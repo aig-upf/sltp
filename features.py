@@ -14,11 +14,12 @@
 #  ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
 #
 #  Blai Bonet, bonet@ldc.usb.ve, bonetblai@gmail.com
-
+import json
+import argparse
 from signal import signal, SIGPIPE, SIG_DFL
 signal(SIGPIPE,SIG_DFL) 
 
-import argparse
+
 g_argparse = argparse.ArgumentParser()
 g_argparse.add_argument('--k', help = 'Number of iterations to derive concepts and roles', action = 'store', default = '0')
 g_argparse.add_argument('signature', help='Name of file containing atomic concepts and roles')
@@ -481,14 +482,13 @@ def read_signature(signature_filename):
 
 
 # read transitions
-import demjson
 g_states_by_str = {}
 g_states_by_id = {}
 g_transitions = {}
 def read_transitions(transitions_filename):
-    raw_file = [ line.replace(' ', '') for line in read_file(transitions_filename) if line[0:4] == '{id:' ]
+    raw_file = [ line.replace(' ', '') for line in read_file(transitions_filename) if line[0:6] == '{"id":' ]
     for raw_line in raw_file:
-        j = demjson.decode(raw_line)
+        j = json.loads(raw_line)
         j_atoms = [ atom.rstrip(')').replace('(',',').split(',') for atom in j['atoms'] ]
         j_atoms_str = str(j_atoms)
         j_id = -1
@@ -503,7 +503,7 @@ def read_transitions(transitions_filename):
         # insert (normalized) transition into hash
         if j['parent'] != j['id']:
             j_pid = int(j['parent'])
-            jp = demjson.decode(raw_file[j_pid])
+            jp = json.loads(raw_file[j_pid])
             assert jp['id'] == j_pid
             jp_atoms = [ atom.rstrip(')').replace('(',',').split(',') for atom in jp['atoms'] ]
             jp_atoms_str = str(jp_atoms)
