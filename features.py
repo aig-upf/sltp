@@ -21,7 +21,7 @@ signal(SIGPIPE,SIG_DFL)
 
 
 g_argparse = argparse.ArgumentParser()
-g_argparse.add_argument('--k', help = 'Number of iterations to derive concepts and roles', action = 'store', default = '0')
+g_argparse.add_argument('-k', help = 'Number of iterations to derive concepts and roles', action = 'store', default = '0')
 g_argparse.add_argument('signature', help='Name of file containing atomic concepts and roles')
 g_argparse.add_argument('transitions', help='Name of file containing transitions (output from planner)')
 g_args = g_argparse.parse_args()
@@ -31,7 +31,9 @@ from collections import deque
 
 # read file line by line
 def read_file(filename):
-    return [ line.rstrip('\n') for line in open(filename) ]
+    with open(filename) as f:
+        for line in f:
+            yield line.rstrip('\n')
 
 
 # abstract classes for concepts and roles
