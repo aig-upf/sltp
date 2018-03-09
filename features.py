@@ -375,9 +375,9 @@ def derive_concepts(concepts, roles):
     #result.extend([ NotConcept(c) for c in concepts if not isinstance(c, NotConcept) and c.depth > 0 ])
     #result.extend([ NotConcept(c) for c in concepts if not isinstance(c, NotConcept) ])
     #result.extend(map(lambda p: AndConcept(p[0], p[1]), iter_combinations(concepts, 2)))
-    result.extend(map(lambda p: ExistsConcept(p[0], p[1]), iter_product(roles, concepts)))
-    result.extend(map(lambda p: ForallConcept(p[0], p[1]), iter_product(roles, concepts)))
-    result.extend(map(lambda p: EqualConcept(p[0], p[1]), iter_combinations(roles, 2)))
+    result.extend([ExistsConcept(p[0], p[1]) for p in iter_product(roles, concepts)])
+    result.extend([ForallConcept(p[0], p[1]) for p in iter_product(roles, concepts)])
+    result.extend([EqualConcept(p[0], p[1]) for p in iter_combinations(roles, 2)])
     return result
 
 def derive_roles(concepts, roles):
@@ -385,7 +385,7 @@ def derive_roles(concepts, roles):
     #result.extend([ InverseRole(r) for r in roles if not isinstance(r, InverseRole) ])
     #result.extend([ StarRole(r) for r in roles if not isinstance(r, StarRole) ])
     #result.extend([ CompositionRole(p[0], p[1]) for p in iter_product(roles, roles) if p[0] != p[1] ])
-    result.extend(map(lambda p: RestrictRole(p[0], p[1]), iter_product(roles, concepts)))
+    result.extend([RestrictRole(p[0], p[1]) for p in iter_product(roles, concepts)])
     return result
 
 def extend_concepts_and_roles(concepts, roles):
@@ -458,7 +458,7 @@ def build_cache_for_state(state):
 def derive_features(concepts, roles):
     new_features = [ BooleanFeature(c) for c in concepts ]
     new_features.extend([ Numerical1Feature(c) for c in concepts ])
-    new_features.extend(map(lambda p: Numerical2Feature(p[0], p[1], p[2]), iter_product(concepts, roles, concepts)))
+    new_features.extend([Numerical2Feature(p[0], p[1], p[2]) for p in iter_product(concepts, roles, concepts)])
     return new_features
 
 
@@ -521,51 +521,51 @@ def read_transitions(transitions_filename):
         for dst in g_transitions[src]:
             assert dst in g_states_by_id
 
-    print '#lines-raw-file=%d, #state-by-str=%d, #states-by-id=%d, #transition-entries=%d, #transitions=%d' % (len(raw_file), len(g_states_by_str), len(g_states_by_id), len(g_transitions), sum([len(g_transitions[src]) for src in g_transitions]))
+    print('#lines-raw-file=%d, #state-by-str=%d, #states-by-id=%d, #transition-entries=%d, #transitions=%d' % (len(raw_file), len(g_states_by_str), len(g_states_by_id), len(g_transitions), sum([len(g_transitions[src]) for src in g_transitions])))
 
 
 def main():
     # read signature file containing atoms, concepts and roles
-    print 'Reading signature file...'
+    print('Reading signature file...')
     read_signature(g_args.signature)
-    print '%d input atoms (0-ary signature):' % len(g_input_atoms), [ str(item) for item in g_input_atoms ]
-    print '%d input concepts (1-ary signature):' % len(g_input_concepts), [ str(item) for item in g_input_concepts ]
-    print '%d input roles (2-ary signature):' % len(g_input_roles), [ str(item) for item in g_input_roles ]
+    print('%d input atoms (0-ary signature):' % len(g_input_atoms), [ str(item) for item in g_input_atoms ])
+    print('%d input concepts (1-ary signature):' % len(g_input_concepts), [ str(item) for item in g_input_concepts ])
+    print('%d input roles (2-ary signature):' % len(g_input_roles), [ str(item) for item in g_input_roles ])
 
     # construct primitive concepts and rules: these are input ones plus some other
-    print '\nConstructing primitive concepts and roles...'
+    print('\nConstructing primitive concepts and roles...')
     g_primitive_concepts = derive_primitive_concepts(g_input_concepts)
     g_primitive_roles = derive_primitive_roles(g_input_roles)
-    print '%d primitive concept(s):' % len(g_primitive_concepts), [ (str(item), item.depth) for item in g_primitive_concepts ]
-    print '%d primitive rule(s):' % len(g_primitive_roles), [ (str(item), item.depth) for item in g_primitive_roles ]
+    print('%d primitive concept(s):' % len(g_primitive_concepts), [ (str(item), item.depth) for item in g_primitive_concepts ])
+    print('%d primitive rule(s):' % len(g_primitive_roles), [ (str(item), item.depth) for item in g_primitive_roles ])
 
     # construct derived concepts and rules obtained with grammar
-    print '\nConstructing derived concepts and roles using %d iteration(s)...' % int(g_args.k)
+    print('\nConstructing derived concepts and roles using %d iteration(s)...' % int(g_args.k))
     g_derived_concepts = list(g_primitive_concepts)
     g_derived_roles = list(g_primitive_roles)
     for i in range(0, int(g_args.k)):
         new_concepts, new_roles = extend_concepts_and_roles(g_derived_concepts, g_derived_roles)
-        print 'iteration %d: %d new concept(s) and %d new role(s)' % (1 + i, len(new_concepts), len(new_roles))
+        print('iteration %d: %d new concept(s) and %d new role(s)' % (1 + i, len(new_concepts), len(new_roles)))
         g_derived_concepts.extend(new_concepts)
         g_derived_roles.extend(new_roles)
-    print 'final: %d concept(s) and %d role(s)' % (len(g_derived_concepts), len(g_derived_roles))
+    print('final: %d concept(s) and %d role(s)' % (len(g_derived_concepts), len(g_derived_roles)))
     #print 'Derived concepts:', [ (str(item), item.depth) for item in g_derived_concepts ]
     #print 'Derived roles:', [ (str(item), item.depth) for item in g_derived_roles ]
 
     # read states
-    print '\nReading states and transitions...'
+    print('\nReading states and transitions...')
     read_transitions(g_args.transitions)
 
     # for each state, compute initial cache, and then extesion for each concept and role
     for sid in g_states_by_id:
-        print ''
+        print('')
         cache = build_cache_for_state(g_states_by_id[sid][1])
         for c in g_derived_concepts:
             ext = c.extension(cache['<universe>'], cache, {})
-            if ext: print 'Extension of CONCEPT %s: %s' % (str(c), ext)
+            if ext: print('Extension of CONCEPT %s: %s' % (str(c), ext))
         for r in g_derived_roles:
             ext = r.extension(cache['<universe>'], cache, {})
-            if ext: print 'Extension of ROLE %s: %s' % (str(r), ext)
+            if ext: print('Extension of ROLE %s: %s' % (str(r), ext))
 
 
 if __name__ == "__main__":
