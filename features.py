@@ -14,20 +14,25 @@
 #  ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
 #
 #  Blai Bonet, bonet@ldc.usb.ve, bonetblai@gmail.com
+import sys
 import json
 import argparse
 from signal import signal, SIGPIPE, SIG_DFL
 from collections import deque
 from itertools import product as iter_product
 from itertools import combinations as iter_combinations
+from tarski.io import FstripsReader
+from tarski.syntax import builtins
 
 signal(SIGPIPE, SIG_DFL)
 
-g_argparse = argparse.ArgumentParser()
-g_argparse.add_argument('-k', help='Number of iterations to derive concepts and roles', action='store', default='0')
-g_argparse.add_argument('signature', help='Name of file containing atomic concepts and roles')
-g_argparse.add_argument('transitions', help='Name of file containing transitions (output from planner)')
-g_args = g_argparse.parse_args()
+
+def parse_arguments(args):
+    parser = argparse.ArgumentParser(description="Learn generalized features and concepts")
+    parser.add_argument('-k', help='Number of iterations to derive concepts and roles', action='store', default='0')
+    parser.add_argument('transitions', help='Name of file containing transitions (output from planner)')
+    parser.add_argument('-d', '--domain', required=True, help='The PDDL domain filename')
+    return parser.parse_args(args)
 
 
 # read file line by line
@@ -511,21 +516,24 @@ g_input_concepts = []
 g_input_roles = []
 
 
-def read_signature(signature_filename):
-    signature = [item for line in read_file(signature_filename) for item in line.split(' ')]
-    assert len(
-        signature) % 2 == 0, 'Expecting even number of elements in signature because each element has name and arity'
+def read_signature(language):
+    assert len(language.functions) == 0
 
-    for i in range(0, len(signature), 2):
-        name = signature[i]
-        arity = int(signature[i + 1])
-        g_map_signature[name] = arity
-        if arity == 0:
+    for predicate in language.predicates:
+        if builtins.is_builtin_predicate(predicate):
+            continue  # Skip "=" and other built-in symbols
+
+        name = predicate.symbol
+        g_map_signature[name] = predicate.arity
+
+        if predicate.arity == 0:
             g_input_atoms.append(Atom(name))
-        elif arity == 1:
+        elif predicate.arity == 1:
             g_input_concepts.append(BasicConcept(name))
-        elif arity == 2:
+        elif predicate.arity == 2:
             g_input_roles.append(BasicRole(name))
+        else:
+            print("Predicate {} with arity > 2 ignored".format(predicate))
 
 
 # read transitions
@@ -573,10 +581,15 @@ def read_transitions(transitions_filename):
         sum([len(g_transitions[src]) for src in g_transitions])))
 
 
-def main():
+def main(args):
+    reader = FstripsReader()
+    reader.parse_domain(args.domain)
+    problem = reader.problem
+
+
     # read signature file containing atoms, concepts and roles
     print('Reading signature file...')
-    read_signature(g_args.signature)
+    read_signature(problem.language)
     print('%d input atoms (0-ary signature):' % len(g_input_atoms), [str(item) for item in g_input_atoms])
     print('%d input concepts (1-ary signature):' % len(g_input_concepts), [str(item) for item in g_input_concepts])
     print('%d input roles (2-ary signature):' % len(g_input_roles), [str(item) for item in g_input_roles])
@@ -590,10 +603,10 @@ def main():
     print('%d primitive rule(s):' % len(g_primitive_roles), [(str(item), item.depth) for item in g_primitive_roles])
 
     # construct derived concepts and rules obtained with grammar
-    print('\nConstructing derived concepts and roles using %d iteration(s)...' % int(g_args.k))
+    print('\nConstructing derived concepts and roles using %d iteration(s)...' % int(args.k))
     g_derived_concepts = list(g_primitive_concepts)
     g_derived_roles = list(g_primitive_roles)
-    for i in range(0, int(g_args.k)):
+    for i in range(0, int(args.k)):
         new_concepts, new_roles = extend_concepts_and_roles(g_derived_concepts, g_derived_roles)
         print('iteration %d: %d new concept(s) and %d new role(s)' % (1 + i, len(new_concepts), len(new_roles)))
         g_derived_concepts.extend(new_concepts)
@@ -604,19 +617,19 @@ def main():
 
     # read states
     print('\nReading states and transitions...')
-    read_transitions(g_args.transitions)
+    read_transitions(args.transitions)
 
     # for each state, compute initial cache, and then extesion for each concept and role
     for sid in g_states_by_id:
-        print('')
+        # print('')
         cache = build_cache_for_state(g_states_by_id[sid][1])
         for c in g_derived_concepts:
             ext = c.extension(cache['<universe>'], cache, {})
-            if ext: print('Extension of CONCEPT %s: %s' % (str(c), ext))
+            # if ext: print('Extension of CONCEPT %s: %s' % (str(c), ext))
         for r in g_derived_roles:
             ext = r.extension(cache['<universe>'], cache, {})
-            if ext: print('Extension of ROLE %s: %s' % (str(r), ext))
+            # if ext: print('Extension of ROLE %s: %s' % (str(r), ext))
 
 
 if __name__ == "__main__":
-    main()
+    main(parse_arguments(sys.argv[1:]))
