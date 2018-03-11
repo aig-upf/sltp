@@ -24,7 +24,7 @@ from itertools import combinations as iter_combinations
 from tarski.io import FstripsReader
 from tarski.syntax import builtins
 
-from utils import check_all_equal, compute_transitive_closure, transitive_closure
+from utils import check_all_equal, transitive_closure
 
 signal(SIGPIPE, SIG_DFL)
 
@@ -345,6 +345,7 @@ class RestrictRole(Role):
 
 def derive_primitive_concepts(concepts):
     new_concepts = list(concepts)
+    new_concepts.append(UniversalConcept())
     new_concepts.extend([NotConcept(c) for c in concepts if not isinstance(c, NotConcept)])
     return new_concepts
 
@@ -361,10 +362,10 @@ def derive_concepts(concepts, roles):
     result = []
     # result.extend([ NotConcept(c) for c in concepts if not isinstance(c, NotConcept) and c.depth > 0 ])
     # result.extend([ NotConcept(c) for c in concepts if not isinstance(c, NotConcept) ])
-    # result.extend(map(lambda p: AndConcept(p[0], p[1]), iter_combinations(concepts, 2)))
-    result.extend([ExistsConcept(p[0], p[1]) for p in iter_product(roles, concepts)])
-    result.extend([ForallConcept(p[0], p[1]) for p in iter_product(roles, concepts)])
-    result.extend([EqualConcept(p[0], p[1]) for p in iter_combinations(roles, 2)])
+    # result.extend(map(lambda p: AndConcept(r, c), iter_combinations(concepts, 2)))
+    result.extend([ExistsConcept(r, c) for r, c in iter_product(roles, concepts)])
+    result.extend([ForallConcept(r, c) for r, c in iter_product(roles, concepts)])
+    result.extend([EqualConcept(r, c) for r, c in iter_combinations(roles, 2)])
     return result
 
 
@@ -372,8 +373,8 @@ def derive_roles(concepts, roles):
     result = []
     # result.extend([ InverseRole(r) for r in roles if not isinstance(r, InverseRole) ])
     # result.extend([ StarRole(r) for r in roles if not isinstance(r, StarRole) ])
-    # result.extend([ CompositionRole(p[0], p[1]) for p in iter_product(roles, roles) if p[0] != p[1] ])
-    result.extend([RestrictRole(p[0], p[1]) for p in iter_product(roles, concepts)])
+    # result.extend([ CompositionRole(r, c) for r, c in iter_product(roles, roles) if p[0] != p[1] ])
+    result.extend([RestrictRole(r, c) for r, c in iter_product(roles, concepts)])
     return result
 
 
@@ -455,7 +456,7 @@ def build_cache_for_state(state):
 def derive_features(concepts, roles):
     new_features = [BooleanFeature(c) for c in concepts]
     new_features.extend(Numerical1Feature(c) for c in concepts)
-    new_features.extend(Numerical2Feature(p[0], p[1], p[2]) for p in iter_product(concepts, roles, concepts))
+    new_features.extend(Numerical2Feature(c1, r, c2) for c1, r, c2 in iter_product(concepts, roles, concepts))
     return new_features
 
 
