@@ -18,11 +18,13 @@ import sys
 import json
 import argparse
 from signal import signal, SIGPIPE, SIG_DFL
-from collections import deque
 from itertools import product as iter_product
 from itertools import combinations as iter_combinations
+
 from tarski.io import FstripsReader
 from tarski.syntax import builtins
+
+from utils import check_all_equal, compute_transitive_closure, transitive_closure
 
 signal(SIGPIPE, SIG_DFL)
 
@@ -276,63 +278,12 @@ class StarRole(Role):
         self.r = r
 
     def extension(self, objects, cache, parameter_subst):
-        if repr(self) in cache:
-            return cache[repr(self)]
-        else:
-            self.compute_transitive_closure(objects, cache, parameter_subst)
-            result = self.closure
-            cache[repr(self)] = result
-            return result
+        if repr(self) not in cache:
+            ext = self.r.extension(objects, cache, parameter_subst)
+            # cache[repr(self)] = compute_transitive_closure(ext)
+            cache[repr(self)] = transitive_closure(ext)
 
-    # compute transitive closure
-    def compute_transitive_closure(self, objects, cache, parameter_subst):
-        # compute adjacency lists from extension
-        ext_r = self.r.extension(objects, cache, parameter_subst)
-        adj = dict()
-        for (u, v) in ext_r:
-            if u not in adj: adj[u] = []
-            adj[u].append(v)
-
-        # objects in extension
-        objects_in_ext = set()
-        for (u, v) in ext_r:
-            objects_in_ext.add(u)
-            objects_in_ext.add(v)
-
-        # perform a breadth-first search from each object
-        bfs_table = dict()
-        for u in objects_in_ext:
-            table = self.breadth_first_search(u, objects_in_ext, adj)
-            bfs_table[u] = table
-
-        # compute transitive closure (u,v) is in closure iff u == v or v.p != nil in bfs-tree(u)
-        self.closure = []
-        for u in objects_in_ext:
-            for v in objects_in_ext:
-                if u == v:
-                    self.closure.append((u, v))
-                elif (u in bfs_table) and (v in bfs_table[u]):
-                    assert len(bfs_table[u][v]) == 3
-                    if bfs_table[u][v][2] != None:
-                        self.closure.append((u, v))
-
-    def breadth_first_search(self, src, objects, adj):
-        # initialize table
-        table = dict()
-        for u in objects:
-            table[u] = (0, float('inf'), None)  # (u.color = BLACK, u.d = inf, u.p = nil)
-        table[src] = (1, 0, None)  # (src.color = GRAY, src.d = 0, src.p = nil)
-
-        # perform bfs starting from src
-        queue = deque()
-        while queue:
-            u = queue.pop()
-            for v in adj[u]:
-                if table[v][0] == 0:
-                    table[v] = (1, table[u][1] + 1, u)  # (v.color = GRAY, v.d = u.d + 1, v.p = u)
-                    queue.appendleft(v)
-            table[u][0] = 2  # u.color = BLACK
-        return table
+        return cache[repr(self)]
 
     def __repr__(self):
         return 'Star(%s)' % repr(self.r)
@@ -479,15 +430,14 @@ class Numerical2Feature(Feature):
 
 
 def build_cache_for_state(state):
-    cache = {}
-    cache['<universe>'] = set()
-    cache['atoms'] = []
+    cache = {'<universe>': set(), 'atoms': []}
     for atom in state:
         assert atom
+        name = atom[0]
+
         if len(atom) == 1:
-            cache['atoms'].append(atom[0])
+            cache['atoms'].append(name)
         else:
-            name = atom[0]
             if name not in cache:
                 cache[name] = []
             if len(atom) == 2:
@@ -535,6 +485,10 @@ def read_signature(language):
         else:
             print("Predicate {} with arity > 2 ignored".format(predicate))
 
+    print('%d input atoms (0-ary signature):' % len(g_input_atoms), [str(item) for item in g_input_atoms])
+    print('%d input concepts (1-ary signature):' % len(g_input_concepts), [str(item) for item in g_input_concepts])
+    print('%d input roles (2-ary signature):' % len(g_input_roles), [str(item) for item in g_input_roles])
+
 
 # read transitions
 g_states_by_str = {}
@@ -581,18 +535,50 @@ def read_transitions(transitions_filename):
         sum([len(g_transitions[src]) for src in g_transitions])))
 
 
+def prune_elements(existing, novel, extensions):
+
+    assert extensions
+
+    good = []
+    for element in novel:
+        all_elem_extensions = [element.extension(cache['<universe>'], cache, {})
+                               for _, cache in extensions.items()]
+
+        # if check_all_equal(all_elem_extensions):
+        #     print('Concept/role "{}" has constant extension over all samples'.format(element))
+
+        if check_all_equal(all_elem_extensions) and len(all_elem_extensions[1]) == 0:
+            # print('Concept/role "{}" has empty extension over all samples'.format(element))
+            pass
+        else:
+            good.append(element)
+
+        # for state_id, state_cache in extensions.items():
+        #     elem_ext = element.extension(state_cache['<universe>'], state_cache, {})
+
+    print("{} concepts/roles pruned because of emptyness".format(len(novel) - len(good)))
+
+    # l = list(itertools.product(existing, novel))
+    return good
+
+
+def print_atstar(state_extensions):
+    s = state_extensions[0]
+    at_closure = StarRole(BasicRole('at'))
+    e = at_closure.extension(s['<universe>'], s, {})
+    print("Extension of AT*: {}".format(e))
+
+
 def main(args):
     reader = FstripsReader()
     reader.parse_domain(args.domain)
     problem = reader.problem
 
-
-    # read signature file containing atoms, concepts and roles
-    print('Reading signature file...')
+    print('Loading domain predicate signatures...')
     read_signature(problem.language)
-    print('%d input atoms (0-ary signature):' % len(g_input_atoms), [str(item) for item in g_input_atoms])
-    print('%d input concepts (1-ary signature):' % len(g_input_concepts), [str(item) for item in g_input_concepts])
-    print('%d input roles (2-ary signature):' % len(g_input_roles), [str(item) for item in g_input_roles])
+
+    print('\nLoading states and transitions...')
+    read_transitions(args.transitions)
 
     # construct primitive concepts and rules: these are input ones plus some other
     print('\nConstructing primitive concepts and roles...')
@@ -602,33 +588,52 @@ def main(args):
           [(str(item), item.depth) for item in g_primitive_concepts])
     print('%d primitive rule(s):' % len(g_primitive_roles), [(str(item), item.depth) for item in g_primitive_roles])
 
+    state_extensions = dict()  # Concept and role extensions indexed by state
+    update_state_extensions(g_primitive_concepts + g_primitive_roles, state_extensions)
+    g_primitive_concepts = prune_elements([], g_primitive_concepts, state_extensions)
+    g_primitive_roles = prune_elements([], g_primitive_roles, state_extensions)
+
     # construct derived concepts and rules obtained with grammar
     print('\nConstructing derived concepts and roles using %d iteration(s)...' % int(args.k))
+    print_atstar(state_extensions)
     g_derived_concepts = list(g_primitive_concepts)
     g_derived_roles = list(g_primitive_roles)
     for i in range(0, int(args.k)):
         new_concepts, new_roles = extend_concepts_and_roles(g_derived_concepts, g_derived_roles)
         print('iteration %d: %d new concept(s) and %d new role(s)' % (1 + i, len(new_concepts), len(new_roles)))
+
+        update_state_extensions(new_concepts + new_roles, state_extensions)
+        new_concepts = prune_elements(g_derived_concepts, new_concepts, state_extensions)
+        new_roles = prune_elements(g_derived_roles, new_roles, state_extensions)
+
         g_derived_concepts.extend(new_concepts)
         g_derived_roles.extend(new_roles)
+
     print('final: %d concept(s) and %d role(s)' % (len(g_derived_concepts), len(g_derived_roles)))
-    # print 'Derived concepts:', [ (str(item), item.depth) for item in g_derived_concepts ]
-    # print 'Derived roles:', [ (str(item), item.depth) for item in g_derived_roles ]
+    print('\n\nDerived concepts:\n' + '\n'.join("{} ({})".format(item, item.depth) for item in g_derived_concepts))
+    print('\n\nDerived roles:\n' + '\n'.join("{} ({})".format(item, item.depth) for item in g_derived_roles))
 
-    # read states
-    print('\nReading states and transitions...')
-    read_transitions(args.transitions)
+    # Tests
+    print_atstar(state_extensions)
 
-    # for each state, compute initial cache, and then extesion for each concept and role
+
+
+def update_state_extensions(elements, state_extensions):
+    """ Updates the given state extensions with the extensions in each state of all
+    given elements (concepts and roles)"""
     for sid in g_states_by_id:
-        # print('')
-        cache = build_cache_for_state(g_states_by_id[sid][1])
-        for c in g_derived_concepts:
-            ext = c.extension(cache['<universe>'], cache, {})
-            # if ext: print('Extension of CONCEPT %s: %s' % (str(c), ext))
-        for r in g_derived_roles:
-            ext = r.extension(cache['<universe>'], cache, {})
-            # if ext: print('Extension of ROLE %s: %s' % (str(r), ext))
+        compute_state_extensions(sid, elements, state_extensions)
+
+
+def compute_state_extensions(state, elements, state_extensions):
+    # Retrieve the state cache if previously built, otherwise create a new one
+    cache = state_extensions.get(state, None) or build_cache_for_state(g_states_by_id[state][1])
+    state_extensions[state] = cache
+
+    for elem in elements:
+        assert isinstance(elem, (Concept, Role))
+        _ = elem.extension(cache['<universe>'], cache, {})
+        # if ext: print('Extension of CONCEPT %s: %s' % (str(c), _))
 
 
 if __name__ == "__main__":
