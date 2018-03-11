@@ -73,6 +73,8 @@ class TerminologicalFactory(object):
     def __init__(self, language: tsk.FirstOrderLanguage):
         self.language = language
         self.universe_sort = language.get_sort('object')
+        self.top = UniversalConcept(language.get_sort('object'))
+        self.bot = self.create_not_concept(self.top)
         self.termbox = TermBox()
 
         self.map_signature = {}
@@ -109,9 +111,8 @@ class TerminologicalFactory(object):
     # derive new concepts (1-step derivation) from given set of concepts and roles
     def derive_atomic_concepts(self, concepts):
         new_concepts = list(concepts)
-        universal = UniversalConcept(self.universe_sort)
-        new_concepts.append(universal)
-        new_concepts.append(self.create_not_concept(universal))
+        new_concepts.append(self.top)
+        new_concepts.append(self.bot)
         new_concepts.extend(self.create_not_concept(c) for c in concepts)
         # TODO Add ParametricConcepts and roles here
         return [term for term in new_concepts if term is not None]
@@ -123,7 +124,6 @@ class TerminologicalFactory(object):
         new_roles.extend(StarRole(InverseRole(r)) for r in roles if not isinstance(r, InverseRole))
         return [term for term in new_roles if term is not None]
 
-
     def derive_concepts(self, concepts, roles):
         result = []
         # result.extend([ NotConcept(c) for c in concepts if not isinstance(c, NotConcept) and c.depth > 0 ])
@@ -134,15 +134,13 @@ class TerminologicalFactory(object):
         result.extend(self.create_equal_concept(r1, r2) for r1, r2 in iter_combinations(roles, 2))
         return [term for term in result if term is not None]
 
-
     def derive_roles(self, concepts, roles):
         result = []
         # result.extend([ InverseRole(r) for r in roles if not isinstance(r, InverseRole) ])
         # result.extend([ StarRole(r) for r in roles if not isinstance(r, StarRole) ])
         # result.extend([ CompositionRole(r, c) for r, c in iter_product(roles, roles) if p[0] != p[1] ])
-        result.extend(RestrictRole(r, c) for r, c in iter_product(roles, concepts))
+        result.extend(self.create_restrict_role(r, c) for r, c in iter_product(roles, concepts))
         return [term for term in result if term is not None]
-
 
     def extend_concepts_and_roles(self, concepts, roles):
         new_concepts = self.derive_concepts(concepts, roles)
@@ -204,28 +202,18 @@ class TerminologicalFactory(object):
 
         return result
 
+    def create_restrict_role(self, r: Role, c: Concept):
 
-def build_cache_for_state(state):
-    cache = {'<universe>': set(), 'atoms': []}
-    for atom in state:
-        assert atom
-        name = atom[0]
+        result = RestrictRole(r, c)
+        if not self.language.are_vertically_related(r.sort[1], c.sort):
+            print('Role "{}" pruned for type-inconsistency reasons'.format(result))
+            return None
 
-        if len(atom) == 1:
-            cache['atoms'].append(name)
-        else:
-            if name not in cache:
-                cache[name] = []
-            if len(atom) == 2:
-                cache[name].append(atom[1])
-                cache['<universe>'].add(atom[1])
-            elif len(atom) == 3:
-                cache[name].append((atom[1], atom[2]))
-                cache['<universe>'].add(atom[1])
-                cache['<universe>'].add(atom[2])
-            else:
-                assert False, "Expecting at most two arguments, but got '(%s)'" % ' '.join(atom)
-    return cache
+        if isinstance(c, UniversalConcept) or c == self.bot:
+            print('Role "{}" pruned; no sense in restricting to top / bot concepts'.format(result))
+            return None
+
+        return result
 
 
 def derive_features(concepts, roles):
@@ -284,43 +272,83 @@ def read_transitions(transitions_filename):
         sum([len(g_transitions[src]) for src in g_transitions])))
 
 
-def prune_elements(existing, novel, extensions, name):
+class InterpretationSet(object):
+    def __init__(self, language):
+        self.language = language
+        self.state_extensions = dict()  # Concept and role extensions indexed by state
+        self.top = UniversalConcept(language.get_sort('object'))
 
-    assert extensions
+    def update_state_extensions(self, elements):
+        """ Updates the given state extensions with the extensions in each state of all
+        given elements (concepts and roles)"""
+        for sid in g_states_by_id:
+            self.compute_state_extensions(sid, elements, self.state_extensions)
 
-    all_universes = [cache['<universe>'] for cache in extensions.values()]
-    assert check_all_equal(all_universes), "We should expect the universe of interpretation in all states to be equal"
-    universe = all_universes[0]
+    def compute_state_extensions(self, state, elements, state_extensions):
+        # Retrieve the state cache if previously built, otherwise create a new one
+        cache = state_extensions.get(state, None) or self.build_cache_for_state(g_states_by_id[state][1])
+        state_extensions[state] = cache
 
-    good = []
-    for element in novel:
-        all_elem_extensions = [element.extension(cache['<universe>'], cache, {})
-                               for cache in extensions.values()]
+        for elem in elements:
+            assert isinstance(elem, (Concept, Role))
+            _ = elem.extension(cache[self.top], cache, {})
+            # if ext: print('Extension of CONCEPT %s: %s' % (str(c), _))
 
-        # if check_all_equal(all_elem_extensions):
-        #     print('Concept/role "{}" has constant extension over all samples'.format(element))
+    def build_cache_for_state(self, state):
+        cache = {self.top: set(), 'atoms': []}
+        for atom in state:
+            assert atom
+            name = atom[0]
 
-        all_equal = check_all_equal(all_elem_extensions)
+            if len(atom) == 1:
+                cache['atoms'].append(name)
+            else:
+                if name not in cache:
+                    cache[name] = []
+                if len(atom) == 2:
+                    cache[name].append(atom[1])
+                    cache[self.top].add(atom[1])
+                elif len(atom) == 3:
+                    cache[name].append((atom[1], atom[2]))
+                    cache[self.top].add(atom[1])
+                    cache[self.top].add(atom[2])
+                else:
+                    assert False, "Expecting at most two arguments, but got '(%s)'" % ' '.join(atom)
+        return cache
 
-        if all_equal:
-            if repr(element) != "Not(<universe>)" and len(all_elem_extensions[1]) == 0:
-                print('{} "{}" has empty extension over all samples'.format(name, element))
-                continue
+    def prune(self, existing, novel, name):
+        extensions = self.state_extensions
+        assert extensions
 
-            if repr(element) != "<universe>" and len(all_elem_extensions[1]) == len(universe):
-                print('{} "{}" has universal extension over all samples'.format(name, element))
-                continue
+        all_universes = [cache[self.top] for cache in extensions.values()]
+        assert check_all_equal(all_universes), "We should expect the universe of interpretation in all states to be equal"
+        universe = all_universes[0]
 
-        good.append(element)
+        good = []
+        for element in novel:
+            all_elem_extensions = [element.extension(cache[self.top], cache, {})
+                                   for cache in extensions.values()]
 
-        # for state_id, state_cache in extensions.items():
-        #     elem_ext = element.extension(state_cache['<universe>'], state_cache, {})
+            # if check_all_equal(all_elem_extensions):
+            #     print('Concept/role "{}" has constant extension over all samples'.format(element))
 
-    print("{} {}(s) pruned because of emptyness".format(len(novel) - len(good), name))
+            all_equal = check_all_equal(all_elem_extensions)
 
-    # l = list(itertools.product(existing, novel))
-    return good
+            if all_equal:
+                if repr(element) != "Not(<universe>)" and len(all_elem_extensions[1]) == 0:
+                    print('{} "{}" has empty extension over all samples'.format(name, element))
+                    continue
 
+                if element != self.top and len(all_elem_extensions[1]) == len(universe):
+                    print('{} "{}" has universal extension over all samples'.format(name, element))
+                    continue
+
+            good.append(element)
+
+        print("{} {}(s) pruned because of emptyness".format(len(novel) - len(good), name))
+
+        # l = list(itertools.product(existing, novel))
+        return good
 
 def main(args):
     reader = FstripsReader()
@@ -340,10 +368,10 @@ def main(args):
     # construct primitive concepts and rules: these are input ones plus some other
     factory.create_atomic_terms()
 
-    state_extensions = dict()  # Concept and role extensions indexed by state
-    update_state_extensions(termbox.all_atoms(), state_extensions)
-    termbox.atomic_concepts = prune_elements([], termbox.atomic_concepts, state_extensions, "concept")
-    termbox.atomic_roles = prune_elements([], termbox.atomic_roles, state_extensions, "role")
+    interp = InterpretationSet(language)
+    interp.update_state_extensions(termbox.all_atoms())
+    termbox.atomic_concepts = interp.prune([], termbox.atomic_concepts, "concept")
+    termbox.atomic_roles = interp.prune([], termbox.atomic_roles, "role")
 
     # construct derived concepts and rules obtained with grammar
     print('\nConstructing derived concepts and roles using %d iteration(s)...' % int(args.k))
@@ -353,9 +381,9 @@ def main(args):
         new_concepts, new_roles = factory.extend_concepts_and_roles(derived_concepts, derived_roles)
         print('iteration %d: %d new concept(s) and %d new role(s)' % (1 + i, len(new_concepts), len(new_roles)))
 
-        update_state_extensions(new_concepts + new_roles, state_extensions)
-        new_concepts = prune_elements(derived_concepts, new_concepts, state_extensions, "concept")
-        new_roles = prune_elements(derived_roles, new_roles, state_extensions, "role")
+        interp.update_state_extensions(new_concepts + new_roles)
+        new_concepts = interp.prune(derived_concepts, new_concepts, "concept")
+        new_roles = interp.prune(derived_roles, new_roles, "role")
 
         derived_concepts.extend(new_concepts)
         derived_roles.extend(new_roles)
@@ -363,24 +391,6 @@ def main(args):
     print('final: %d concept(s) and %d role(s)' % (len(derived_concepts), len(derived_roles)))
     # print('\n\nDerived concepts:\n' + '\n'.join("{} ({})".format(item, item.depth) for item in derived_concepts))
     # print('\n\nDerived roles:\n' + '\n'.join("{} ({})".format(item, item.depth) for item in derived_roles))
-
-
-def update_state_extensions(elements, state_extensions):
-    """ Updates the given state extensions with the extensions in each state of all
-    given elements (concepts and roles)"""
-    for sid in g_states_by_id:
-        compute_state_extensions(sid, elements, state_extensions)
-
-
-def compute_state_extensions(state, elements, state_extensions):
-    # Retrieve the state cache if previously built, otherwise create a new one
-    cache = state_extensions.get(state, None) or build_cache_for_state(g_states_by_id[state][1])
-    state_extensions[state] = cache
-
-    for elem in elements:
-        assert isinstance(elem, (Concept, Role))
-        _ = elem.extension(cache['<universe>'], cache, {})
-        # if ext: print('Extension of CONCEPT %s: %s' % (str(c), _))
 
 
 if __name__ == "__main__":

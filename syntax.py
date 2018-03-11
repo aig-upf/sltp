@@ -35,9 +35,16 @@ class Atom:
 class UniversalConcept(Concept):
     def __init__(self, universal_sort):
         Concept.__init__(self, universal_sort, 0)
+        self.hash = hash(self.__class__)
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        return hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__
 
     def extension(self, objects, cache, parameter_subst):
-        return [] if repr(self) not in cache else cache[repr(self)]
+        return [] if self not in cache else cache[self]
 
     def __repr__(self):
         return '<universe>'
@@ -49,6 +56,14 @@ class ParametricConcept(Concept):
     def __init__(self, parameter):
         Concept.__init__(self, 'parametric', 0)
         self.parameter = parameter
+        self.hash = hash((self.__class__, self.parameter))
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
+                self.parameter == other.parameter)
 
     def extension(self, objects, cache, parameter_subst):
         assert self.parameter in parameter_subst, "Parameter '?%s' should appear in substitution: %s" % (
@@ -66,6 +81,15 @@ class BasicConcept(Concept):
         assert isinstance(predicate, tsk.syntax.Predicate)
         Concept.__init__(self, predicate.sort[0], 0)
         self.predicate = predicate
+        # This is a bit aggressive, but we assume that predicate names are unique
+        self.hash = hash((self.__class__, self.name))
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
+                self.name == other.name)
 
     @property
     def name(self):
@@ -85,14 +109,21 @@ class NotConcept(Concept):
         assert isinstance(c, Concept)
         Concept.__init__(self, universal_sort, 1 + c.depth)
         self.c = c
+        self.hash = hash((self.__class__, self.c))
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
+                self.c == other.c)
 
     def extension(self, objects, cache, parameter_subst):
-        if repr(self) in cache:
-            return cache[repr(self)]
+        if self in cache:
+            return cache[self]
         else:
             ext_c = self.c.extension(objects, cache, parameter_subst)
-            result = [x for x in objects if x not in ext_c]
-            cache[repr(self)] = result
+            cache[self] = result = [x for x in objects if x not in ext_c]
             return result
 
     def __repr__(self):
@@ -108,15 +139,24 @@ class AndConcept(Concept):
         Concept.__init__(self, 'and', 1 + c1.depth + c2.depth)
         self.c1 = c1
         self.c2 = c2
+        self.hash = hash((self.__class__, self.c1, self.c2))
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
+                self.c1 == other.c1 and
+                self.c2 == other.c2)
 
     def extension(self, objects, cache, parameter_subst):
-        if repr(self) in cache:
-            return cache[repr(self)]
+        if self in cache:
+            return cache[self]
         else:
             ext_c1 = self.c1.extension(objects, cache, parameter_subst)
             ext_c2 = self.c2.extension(objects, cache, parameter_subst)
             result = [x for x in ext_c1 if x in ext_c2]
-            cache[repr(self)] = result
+            cache[self] = result
             return result
 
     def __repr__(self):
@@ -133,15 +173,24 @@ class ExistsConcept(Concept):
         Concept.__init__(self, r.sort[0], 1 + r.depth + c.depth)
         self.r = r
         self.c = c
+        self.hash = hash((self.__class__, self.r, self.c))
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
+                self.c == other.c and
+                self.r == other.r)
 
     def extension(self, objects, cache, parameter_subst):
-        if repr(self) in cache:
-            return cache[repr(self)]
+        if self in cache:
+            return cache[self]
         else:
             ext_r = self.r.extension(objects, cache, parameter_subst)
             ext_c = self.c.extension(objects, cache, parameter_subst)
             result = [x for x in objects if [z for (y, z) in ext_r if y == x and z in ext_c]]
-            cache[repr(self)] = result
+            cache[self] = result
             return result
 
     def __repr__(self):
@@ -158,15 +207,24 @@ class ForallConcept(Concept):
         Concept.__init__(self, r.sort[0], 1 + r.depth + c.depth)
         self.r = r
         self.c = c
+        self.hash = hash((self.__class__, self.r, self.c))
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
+                self.c == other.c and
+                self.r == other.r)
 
     def extension(self, objects, cache, parameter_subst):
-        if repr(self) in cache:
-            return cache[repr(self)]
+        if self in cache:
+            return cache[self]
         else:
             ext_r = self.c.extension(objects, cache, parameter_subst)
             ext_c = self.c.extension(objects, cache, parameter_subst)
             result = [x for x in objects if objects == [y for y in objects if (x, y) not in ext_r or y in ext_c]]
-            cache[repr(self)] = result
+            cache[self] = result
             return result
 
     def __repr__(self):
@@ -182,15 +240,24 @@ class EqualConcept(Concept):
         Concept.__init__(self, sort, 1 + r1.depth + r2.depth)
         self.r1 = r1
         self.r2 = r2
+        self.hash = hash((self.__class__, self.r1, self.r2))
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
+                self.r1 == other.r1 and
+                self.r2 == other.r2)
 
     def extension(self, objects, cache, parameter_subst):
-        if repr(self) in cache:
-            return cache[repr(self)]
+        if self in cache:
+            return cache[self]
         else:
             ext_r1 = self.r1.extension(objects, cache, parameter_subst)
             ext_r2 = self.r2.extension(objects, cache, parameter_subst)
             result = [x for x in objects if [z for (y, z) in ext_r1 if y == x] == [z for (y, z) in ext_r2 if y == x]]
-            cache[repr(self)] = result
+            cache[self] = result
             return result
 
     def __repr__(self):
@@ -204,6 +271,16 @@ class BasicRole(Role):
         assert isinstance(predicate, tsk.syntax.Predicate)
         super().__init__(predicate.sort, 0)
         self.predicate = predicate
+
+        # This is a bit aggressive, but we assume that predicate names are unique
+        self.hash = hash((self.__class__, self.name))
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
+                self.name == other.name)
 
     @property
     def name(self):
@@ -224,14 +301,22 @@ class InverseRole(Role):
         s1, s2 = r.sort
         super().__init__([s2, s1], 1 + r.depth)
         self.r = r
+        self.hash = hash((self.__class__, self.r))
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
+                self.r == other.r)
 
     def extension(self, objects, cache, parameter_subst):
-        if repr(self) in cache:
-            return cache[repr(self)]
+        if self in cache:
+            return cache[self]
         else:
             ext_r = self.r.extension(objects, cache, parameter_subst)
             result = [(y, x) for (x, y) in ext_r]
-            cache[repr(self)] = result
+            cache[self] = result
             return result
 
     def __repr__(self):
@@ -245,14 +330,22 @@ class StarRole(Role):
         assert isinstance(r, Role)
         Role.__init__(self, r.sort, 1 + r.depth)
         self.r = r
+        self.hash = hash((self.__class__, self.r))
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
+                self.r == other.r)
 
     def extension(self, objects, cache, parameter_subst):
-        if repr(self) not in cache:
+        if self not in cache:
             ext = self.r.extension(objects, cache, parameter_subst)
-            # cache[repr(self)] = compute_transitive_closure(ext)
-            cache[repr(self)] = transitive_closure(ext)
+            # cache[self] = compute_transitive_closure(ext)
+            cache[self] = transitive_closure(ext)
 
-        return cache[repr(self)]
+        return cache[self]
 
     def __repr__(self):
         return 'Star(%s)' % repr(self.r)
@@ -267,17 +360,26 @@ class CompositionRole(Role):
         Role.__init__(self, [r1.sort[0], r2.sort[1]], 1 + r1.depth + r2.depth)
         self.r1 = r1
         self.r2 = r2
+        self.hash = hash((self.__class__, self.r1, self.r2))
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
+                self.r1 == other.r1 and
+                self.r2 == other.r2)
 
     def extension(self, objects, cache, parameter_subst):
-        if repr(self) in cache:
-            return cache[repr(self)]
+        if self in cache:
+            return cache[self]
         else:
             ext_r1 = self.r1.extension(objects, cache, parameter_subst)
             ext_r2 = self.r2.extension(objects, cache, parameter_subst)
             result = []
             for (x, u) in ext_r1:
                 result.extend([(x, z) for (y, z) in ext_r2 if u == y])
-            cache[repr(self)] = result
+            cache[self] = result
             return result
 
     def __repr__(self):
@@ -293,15 +395,24 @@ class RestrictRole(Role):
         Role.__init__(self, r.sort, 1 + r.depth + c.depth)
         self.r = r
         self.c = c
+        self.hash = hash((self.__class__, self.r, self.c))
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
+                self.c == other.c and
+                self.r == other.r)
 
     def extension(self, objects, cache, parameter_subst):
-        if repr(self) in cache:
-            return cache[repr(self)]
+        if self in cache:
+            return cache[self]
         else:
             ext_r = self.r.extension(objects, cache, parameter_subst)
             ext_c = self.c.extension(objects, cache, parameter_subst)
             result = [(x, y) for (x, y) in ext_r if y in ext_c]
-            cache[repr(self)] = result
+            cache[self] = result
             return result
 
     def __repr__(self):
