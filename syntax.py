@@ -2,6 +2,7 @@ import tarski as tsk
 
 from utils import transitive_closure
 
+
 # abstract classes for concepts and roles
 class Concept(object):
     def __init__(self, sort, depth):
@@ -299,3 +300,49 @@ class RestrictRole(Role):
 
     __str__ = __repr__
 
+
+
+# features
+class Feature(object):
+    def __init__(self):
+        pass
+
+
+class BooleanFeature(Feature):
+    def __init__(self, c):
+        assert isinstance(c, Concept)
+        super().__init__()
+        self.c = c
+
+    def __repr__(self):
+        return 'Boolean(%s)' % repr(self.c)
+
+    __str__ = __repr__
+
+
+class Numerical1Feature(Feature):
+    def __init__(self, c):
+        assert isinstance(c, Concept)
+        super().__init__()
+        self.c = c
+
+    def __repr__(self):
+        return 'Numerical1(%s)' % repr(self.c)
+
+    __str__ = __repr__
+
+
+class Numerical2Feature(Feature):
+    def __init__(self, c1, r, c2):
+        assert isinstance(c1, Concept)
+        assert isinstance(r, Role)
+        assert isinstance(c2, Concept)
+        super().__init__()
+        self.c1 = c1
+        self.r = r
+        self.c2 = c2
+
+    def __repr__(self):
+        return 'Numerical2(%s,%s,%s)' % repr(self.c1, self.r, self.c2)
+
+    __str__ = __repr__

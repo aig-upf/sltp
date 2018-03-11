@@ -25,7 +25,7 @@ from tarski.io import FstripsReader
 from tarski.syntax import builtins
 
 from syntax import Concept, Role, Atom, UniversalConcept, BasicConcept, NotConcept, ExistsConcept, ForallConcept, \
-    EqualConcept, BasicRole, InverseRole, StarRole, RestrictRole
+    EqualConcept, BasicRole, InverseRole, StarRole, RestrictRole, BooleanFeature, Numerical1Feature, Numerical2Feature
 from utils import check_all_equal, read_file
 
 signal(SIGPIPE, SIG_DFL)
@@ -80,52 +80,6 @@ def extend_concepts_and_roles(concepts, roles):
     new_concepts = derive_concepts(concepts, roles)
     new_roles = derive_roles(concepts, roles)
     return new_concepts, new_roles
-
-
-# features
-class Feature(object):
-    def __init__(self):
-        pass
-
-
-class BooleanFeature(Feature):
-    def __init__(self, c):
-        assert isinstance(c, Concept)
-        super().__init__()
-        self.c = c
-
-    def __repr__(self):
-        return 'Boolean(%s)' % repr(self.c)
-
-    __str__ = __repr__
-
-
-class Numerical1Feature(Feature):
-    def __init__(self, c):
-        assert isinstance(c, Concept)
-        super().__init__()
-        self.c = c
-
-    def __repr__(self):
-        return 'Numerical1(%s)' % repr(self.c)
-
-    __str__ = __repr__
-
-
-class Numerical2Feature(Feature):
-    def __init__(self, c1, r, c2):
-        assert isinstance(c1, Concept)
-        assert isinstance(r, Role)
-        assert isinstance(c2, Concept)
-        super().__init__()
-        self.c1 = c1
-        self.r = r
-        self.c2 = c2
-
-    def __repr__(self):
-        return 'Numerical2(%s,%s,%s)' % repr(self.c1, self.r, self.c2)
-
-    __str__ = __repr__
 
 
 def build_cache_for_state(state):
