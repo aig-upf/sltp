@@ -6,15 +6,16 @@ from utils import transitive_closure
 # abstract classes for concepts and roles
 class Concept(object):
     def __init__(self, sort, depth):
-        self.depth = depth
         self.sort = sort
+        self.depth = depth
 
     def extension(self, objects, cache, parameter_subst):
         assert False, 'Abstract method should be implemented in derived class'
 
 
 class Role(object):
-    def __init__(self, depth):
+    def __init__(self, sort, depth):
+        self.sort = sort
         self.depth = depth
 
     def extension(self, objects, cache, parameter_subst):
@@ -32,8 +33,8 @@ class Atom:
 
 
 class UniversalConcept(Concept):
-    def __init__(self):
-        Concept.__init__(self, 'universal', 0)
+    def __init__(self, universal_sort):
+        Concept.__init__(self, universal_sort, 0)
 
     def extension(self, objects, cache, parameter_subst):
         return [] if repr(self) not in cache else cache[repr(self)]
@@ -63,7 +64,7 @@ class ParametricConcept(Concept):
 class BasicConcept(Concept):
     def __init__(self, predicate):
         assert isinstance(predicate, tsk.syntax.Predicate)
-        Concept.__init__(self, predicate.sort, 0)
+        Concept.__init__(self, predicate.sort[0], 0)
         self.predicate = predicate
 
     @property
@@ -80,9 +81,9 @@ class BasicConcept(Concept):
 
 
 class NotConcept(Concept):
-    def __init__(self, c):
+    def __init__(self, c, universal_sort):
         assert isinstance(c, Concept)
-        Concept.__init__(self, 'not', 1 + c.depth)
+        Concept.__init__(self, universal_sort, 1 + c.depth)
         self.c = c
 
     def extension(self, objects, cache, parameter_subst):
@@ -128,7 +129,8 @@ class ExistsConcept(Concept):
     def __init__(self, r, c):
         assert isinstance(r, Role)
         assert isinstance(c, Concept)
-        Concept.__init__(self, 'exists', 1 + r.depth + c.depth)
+        # The sort of an exists-concept is that of the first element of the relation
+        Concept.__init__(self, r.sort[0], 1 + r.depth + c.depth)
         self.r = r
         self.c = c
 
@@ -152,7 +154,8 @@ class ForallConcept(Concept):
     def __init__(self, r, c):
         assert isinstance(r, Role)
         assert isinstance(c, Concept)
-        Concept.__init__(self, 'forall', 1 + r.depth + c.depth)
+        # The sort of a forall-concept is that of the first element of the relation # TODO Check this
+        Concept.__init__(self, r.sort[0], 1 + r.depth + c.depth)
         self.r = r
         self.c = c
 
@@ -173,10 +176,10 @@ class ForallConcept(Concept):
 
 
 class EqualConcept(Concept):
-    def __init__(self, r1, r2):
+    def __init__(self, r1, r2, sort):
         assert isinstance(r1, Role)
         assert isinstance(r2, Role)
-        Concept.__init__(self, 'equal', 1 + r1.depth + r2.depth)
+        Concept.__init__(self, sort, 1 + r1.depth + r2.depth)
         self.r1 = r1
         self.r2 = r2
 
@@ -197,9 +200,14 @@ class EqualConcept(Concept):
 
 
 class BasicRole(Role):
-    def __init__(self, name):
-        Role.__init__(self, 0)
-        self.name = name
+    def __init__(self, predicate):
+        assert isinstance(predicate, tsk.syntax.Predicate)
+        super().__init__(predicate.sort, 0)
+        self.predicate = predicate
+
+    @property
+    def name(self):
+        return self.predicate.symbol
 
     def extension(self, objects, cache, parameter_subst):
         return [] if self.name not in cache else cache[self.name]
@@ -213,7 +221,8 @@ class BasicRole(Role):
 class InverseRole(Role):
     def __init__(self, r):
         assert isinstance(r, Role)
-        Role.__init__(self, 1 + r.depth)
+        s1, s2 = r.sort
+        super().__init__([s2, s1], 1 + r.depth)
         self.r = r
 
     def extension(self, objects, cache, parameter_subst):
@@ -234,7 +243,7 @@ class InverseRole(Role):
 class StarRole(Role):
     def __init__(self, r):
         assert isinstance(r, Role)
-        Role.__init__(self, 1 + r.depth)
+        Role.__init__(self, r.sort, 1 + r.depth)
         self.r = r
 
     def extension(self, objects, cache, parameter_subst):
@@ -255,7 +264,7 @@ class CompositionRole(Role):
     def __init__(self, r1, r2):
         assert isinstance(r1, Role)
         assert isinstance(r2, Role)
-        Role.__init__(self, 1 + r1.depth + r2.depth)
+        Role.__init__(self, [r1.sort[0], r2.sort[1]], 1 + r1.depth + r2.depth)
         self.r1 = r1
         self.r2 = r2
 
@@ -281,7 +290,7 @@ class RestrictRole(Role):
     def __init__(self, r, c):
         assert isinstance(r, Role)
         assert isinstance(c, Concept)
-        Role.__init__(self, 1 + r.depth + c.depth)
+        Role.__init__(self, r.sort, 1 + r.depth + c.depth)
         self.r = r
         self.c = c
 
@@ -301,8 +310,6 @@ class RestrictRole(Role):
     __str__ = __repr__
 
 
-
-# features
 class Feature(object):
     def __init__(self):
         pass
