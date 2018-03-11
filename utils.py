@@ -72,3 +72,10 @@ def transitive_closure(elements):
         closure = closure_until_now
 
     return closure
+
+
+# read file line by line
+def read_file(filename):
+    with open(filename) as f:
+        for line in f:
+            yield line.rstrip('\n')
