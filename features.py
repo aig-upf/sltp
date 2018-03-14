@@ -14,6 +14,7 @@
 #  ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
 #
 #  Blai Bonet, bonet@ldc.usb.ve, bonetblai@gmail.com
+import resource
 import argparse
 import logging
 import sys
@@ -22,7 +23,6 @@ from signal import signal, SIGPIPE, SIG_DFL
 
 import os
 import tarski as tsk
-from sortedcontainers import SortedSet
 from tarski.io import FstripsReader
 from tarski.syntax import builtins
 
@@ -108,7 +108,6 @@ class TerminologicalFactory(object):
         self.termbox.atomic_roles = self.create_atomic_roles(self.termbox.primitive_roles)
 
         return self.termbox.atomic_concepts, self.termbox.atomic_roles
-
 
     # derive new concepts (1-step derivation) from given set of concepts and roles
     def create_atomic_concepts(self, concepts):
@@ -291,7 +290,7 @@ class InterpretationSet(object):
                 cache.setdefault(name, set()).add(universe.index(atom[1]))
             elif len(atom) == 3:
                 t = (universe.index(atom[1]), universe.index(atom[2]))
-                cache.setdefault(name, SortedSet()).add(t)
+                cache.setdefault(name, set()).add(t)
 
         cache[self.top] = universe.as_extension()
         cache[self.bot] = set()
@@ -334,6 +333,14 @@ class InterpretationSet(object):
 
     def process_roles(self, elems):
         return (c for c in elems if self.process_term(c, arity=2, name="Role"))
+
+
+def store_terms(concepts, roles, args):
+    os.makedirs('terms', exist_ok=True)
+    with open(os.path.join('terms', args.transitions_filename + '.concepts'), 'w') as f:
+        f.write("\n".join(map(str, concepts)))
+    with open(os.path.join('terms', args.transitions_filename + '.roles'), 'w') as f:
+        f.write("\n".join(map(str, roles)))
 
 
 def main(args):
@@ -385,17 +392,24 @@ def main(args):
 
         print("\t\tof which {} concept(s) and {} role(s) incorporated".format(c_j-c_i, r_j-r_i))
 
+    store_terms(concepts, roles, args)
     print('Final output: %d concept(s) and %d role(s)' % (len(concepts), len(roles)))
+    print('Max. memory usage (MB): {}'.format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024))
 
 
 def configure_logging(args):
     level = logging.DEBUG if args.debug else logging.INFO
-    transitions_filename = os.path.basename(args.transitions)
-    filename = os.path.join('logs', transitions_filename + '.log')
+    filename = os.path.basename(args.transitions)
+    args.transitions_filename = '.'.join(filename.split('.')[:-1])
+    filename = os.path.join('logs', args.transitions_filename + '.log')
     logging.basicConfig(filename=filename, filemode='w', level=level)
 
 
-if __name__ == "__main__":
-    args = parse_arguments(sys.argv[1:])
+def bootstrap(arguments):
+    args = parse_arguments(arguments)
     configure_logging(args)
-    main(args)
+    return args
+
+
+if __name__ == "__main__":
+    main(bootstrap(sys.argv[1:]))

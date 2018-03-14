@@ -8,9 +8,6 @@
 import itertools
 from bitarray import bitarray
 
-from sortedcontainers import SortedSet
-
-
 def create_extension_trace(universe, data, arity):
     return ExtensionTrace(universe, data, arity)
 
@@ -30,7 +27,6 @@ class ExtensionTrace(object):
     length `m`^2, where BM[m*i+j], for 0 <= i,j < m, iff the pair (i,j) is in the extension of the role.
     The extension trace of `r` is again the concatenation of the individual extensions into a bitmap that this time
     will have length m^2*n.
-
     """
     def __init__(self, universe, data, arity):
         """
@@ -109,7 +105,7 @@ def extension_to_bits1(extension, m):
 
 
 def extension_to_bits2(extension, m):
-    assert isinstance(extension, SortedSet)
+    assert isinstance(extension, set)
     return extension_to_bits1((m*x+y for x, y in extension), m*m)
 
 

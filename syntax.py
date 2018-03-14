@@ -1,7 +1,6 @@
 import tarski as tsk
 
 from utils import transitive_closure
-from sortedcontainers import SortedSet
 
 
 # abstract classes for concepts and roles
@@ -318,7 +317,7 @@ class BasicRole(Role):
         return self.predicate.symbol
 
     def extension(self, objects, cache, parameter_subst):
-        return SortedSet() if self.name not in cache else cache[self.name]
+        return set() if self.name not in cache else cache[self.name]
 
     def __repr__(self):
         return '%s' % self.name
@@ -346,7 +345,7 @@ class InverseRole(Role):
             return cache[self]
         else:
             ext_r = self.r.extension(objects, cache, parameter_subst)
-            cache[self] = result = SortedSet((y, x) for (x, y) in ext_r)
+            cache[self] = result = set((y, x) for (x, y) in ext_r)
             return result
 
     def __repr__(self):
@@ -373,7 +372,7 @@ class StarRole(Role):
         if self not in cache:
             ext = self.r.extension(objects, cache, parameter_subst)
             # cache[self] = compute_transitive_closure(ext)
-            cache[self] = result = SortedSet(transitive_closure(ext))
+            cache[self] = result = set(transitive_closure(ext))
 
         return cache[self]
 
@@ -406,7 +405,7 @@ class CompositionRole(Role):
         else:
             ext_r1 = self.r1.extension(objects, cache, parameter_subst)
             ext_r2 = self.r2.extension(objects, cache, parameter_subst)
-            cache[self] = result = SortedSet()
+            cache[self] = result = set()
             for a, b in ext_r1:
                 for x, y in ext_r2:
                     if b == x:
@@ -446,7 +445,7 @@ class RestrictRole(Role):
         else:
             ext_r = self.r.extension(objects, cache, parameter_subst)
             ext_c = self.c.extension(objects, cache, parameter_subst)
-            cache[self] = result = SortedSet((x, y) for (x, y) in ext_r if y in ext_c)
+            cache[self] = result = set((x, y) for (x, y) in ext_r if y in ext_c)
             return result
 
     def __repr__(self):
@@ -501,8 +500,8 @@ class Numerical2Feature(Feature):
 
 
 def most_restricted_type(language, t1, t2):
-    if language.is_subtype_of(t1, t2):
+    if language.is_subtype(t1, t2):
         return t1
-    elif language.is_subtype_of(t2, t1):
+    elif language.is_subtype(t2, t1):
         return t2
     return None
