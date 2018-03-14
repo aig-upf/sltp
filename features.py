@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import argparse
-import json
 #  Copyright (C) 2018-<date> Blai Bonet
 #
 #  Permission is hereby granted to distribute this software for
@@ -16,26 +14,32 @@ import json
 #  ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
 #
 #  Blai Bonet, bonet@ldc.usb.ve, bonetblai@gmail.com
+import argparse
+import logging
 import sys
-from itertools import combinations as iter_combinations
-from itertools import product as iter_product
+import itertools
 from signal import signal, SIGPIPE, SIG_DFL
 
+import tarski as tsk
+from sortedcontainers import SortedSet
 from tarski.io import FstripsReader
 from tarski.syntax import builtins
-import tarski as tsk
 
-
+from extensions import UniverseIndex, create_extension_trace
 from syntax import Concept, Role, Atom, UniversalConcept, BasicConcept, NotConcept, ExistsConcept, ForallConcept, \
-    EqualConcept, BasicRole, InverseRole, StarRole, RestrictRole, BooleanFeature, Numerical1Feature, Numerical2Feature
-from utils import check_all_equal, read_file
+    EqualConcept, BasicRole, InverseRole, StarRole, RestrictRole, BooleanFeature, Numerical1Feature, Numerical2Feature, \
+    AndConcept, most_restricted_type, EmptyConcept
+from transitions import read_transitions
 
 signal(SIGPIPE, SIG_DFL)
+
+logging.basicConfig(filename='logs/pruned.log', filemode='w', level=logging.DEBUG)
 
 
 def parse_arguments(args):
     parser = argparse.ArgumentParser(description="Learn generalized features and concepts")
-    parser.add_argument('-k', help='Number of iterations to derive concepts and roles', action='store', default='0')
+    parser.add_argument('-k', help='Number of iterations to derive concepts and roles', action='store', default=0,
+                        type=int)
     parser.add_argument('transitions', help='Name of file containing transitions (output from planner)')
     parser.add_argument('-d', '--domain', required=True, help='The PDDL domain filename')
     return parser.parse_args(args)
@@ -55,9 +59,6 @@ class TermBox(object):
     def all_primitives(self):
         return self.primitive_concepts + self.primitive_roles
 
-    def all_atoms(self):
-        return self.atomic_concepts + self.atomic_roles
-
     def print_primitives(self):
         print('%d input atoms (0-ary signature):' % len(self.primitive_atoms), [str(item) for item in self.primitive_atoms])
         print('%d input concepts (1-ary signature):' % len(self.primitive_concepts), [str(item) for item in self.primitive_concepts])
@@ -73,8 +74,8 @@ class TerminologicalFactory(object):
     def __init__(self, language: tsk.FirstOrderLanguage):
         self.language = language
         self.universe_sort = language.get_sort('object')
-        self.top = UniversalConcept(language.get_sort('object'))
-        self.bot = self.create_not_concept(self.top)
+        self.top = UniversalConcept(self.universe_sort)
+        self.bot = EmptyConcept(self.universe_sort)
         self.termbox = TermBox()
 
         self.map_signature = {}
@@ -98,54 +99,63 @@ class TerminologicalFactory(object):
                 print("Predicate {} with arity > 2 ignored".format(predicate))
 
         self.termbox.print_primitives()
+        return self.termbox.primitive_concepts, self.termbox.primitive_roles
 
     def create_atomic_terms(self):
         print('\nConstructing atomic concepts and roles...')
 
-        self.termbox.atomic_concepts = self.derive_atomic_concepts(self.termbox.primitive_concepts)
-        self.termbox.atomic_roles = self.derive_atomic_roles(self.termbox.primitive_roles)
+        self.termbox.atomic_concepts = self.create_atomic_concepts(self.termbox.primitive_concepts)
+        self.termbox.atomic_roles = self.create_atomic_roles(self.termbox.primitive_roles)
 
-        # g_primitive_concepts = self.derive_atomic_concepts(self.termbox.primitive_concepts)
-        # g_primitive_roles = self.derive_atomic_roles(self.termbox.primitive_roles)
+        return self.termbox.atomic_concepts, self.termbox.atomic_roles
+
 
     # derive new concepts (1-step derivation) from given set of concepts and roles
-    def derive_atomic_concepts(self, concepts):
-        new_concepts = list(concepts)
-        new_concepts.append(self.top)
-        new_concepts.append(self.bot)
-        new_concepts.extend(self.create_not_concept(c) for c in concepts)
+    def create_atomic_concepts(self, concepts):
+        new_concepts = [self.top, self.bot] + concepts + [self.create_not_concept(c) for c in concepts]
         # TODO Add ParametricConcepts and roles here
         return [term for term in new_concepts if term is not None]
 
-    def derive_atomic_roles(self, roles):
+    def create_atomic_roles(self, roles):
         new_roles = list(roles)
         new_roles.extend(InverseRole(r) for r in roles if not isinstance(r, InverseRole))
         new_roles.extend(StarRole(r) for r in roles if not isinstance(r, StarRole))
         new_roles.extend(StarRole(InverseRole(r)) for r in roles if not isinstance(r, InverseRole))
         return [term for term in new_roles if term is not None]
 
-    def derive_concepts(self, concepts, roles):
+    def derive_concepts(self, old_c, new_c, old_r, new_r):
         result = []
-        # result.extend([ NotConcept(c) for c in concepts if not isinstance(c, NotConcept) and c.depth > 0 ])
-        # result.extend([ NotConcept(c) for c in concepts if not isinstance(c, NotConcept) ])
-        # result.extend(map(lambda p: AndConcept(r, c), iter_combinations(concepts, 2)))
-        result.extend(self.create_exists_concept(r, c) for r, c in iter_product(roles, concepts))
-        result.extend(self.create_forall_concept(r, c) for r, c in iter_product(roles, concepts))
-        result.extend(self.create_equal_concept(r1, r2) for r1, r2 in iter_combinations(roles, 2))
+
+        #
+        for fun in (self.create_exists_concept, self.create_forall_concept):
+            result.extend(fun(r, c) for r, c in itertools.product(new_r, old_c))
+            result.extend(fun(r, c) for r, c in itertools.product(old_r, new_c))
+            result.extend(fun(r, c) for r, c in itertools.product(new_r, new_c))
+
+        #
+        for fun in (self.create_equal_concept, ):
+            result.extend(fun(r1, r2) for r1, r2 in itertools.product(old_r, new_r))
+            result.extend(fun(r1, r2) for r1, r2 in itertools.combinations(new_r, 2))
+
+        #
+        # for fun in (self.create_and_concept,):
+        #     result.extend(fun(c1, c2) for c1, c2 in itertools.product(new_c, old_c))
+        #     result.extend(fun(c1, c2) for c1, c2 in itertools.combinations(new_c, 2))
+
         return [term for term in result if term is not None]
 
-    def derive_roles(self, concepts, roles):
+    def derive_roles(self, old_c, new_c, old_r, new_r):
         result = []
         # result.extend([ InverseRole(r) for r in roles if not isinstance(r, InverseRole) ])
         # result.extend([ StarRole(r) for r in roles if not isinstance(r, StarRole) ])
-        # result.extend([ CompositionRole(r, c) for r, c in iter_product(roles, roles) if p[0] != p[1] ])
-        result.extend(self.create_restrict_role(r, c) for r, c in iter_product(roles, concepts))
-        return [term for term in result if term is not None]
+        # result.extend([ CompositionRole(r, c) for r, c in itertools.product(roles, roles) if p[0] != p[1] ])
 
-    def extend_concepts_and_roles(self, concepts, roles):
-        new_concepts = self.derive_concepts(concepts, roles)
-        new_roles = self.derive_roles(concepts, roles)
-        return new_concepts, new_roles
+        for fun in (self.create_restrict_role, ):
+            result.extend(fun(r, c) for r, c in itertools.product(new_r, old_c))
+            result.extend(fun(r, c) for r, c in itertools.product(old_r, new_c))
+            result.extend(fun(r, c) for r, c in itertools.product(new_r, new_c))
+
+        return [term for term in result if term is not None]
 
     def create_exists_concept(self, role: Role, concept: Concept):
         # exists(R.C) = { x | exists y R(x,y) and C(y) }
@@ -153,9 +163,13 @@ class TerminologicalFactory(object):
         result = ExistsConcept(role, concept)
         s1, s2 = role.sort
 
+        if concept == self.bot:
+            logging.debug('Concept "{}" is statically empty'.format(result))
+            return None
+
         # TODO ADD: If C is a sort-concept of the same sort than s2, then the concept will be equiv to exist(R.True)
         if not self.language.are_vertically_related(s2, concept.sort):
-            print('Concept "{}" pruned for type-inconsistency reasons'.format(result))
+            logging.debug('Concept "{}" pruned for type-inconsistency reasons'.format(result))
             return None
 
         return result
@@ -174,17 +188,36 @@ class TerminologicalFactory(object):
         s1, s2 = role.sort
 
         if isinstance(concept, UniversalConcept):
-            # print('Concept "{}" equivalent to simpler concept'.format(result))
+            # logging.debug('Concept "{}" equivalent to simpler concept'.format(result))
             return None
 
         if not self.language.are_vertically_related(s2, concept.sort):
-            print('Concept "{}" pruned for type-inconsistency reasons'.format(result))
+            logging.debug('Concept "{}" pruned for type-inconsistency reasons'.format(result))
+            return None
+
+        return result
+
+    def create_and_concept(self, c1: Concept, c2: Concept):
+        # C1 AND C2 = { x | C1(x) AND C2(x) }
+
+        result = AndConcept(c1, c2)
+
+        if c1 == c2:
+            return None  # No sense in C and C
+
+        if c1 in (self.top, self.bot) or c2 in (self.top, self.bot):
+            logging.debug('Concept "{}" pruned, no sense in AND\'ing with top or bot', result)
+            return None
+
+        if most_restricted_type(c1.sort.language, c1.sort, c2.sort) is None:
+            # i.e. c1 and c2 are disjoint types
+            logging.debug('Concept "{}" pruned for type-inconsistency reasons'.format(result))
             return None
 
         return result
 
     def create_equal_concept(self, r1: Role, r2: Role):
-
+        assert isinstance(r1, Role) and isinstance(r2, Role)
         # The sort of the resulting concept will be the most restricted sort between the left sorts of the two roles
         if self.language.is_subtype(r1.sort[0], r2.sort[0]):
             sort = r1.sort[0]
@@ -197,7 +230,7 @@ class TerminologicalFactory(object):
 
         if not self.language.are_vertically_related(r1.sort[0], r2.sort[0]) or \
                 not self.language.are_vertically_related(r1.sort[1], r2.sort[1]):
-            print('Concept "{}" pruned for type-inconsistency reasons'.format(result))
+            logging.debug('Concept "{}" pruned for type-inconsistency reasons'.format(result))
             return None
 
         return result
@@ -206,11 +239,11 @@ class TerminologicalFactory(object):
 
         result = RestrictRole(r, c)
         if not self.language.are_vertically_related(r.sort[1], c.sort):
-            print('Role "{}" pruned for type-inconsistency reasons'.format(result))
+            logging.debug('Role "{}" pruned for type-inconsistency reasons'.format(result))
             return None
 
         if isinstance(c, UniversalConcept) or c == self.bot:
-            print('Role "{}" pruned; no sense in restricting to top / bot concepts'.format(result))
+            logging.debug('Role "{}" pruned; no sense in restricting to top / bot concepts'.format(result))
             return None
 
         return result
@@ -219,136 +252,89 @@ class TerminologicalFactory(object):
 def derive_features(concepts, roles):
     new_features = [BooleanFeature(c) for c in concepts]
     new_features.extend(Numerical1Feature(c) for c in concepts)
-    new_features.extend(Numerical2Feature(c1, r, c2) for c1, r, c2 in iter_product(concepts, roles, concepts))
+    new_features.extend(Numerical2Feature(c1, r, c2) for c1, r, c2 in itertools.product(concepts, roles, concepts))
     return new_features
 
 
-# read transitions
-g_states_by_str = {}
-g_states_by_id = {}
-g_transitions = {}
-
-
-def normalize_atom_name(name):
-    return name.replace('()', '').rstrip(')').replace('(', ',').split(',')
-
-
-def read_transitions(transitions_filename):
-    raw_file = [line.replace(' ', '') for line in read_file(transitions_filename) if line[0:6] == '{"id":']
-    for raw_line in raw_file:
-        j = json.loads(raw_line)
-        j_atoms = [normalize_atom_name(atom) for atom in j['atoms']]
-        j_atoms_str = str(j_atoms)
-
-        # insert state into hash with (normalized) id
-        if j_atoms_str not in g_states_by_str:
-            j_id = int(j['id'])
-            g_states_by_str[j_atoms_str] = g_states_by_id[j_id] = (j_id, j_atoms)
-        else:
-            j_id = g_states_by_str[j_atoms_str][0]
-
-        # insert (normalized) transition into hash
-        if j['parent'] != j['id']:
-            j_pid = int(j['parent'])
-            jp = json.loads(raw_file[j_pid])
-            assert jp['id'] == j_pid
-            jp_atoms = [normalize_atom_name(atom) for atom in jp['atoms']]
-
-            jp_atoms_str = str(jp_atoms)
-
-            assert jp_atoms_str in g_states_by_str
-            jp_id = g_states_by_str[jp_atoms_str][0]
-            if jp_id not in g_transitions: g_transitions[jp_id] = []
-            g_transitions[jp_id].append(j_id)
-
-    # check soundness
-    for src in g_transitions:
-        assert src in g_states_by_id
-        for dst in g_transitions[src]:
-            assert dst in g_states_by_id
-
-    print('#lines-raw-file=%d, #state-by-str=%d, #states-by-id=%d, #transition-entries=%d, #transitions=%d' % (
-        len(raw_file), len(g_states_by_str), len(g_states_by_id), len(g_transitions),
-        sum([len(g_transitions[src]) for src in g_transitions])))
-
-
 class InterpretationSet(object):
-    def __init__(self, language):
+    def __init__(self, language, state_samples, top, bot):
         self.language = language
-        self.state_extensions = dict()  # Concept and role extensions indexed by state
-        self.top = UniversalConcept(language.get_sort('object'))
+        self.state_samples = state_samples
+        self.top = top
+        self.bot = bot
+        self.universe = self.compute_universe(state_samples)
+        self.state_extensions = self.initialize_state_extensions(state_samples)
+        self.all_traces = dict()  # a dictionary from extension trace to simplest concept / role achieving it
 
-    def update_state_extensions(self, elements):
-        """ Updates the given state extensions with the extensions in each state of all
-        given elements (concepts and roles)"""
-        for sid in g_states_by_id:
-            self.compute_state_extensions(sid, elements, self.state_extensions)
+    def generate_extension_trace(self, concept, arity):
+        assert isinstance(concept, (Concept, Role))
 
-    def compute_state_extensions(self, state, elements, state_extensions):
-        # Retrieve the state cache if previously built, otherwise create a new one
-        cache = state_extensions.get(state, None) or self.build_cache_for_state(g_states_by_id[state][1])
-        state_extensions[state] = cache
+        trace = []
+        for state in self.state_samples:
+            cache = self.state_extensions[state]
+            ext = concept.extension(cache[self.top], cache, {})
+            # assert isinstance(ext, tuple)
+            trace.append(ext)
 
-        for elem in elements:
-            assert isinstance(elem, (Concept, Role))
-            _ = elem.extension(cache[self.top], cache, {})
-            # if ext: print('Extension of CONCEPT %s: %s' % (str(c), _))
+        return create_extension_trace(self.universe, trace, arity)
 
-    def build_cache_for_state(self, state):
-        cache = {self.top: set(), 'atoms': []}
+    def build_cache_for_state(self, state, universe):
+        cache = dict()
+        cache['atoms'] = []  # Not sure if we'll need this
         for atom in state:
-            assert atom
+            assert len(atom) in (1, 2, 3)
             name = atom[0]
 
             if len(atom) == 1:
                 cache['atoms'].append(name)
-            else:
-                if name not in cache:
-                    cache[name] = []
-                if len(atom) == 2:
-                    cache[name].append(atom[1])
-                    cache[self.top].add(atom[1])
-                elif len(atom) == 3:
-                    cache[name].append((atom[1], atom[2]))
-                    cache[self.top].add(atom[1])
-                    cache[self.top].add(atom[2])
-                else:
-                    assert False, "Expecting at most two arguments, but got '(%s)'" % ' '.join(atom)
+            elif len(atom) == 2:
+                cache.setdefault(name, set()).add(universe.index(atom[1]))
+            elif len(atom) == 3:
+                t = (universe.index(atom[1]), universe.index(atom[2]))
+                cache.setdefault(name, SortedSet()).add(t)
+
+        cache[self.top] = universe.as_extension()
+        cache[self.bot] = set()
+        cache["_index_"] = universe
         return cache
 
-    def prune(self, existing, novel, name):
-        extensions = self.state_extensions
-        assert extensions
+    def compute_universe(self, states):
+        """ Iterate through all states and collect all possible PDDL objects """
+        universe = UniverseIndex()
 
-        all_universes = [cache[self.top] for cache in extensions.values()]
-        assert check_all_equal(all_universes), "We should expect the universe of interpretation in all states to be equal"
-        universe = all_universes[0]
+        for sid, (_, state) in states.items():
+            for atom in state:
+                assert len(atom) in (1, 2, 3)
+                [universe.add(obj) for obj in atom[1:]]
 
-        good = []
-        for element in novel:
-            all_elem_extensions = [element.extension(cache[self.top], cache, {})
-                                   for cache in extensions.values()]
+        universe.finish()  # No more objects possible
+        return universe
 
-            # if check_all_equal(all_elem_extensions):
-            #     print('Concept/role "{}" has constant extension over all samples'.format(element))
+    def initialize_state_extensions(self, states):
+        extensions = dict()  # Concept and role extensions indexed by state
+        for sid, (_, state) in states.items():
+            extensions[sid] = self.build_cache_for_state(state, self.universe)
+        return extensions
 
-            all_equal = check_all_equal(all_elem_extensions)
+    def process_term(self, c, arity, name):
+        if c is None:
+            return None
+        trace = self.generate_extension_trace(c, arity)
+        try:
+            old = self.all_traces[trace]
+            # Another concept with same trace exists, so we prune this one
+            logging.debug("{} '{}' has equal extension trace to concept '{}'".format(name, c, old))
+            return False
+        except KeyError:
+            self.all_traces[trace] = c
+            return True
 
-            if all_equal:
-                if repr(element) != "Not(<universe>)" and len(all_elem_extensions[1]) == 0:
-                    print('{} "{}" has empty extension over all samples'.format(name, element))
-                    continue
+    def process_concepts(self, elems):
+        return (c for c in elems if self.process_term(c, arity=1, name="Concept"))
 
-                if element != self.top and len(all_elem_extensions[1]) == len(universe):
-                    print('{} "{}" has universal extension over all samples'.format(name, element))
-                    continue
+    def process_roles(self, elems):
+        return (c for c in elems if self.process_term(c, arity=2, name="Role"))
 
-            good.append(element)
-
-        print("{} {}(s) pruned because of emptyness".format(len(novel) - len(good), name))
-
-        # l = list(itertools.product(existing, novel))
-        return good
 
 def main(args):
     reader = FstripsReader()
@@ -357,40 +343,49 @@ def main(args):
     language = problem.language
 
     print('\nLoading states and transitions...')
-    read_transitions(args.transitions)
+    state_samples = read_transitions(args.transitions)
 
     factory = TerminologicalFactory(language)
-    termbox = factory.termbox
+
+    interpretations = InterpretationSet(language, state_samples, factory.top, factory.bot)
+
+    concepts = []
+    roles = []
 
     # Create the "input" terms, i.e. primitive concepts and roles
     factory.create_primitive_terms_from_language()
 
     # construct primitive concepts and rules: these are input ones plus some other
-    factory.create_atomic_terms()
+    ac, ar = factory.create_atomic_terms()
 
-    interp = InterpretationSet(language)
-    interp.update_state_extensions(termbox.all_atoms())
-    termbox.atomic_concepts = interp.prune([], termbox.atomic_concepts, "concept")
-    termbox.atomic_roles = interp.prune([], termbox.atomic_roles, "role")
+    concepts.extend(interpretations.process_concepts(ac))
+    roles.extend(interpretations.process_roles(ar))
 
     # construct derived concepts and rules obtained with grammar
-    print('\nConstructing derived concepts and roles using %d iteration(s)...' % int(args.k))
-    derived_concepts = list(termbox.atomic_concepts)
-    derived_roles = list(termbox.atomic_roles)
-    for i in range(0, int(args.k)):
-        new_concepts, new_roles = factory.extend_concepts_and_roles(derived_concepts, derived_roles)
-        print('iteration %d: %d new concept(s) and %d new role(s)' % (1 + i, len(new_concepts), len(new_roles)))
+    c_i, c_j = 0, len(concepts)
+    r_i, r_j = 0, len(roles)
+    print('\nConstructing derived concepts and roles using {} iteration(s), starting from {} concepts and {} roles'.
+          format(args.k, c_j, r_j))
 
-        interp.update_state_extensions(new_concepts + new_roles)
-        new_concepts = interp.prune(derived_concepts, new_concepts, "concept")
-        new_roles = interp.prune(derived_roles, new_roles, "role")
+    for i in range(1, args.k+1):
 
-        derived_concepts.extend(new_concepts)
-        derived_roles.extend(new_roles)
+        old_c, new_c = concepts[0:c_i], concepts[c_i:c_j]
+        old_r, new_r = roles[0:r_i], roles[r_i:r_j]
 
-    print('final: %d concept(s) and %d role(s)' % (len(derived_concepts), len(derived_roles)))
-    # print('\n\nDerived concepts:\n' + '\n'.join("{} ({})".format(item, item.depth) for item in derived_concepts))
-    # print('\n\nDerived roles:\n' + '\n'.join("{} ({})".format(item, item.depth) for item in derived_roles))
+        derived_c = factory.derive_concepts(old_c, new_c, old_r, new_r)
+        derived_r = factory.derive_roles(old_c, new_c, old_r, new_r)
+
+        print("it. {}: {} concept(s) and {} role(s) generated".format(i, len(derived_c), len(derived_r)))
+
+        concepts.extend(interpretations.process_concepts(derived_c))
+        roles.extend(interpretations.process_roles(derived_r))
+
+        c_i, c_j = c_j, len(concepts)
+        r_i, r_j = r_j, len(roles)
+
+        print("\t\tof which {} concept(s) and {} role(s) incorporated".format(c_j-c_i, r_j-r_i))
+
+    print('Final output: %d concept(s) and %d role(s)' % (len(concepts), len(roles)))
 
 
 if __name__ == "__main__":
