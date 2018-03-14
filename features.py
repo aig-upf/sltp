@@ -20,6 +20,7 @@ import sys
 import itertools
 from signal import signal, SIGPIPE, SIG_DFL
 
+import os
 import tarski as tsk
 from sortedcontainers import SortedSet
 from tarski.io import FstripsReader
@@ -33,8 +34,6 @@ from transitions import read_transitions
 
 signal(SIGPIPE, SIG_DFL)
 
-logging.basicConfig(filename='logs/pruned.log', filemode='w', level=logging.DEBUG)
-
 
 def parse_arguments(args):
     parser = argparse.ArgumentParser(description="Learn generalized features and concepts")
@@ -42,6 +41,7 @@ def parse_arguments(args):
                         type=int)
     parser.add_argument('transitions', help='Name of file containing transitions (output from planner)')
     parser.add_argument('-d', '--domain', required=True, help='The PDDL domain filename')
+    parser.add_argument('--debug', default=False, help='Print additional debugging information')
     return parser.parse_args(args)
 
 
@@ -388,5 +388,14 @@ def main(args):
     print('Final output: %d concept(s) and %d role(s)' % (len(concepts), len(roles)))
 
 
+def configure_logging(args):
+    level = logging.DEBUG if args.debug else logging.INFO
+    transitions_filename = os.path.basename(args.transitions)
+    filename = os.path.join('logs', transitions_filename + '.log')
+    logging.basicConfig(filename=filename, filemode='w', level=level)
+
+
 if __name__ == "__main__":
-    main(parse_arguments(sys.argv[1:]))
+    args = parse_arguments(sys.argv[1:])
+    configure_logging(args)
+    main(args)
