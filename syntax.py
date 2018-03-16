@@ -242,7 +242,7 @@ class ForallConcept(Concept):
         if self in cache:
             return cache[self]
         else:
-            ext_r = self.c.extension(objects, cache, parameter_subst)
+            ext_r = self.r.extension(objects, cache, parameter_subst)
             ext_c = self.c.extension(objects, cache, parameter_subst)
             # cache[self] = result = set(x for x in objects if objects == [y for y in objects if (x, y) not in ext_r or y in ext_c])
             cache[self] = result = set()

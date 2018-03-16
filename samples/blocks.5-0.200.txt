@@ -1,0 +1,572 @@
+
+********************************************************************************
+WARNING! Fixing PYTHONHASHSEED to 1 to obtain more reliable results
+********************************************************************************
+
+Problem domain:               blocks
+Problem instance:             probBLOCKS-5-0
+Working directory:            /home/frances/projects/code/fs-monotonic/workspace/180314/blocks/probBLOCKS-5-0
+Using pre-compiled vanilla solver from '/home/frances/projects/code/fs-monotonic/planners/generic/solver.bin'
+Running solver:               /home/frances/projects/code/fs-monotonic/workspace/180314/blocks/probBLOCKS-5-0/solver.bin
+Command line arguments:       --driver bfs --options max_expansions=200
+
+Loading problem data
+[INFO][ 0.00167] Number of objects: 7
+[INFO][ 0.00168] Number of state variables: 41
+[INFO][ 0.00169] Number of problem atoms: 41
+[INFO][ 0.00169] Number of action schemata: 4
+[INFO][ 0.00170] Number of (perhaps partially) ground actions: 0
+[INFO][ 0.00170] Number of goal atoms: 4
+[INFO][ 0.00170] Number of state constraint atoms: 0
+[INFO][ 0.00179] Deriving control to search engine...
+[INFO][ 0.00312] Starting search. Results written to .
+
+
+==GENERATED NODES==
+{"id": 0, "parent": 0, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 1, "parent": 0, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 2, "parent": 0, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 3, "parent": 1, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 4, "parent": 1, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "on(d, c)", "ontable(a)", "clear(d)", "handempty()"]}
+{"id": 5, "parent": 2, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 6, "parent": 2, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 7, "parent": 2, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 8, "parent": 3, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 9, "parent": 3, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 10, "parent": 4, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 11, "parent": 5, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 12, "parent": 5, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 13, "parent": 5, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 14, "parent": 6, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 15, "parent": 6, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 16, "parent": 7, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 17, "parent": 7, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 18, "parent": 8, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 19, "parent": 8, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "on(d, c)", "ontable(a)", "clear(d)", "handempty()"]}
+{"id": 20, "parent": 9, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 21, "parent": 9, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 22, "parent": 9, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 23, "parent": 10, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 24, "parent": 10, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "on(d, c)", "ontable(a)", "clear(d)", "handempty()"]}
+{"id": 25, "parent": 11, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 26, "parent": 11, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 27, "parent": 11, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 28, "parent": 12, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 29, "parent": 12, "atoms": ["on(b, a)", "on(e, b)", "on(d, e)", "ontable(a)", "ontable(c)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 30, "parent": 12, "atoms": ["on(b, a)", "on(e, b)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 31, "parent": 13, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 32, "parent": 13, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 33, "parent": 13, "atoms": ["on(b, a)", "on(e, c)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 34, "parent": 13, "atoms": ["on(b, a)", "on(e, d)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 35, "parent": 14, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 36, "parent": 14, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "on(d, c)", "ontable(a)", "clear(d)", "handempty()"]}
+{"id": 37, "parent": 15, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 38, "parent": 15, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 39, "parent": 15, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 40, "parent": 16, "atoms": ["on(b, a)", "on(c, d)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 41, "parent": 16, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 42, "parent": 16, "atoms": ["on(b, a)", "on(e, c)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "handempty()"]}
+{"id": 43, "parent": 17, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 44, "parent": 17, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 45, "parent": 17, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 46, "parent": 18, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 47, "parent": 18, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 48, "parent": 19, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 49, "parent": 20, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 50, "parent": 20, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 51, "parent": 20, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 52, "parent": 21, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 53, "parent": 21, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 54, "parent": 22, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 55, "parent": 22, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 56, "parent": 23, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 57, "parent": 23, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 58, "parent": 24, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 59, "parent": 25, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 60, "parent": 25, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 61, "parent": 25, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 62, "parent": 26, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 63, "parent": 26, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 64, "parent": 27, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 65, "parent": 27, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 66, "parent": 28, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 67, "parent": 28, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 68, "parent": 28, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 69, "parent": 29, "atoms": ["on(b, a)", "on(e, b)", "on(d, e)", "ontable(a)", "clear(d)", "holding(c)"]}
+{"id": 70, "parent": 29, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 71, "parent": 30, "atoms": ["on(b, a)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(b)", "clear(d)", "holding(e)"]}
+{"id": 72, "parent": 30, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 73, "parent": 31, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 74, "parent": 31, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 75, "parent": 31, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "clear(b)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 76, "parent": 31, "atoms": ["ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(a)", "clear(c)", "clear(d)", "holding(b)"]}
+{"id": 77, "parent": 32, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 78, "parent": 32, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 79, "parent": 32, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 80, "parent": 33, "atoms": ["on(b, a)", "on(e, c)", "ontable(a)", "ontable(c)", "clear(b)", "clear(e)", "holding(d)"]}
+{"id": 81, "parent": 33, "atoms": ["on(e, c)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(a)", "clear(d)", "holding(b)"]}
+{"id": 82, "parent": 33, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 83, "parent": 34, "atoms": ["on(b, a)", "on(e, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "holding(c)"]}
+{"id": 84, "parent": 34, "atoms": ["on(e, d)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(a)", "clear(c)", "holding(b)"]}
+{"id": 85, "parent": 34, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 86, "parent": 35, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 87, "parent": 35, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 88, "parent": 36, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 89, "parent": 37, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 90, "parent": 37, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 91, "parent": 37, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 92, "parent": 38, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 93, "parent": 38, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 94, "parent": 39, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 95, "parent": 39, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 96, "parent": 40, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 97, "parent": 40, "atoms": ["on(c, d)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(e)", "clear(a)", "clear(c)", "holding(b)"]}
+{"id": 98, "parent": 40, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 99, "parent": 41, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 100, "parent": 41, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 101, "parent": 42, "atoms": ["on(e, c)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(a)", "holding(b)"]}
+{"id": 102, "parent": 42, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 103, "parent": 43, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 104, "parent": 43, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 105, "parent": 43, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 106, "parent": 44, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 107, "parent": 44, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 108, "parent": 45, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 109, "parent": 45, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 110, "parent": 46, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 111, "parent": 46, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "on(d, c)", "ontable(a)", "clear(d)", "handempty()"]}
+{"id": 112, "parent": 47, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 113, "parent": 47, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 114, "parent": 47, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 115, "parent": 48, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 116, "parent": 48, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "on(d, c)", "ontable(a)", "clear(d)", "handempty()"]}
+{"id": 117, "parent": 49, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 118, "parent": 49, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 119, "parent": 49, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 120, "parent": 50, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 121, "parent": 50, "atoms": ["on(b, a)", "on(e, b)", "on(d, e)", "ontable(a)", "ontable(c)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 122, "parent": 50, "atoms": ["on(b, a)", "on(e, b)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 123, "parent": 51, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 124, "parent": 51, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 125, "parent": 51, "atoms": ["on(b, a)", "on(e, c)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 126, "parent": 51, "atoms": ["on(b, a)", "on(e, d)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 127, "parent": 52, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 128, "parent": 52, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "on(d, c)", "ontable(a)", "clear(d)", "handempty()"]}
+{"id": 129, "parent": 53, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 130, "parent": 53, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 131, "parent": 53, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 132, "parent": 54, "atoms": ["on(b, a)", "on(c, d)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 133, "parent": 54, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 134, "parent": 54, "atoms": ["on(b, a)", "on(e, c)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "handempty()"]}
+{"id": 135, "parent": 55, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 136, "parent": 55, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 137, "parent": 55, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 138, "parent": 56, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 139, "parent": 56, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "on(d, c)", "ontable(a)", "clear(d)", "handempty()"]}
+{"id": 140, "parent": 57, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 141, "parent": 57, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 142, "parent": 57, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 143, "parent": 58, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 144, "parent": 58, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "on(d, c)", "ontable(a)", "clear(d)", "handempty()"]}
+{"id": 145, "parent": 59, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 146, "parent": 59, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 147, "parent": 59, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 148, "parent": 60, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 149, "parent": 60, "atoms": ["on(b, a)", "on(e, b)", "on(d, e)", "ontable(a)", "ontable(c)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 150, "parent": 60, "atoms": ["on(b, a)", "on(e, b)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 151, "parent": 61, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 152, "parent": 61, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 153, "parent": 61, "atoms": ["on(b, a)", "on(e, c)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 154, "parent": 61, "atoms": ["on(b, a)", "on(e, d)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 155, "parent": 62, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 156, "parent": 62, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "on(d, c)", "ontable(a)", "clear(d)", "handempty()"]}
+{"id": 157, "parent": 63, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 158, "parent": 63, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 159, "parent": 63, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 160, "parent": 64, "atoms": ["on(b, a)", "on(c, d)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 161, "parent": 64, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 162, "parent": 64, "atoms": ["on(b, a)", "on(e, c)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "handempty()"]}
+{"id": 163, "parent": 65, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 164, "parent": 65, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 165, "parent": 65, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 166, "parent": 66, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 167, "parent": 66, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 168, "parent": 66, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 169, "parent": 67, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 170, "parent": 67, "atoms": ["on(b, a)", "on(e, b)", "on(d, e)", "ontable(a)", "ontable(c)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 171, "parent": 67, "atoms": ["on(b, a)", "on(e, b)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 172, "parent": 68, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 173, "parent": 68, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 174, "parent": 68, "atoms": ["on(b, a)", "on(e, c)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 175, "parent": 68, "atoms": ["on(b, a)", "on(e, d)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 176, "parent": 69, "atoms": ["on(b, a)", "on(e, b)", "on(d, e)", "ontable(a)", "ontable(c)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 177, "parent": 69, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "on(d, e)", "ontable(a)", "clear(c)", "handempty()"]}
+{"id": 178, "parent": 70, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 179, "parent": 70, "atoms": ["on(b, a)", "on(e, b)", "on(d, e)", "ontable(a)", "ontable(c)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 180, "parent": 70, "atoms": ["on(b, a)", "on(e, b)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 181, "parent": 71, "atoms": ["on(b, a)", "on(d, c)", "ontable(e)", "ontable(a)", "ontable(c)", "clear(b)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 182, "parent": 71, "atoms": ["on(b, a)", "on(e, b)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 183, "parent": 71, "atoms": ["on(b, a)", "on(e, d)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(b)", "clear(e)", "handempty()"]}
+{"id": 184, "parent": 72, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 185, "parent": 72, "atoms": ["on(b, a)", "on(e, b)", "on(d, e)", "ontable(a)", "ontable(c)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 186, "parent": 72, "atoms": ["on(b, a)", "on(e, b)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 187, "parent": 73, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 188, "parent": 73, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 189, "parent": 73, "atoms": ["on(b, a)", "on(e, c)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 190, "parent": 73, "atoms": ["on(b, a)", "on(e, d)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 191, "parent": 74, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 192, "parent": 74, "atoms": ["on(b, a)", "on(c, b)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 193, "parent": 74, "atoms": ["on(b, a)", "on(c, e)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 194, "parent": 74, "atoms": ["on(b, a)", "on(c, d)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 195, "parent": 75, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 196, "parent": 75, "atoms": ["on(b, a)", "on(d, b)", "ontable(e)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 197, "parent": 75, "atoms": ["on(b, a)", "on(d, e)", "ontable(e)", "ontable(a)", "ontable(c)", "clear(b)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 198, "parent": 75, "atoms": ["on(b, a)", "on(d, c)", "ontable(e)", "ontable(a)", "ontable(c)", "clear(b)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 199, "parent": 76, "atoms": ["ontable(b)", "ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(a)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 200, "parent": 76, "atoms": ["on(b, e)", "ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(a)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 201, "parent": 76, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 202, "parent": 76, "atoms": ["on(b, c)", "ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(a)", "clear(d)", "handempty()"]}
+{"id": 203, "parent": 76, "atoms": ["on(b, d)", "ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(a)", "clear(c)", "handempty()"]}
+{"id": 204, "parent": 77, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 205, "parent": 77, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 206, "parent": 77, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 207, "parent": 78, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 208, "parent": 78, "atoms": ["on(b, a)", "on(e, b)", "on(d, e)", "ontable(a)", "ontable(c)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 209, "parent": 78, "atoms": ["on(b, a)", "on(e, b)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 210, "parent": 79, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 211, "parent": 79, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 212, "parent": 79, "atoms": ["on(b, a)", "on(e, c)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 213, "parent": 79, "atoms": ["on(b, a)", "on(e, d)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 214, "parent": 80, "atoms": ["on(b, a)", "on(e, c)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 215, "parent": 80, "atoms": ["on(b, a)", "on(e, c)", "on(d, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 216, "parent": 80, "atoms": ["on(b, a)", "on(e, c)", "on(d, e)", "ontable(a)", "ontable(c)", "clear(b)", "clear(d)", "handempty()"]}
+{"id": 217, "parent": 81, "atoms": ["on(e, c)", "ontable(b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(a)", "clear(d)", "handempty()"]}
+{"id": 218, "parent": 81, "atoms": ["on(b, e)", "on(e, c)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(a)", "clear(d)", "handempty()"]}
+{"id": 219, "parent": 81, "atoms": ["on(b, a)", "on(e, c)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 220, "parent": 81, "atoms": ["on(b, d)", "on(e, c)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(a)", "handempty()"]}
+{"id": 221, "parent": 82, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 222, "parent": 82, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 223, "parent": 82, "atoms": ["on(b, a)", "on(e, c)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 224, "parent": 82, "atoms": ["on(b, a)", "on(e, d)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 225, "parent": 83, "atoms": ["on(b, a)", "on(e, d)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 226, "parent": 83, "atoms": ["on(b, a)", "on(e, d)", "on(c, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 227, "parent": 83, "atoms": ["on(b, a)", "on(e, d)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "handempty()"]}
+{"id": 228, "parent": 84, "atoms": ["on(e, d)", "ontable(b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(a)", "clear(c)", "handempty()"]}
+{"id": 229, "parent": 84, "atoms": ["on(b, e)", "on(e, d)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(a)", "clear(c)", "handempty()"]}
+{"id": 230, "parent": 84, "atoms": ["on(b, a)", "on(e, d)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 231, "parent": 84, "atoms": ["on(b, c)", "on(e, d)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(a)", "handempty()"]}
+{"id": 232, "parent": 85, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 233, "parent": 85, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 234, "parent": 85, "atoms": ["on(b, a)", "on(e, c)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 235, "parent": 85, "atoms": ["on(b, a)", "on(e, d)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 236, "parent": 86, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 237, "parent": 86, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "on(d, c)", "ontable(a)", "clear(d)", "handempty()"]}
+{"id": 238, "parent": 87, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 239, "parent": 87, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 240, "parent": 87, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 241, "parent": 88, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 242, "parent": 88, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "on(d, c)", "ontable(a)", "clear(d)", "handempty()"]}
+{"id": 243, "parent": 89, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 244, "parent": 89, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 245, "parent": 89, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 246, "parent": 90, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 247, "parent": 90, "atoms": ["on(b, a)", "on(e, b)", "on(d, e)", "ontable(a)", "ontable(c)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 248, "parent": 90, "atoms": ["on(b, a)", "on(e, b)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 249, "parent": 91, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 250, "parent": 91, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 251, "parent": 91, "atoms": ["on(b, a)", "on(e, c)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 252, "parent": 91, "atoms": ["on(b, a)", "on(e, d)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 253, "parent": 92, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 254, "parent": 92, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "on(d, c)", "ontable(a)", "clear(d)", "handempty()"]}
+{"id": 255, "parent": 93, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 256, "parent": 93, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 257, "parent": 93, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 258, "parent": 94, "atoms": ["on(b, a)", "on(c, d)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 259, "parent": 94, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 260, "parent": 94, "atoms": ["on(b, a)", "on(e, c)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "handempty()"]}
+{"id": 261, "parent": 95, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 262, "parent": 95, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 263, "parent": 95, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 264, "parent": 96, "atoms": ["on(b, a)", "on(c, d)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 265, "parent": 96, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 266, "parent": 96, "atoms": ["on(b, a)", "on(e, c)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "handempty()"]}
+{"id": 267, "parent": 97, "atoms": ["on(c, d)", "ontable(b)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(a)", "clear(c)", "handempty()"]}
+{"id": 268, "parent": 97, "atoms": ["on(b, e)", "on(c, d)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(a)", "clear(c)", "handempty()"]}
+{"id": 269, "parent": 97, "atoms": ["on(b, a)", "on(c, d)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 270, "parent": 97, "atoms": ["on(b, c)", "on(c, d)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(a)", "handempty()"]}
+{"id": 271, "parent": 98, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 272, "parent": 98, "atoms": ["on(b, a)", "on(c, b)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 273, "parent": 98, "atoms": ["on(b, a)", "on(c, e)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 274, "parent": 98, "atoms": ["on(b, a)", "on(c, d)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 275, "parent": 99, "atoms": ["on(b, a)", "on(c, d)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 276, "parent": 99, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 277, "parent": 99, "atoms": ["on(b, a)", "on(e, c)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "handempty()"]}
+{"id": 278, "parent": 100, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 279, "parent": 100, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 280, "parent": 100, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 281, "parent": 101, "atoms": ["on(e, c)", "on(c, d)", "ontable(b)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(a)", "handempty()"]}
+{"id": 282, "parent": 101, "atoms": ["on(b, e)", "on(e, c)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(a)", "handempty()"]}
+{"id": 283, "parent": 101, "atoms": ["on(b, a)", "on(e, c)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "handempty()"]}
+{"id": 284, "parent": 102, "atoms": ["on(b, a)", "on(c, d)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 285, "parent": 102, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 286, "parent": 102, "atoms": ["on(b, a)", "on(e, c)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "handempty()"]}
+{"id": 287, "parent": 103, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 288, "parent": 103, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 289, "parent": 103, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 290, "parent": 104, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 291, "parent": 104, "atoms": ["on(b, a)", "on(e, b)", "on(d, e)", "ontable(a)", "ontable(c)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 292, "parent": 104, "atoms": ["on(b, a)", "on(e, b)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 293, "parent": 105, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 294, "parent": 105, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 295, "parent": 105, "atoms": ["on(b, a)", "on(e, c)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "handempty()"]}
+{"id": 296, "parent": 105, "atoms": ["on(b, a)", "on(e, d)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 297, "parent": 106, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 298, "parent": 106, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "on(d, c)", "ontable(a)", "clear(d)", "handempty()"]}
+{"id": 299, "parent": 107, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 300, "parent": 107, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 301, "parent": 107, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 302, "parent": 108, "atoms": ["on(b, a)", "on(c, d)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 303, "parent": 108, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 304, "parent": 108, "atoms": ["on(b, a)", "on(e, c)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "handempty()"]}
+{"id": 305, "parent": 109, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 306, "parent": 109, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "handempty()"]}
+{"id": 307, "parent": 109, "atoms": ["on(b, a)", "on(e, b)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(c)", "handempty()"]}
+{"id": 308, "parent": 110, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 309, "parent": 110, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 310, "parent": 111, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 311, "parent": 112, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 312, "parent": 112, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 313, "parent": 112, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 314, "parent": 113, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 315, "parent": 113, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 316, "parent": 114, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 317, "parent": 114, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 318, "parent": 115, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 319, "parent": 115, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 320, "parent": 116, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 321, "parent": 117, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 322, "parent": 117, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 323, "parent": 117, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 324, "parent": 118, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 325, "parent": 118, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 326, "parent": 119, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 327, "parent": 119, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 328, "parent": 120, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 329, "parent": 120, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 330, "parent": 120, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 331, "parent": 121, "atoms": ["on(b, a)", "on(e, b)", "on(d, e)", "ontable(a)", "clear(d)", "holding(c)"]}
+{"id": 332, "parent": 121, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 333, "parent": 122, "atoms": ["on(b, a)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(b)", "clear(d)", "holding(e)"]}
+{"id": 334, "parent": 122, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 335, "parent": 123, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 336, "parent": 123, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 337, "parent": 123, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "clear(b)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 338, "parent": 123, "atoms": ["ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(a)", "clear(c)", "clear(d)", "holding(b)"]}
+{"id": 339, "parent": 124, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 340, "parent": 124, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 341, "parent": 124, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 342, "parent": 125, "atoms": ["on(b, a)", "on(e, c)", "ontable(a)", "ontable(c)", "clear(b)", "clear(e)", "holding(d)"]}
+{"id": 343, "parent": 125, "atoms": ["on(e, c)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(a)", "clear(d)", "holding(b)"]}
+{"id": 344, "parent": 125, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 345, "parent": 126, "atoms": ["on(b, a)", "on(e, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "holding(c)"]}
+{"id": 346, "parent": 126, "atoms": ["on(e, d)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(a)", "clear(c)", "holding(b)"]}
+{"id": 347, "parent": 126, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 348, "parent": 127, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 349, "parent": 127, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 350, "parent": 128, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 351, "parent": 129, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 352, "parent": 129, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 353, "parent": 129, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 354, "parent": 130, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 355, "parent": 130, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 356, "parent": 131, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 357, "parent": 131, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 358, "parent": 132, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 359, "parent": 132, "atoms": ["on(c, d)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(e)", "clear(a)", "clear(c)", "holding(b)"]}
+{"id": 360, "parent": 132, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 361, "parent": 133, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 362, "parent": 133, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 363, "parent": 134, "atoms": ["on(e, c)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(a)", "holding(b)"]}
+{"id": 364, "parent": 134, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 365, "parent": 135, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 366, "parent": 135, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 367, "parent": 135, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 368, "parent": 136, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 369, "parent": 136, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 370, "parent": 137, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 371, "parent": 137, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 372, "parent": 138, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 373, "parent": 138, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 374, "parent": 139, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 375, "parent": 140, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 376, "parent": 140, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 377, "parent": 140, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 378, "parent": 141, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 379, "parent": 141, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 380, "parent": 142, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 381, "parent": 142, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 382, "parent": 143, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 383, "parent": 143, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 384, "parent": 144, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 385, "parent": 145, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 386, "parent": 145, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 387, "parent": 145, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 388, "parent": 146, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 389, "parent": 146, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 390, "parent": 147, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 391, "parent": 147, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 392, "parent": 148, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 393, "parent": 148, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 394, "parent": 148, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 395, "parent": 149, "atoms": ["on(b, a)", "on(e, b)", "on(d, e)", "ontable(a)", "clear(d)", "holding(c)"]}
+{"id": 396, "parent": 149, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 397, "parent": 150, "atoms": ["on(b, a)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(b)", "clear(d)", "holding(e)"]}
+{"id": 398, "parent": 150, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 399, "parent": 151, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 400, "parent": 151, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 401, "parent": 151, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "clear(b)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 402, "parent": 151, "atoms": ["ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(a)", "clear(c)", "clear(d)", "holding(b)"]}
+{"id": 403, "parent": 152, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 404, "parent": 152, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 405, "parent": 152, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 406, "parent": 153, "atoms": ["on(b, a)", "on(e, c)", "ontable(a)", "ontable(c)", "clear(b)", "clear(e)", "holding(d)"]}
+{"id": 407, "parent": 153, "atoms": ["on(e, c)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(a)", "clear(d)", "holding(b)"]}
+{"id": 408, "parent": 153, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 409, "parent": 154, "atoms": ["on(b, a)", "on(e, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "holding(c)"]}
+{"id": 410, "parent": 154, "atoms": ["on(e, d)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(a)", "clear(c)", "holding(b)"]}
+{"id": 411, "parent": 154, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 412, "parent": 155, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 413, "parent": 155, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 414, "parent": 156, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 415, "parent": 157, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 416, "parent": 157, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 417, "parent": 157, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 418, "parent": 158, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 419, "parent": 158, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 420, "parent": 159, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 421, "parent": 159, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 422, "parent": 160, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 423, "parent": 160, "atoms": ["on(c, d)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(e)", "clear(a)", "clear(c)", "holding(b)"]}
+{"id": 424, "parent": 160, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 425, "parent": 161, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 426, "parent": 161, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 427, "parent": 162, "atoms": ["on(e, c)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(e)", "clear(a)", "holding(b)"]}
+{"id": 428, "parent": 162, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 429, "parent": 163, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 430, "parent": 163, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 431, "parent": 163, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 432, "parent": 164, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 433, "parent": 164, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 434, "parent": 165, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 435, "parent": 165, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 436, "parent": 166, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 437, "parent": 166, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 438, "parent": 166, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 439, "parent": 167, "atoms": ["on(b, a)", "on(e, b)", "on(c, e)", "ontable(a)", "clear(c)", "holding(d)"]}
+{"id": 440, "parent": 167, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 441, "parent": 168, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 442, "parent": 168, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 443, "parent": 169, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 444, "parent": 169, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 445, "parent": 169, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 446, "parent": 170, "atoms": ["on(b, a)", "on(e, b)", "on(d, e)", "ontable(a)", "clear(d)", "holding(c)"]}
+{"id": 447, "parent": 170, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 448, "parent": 171, "atoms": ["on(b, a)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(b)", "clear(d)", "holding(e)"]}
+{"id": 449, "parent": 171, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 450, "parent": 172, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 451, "parent": 172, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 452, "parent": 172, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "clear(b)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 453, "parent": 172, "atoms": ["ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(a)", "clear(c)", "clear(d)", "holding(b)"]}
+{"id": 454, "parent": 173, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 455, "parent": 173, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 456, "parent": 173, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 457, "parent": 174, "atoms": ["on(b, a)", "on(e, c)", "ontable(a)", "ontable(c)", "clear(b)", "clear(e)", "holding(d)"]}
+{"id": 458, "parent": 174, "atoms": ["on(e, c)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(a)", "clear(d)", "holding(b)"]}
+{"id": 459, "parent": 174, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 460, "parent": 175, "atoms": ["on(b, a)", "on(e, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "holding(c)"]}
+{"id": 461, "parent": 175, "atoms": ["on(e, d)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(a)", "clear(c)", "holding(b)"]}
+{"id": 462, "parent": 175, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 463, "parent": 176, "atoms": ["on(b, a)", "on(e, b)", "on(d, e)", "ontable(a)", "clear(d)", "holding(c)"]}
+{"id": 464, "parent": 176, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 465, "parent": 177, "atoms": ["on(b, a)", "on(e, b)", "on(d, e)", "ontable(a)", "clear(d)", "holding(c)"]}
+{"id": 466, "parent": 178, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 467, "parent": 178, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 468, "parent": 178, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 469, "parent": 179, "atoms": ["on(b, a)", "on(e, b)", "on(d, e)", "ontable(a)", "clear(d)", "holding(c)"]}
+{"id": 470, "parent": 179, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 471, "parent": 180, "atoms": ["on(b, a)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(b)", "clear(d)", "holding(e)"]}
+{"id": 472, "parent": 180, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 473, "parent": 181, "atoms": ["on(b, a)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(b)", "clear(d)", "holding(e)"]}
+{"id": 474, "parent": 181, "atoms": ["on(d, c)", "ontable(e)", "ontable(a)", "ontable(c)", "clear(e)", "clear(a)", "clear(d)", "holding(b)"]}
+{"id": 475, "parent": 181, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "clear(b)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 476, "parent": 182, "atoms": ["on(b, a)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(b)", "clear(d)", "holding(e)"]}
+{"id": 477, "parent": 182, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 478, "parent": 183, "atoms": ["on(e, d)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(e)", "clear(a)", "holding(b)"]}
+{"id": 479, "parent": 183, "atoms": ["on(b, a)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(b)", "clear(d)", "holding(e)"]}
+{"id": 480, "parent": 184, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 481, "parent": 184, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 482, "parent": 184, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 483, "parent": 185, "atoms": ["on(b, a)", "on(e, b)", "on(d, e)", "ontable(a)", "clear(d)", "holding(c)"]}
+{"id": 484, "parent": 185, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 485, "parent": 186, "atoms": ["on(b, a)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(b)", "clear(d)", "holding(e)"]}
+{"id": 486, "parent": 186, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 487, "parent": 187, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 488, "parent": 187, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 489, "parent": 187, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "clear(b)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 490, "parent": 187, "atoms": ["ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(a)", "clear(c)", "clear(d)", "holding(b)"]}
+{"id": 491, "parent": 188, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(d)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 492, "parent": 188, "atoms": ["on(b, a)", "on(e, b)", "ontable(a)", "ontable(c)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 493, "parent": 188, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 494, "parent": 189, "atoms": ["on(b, a)", "on(e, c)", "ontable(a)", "ontable(c)", "clear(b)", "clear(e)", "holding(d)"]}
+{"id": 495, "parent": 189, "atoms": ["on(e, c)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(a)", "clear(d)", "holding(b)"]}
+{"id": 496, "parent": 189, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 497, "parent": 190, "atoms": ["on(b, a)", "on(e, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "holding(c)"]}
+{"id": 498, "parent": 190, "atoms": ["on(e, d)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(a)", "clear(c)", "holding(b)"]}
+{"id": 499, "parent": 190, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 500, "parent": 191, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 501, "parent": 191, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 502, "parent": 191, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "clear(b)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 503, "parent": 191, "atoms": ["ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(a)", "clear(c)", "clear(d)", "holding(b)"]}
+{"id": 504, "parent": 192, "atoms": ["on(b, a)", "on(c, b)", "ontable(a)", "ontable(d)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 505, "parent": 192, "atoms": ["on(b, a)", "on(c, b)", "ontable(e)", "ontable(a)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 506, "parent": 192, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 507, "parent": 193, "atoms": ["on(b, a)", "on(c, e)", "ontable(e)", "ontable(a)", "clear(b)", "clear(c)", "holding(d)"]}
+{"id": 508, "parent": 193, "atoms": ["on(c, e)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(a)", "clear(c)", "clear(d)", "holding(b)"]}
+{"id": 509, "parent": 193, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 510, "parent": 194, "atoms": ["on(b, a)", "on(c, d)", "ontable(a)", "ontable(d)", "clear(b)", "clear(c)", "holding(e)"]}
+{"id": 511, "parent": 194, "atoms": ["on(c, d)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(e)", "clear(a)", "clear(c)", "holding(b)"]}
+{"id": 512, "parent": 194, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 513, "parent": 195, "atoms": ["on(b, a)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 514, "parent": 195, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 515, "parent": 195, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "clear(b)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 516, "parent": 195, "atoms": ["ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(a)", "clear(c)", "clear(d)", "holding(b)"]}
+{"id": 517, "parent": 196, "atoms": ["on(b, a)", "on(d, b)", "ontable(a)", "ontable(c)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 518, "parent": 196, "atoms": ["on(b, a)", "on(d, b)", "ontable(e)", "ontable(a)", "clear(e)", "clear(d)", "holding(c)"]}
+{"id": 519, "parent": 196, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "clear(b)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 520, "parent": 197, "atoms": ["on(b, a)", "on(d, e)", "ontable(e)", "ontable(a)", "clear(b)", "clear(d)", "holding(c)"]}
+{"id": 521, "parent": 197, "atoms": ["on(d, e)", "ontable(e)", "ontable(a)", "ontable(c)", "clear(a)", "clear(c)", "clear(d)", "holding(b)"]}
+{"id": 522, "parent": 197, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "clear(b)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 523, "parent": 198, "atoms": ["on(b, a)", "on(d, c)", "ontable(a)", "ontable(c)", "clear(b)", "clear(d)", "holding(e)"]}
+{"id": 524, "parent": 198, "atoms": ["on(d, c)", "ontable(e)", "ontable(a)", "ontable(c)", "clear(e)", "clear(a)", "clear(d)", "holding(b)"]}
+{"id": 525, "parent": 198, "atoms": ["on(b, a)", "ontable(e)", "ontable(a)", "ontable(c)", "clear(b)", "clear(e)", "clear(c)", "holding(d)"]}
+{"id": 526, "parent": 199, "atoms": ["ontable(e)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(e)", "clear(a)", "clear(c)", "clear(d)", "holding(b)"]}
+{"id": 527, "parent": 199, "atoms": ["ontable(b)", "ontable(a)", "ontable(c)", "ontable(d)", "clear(b)", "clear(a)", "clear(c)", "clear(d)", "holding(e)"]}
+{"id": 528, "parent": 199, "atoms": ["ontable(b)", "ontable(e)", "ontable(c)", "ontable(d)", "clear(b)", "clear(e)", "clear(c)", "clear(d)", "holding(a)"]}
+{"id": 529, "parent": 199, "atoms": ["ontable(b)", "ontable(e)", "ontable(a)", "ontable(d)", "clear(b)", "clear(e)", "clear(a)", "clear(d)", "holding(c)"]}
+{"id": 530, "parent": 199, "atoms": ["ontable(b)", "ontable(e)", "ontable(a)", "ontable(c)", "clear(b)", "clear(e)", "clear(a)", "clear(c)", "holding(d)"]}
+[INFO][ 0.00889] Expansions: 200
+[INFO][ 0.00890] Generations: 531
+[INFO][ 0.00890] Evaluations: 0
+[INFO][ 0.00891] Total Planning Time: 0.008758 s.
+[INFO][ 0.00891] Actual Search Time: 0.005586 s.
+[INFO][ 0.00894] Peak mem. usage: 60216 kB.
+[INFO][ 0.00895] Search Result: No plan was found.
+[INFO][ 0.00904] Number of objects: 7
+[INFO][ 0.00905] Number of state variables: 41
+[INFO][ 0.00906] Number of problem atoms: 41
+[INFO][ 0.00906] Number of action schemata: 4
+[INFO][ 0.00906] Number of (perhaps partially) ground actions: 60
+[INFO][ 0.00907] Number of goal atoms: 4
+[INFO][ 0.00907] Number of state constraint atoms: 0
+Peak memory: 60216 KB
+No plan was found

@@ -23,13 +23,14 @@ from signal import signal, SIGPIPE, SIG_DFL
 
 import os
 import tarski as tsk
+import time
 from tarski.io import FstripsReader
 from tarski.syntax import builtins
 
 from extensions import UniverseIndex, create_extension_trace
 from syntax import Concept, Role, Atom, UniversalConcept, BasicConcept, NotConcept, ExistsConcept, ForallConcept, \
     EqualConcept, BasicRole, InverseRole, StarRole, RestrictRole, BooleanFeature, Numerical1Feature, Numerical2Feature, \
-    AndConcept, most_restricted_type, EmptyConcept
+    AndConcept, most_restricted_type, EmptyConcept, CompositionRole
 from transitions import read_transitions
 
 signal(SIGPIPE, SIG_DFL)
@@ -41,7 +42,7 @@ def parse_arguments(args):
                         type=int)
     parser.add_argument('transitions', help='Name of file containing transitions (output from planner)')
     parser.add_argument('-d', '--domain', required=True, help='The PDDL domain filename')
-    parser.add_argument('--debug', default=False, help='Print additional debugging information')
+    parser.add_argument('--debug', action='store_true', help='Print additional debugging information')
     return parser.parse_args(args)
 
 
@@ -102,8 +103,6 @@ class TerminologicalFactory(object):
         return self.termbox.primitive_concepts, self.termbox.primitive_roles
 
     def create_atomic_terms(self):
-        print('\nConstructing atomic concepts and roles...')
-
         self.termbox.atomic_concepts = self.create_atomic_concepts(self.termbox.primitive_concepts)
         self.termbox.atomic_roles = self.create_atomic_roles(self.termbox.primitive_roles)
 
@@ -137,9 +136,9 @@ class TerminologicalFactory(object):
             result.extend(fun(r1, r2) for r1, r2 in itertools.combinations(new_r, 2))
 
         #
-        # for fun in (self.create_and_concept,):
-        #     result.extend(fun(c1, c2) for c1, c2 in itertools.product(new_c, old_c))
-        #     result.extend(fun(c1, c2) for c1, c2 in itertools.combinations(new_c, 2))
+        for fun in (self.create_and_concept,):
+            result.extend(fun(c1, c2) for c1, c2 in itertools.product(new_c, old_c))
+            result.extend(fun(c1, c2) for c1, c2 in itertools.combinations(new_c, 2))
 
         return [term for term in result if term is not None]
 
@@ -147,7 +146,10 @@ class TerminologicalFactory(object):
         result = []
         # result.extend([ InverseRole(r) for r in roles if not isinstance(r, InverseRole) ])
         # result.extend([ StarRole(r) for r in roles if not isinstance(r, StarRole) ])
-        # result.extend([ CompositionRole(r, c) for r, c in itertools.product(roles, roles) if p[0] != p[1] ])
+
+        for fun in (self.create_composition_role, ):
+            result.extend(fun(r1, r2) for r1, r2 in itertools.product(old_r, new_r))
+            result.extend(fun(r1, r2) for r1, r2 in itertools.combinations(new_r, 2))
 
         for fun in (self.create_restrict_role, ):
             result.extend(fun(r, c) for r, c in itertools.product(new_r, old_c))
@@ -170,6 +172,9 @@ class TerminologicalFactory(object):
         if not self.language.are_vertically_related(s2, concept.sort):
             logging.debug('Concept "{}" pruned for type-inconsistency reasons'.format(result))
             return None
+
+        if isinstance(role, RestrictRole) and concept == self.top:
+            return None  # Is syntactically equivalent to a simpler exists concept
 
         return result
 
@@ -205,12 +210,12 @@ class TerminologicalFactory(object):
             return None  # No sense in C and C
 
         if c1 in (self.top, self.bot) or c2 in (self.top, self.bot):
-            logging.debug('Concept "{}" pruned, no sense in AND\'ing with top or bot', result)
+            logging.debug('Concept "%s" pruned, no sense in AND\'ing with top or bot', result)
             return None
 
         if most_restricted_type(c1.sort.language, c1.sort, c2.sort) is None:
             # i.e. c1 and c2 are disjoint types
-            logging.debug('Concept "{}" pruned for type-inconsistency reasons'.format(result))
+            logging.debug('Concept "%s" pruned for type-inconsistency reasons', result)
             return None
 
         return result
@@ -245,7 +250,42 @@ class TerminologicalFactory(object):
             logging.debug('Role "{}" pruned; no sense in restricting to top / bot concepts'.format(result))
             return None
 
+        if isinstance(r, RestrictRole):
+            logging.debug('Role "{}" pruned; no direct nesting of restrictions'.format(result))
+            return None
+
         return result
+
+    def create_composition_role(self, r1: Role, r2: Role):
+
+        if r1 == r2:
+            return None
+
+        # Compose only on primitives or their inversions
+        if (not isinstance(r1, (BasicRole, InverseRole)) or
+           not isinstance(r2, (BasicRole, InverseRole))):
+            return None
+
+        result = CompositionRole(r1, r2)
+        if not self.language.are_vertically_related(r1.sort[1], r2.sort[0]):
+            logging.debug('Role "{}" pruned for type-inconsistency reasons'.format(result))
+            return None
+
+        return result
+
+    def tests(self, language, interpretations):
+        on_r = BasicRole(language.get_predicate("on"))
+        ontable_c = BasicConcept(language.get_predicate("ontable"))
+        # r = StarRole(BasicRole(language.get_predicate("on")))
+        # c = self.create_forall_concept(r, BasicConcept(language.get_predicate("clear")))
+        # x = list(interpretations.process_concepts([c]))
+        # return x
+
+        # r = StarRole())
+        c1 = self.create_exists_concept(on_r, self.top)
+        c2 = self.create_not_concept(ontable_c)
+        x = list(interpretations.process_concepts([c2, c1]))
+        return x
 
 
 def derive_features(concepts, roles):
@@ -294,7 +334,8 @@ class InterpretationSet(object):
 
         cache[self.top] = universe.as_extension()
         cache[self.bot] = set()
-        cache["_index_"] = universe
+        # cache["_index_"] = universe
+        cache["_state_"] = state
         return cache
 
     def compute_universe(self, states):
@@ -337,9 +378,9 @@ class InterpretationSet(object):
 
 def store_terms(concepts, roles, args):
     os.makedirs('terms', exist_ok=True)
-    with open(os.path.join('terms', args.transitions_filename + '.concepts'), 'w') as f:
+    with open(os.path.join('terms', args.result_filename + '.concepts'), 'w') as f:
         f.write("\n".join(map(str, concepts)))
-    with open(os.path.join('terms', args.transitions_filename + '.roles'), 'w') as f:
+    with open(os.path.join('terms', args.result_filename + '.roles'), 'w') as f:
         f.write("\n".join(map(str, roles)))
 
 
@@ -371,8 +412,10 @@ def main(args):
     # construct derived concepts and rules obtained with grammar
     c_i, c_j = 0, len(concepts)
     r_i, r_j = 0, len(roles)
-    print('\nConstructing derived concepts and roles using {} iteration(s), starting from {} concepts and {} roles'.
+    print('\nDeriving concepts and roles using {} iteration(s), starting from {} atomic concepts and {} roles'.
           format(args.k, c_j, r_j))
+
+    factory.tests(language, interpretations)
 
     for i in range(1, args.k+1):
 
@@ -394,14 +437,14 @@ def main(args):
 
     store_terms(concepts, roles, args)
     print('Final output: %d concept(s) and %d role(s)' % (len(concepts), len(roles)))
-    print('Max. memory usage (MB): {}'.format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024))
+    print('Number of states in the sample: {}'.format(len(state_samples)))
 
 
 def configure_logging(args):
     level = logging.DEBUG if args.debug else logging.INFO
     filename = os.path.basename(args.transitions)
-    args.transitions_filename = '.'.join(filename.split('.')[:-1])
-    filename = os.path.join('logs', args.transitions_filename + '.log')
+    args.result_filename = '.'.join(filename.split('.')[:-1]) + ".{}it".format(args.k)
+    filename = os.path.join('logs', args.result_filename + '.log')
     logging.basicConfig(filename=filename, filemode='w', level=level)
 
 
@@ -412,4 +455,9 @@ def bootstrap(arguments):
 
 
 if __name__ == "__main__":
-    main(bootstrap(sys.argv[1:]))
+    _args = bootstrap(sys.argv[1:])
+    start = time.process_time()
+    main(_args)
+    print('CPU time: {:.2f}sec'.format(time.process_time()-start))
+    print('Max. memory usage: {:.2f}MB'.format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024))
+
