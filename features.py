@@ -62,6 +62,7 @@ class TerminologicalFactory(object):
         self.top = UniversalConcept(self.universe_sort)
         self.bot = EmptyConcept(self.universe_sort)
         self.termbox = TermBox()
+        self.processor = None  # Will be set later
 
         self.map_signature = {}
 
@@ -95,51 +96,46 @@ class TerminologicalFactory(object):
     def create_atomic_concepts(self, concepts):
         new_concepts = [self.top, self.bot] + concepts + [self.create_not_concept(c) for c in concepts]
         # TODO Add ParametricConcepts and roles here
-        return [term for term in new_concepts if term is not None]
+        return [term for term in new_concepts if self.processor.process_term(term)]
 
     def create_atomic_roles(self, roles):
         new_roles = list(roles)
         new_roles.extend(InverseRole(r) for r in roles if not isinstance(r, InverseRole))
         new_roles.extend(StarRole(r) for r in roles if not isinstance(r, StarRole))
         new_roles.extend(StarRole(InverseRole(r)) for r in roles if not isinstance(r, InverseRole))
-        return [term for term in new_roles if term is not None]
+        return [term for term in new_roles if self.processor.process_term(term)]
 
     def derive_concepts(self, old_c, new_c, old_r, new_r):
-        result = []
+        generators = []
 
-        #
-        for fun in (self.create_exists_concept, self.create_forall_concept):
-            result.extend(fun(r, c) for r, c in itertools.product(new_r, old_c))
-            result.extend(fun(r, c) for r, c in itertools.product(old_r, new_c))
-            result.extend(fun(r, c) for r, c in itertools.product(new_r, new_c))
+        # EXISTS R.C, FORALL R.C
+        for concepts, roles in ((new_r, old_c), (old_r, new_c), (new_r, new_c)):
+            for fun in (self.create_exists_concept, self.create_forall_concept):
+                generators.append((fun(r, c) for r, c in itertools.product(concepts, roles)))
 
-        #
-        for fun in (self.create_equal_concept, ):
-            result.extend(fun(r1, r2) for r1, r2 in itertools.product(old_r, new_r))
-            result.extend(fun(r1, r2) for r1, r2 in itertools.combinations(new_r, 2))
+        # R = R'
+        for pairings in (itertools.product(old_r, new_r), itertools.combinations(new_r, 2)):
+            generators.append((self.create_equal_concept(r1, r2) for r1, r2 in pairings))
 
-        #
-        for fun in (self.create_and_concept,):
-            result.extend(fun(c1, c2) for c1, c2 in itertools.product(new_c, old_c))
-            result.extend(fun(c1, c2) for c1, c2 in itertools.combinations(new_c, 2))
+        # C AND C'
+        for pairings in (itertools.product(new_c, old_c), itertools.combinations(new_c, 2)):
+            generators.append((self.create_and_concept(c1, c2) for c1, c2 in pairings))
 
-        return [term for term in result if term is not None]
+        return (t for t in itertools.chain(*generators) if self.processor.process_term(t))
 
     def derive_roles(self, old_c, new_c, old_r, new_r):
-        result = []
+        generators = []
+        cart_prod = itertools.product
         # result.extend([ InverseRole(r) for r in roles if not isinstance(r, InverseRole) ])
         # result.extend([ StarRole(r) for r in roles if not isinstance(r, StarRole) ])
 
-        for fun in (self.create_composition_role, ):
-            result.extend(fun(r1, r2) for r1, r2 in itertools.product(old_r, new_r))
-            result.extend(fun(r1, r2) for r1, r2 in itertools.combinations(new_r, 2))
+        for pairings in (cart_prod(old_r, new_r), itertools.combinations(new_r, 2)):
+            generators.append((self.create_composition_role(r1, r2) for r1, r2 in pairings))
 
-        for fun in (self.create_restrict_role, ):
-            result.extend(fun(r, c) for r, c in itertools.product(new_r, old_c))
-            result.extend(fun(r, c) for r, c in itertools.product(old_r, new_c))
-            result.extend(fun(r, c) for r, c in itertools.product(new_r, new_c))
+        for pairings in (cart_prod(new_r, old_c), cart_prod(old_r, new_c), cart_prod(new_r, new_c)):
+            generators.append((self.create_restrict_role(r, c) for r, c in pairings))
 
-        return [term for term in result if term is not None]
+        return (t for t in itertools.chain(*generators) if self.processor.process_term(t))
 
     def create_exists_concept(self, role: Role, concept: Concept):
         # exists(R.C) = { x | exists y R(x,y) and C(y) }
@@ -278,7 +274,7 @@ def derive_features(concepts, roles):
     return new_features
 
 
-class InterpretationSet(object):
+class SemanticProcessor(object):
     def __init__(self, language, states, top, bot):
         self.language = language
         self.states = states
@@ -289,18 +285,19 @@ class InterpretationSet(object):
         self.universe = self.compute_universe(states)
         self.cache = self.create_cache_for_samples()
 
+    # @profile
     def generate_extension_trace(self, term):
         assert isinstance(term, (Concept, Role))
 
         substitution = {}
         trace = bitarray()
+        state_extensions = []
         for sid in self.states:
             extension = term.extension(self.cache, sid, substitution)
-            self.cache.register_compressed_extension(term, sid, extension)
             trace += extension
+            state_extensions.append((sid, extension))
 
-        # return create_extension_trace(self.universe, trace, arity)
-        return trace
+        return trace, state_extensions
 
     def build_cache_for_state(self, state, universe):
         cache = dict()
@@ -359,8 +356,16 @@ class InterpretationSet(object):
         return cache
 
     def process_term(self, term):
-        trace = self.generate_extension_trace(term)
-        return self.cache.register_trace(term, trace)
+        if term is None:
+            return False
+        trace, extensions = self.generate_extension_trace(term)
+        if self.cache.register_trace(term, trace):  # The trace is new
+            for sid, ext in extensions:
+                self.cache.register_compressed_extension(term, sid, ext)
+            return True
+
+        # Otherwise the trace is equivalent to some other trace already seen, we signal so by returning False
+        return False
 
     def process_terms(self, elems):
         return [x for x in elems if self.process_term(x)]
@@ -374,6 +379,7 @@ def store_terms(concepts, roles, args):
         f.write("\n".join(map(str, roles)))
 
 
+# @profile
 def main(args):
     reader = FstripsReader()
     reader.parse_domain(args.domain)
@@ -381,19 +387,16 @@ def main(args):
     language = problem.language
 
     print('\nLoading states and transitions...')
-    state_samples = read_transitions(args.transitions)
+    states = read_transitions(args.transitions)
 
     factory = TerminologicalFactory(language)
+    factory.processor = SemanticProcessor(language, states, factory.top, factory.bot)
 
-    interpretations = InterpretationSet(language, state_samples, factory.top, factory.bot)
 
     # Construct the primitive terms from the input language, and then add the atoms
     concepts, roles = factory.create_primitives()
     concepts = factory.create_atomic_concepts(concepts)
     roles = factory.create_atomic_roles(roles)
-
-    concepts = interpretations.process_terms(concepts)
-    roles = interpretations.process_terms(roles)
 
     # factory.tests(language, interpretations)  # informal tests
 
@@ -403,31 +406,26 @@ def main(args):
     print('\nDeriving concepts and roles using {} iteration(s), starting from {} atomic concepts and {} roles'.
           format(args.k, c_j, r_j))
 
-
-
     for i in range(1, args.k+1):
-
+        # Update indexes
         old_c, new_c = concepts[0:c_i], concepts[c_i:c_j]
         old_r, new_r = roles[0:r_i], roles[r_i:r_j]
 
-        derived_c = factory.derive_concepts(old_c, new_c, old_r, new_r)
-        derived_r = factory.derive_roles(old_c, new_c, old_r, new_r)
+        print("Starting iteration #{}...".format(i), end='', flush=True)
 
-        print("it. {}: {} concept(s) and {} role(s) generated".format(i, len(derived_c), len(derived_r)))
-
-        concepts.extend(interpretations.process_terms(derived_c))
-        roles.extend(interpretations.process_terms(derived_r))
+        concepts.extend(factory.derive_concepts(old_c, new_c, old_r, new_r))
+        roles.extend(factory.derive_roles(old_c, new_c, old_r, new_r))
 
         c_i, c_j = c_j, len(concepts)
         r_i, r_j = r_j, len(roles)
 
-        print("\t\tof which {} concept(s) and {} role(s) incorporated".format(c_j-c_i, r_j-r_i))
+        print("\t{} new concept(s) and {} new role(s) incorporated".format(c_j-c_i, r_j-r_i))
 
     # profiling.print_snapshot()
 
     store_terms(concepts, roles, args)
     print('Final output: %d concept(s) and %d role(s)' % (len(concepts), len(roles)))
-    print('Number of states in the sample: {}'.format(len(state_samples)))
+    print('Number of states in the sample: {}'.format(len(states)))
 
 
 def configure_logging(args):

@@ -159,11 +159,14 @@ class ExtensionCache(object):
     def universe(self, state):
         return self.as_bitarray(self.top, state)
 
-    def contains(self, term, state):
-        return (term, state) in self.index
+    # def contains(self, term, state):
+    #     return (term, state) in self.index
 
     def as_bitarray(self, term, state):
         return self.index[(term, state)]
+        # if (term, state) in self.index:
+        #     return self.index[(term, state)]
+        # return term.extension(self, state, {})
 
     def as_set(self, term, state):  # TODO CACHE A CERTAIN AMOUNT OF ITEMS
         return self.uncompress(self.as_bitarray(term, state), term.ARITY)
@@ -180,11 +183,11 @@ class ExtensionCache(object):
         try:
             equivalent = self.all_traces[wrapped]
             logging.debug("Term '{}' semantically equivalent to the previously-generated '{}'".format(term, equivalent))
-            self.term_to_trace[term] = self.term_to_trace[equivalent]
+            # self.term_to_trace[term] = self.term_to_trace[equivalent]
             return False
         except KeyError:
             self.all_traces[wrapped] = term
-            self.term_to_trace[term] = wrapped
+            # self.term_to_trace[term] = wrapped
             return True
 
 
