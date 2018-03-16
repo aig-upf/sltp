@@ -24,15 +24,17 @@ from signal import signal, SIGPIPE, SIG_DFL
 import os
 import tarski as tsk
 import time
+
+from bitarray import bitarray
 from tarski.io import FstripsReader
 from tarski.syntax import builtins
 
-from extensions import UniverseIndex, create_extension_trace
+# import profiling
+from extensions import UniverseIndex, ExtensionCache
 from syntax import Concept, Role, Atom, UniversalConcept, BasicConcept, NotConcept, ExistsConcept, ForallConcept, \
     EqualConcept, BasicRole, InverseRole, StarRole, RestrictRole, BooleanFeature, Numerical1Feature, Numerical2Feature, \
     AndConcept, most_restricted_type, EmptyConcept, CompositionRole
 from transitions import read_transitions
-
 signal(SIGPIPE, SIG_DFL)
 
 
@@ -84,9 +86,9 @@ class TerminologicalFactory(object):
                 print("Predicate {} with arity > 2 ignored".format(predicate))
 
         atoms = self.termbox.primitive_atoms
-        print('{} input (nullary) atoms : {}'.format(len(atoms), map(str, atoms)))
-        print('{} input (unary) concepts: {}'.format(len(concepts), map(str, concepts)))
-        print('{} input (binary) roles  : {}'.format(len(roles), map(str, roles)))
+        print('{} input (nullary) atoms : {}'.format(len(atoms), list(map(str, atoms))))
+        print('{} input (unary) concepts: {}'.format(len(concepts), list(map(str, concepts))))
+        print('{} input (binary) roles  : {}'.format(len(roles), list(map(str, roles))))
         return concepts, roles
 
     # derive new concepts (1-step derivation) from given set of concepts and roles
@@ -277,46 +279,61 @@ def derive_features(concepts, roles):
 
 
 class InterpretationSet(object):
-    def __init__(self, language, state_samples, top, bot):
+    def __init__(self, language, states, top, bot):
         self.language = language
-        self.state_samples = state_samples
+        self.states = states
         self.top = top
         self.bot = bot
-        self.universe = self.compute_universe(state_samples)
-        self.state_extensions = self.initialize_state_extensions(state_samples)
-        self.all_traces = dict()  # a dictionary from extension trace to simplest concept / role achieving it
+        self.relevant_predicates = set(p for p in self.language.predicates
+                                       if not builtins.is_builtin_predicate(p) and p.arity in (1, 2))
+        self.universe = self.compute_universe(states)
+        self.cache = self.create_cache_for_samples()
 
-    def generate_extension_trace(self, concept, arity):
-        assert isinstance(concept, (Concept, Role))
+    def generate_extension_trace(self, term):
+        assert isinstance(term, (Concept, Role))
 
-        trace = []
-        for state in self.state_samples:
-            cache = self.state_extensions[state]
-            ext = concept.extension(cache[self.top], cache, {})
-            # assert isinstance(ext, tuple)
-            trace.append(ext)
+        substitution = {}
+        trace = bitarray()
+        for sid in self.states:
+            extension = term.extension(self.cache, sid, substitution)
+            self.cache.register_compressed_extension(term, sid, extension)
+            trace += extension
 
-        return create_extension_trace(self.universe, trace, arity)
+        # return create_extension_trace(self.universe, trace, arity)
+        return trace
 
     def build_cache_for_state(self, state, universe):
         cache = dict()
-        cache['atoms'] = []  # Not sure if we'll need this
+        cache['_atoms_'] = []  # Not sure if we'll need this
+        unprocessed = set(self.relevant_predicates)
+
         for atom in state:
             assert len(atom) in (1, 2, 3)
             name = atom[0]
 
             if len(atom) == 1:
-                cache['atoms'].append(name)
-            elif len(atom) == 2:
-                cache.setdefault(name, set()).add(universe.index(atom[1]))
-            elif len(atom) == 3:
-                t = (universe.index(atom[1]), universe.index(atom[2]))
-                cache.setdefault(name, set()).add(t)
+                cache['_atoms_'].append(name)
+            else:
+                predicate = self.language.get_predicate(name)
+                if predicate in unprocessed:
+                    unprocessed.remove(predicate)
+
+                if len(atom) == 2:
+                    cache.setdefault(BasicConcept(predicate), set()).add(universe.index(atom[1]))
+                else:
+                    t = (universe.index(atom[1]), universe.index(atom[2]))
+                    cache.setdefault(BasicRole(predicate), set()).add(t)
 
         cache[self.top] = universe.as_extension()
         cache[self.bot] = set()
         # cache["_index_"] = universe
         cache["_state_"] = state
+
+        # CWA: those predicates not appearing on the state trace are assumed to have empty denotation
+        for p in unprocessed:
+            term = BasicConcept(p) if p.arity == 1 else BasicRole(p)
+            cache[term] = set()
+
         return cache
 
     def compute_universe(self, states):
@@ -331,25 +348,22 @@ class InterpretationSet(object):
         universe.finish()  # No more objects possible
         return universe
 
-    def initialize_state_extensions(self, states):
-        extensions = dict()  # Concept and role extensions indexed by state
-        for sid, (_, state) in states.items():
-            extensions[sid] = self.build_cache_for_state(state, self.universe)
-        return extensions
+    def create_cache_for_samples(self):
+        cache = ExtensionCache(self.universe, self.top, self.bot)
+        for sid, (_, state) in self.states.items():
+            all_terms = self.build_cache_for_state(state, self.universe)
+            for term, extension in all_terms.items():
+                if isinstance(term, (Concept, Role)):
+                    cache.register_extension(term, sid, extension)
 
-    def process_term(self, c, arity, name):
-        trace = self.generate_extension_trace(c, arity)
-        try:
-            equivalent = self.all_traces[trace]
-            # Another concept with same trace exists, so we prune this one
-            logging.debug("{} '{}' is equivalent to the previously-generated '{}'".format(name, c, equivalent))
-            return False
-        except KeyError:
-            self.all_traces[trace] = c
-            return True
+        return cache
 
-    def process_terms(self, elems, arity, name):
-        return [x for x in elems if self.process_term(x, arity, name)]
+    def process_term(self, term):
+        trace = self.generate_extension_trace(term)
+        return self.cache.register_trace(term, trace)
+
+    def process_terms(self, elems):
+        return [x for x in elems if self.process_term(x)]
 
 
 def store_terms(concepts, roles, args):
@@ -378,8 +392,8 @@ def main(args):
     concepts = factory.create_atomic_concepts(concepts)
     roles = factory.create_atomic_roles(roles)
 
-    concepts = interpretations.process_terms(concepts, arity=1, name="Concept")
-    roles = interpretations.process_terms(roles, arity=2, name="Role")
+    concepts = interpretations.process_terms(concepts)
+    roles = interpretations.process_terms(roles)
 
     # factory.tests(language, interpretations)  # informal tests
 
@@ -388,6 +402,8 @@ def main(args):
     r_i, r_j = 0, len(roles)
     print('\nDeriving concepts and roles using {} iteration(s), starting from {} atomic concepts and {} roles'.
           format(args.k, c_j, r_j))
+
+
 
     for i in range(1, args.k+1):
 
@@ -399,13 +415,15 @@ def main(args):
 
         print("it. {}: {} concept(s) and {} role(s) generated".format(i, len(derived_c), len(derived_r)))
 
-        concepts.extend(interpretations.process_terms(derived_c, arity=1, name="Concept"))
-        roles.extend(interpretations.process_terms(derived_r, arity=2, name="Role"))
+        concepts.extend(interpretations.process_terms(derived_c))
+        roles.extend(interpretations.process_terms(derived_r))
 
         c_i, c_j = c_j, len(concepts)
         r_i, r_j = r_j, len(roles)
 
         print("\t\tof which {} concept(s) and {} role(s) incorporated".format(c_j-c_i, r_j-r_i))
+
+    # profiling.print_snapshot()
 
     store_terms(concepts, roles, args)
     print('Final output: %d concept(s) and %d role(s)' % (len(concepts), len(roles)))
@@ -429,6 +447,7 @@ def bootstrap(arguments):
 if __name__ == "__main__":
     _args = bootstrap(sys.argv[1:])
     start = time.process_time()
+    # profiling.start()
     main(_args)
     print('CPU time: {:.2f}sec'.format(time.process_time()-start))
     print('Max. memory usage: {:.2f}MB'.format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024))

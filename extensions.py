@@ -6,10 +6,13 @@
  hashable and comparable, so that we can use them in hash tables.
 """
 import itertools
+import logging
+
 from bitarray import bitarray
 
-def create_extension_trace(universe, data, arity):
-    return ExtensionTrace(universe, data, arity)
+
+_btrue = bitarray('1')
+_bfalse = bitarray('0')
 
 
 class ExtensionTrace(object):
@@ -28,18 +31,8 @@ class ExtensionTrace(object):
     The extension trace of `r` is again the concatenation of the individual extensions into a bitmap that this time
     will have length m^2*n.
     """
-    def __init__(self, universe, data, arity):
-        """
-        :param universe: The universe of discourse
-        :param data: A list with the ordered sequence of extensions, in non-compressed format
-        :param arity: The arity of the elements in the extensions of the trace: arity 1 for concepts, 2 for roles.
-        """
-        assert arity in (1, 2)
-        self.universe = universe
-        self.m = len(universe)  # i.e. object IDs are in range [0, self.m-1]
-        self.arity = arity
-        self.data = bitarray(trace_to_bits(data, self.m, self.arity))
-        # assert bits_to_trace(self.data, self.m) == data  # (expensive check)
+    def __init__(self, b_array):
+        self.data = b_array
         self.hash = hash(self.data.tobytes())  # We cache the hash for faster retrieval.
 
     def __hash__(self):
@@ -97,16 +90,37 @@ class UniverseIndex(object):
         return len(self._objects)
 
 
-def extension_to_bits1(extension, m):
+def compress_unary_extension(extension, m):
     bits = [False] * m
     for i in extension:
+        assert i < m
         bits[i] = True
-    return bits
+    return bitarray(bits)
 
 
-def extension_to_bits2(extension, m):
+def uncompress_unary_extension(extension, m):
+    assert isinstance(extension, bitarray)
+    return set(i for i in extension.itersearch(_btrue))
+
+
+def compress_binary_extension(extension, m):
     assert isinstance(extension, set)
-    return extension_to_bits1((m*x+y for x, y in extension), m*m)
+    return compress_unary_extension((m*x+y for x, y in extension), m*m)
+
+
+def uncompress_binary_extension(extension, m):
+    assert isinstance(extension, bitarray)
+    return set((i//m, i % m) for i in extension.itersearch(_btrue))
+
+
+def compress_extension(extension, m, arity):
+    assert arity in (1, 2)
+    return compress_unary_extension(extension, m) if arity == 1 else compress_binary_extension(extension, m)
+
+
+def uncompress_extension(extension, m, arity):
+    assert arity in (1, 2)
+    return uncompress_unary_extension(extension, m) if arity == 1 else uncompress_binary_extension(extension, m)
 
 
 def trace_to_bits(trace, m, arity):
@@ -114,7 +128,7 @@ def trace_to_bits(trace, m, arity):
         [[1110], [0101], ...] which will be later fed to the bitarray constructor
     """
     assert isinstance(trace, list)
-    mapper = extension_to_bits1 if arity == 1 else extension_to_bits2
+    mapper = compress_unary_extension if arity == 1 else compress_binary_extension
     return itertools.chain.from_iterable(mapper(ext, m) for ext in trace)
 
 
@@ -123,3 +137,57 @@ def trace_to_bits(trace, m, arity):
 #     chunked = (as_list[pos:pos + m] for pos in range(0, len(as_list), m))
 #     indexed = [set(i for i, x in enumerate(l) if x is True) for l in chunked]
 #     return indexed
+
+
+class ExtensionCache(object):
+    def __init__(self, universe: UniverseIndex, top, bot):
+        self._universe = universe
+        self.m = len(universe)
+        self.universe_set = universe.as_extension()
+        self.top = top
+        self.bot = bot
+        self.index = dict()
+        self.all_traces = dict()  # a dictionary from extension trace to simplest concept / role achieving it
+        self.term_to_trace = dict()
+
+    def register_extension(self, term, sid, extension):
+        self.index[(term, sid)] = compress_extension(extension, self.m, term.ARITY)
+
+    def register_compressed_extension(self, term, sid, extension):
+        self.index[(term, sid)] = extension
+
+    def universe(self, state):
+        return self.as_bitarray(self.top, state)
+
+    def contains(self, term, state):
+        return (term, state) in self.index
+
+    def as_bitarray(self, term, state):
+        return self.index[(term, state)]
+
+    def as_set(self, term, state):  # TODO CACHE A CERTAIN AMOUNT OF ITEMS
+        return self.uncompress(self.as_bitarray(term, state), term.ARITY)
+
+    def uncompress(self, data, arity):
+        return uncompress_extension(data, self.m, arity)
+
+    def compress(self, data, arity):
+        return compress_extension(data, self.m, arity)
+
+    def register_trace(self, term, trace):
+        """ Register the trace for the given term. Return true iff no equivalent trace was already registered """
+        wrapped = ExtensionTrace(trace)
+        try:
+            equivalent = self.all_traces[wrapped]
+            logging.debug("Term '{}' semantically equivalent to the previously-generated '{}'".format(term, equivalent))
+            self.term_to_trace[term] = self.term_to_trace[equivalent]
+            return False
+        except KeyError:
+            self.all_traces[wrapped] = term
+            self.term_to_trace[term] = wrapped
+            return True
+
+
+
+
+
