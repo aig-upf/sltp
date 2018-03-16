@@ -51,24 +51,6 @@ class TermBox(object):
 
     def __init__(self):
         self.primitive_atoms = []
-        self.primitive_concepts = []
-        self.primitive_roles = []
-
-        self.atomic_concepts = []
-        self.atomic_roles = []
-
-    def all_primitives(self):
-        return self.primitive_concepts + self.primitive_roles
-
-    def print_primitives(self):
-        print('%d input atoms (0-ary signature):' % len(self.primitive_atoms), [str(item) for item in self.primitive_atoms])
-        print('%d input concepts (1-ary signature):' % len(self.primitive_concepts), [str(item) for item in self.primitive_concepts])
-        print('%d input roles (2-ary signature):' % len(self.primitive_roles), [str(item) for item in self.primitive_roles])
-
-    def print_atoms(self):
-        print('%d primitive concept(s):' % len(self.atomic_concepts),
-              [(str(item), item.depth) for item in self.atomic_concepts])
-        print('%d primitive rule(s):' % len(self.atomic_roles), [(str(item), item.depth) for item in self.atomic_roles])
 
 
 class TerminologicalFactory(object):
@@ -81,8 +63,10 @@ class TerminologicalFactory(object):
 
         self.map_signature = {}
 
-    def create_primitive_terms_from_language(self):
+    def create_primitives(self):
         assert len(self.language.functions) == 0
+
+        concepts, roles = [], []
         for predicate in self.language.predicates:
             if builtins.is_builtin_predicate(predicate):
                 continue  # Skip "=" and other built-in symbols
@@ -93,20 +77,17 @@ class TerminologicalFactory(object):
             if predicate.arity == 0:
                 self.termbox.primitive_atoms.append(Atom(name))
             elif predicate.arity == 1:
-                self.termbox.primitive_concepts.append(BasicConcept(predicate))
+                concepts.append(BasicConcept(predicate))
             elif predicate.arity == 2:
-                self.termbox.primitive_roles.append(BasicRole(predicate))
+                roles.append(BasicRole(predicate))
             else:
                 print("Predicate {} with arity > 2 ignored".format(predicate))
 
-        self.termbox.print_primitives()
-        return self.termbox.primitive_concepts, self.termbox.primitive_roles
-
-    def create_atomic_terms(self):
-        self.termbox.atomic_concepts = self.create_atomic_concepts(self.termbox.primitive_concepts)
-        self.termbox.atomic_roles = self.create_atomic_roles(self.termbox.primitive_roles)
-
-        return self.termbox.atomic_concepts, self.termbox.atomic_roles
+        atoms = self.termbox.primitive_atoms
+        print('{} input (nullary) atoms : {}'.format(len(atoms), map(str, atoms)))
+        print('{} input (unary) concepts: {}'.format(len(concepts), map(str, concepts)))
+        print('{} input (binary) roles  : {}'.format(len(roles), map(str, roles)))
+        return concepts, roles
 
     # derive new concepts (1-step derivation) from given set of concepts and roles
     def create_atomic_concepts(self, concepts):
@@ -357,23 +338,18 @@ class InterpretationSet(object):
         return extensions
 
     def process_term(self, c, arity, name):
-        if c is None:
-            return None
         trace = self.generate_extension_trace(c, arity)
         try:
-            old = self.all_traces[trace]
+            equivalent = self.all_traces[trace]
             # Another concept with same trace exists, so we prune this one
-            logging.debug("{} '{}' has equal extension trace to concept '{}'".format(name, c, old))
+            logging.debug("{} '{}' is equivalent to the previously-generated '{}'".format(name, c, equivalent))
             return False
         except KeyError:
             self.all_traces[trace] = c
             return True
 
-    def process_concepts(self, elems):
-        return (c for c in elems if self.process_term(c, arity=1, name="Concept"))
-
-    def process_roles(self, elems):
-        return (c for c in elems if self.process_term(c, arity=2, name="Role"))
+    def process_terms(self, elems, arity, name):
+        return [x for x in elems if self.process_term(x, arity, name)]
 
 
 def store_terms(concepts, roles, args):
@@ -397,25 +373,21 @@ def main(args):
 
     interpretations = InterpretationSet(language, state_samples, factory.top, factory.bot)
 
-    concepts = []
-    roles = []
+    # Construct the primitive terms from the input language, and then add the atoms
+    concepts, roles = factory.create_primitives()
+    concepts = factory.create_atomic_concepts(concepts)
+    roles = factory.create_atomic_roles(roles)
 
-    # Create the "input" terms, i.e. primitive concepts and roles
-    factory.create_primitive_terms_from_language()
+    concepts = interpretations.process_terms(concepts, arity=1, name="Concept")
+    roles = interpretations.process_terms(roles, arity=2, name="Role")
 
-    # construct primitive concepts and rules: these are input ones plus some other
-    ac, ar = factory.create_atomic_terms()
-
-    concepts.extend(interpretations.process_concepts(ac))
-    roles.extend(interpretations.process_roles(ar))
+    # factory.tests(language, interpretations)  # informal tests
 
     # construct derived concepts and rules obtained with grammar
     c_i, c_j = 0, len(concepts)
     r_i, r_j = 0, len(roles)
     print('\nDeriving concepts and roles using {} iteration(s), starting from {} atomic concepts and {} roles'.
           format(args.k, c_j, r_j))
-
-    factory.tests(language, interpretations)
 
     for i in range(1, args.k+1):
 
@@ -427,8 +399,8 @@ def main(args):
 
         print("it. {}: {} concept(s) and {} role(s) generated".format(i, len(derived_c), len(derived_r)))
 
-        concepts.extend(interpretations.process_concepts(derived_c))
-        roles.extend(interpretations.process_roles(derived_r))
+        concepts.extend(interpretations.process_terms(derived_c, arity=1, name="Concept"))
+        roles.extend(interpretations.process_terms(derived_r, arity=2, name="Role"))
 
         c_i, c_j = c_j, len(concepts)
         r_i, r_j = r_j, len(roles)
