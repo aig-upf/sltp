@@ -14,6 +14,9 @@ class Concept(object):
     def extension(self, objects, cache, parameter_subst):
         raise NotImplementedError()
 
+    def flatten(self):
+        raise NotImplementedError()
+
 
 class Role(object):
     ARITY = 2
@@ -23,6 +26,9 @@ class Role(object):
         self.depth = depth
 
     def extension(self, cache, state, substitution):
+        raise NotImplementedError()
+
+    def flatten(self):
         raise NotImplementedError()
 
 
@@ -55,6 +61,9 @@ class UniversalConcept(Concept):
 
     __str__ = __repr__
 
+    def flatten(self):
+        return [self]
+
 
 class EmptyConcept(Concept):
     def __init__(self, universal_sort):
@@ -74,6 +83,9 @@ class EmptyConcept(Concept):
         return '<empty>'
 
     __str__ = __repr__
+
+    def flatten(self):
+        return [self]
 
 
 class ParametricConcept(Concept):
@@ -99,6 +111,9 @@ class ParametricConcept(Concept):
         return '?%s' % self.parameter
 
     __str__ = __repr__
+
+    def flatten(self):
+        return [self]
 
 
 class BasicConcept(Concept):
@@ -128,6 +143,9 @@ class BasicConcept(Concept):
 
     __str__ = __repr__
 
+    def flatten(self):
+        return [self]
+
 
 class NotConcept(Concept):
     def __init__(self, c, universal_sort):
@@ -152,6 +170,8 @@ class NotConcept(Concept):
 
     __str__ = __repr__
 
+    def flatten(self):
+        return [self] + self.c.flatten()
 
 class AndConcept(Concept):
     def __init__(self, c1, c2):
@@ -180,6 +200,9 @@ class AndConcept(Concept):
         return 'And(%s,%s)' % (repr(self.c1), repr(self.c2))
 
     __str__ = __repr__
+
+    def flatten(self):
+        return [self] + self.c1.flatten() + self.c2.flatten()
 
 
 class ExistsConcept(Concept):
@@ -211,6 +234,9 @@ class ExistsConcept(Concept):
         return 'Exists(%s,%s)' % (repr(self.r), repr(self.c))
 
     __str__ = __repr__
+
+    def flatten(self):
+        return [self] + self.r.flatten() + self.c.flatten()
 
 
 class ForallConcept(Concept):
@@ -247,6 +273,9 @@ class ForallConcept(Concept):
         return 'Forall(%s,%s)' % (repr(self.r), repr(self.c))
 
     __str__ = __repr__
+
+    def flatten(self):
+        return [self] + self.r.flatten() + self.c.flatten()
 
 
 class EqualConcept(Concept):
@@ -285,6 +314,9 @@ class EqualConcept(Concept):
 
     __str__ = __repr__
 
+    def flatten(self):
+        return [self] + self.r1.flatten() + self.r2.flatten()
+
 
 class BasicRole(Role):
     def __init__(self, predicate):
@@ -314,6 +346,9 @@ class BasicRole(Role):
 
     __str__ = __repr__
 
+    def flatten(self):
+        return [self]
+
 
 class InverseRole(Role):
     def __init__(self, r):
@@ -340,6 +375,9 @@ class InverseRole(Role):
 
     __str__ = __repr__
 
+    def flatten(self):
+        return [self] + self.r.flatten()
+
 
 class StarRole(Role):
     def __init__(self, r):
@@ -364,6 +402,9 @@ class StarRole(Role):
         return 'Star(%s)' % repr(self.r)
 
     __str__ = __repr__
+
+    def flatten(self):
+        return [self] + self.r.flatten()
 
 
 class CompositionRole(Role):
@@ -402,6 +443,9 @@ class CompositionRole(Role):
 
     __str__ = __repr__
 
+    def flatten(self):
+        return [self] + self.r1.flatten() + self.r2.flatten()
+
 
 class RestrictRole(Role):
     def __init__(self, r, c):
@@ -430,6 +474,9 @@ class RestrictRole(Role):
         return 'Restrict(%s,%s)' % (repr(self.r), repr(self.c))
 
     __str__ = __repr__
+
+    def flatten(self):
+        return [self] + self.r.flatten() + self.c.flatten()
 
 
 class Feature(object):

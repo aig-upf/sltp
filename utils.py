@@ -79,3 +79,7 @@ def read_file(filename):
     with open(filename) as f:
         for line in f:
             yield line.rstrip('\n')
+
+
+def filter_subnodes(elem, t):
+    return list(filter(lambda x: type(x) == t, elem.flatten()))

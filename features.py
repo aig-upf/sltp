@@ -35,6 +35,8 @@ from syntax import Concept, Role, Atom, UniversalConcept, BasicConcept, NotConce
     EqualConcept, BasicRole, InverseRole, StarRole, RestrictRole, BooleanFeature, Numerical1Feature, Numerical2Feature, \
     AndConcept, most_restricted_type, EmptyConcept, CompositionRole
 from transitions import read_transitions
+from utils import filter_subnodes
+
 signal(SIGPIPE, SIG_DFL)
 
 
@@ -123,17 +125,18 @@ class TerminologicalFactory(object):
 
         return (t for t in itertools.chain(*generators) if self.processor.process_term(t))
 
-    def derive_roles(self, old_c, new_c, old_r, new_r):
+    def derive_roles(self, old_c, new_c, old_r, new_r, derive_compositions=True):
         generators = []
         cart_prod = itertools.product
         # result.extend([ InverseRole(r) for r in roles if not isinstance(r, InverseRole) ])
         # result.extend([ StarRole(r) for r in roles if not isinstance(r, StarRole) ])
 
-        for pairings in (cart_prod(old_r, new_r), itertools.combinations(new_r, 2)):
-            generators.append((self.create_composition_role(r1, r2) for r1, r2 in pairings))
+        if derive_compositions:
+            for pairings in (cart_prod(old_r, new_r), cart_prod(new_r, new_r)):
+                generators.append((self.create_composition_role(r1, r2) for r1, r2 in pairings))
 
-        for pairings in (cart_prod(new_r, old_c), cart_prod(old_r, new_c), cart_prod(new_r, new_c)):
-            generators.append((self.create_restrict_role(r, c) for r, c in pairings))
+        # for pairings in (cart_prod(new_r, old_c), cart_prod(old_r, new_c), cart_prod(new_r, new_c)):
+        #     generators.append((self.create_restrict_role(r, c) for r, c in pairings))
 
         return (t for t in itertools.chain(*generators) if self.processor.process_term(t))
 
@@ -237,17 +240,20 @@ class TerminologicalFactory(object):
 
     def create_composition_role(self, r1: Role, r2: Role):
 
-        if r1 == r2:
-            return None
-
         # Compose only on primitives or their inversions
-        if (not isinstance(r1, (BasicRole, InverseRole)) or
-           not isinstance(r2, (BasicRole, InverseRole))):
-            return None
+        # if (not isinstance(r1, (BasicRole, InverseRole)) or
+        #    not isinstance(r2, (BasicRole, InverseRole))):
+        #     return None
 
         result = CompositionRole(r1, r2)
+
         if not self.language.are_vertically_related(r1.sort[1], r2.sort[0]):
             logging.debug('Role "{}" pruned for type-inconsistency reasons'.format(result))
+            return None
+
+        num_comp = len(filter_subnodes(result, CompositionRole))
+        if num_comp > 2:
+            logging.debug('Role "{}" pruned: number of compositions ({}) exceeds threshold'.format(result, num_comp))
             return None
 
         return result
@@ -333,7 +339,8 @@ class SemanticProcessor(object):
 
         return cache
 
-    def compute_universe(self, states):
+    @staticmethod
+    def compute_universe(states):
         """ Iterate through all states and collect all possible PDDL objects """
         universe = UniverseIndex()
 
@@ -392,7 +399,6 @@ def main(args):
     factory = TerminologicalFactory(language)
     factory.processor = SemanticProcessor(language, states, factory.top, factory.bot)
 
-
     # Construct the primitive terms from the input language, and then add the atoms
     concepts, roles = factory.create_primitives()
     concepts = factory.create_atomic_concepts(concepts)
@@ -413,8 +419,9 @@ def main(args):
 
         print("Starting iteration #{}...".format(i), end='', flush=True)
 
+        derive_compositions = i <= 1
         concepts.extend(factory.derive_concepts(old_c, new_c, old_r, new_r))
-        roles.extend(factory.derive_roles(old_c, new_c, old_r, new_r))
+        roles.extend(factory.derive_roles(old_c, new_c, old_r, new_r, derive_compositions=derive_compositions))
 
         c_i, c_j = c_j, len(concepts)
         r_i, r_j = r_j, len(roles)
