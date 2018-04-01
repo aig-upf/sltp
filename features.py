@@ -32,8 +32,8 @@ from tarski.syntax import builtins
 # import profiling
 from extensions import UniverseIndex, ExtensionCache
 from syntax import Concept, Role, Atom, UniversalConcept, BasicConcept, NotConcept, ExistsConcept, ForallConcept, \
-    EqualConcept, BasicRole, InverseRole, StarRole, RestrictRole, BooleanFeature, Numerical1Feature, Numerical2Feature, \
-    AndConcept, most_restricted_type, EmptyConcept, CompositionRole
+    EqualConcept, BasicRole, InverseRole, StarRole, RestrictRole, NonEmptyConceptFeature, ConceptCardinalityFeature, \
+    MinDistanceFeature, AndConcept, most_restricted_type, EmptyConcept, CompositionRole
 from transitions import read_transitions
 from utils import filter_subnodes
 
@@ -139,6 +139,21 @@ class TerminologicalFactory(object):
         #     generators.append((self.create_restrict_role(r, c) for r, c in pairings))
 
         return (t for t in itertools.chain(*generators) if self.processor.process_term(t))
+
+    def derive_features(self, concepts, rest, k):
+        new_features = [NonEmptyConceptFeature(c) for c in concepts]
+        new_features.extend(ConceptCardinalityFeature(c) for c in concepts)
+
+        def accept(*args):
+            return True
+
+        card1_concepts = self.processor.singleton_extension_concepts
+        new_features.extend(MinDistanceFeature(c1, r, c2) for c1, r, c2 in itertools.product(card1_concepts, rest, concepts) if c1.depth + r.depth + c2.depth <= k)
+        return new_features
+
+    def create_role_restrictions(self, concepts, roles):
+        role_restrictions = (self.create_restrict_role(r, c) for r, c in itertools.product(roles, concepts))
+        return (t for t in role_restrictions if self.processor.process_term(t))
 
     def create_exists_concept(self, role: Role, concept: Concept):
         # exists(R.C) = { x | exists y R(x,y) and C(y) }
@@ -273,13 +288,6 @@ class TerminologicalFactory(object):
         return x
 
 
-def derive_features(concepts, roles):
-    new_features = [BooleanFeature(c) for c in concepts]
-    new_features.extend(Numerical1Feature(c) for c in concepts)
-    new_features.extend(Numerical2Feature(c1, r, c2) for c1, r, c2 in itertools.product(concepts, roles, concepts))
-    return new_features
-
-
 class SemanticProcessor(object):
     def __init__(self, language, states, top, bot):
         self.language = language
@@ -290,6 +298,7 @@ class SemanticProcessor(object):
                                        if not builtins.is_builtin_predicate(p) and p.arity in (1, 2))
         self.universe = self.compute_universe(states)
         self.cache = self.create_cache_for_samples()
+        self.singleton_extension_concepts = []
 
     # @profile
     def generate_extension_trace(self, term):
@@ -366,13 +375,18 @@ class SemanticProcessor(object):
         if term is None:
             return False
         trace, extensions = self.generate_extension_trace(term)
-        if self.cache.register_trace(term, trace):  # The trace is new
-            for sid, ext in extensions:
-                self.cache.register_compressed_extension(term, sid, ext)
-            return True
+        if not self.cache.register_trace(term, trace):
+            # The trace is equivalent to some other trace already seen, we signal so by returning False
+            return False
 
-        # Otherwise the trace is equivalent to some other trace already seen, we signal so by returning False
-        return False
+        singleton_extension_over_all_states = True and term.ARITY == 1
+        for sid, ext in extensions:  # We register the compressed individual extensions
+            self.cache.register_compressed_extension(term, sid, ext)
+            singleton_extension_over_all_states = singleton_extension_over_all_states and ext.count(True) <= 1
+
+        if singleton_extension_over_all_states:
+            self.singleton_extension_concepts.append(term)
+        return True
 
     def process_terms(self, elems):
         return [x for x in elems if self.process_term(x)]
@@ -383,6 +397,12 @@ def store_terms(concepts, roles, args):
     with open(os.path.join('terms', args.result_filename + '.concepts'), 'w') as f:
         f.write("\n".join(map(str, concepts)))
     with open(os.path.join('terms', args.result_filename + '.roles'), 'w') as f:
+        f.write("\n".join(map(str, roles)))
+
+
+def store_role_restrictions(roles, args):
+    os.makedirs('terms', exist_ok=True)
+    with open(os.path.join('terms', args.result_filename + '.role-restrictions'), 'w') as f:
         f.write("\n".join(map(str, roles)))
 
 
@@ -433,6 +453,16 @@ def main(args):
     store_terms(concepts, roles, args)
     print('Final output: %d concept(s) and %d role(s)' % (len(concepts), len(roles)))
     print('Number of states in the sample: {}'.format(len(states)))
+    print('Number of concepts with singleton extensions over all states: {}'.format(
+        len(factory.processor.singleton_extension_concepts)))
+    print('Creating features from {} concepts and {} roles'.format(len(concepts), len(roles)))
+
+    rest = list(factory.create_role_restrictions(concepts, roles))
+    store_role_restrictions(rest, args)
+    k = 10
+    features = factory.derive_features(concepts, rest, k)
+
+    print('Final number of features: {}'.format(len(features)))
 
 
 def configure_logging(args):

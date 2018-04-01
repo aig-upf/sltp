@@ -102,8 +102,8 @@ class ParametricConcept(Concept):
                 self.parameter == other.parameter)
 
     def extension(self, cache, state, substitution):
-        assert self.parameter in parameter_subst, "Parameter '?%s' should appear in substitution: %s" % (
-            self.parameter, str(parameter_subst))
+        assert self.parameter in substitution, "Parameter '?%s' should appear in substitution: %s" % (
+            self.parameter, str(substitution))
         assert False, "Revise implementation details of following line!"
         return set(parameter_subst[self.parameter])
 
@@ -484,7 +484,7 @@ class Feature(object):
         pass
 
 
-class BooleanFeature(Feature):
+class NonEmptyConceptFeature(Feature):
     def __init__(self, c):
         assert isinstance(c, Concept)
         super().__init__()
@@ -496,7 +496,7 @@ class BooleanFeature(Feature):
     __str__ = __repr__
 
 
-class Numerical1Feature(Feature):
+class ConceptCardinalityFeature(Feature):
     def __init__(self, c):
         assert isinstance(c, Concept)
         super().__init__()
@@ -508,7 +508,7 @@ class Numerical1Feature(Feature):
     __str__ = __repr__
 
 
-class Numerical2Feature(Feature):
+class MinDistanceFeature(Feature):
     def __init__(self, c1, r, c2):
         assert isinstance(c1, Concept)
         assert isinstance(r, Role)
