@@ -90,10 +90,14 @@ class TerminologicalFactory(object):
         return [term for term in new_concepts if self.processor.process_term(term)]
 
     def create_atomic_roles(self, roles):
-        new_roles = list(roles)
-        new_roles.extend(InverseRole(r) for r in roles if not isinstance(r, InverseRole))
+        new_roles = [t for t in roles if self.processor.process_term(t)]
+
+        inverses = [InverseRole(r) for r in roles if not isinstance(r, InverseRole)]
+        inverses = [t for t in inverses if self.processor.process_term(t)]
+
+        new_roles.extend(inverses)
         new_roles.extend(StarRole(r) for r in roles if not isinstance(r, StarRole))
-        new_roles.extend(StarRole(InverseRole(r)) for r in roles if not isinstance(r, InverseRole))
+        new_roles.extend(StarRole(r) for r in inverses)
         return [term for term in new_roles if self.processor.process_term(term)]
 
     def derive_concepts(self, old_c, new_c, old_r, new_r):
