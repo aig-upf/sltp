@@ -149,6 +149,10 @@ class ExtensionCache(object):
         self.index = dict()
         self.all_traces = dict()  # a dictionary from extension trace to simplest concept / role achieving it
         self.term_to_trace = dict()
+        self.feature_values = dict()
+
+    def register_feature_value(self, feature, sid, value):
+        self.index[(feature, sid)] = value
 
     def register_extension(self, term, sid, extension):
         self.index[(term, sid)] = compress_extension(extension, self.m, term.ARITY)
@@ -161,6 +165,9 @@ class ExtensionCache(object):
 
     # def contains(self, term, state):
     #     return (term, state) in self.index
+
+    def feature_value(self, feature, sid):
+        return self.feature_values[(feature, sid)]
 
     def as_bitarray(self, term, state):
         return self.index[(term, state)]

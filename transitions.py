@@ -4,13 +4,9 @@ about expanded states.
 """
 
 import json
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 from utils import read_file
-
-# read transitions
-g_states_by_str = {}
-g_transitions = {}
 
 
 def normalize_atom_name(name):
@@ -19,45 +15,54 @@ def normalize_atom_name(name):
 
 def read_transitions(transitions_filename):
     states_by_id = {}
-    
+    states_by_str = {}
+    transitions = defaultdict(set)
+    transitions_inv = defaultdict(set)
+    seen = set()
+
+    def register_transition(state):
+        transitions[state['parent']].add(state['id'])
+        transitions_inv[state['id']].add(state['parent'])
+
+    def register_state(state):
+        data = (state['id'], state['normalized_atoms'])
+        states_by_str[state['atoms_string']] = data
+        states_by_id[state['id']] = data
+        seen.add(state['id'])
+
     raw_file = [line.replace(' ', '') for line in read_file(transitions_filename) if line[0:6] == '{"id":']
     for raw_line in raw_file:
         j = json.loads(raw_line)
-        j_atoms = [normalize_atom_name(atom) for atom in j['atoms']]
-        j_atoms_str = str(j_atoms)
+        j['normalized_atoms'] = [normalize_atom_name(atom) for atom in j['atoms']]
+        j['atoms_string'] = str(j['normalized_atoms'])
 
-        # insert state into hash with (normalized) id
-        if j_atoms_str not in g_states_by_str:
-            j_id = int(j['id'])
-            g_states_by_str[j_atoms_str] = states_by_id[j_id] = (j_id, j_atoms)
-        else:
-            j_id = g_states_by_str[j_atoms_str][0]
+        if j['id'] in seen:
+            # We hit a repeated state in the search, so we simply need to record the transition
+            register_transition(j)
+            continue
 
-        # insert (normalized) transition into hash
-        if j['parent'] != j['id']:
-            j_pid = int(j['parent'])
-            jp = json.loads(raw_file[j_pid])
-            assert jp['id'] == j_pid
-            jp_atoms = [normalize_atom_name(atom) for atom in jp['atoms']]
+        # The state must be _really_ new
+        assert j['atoms_string'] not in states_by_str
+        register_state(j)
 
-            jp_atoms_str = str(jp_atoms)
-
-            assert jp_atoms_str in g_states_by_str
-            jp_id = g_states_by_str[jp_atoms_str][0]
-            if jp_id not in g_transitions: g_transitions[jp_id] = []
-            g_transitions[jp_id].append(j_id)
+        if j['parent'] != j['id']:  # i.e. if not in the root node, which is not the target of any transition
+            assert json.loads(raw_file[j['parent']])['id'] == j['parent']  # Just a check
+            register_transition(j)
 
     # check soundness
-    for src in g_transitions:
+    for src in transitions:
         assert src in states_by_id
-        for dst in g_transitions[src]:
+        for dst in transitions[src]:
             assert dst in states_by_id
 
+    assert sum([len(targets) for targets in transitions.values()]) == \
+           sum([len(targets) for targets in transitions_inv.values()])
+
     print('#lines-raw-file=%d, #state-by-str=%d, #states-by-id=%d, #transition-entries=%d, #transitions=%d' % (
-        len(raw_file), len(g_states_by_str), len(states_by_id), len(g_transitions),
-        sum([len(g_transitions[src]) for src in g_transitions])))
+        len(raw_file), len(states_by_str), len(states_by_id), len(transitions),
+        sum([len(targets) for targets in transitions.values()])))
 
     ordered = OrderedDict()  # Make sure we return an ordered dictionary
     for id_ in sorted(states_by_id.keys()):
         ordered[id_] = states_by_id[id_]
-    return ordered
+    return ordered, transitions

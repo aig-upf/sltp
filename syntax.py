@@ -1,3 +1,5 @@
+from enum import Enum
+
 import tarski as tsk
 
 from utils import transitive_closure
@@ -11,7 +13,7 @@ class Concept(object):
         self.sort = sort
         self.depth = depth
 
-    def extension(self, objects, cache, parameter_subst):
+    def extension(self, cache, state, parameter_subst):
         raise NotImplementedError()
 
     def flatten(self):
@@ -172,6 +174,7 @@ class NotConcept(Concept):
 
     def flatten(self):
         return [self] + self.c.flatten()
+
 
 class AndConcept(Concept):
     def __init__(self, c1, c2):
@@ -479,9 +482,23 @@ class RestrictRole(Role):
         return [self] + self.r.flatten() + self.c.flatten()
 
 
+class FeatureValueChange(Enum):
+    ADD = 1
+    DEL = 2
+    INC = 3
+    DEC = 4
+    NIL = 5
+
+
 class Feature(object):
     def __init__(self):
         pass
+
+    def value(self, cache, state, substitution):
+        raise NotImplementedError()
+
+    def diff(self, x, y):
+        raise NotImplementedError()
 
 
 class NonEmptyConceptFeature(Feature):
@@ -490,10 +507,36 @@ class NonEmptyConceptFeature(Feature):
         super().__init__()
         self.c = c
 
+    def value(self, cache, state, substitution):
+        """ The feature is true iff the extension of the represented concept has non-empty cardinality"""
+        ext = self.c.extension(cache, state, substitution)
+        return ext.any()
+
+    def diff(self, x, y):
+        assert type(x) is bool
+        assert type(y) is bool
+        if x == y:
+            return FeatureValueChange.NIL
+        if x is True and y is False:
+            return FeatureValueChange.DEL
+        if x is False and y is True:
+            return FeatureValueChange.ADD
+
     def __repr__(self):
-        return 'Boolean(%s)' % repr(self.c)
+        return 'NonEmpty({})'.format(self.c)
 
     __str__ = __repr__
+
+
+def compute_int_feature_diff(x, y):
+    assert type(x) is int and x >= 0
+    assert type(y) is int and y >= 0
+    if x == y:
+        return FeatureValueChange.NIL
+    if x > y:
+        return FeatureValueChange.DEC
+    else:
+        return FeatureValueChange.INC
 
 
 class ConceptCardinalityFeature(Feature):
@@ -502,8 +545,16 @@ class ConceptCardinalityFeature(Feature):
         super().__init__()
         self.c = c
 
+    def value(self, cache, state, substitution):
+        """ The feature value _is_ the cardinality of the extension of the represented concept"""
+        ext = self.c.extension(cache, state, substitution)
+        return ext.count()
+
+    def diff(self, x, y):
+        return compute_int_feature_diff(x, y)
+
     def __repr__(self):
-        return 'Numerical1(%s)' % repr(self.c)
+        return 'card({})'.format(self.c)
 
     __str__ = __repr__
 
@@ -518,8 +569,21 @@ class MinDistanceFeature(Feature):
         self.r = r
         self.c2 = c2
 
+    def value(self, cache, state, substitution):
+        """ The value of the feature is the min distance between any object in the extension of c1 and any object
+            on the extension of c2, moving only along r-edges.
+        """
+        ext_c1 = self.c1.extension(cache, state, substitution)
+        ext_c2 = self.c1.extension(cache, state, substitution)
+        ext_r = self.r.extension(cache, state, substitution)
+        raise NotImplementedError()
+        return ext.any()
+
+    def diff(self, x, y):
+        return compute_int_feature_diff(x, y)
+
     def __repr__(self):
-        return 'Numerical2(%s,%s,%s)' % repr(self.c1, self.r, self.c2)
+        return 'MinDist({}, {}, {})'.format(self.c1, self.r, self.c2)
 
     __str__ = __repr__
 

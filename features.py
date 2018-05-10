@@ -15,7 +15,6 @@
 #
 #  Blai Bonet, bonet@ldc.usb.ve, bonetblai@gmail.com
 import resource
-import argparse
 import logging
 import sys
 import itertools
@@ -35,19 +34,9 @@ from syntax import Concept, Role, Atom, UniversalConcept, BasicConcept, NotConce
     EqualConcept, BasicRole, InverseRole, StarRole, RestrictRole, NonEmptyConceptFeature, ConceptCardinalityFeature, \
     MinDistanceFeature, AndConcept, most_restricted_type, EmptyConcept, CompositionRole
 from transitions import read_transitions
-from utils import filter_subnodes
+from utils import filter_subnodes, bootstrap
 
 signal(SIGPIPE, SIG_DFL)
-
-
-def parse_arguments(args):
-    parser = argparse.ArgumentParser(description="Learn generalized features and concepts")
-    parser.add_argument('-k', help='Number of iterations to derive concepts and roles', action='store', default=0,
-                        type=int)
-    parser.add_argument('transitions', help='Name of file containing transitions (output from planner)')
-    parser.add_argument('-d', '--domain', required=True, help='The PDDL domain filename')
-    parser.add_argument('--debug', action='store_true', help='Print additional debugging information')
-    return parser.parse_args(args)
 
 
 class TermBox(object):
@@ -148,7 +137,7 @@ class TerminologicalFactory(object):
             return True
 
         card1_concepts = self.processor.singleton_extension_concepts
-        new_features.extend(MinDistanceFeature(c1, r, c2) for c1, r, c2 in itertools.product(card1_concepts, rest, concepts) if c1.depth + r.depth + c2.depth <= k)
+        # new_features.extend(MinDistanceFeature(c1, r, c2) for c1, r, c2 in itertools.product(card1_concepts, rest, concepts) if c1.depth + r.depth + c2.depth <= k)
         return new_features
 
     def create_role_restrictions(self, concepts, roles):
@@ -414,7 +403,7 @@ def main(args):
     language = problem.language
 
     print('\nLoading states and transitions...')
-    states = read_transitions(args.transitions)
+    states, transitions = read_transitions(args.transitions)
 
     factory = TerminologicalFactory(language)
     factory.processor = SemanticProcessor(language, states, factory.top, factory.bot)
@@ -463,20 +452,7 @@ def main(args):
     features = factory.derive_features(concepts, rest, k)
 
     print('Final number of features: {}'.format(len(features)))
-
-
-def configure_logging(args):
-    level = logging.DEBUG if args.debug else logging.INFO
-    filename = os.path.basename(args.transitions)
-    args.result_filename = '.'.join(filename.split('.')[:-1]) + ".{}it".format(args.k)
-    filename = os.path.join('logs', args.result_filename + '.log')
-    logging.basicConfig(filename=filename, filemode='w', level=level)
-
-
-def bootstrap(arguments):
-    args = parse_arguments(arguments)
-    configure_logging(args)
-    return args
+    return features, states, transitions, factory.processor.cache
 
 
 if __name__ == "__main__":
