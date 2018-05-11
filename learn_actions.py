@@ -45,6 +45,7 @@ def compute_qualitative_changes(transitions, all_features, model, substitution):
                 x0 = model.compute_feature_value(f, s0, substitution)
                 x1 = model.compute_feature_value(f, s1, substitution)
                 qchanges[(s0, s1, f)] = f.diff(x0, x1)
+                # print("Denotation of feature \"{}\" along transition ({},{}) is: {}".format(f, s0, s1, qchanges[(s0, s1, f)]))
 
     return qchanges
 
@@ -116,7 +117,7 @@ class ModelTranslator(object):
         for (s0, s1, t0, t1), d2_var in self.d2_variables.items():
             d2_distinguishing_features = []  # all features that d2-distinguish the current transition
             for f in self.features:
-                if qchanges[(s0, s1, f)] != qchanges[(s0, s1, f)]:
+                if qchanges[(s0, s1, f)] != qchanges[(t0, t1, f)]:
                     d2_distinguishing_features.append(f)
 
             # D2(s0,s1,t0,t2) iff OR_f selected(f), where f ranges over features that d2-distinguish the transition
