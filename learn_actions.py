@@ -73,12 +73,12 @@ class Model(object):
 
 class ModelTranslator(object):
     def __init__(self, features, states, transitions, cache):
-        self.features = features
         self.states = states
         self.transitions = transitions
-        self.cache = cache
-        self.model = Model(cache)
         self.state_ids = sorted(list(self.states.keys()))
+        self.substitution = {}
+
+        self.model, self.features = self.compute_feature_extensions(features, cache)
         self.writer = CNFWriter()
 
         self.selected_variables = None
@@ -108,10 +108,8 @@ class ModelTranslator(object):
                 self.d2_variables[idx] = self.writer.variable(varname)
 
     def run(self):
-        # TODO REMOVE UNIVERSE AND EMPTY FEATURES
-
-        substitution = {}
-        qchanges = compute_qualitative_changes(self.transitions, self.features, self.model, substitution)
+        print("Generating MAXSAT model from {} features".format(len(self.features)))
+        qchanges = compute_qualitative_changes(self.transitions, self.features, self.model, self.substitution)
 
         self.create_variables()
 
@@ -125,7 +123,6 @@ class ModelTranslator(object):
             d2_lit = Literal(d2_var)
             forward_clause_literals = [-d2_lit]
             for f in d2_distinguishing_features:
-                # big_or = big_or | selected_variables[f]
                 forward_clause_literals.append(Literal(self.selected_variables[f]))
                 self.writer.clause([d2_lit, -Literal(self.selected_variables[f])])
 
@@ -137,8 +134,8 @@ class ModelTranslator(object):
             d1_distinguishing_features = []
 
             for f in self.features:
-                x1 = self.model.compute_feature_value(f, s1, substitution)
-                x2 = self.model.compute_feature_value(f, s2, substitution)
+                x1 = self.model.compute_feature_value(f, s1, self.substitution)
+                x2 = self.model.compute_feature_value(f, s2, self.substitution)
                 if x1 != x2:  # f distinguishes s1 and s2
                     d1_distinguishing_features.append(f)
 
@@ -148,7 +145,6 @@ class ModelTranslator(object):
             forward_clause_literals = [-d1_lit]
 
             for f in d1_distinguishing_features:
-                # big_or = big_or | selected_variables[f]
                 forward_clause_literals.append(Literal(self.selected_variables[f]))
                 self.writer.clause([d1_lit, -Literal(self.selected_variables[f])])
 
@@ -162,6 +158,20 @@ class ModelTranslator(object):
                 self.writer.clause([-Literal(feat_var)], weight=1)
 
         self.writer.save()
+
+    def compute_feature_extensions(self, features, cache):
+        """ Cache all feature denotations and prune those which have constant denotation at the same time """
+        model = Model(cache)
+        pruned = []
+        for f in features:
+            all_values = [model.compute_feature_value(f, s, self.substitution) for s in self.state_ids]
+            if all_values.count(all_values[0]) != len(all_values):
+                pruned.append(f)
+            else:
+                print("Feature \"{}\" has constant denotation ({}) over all states and will be ignored"
+                      .format(f, all_values[0]))
+
+        return model, pruned
 
 
 class Variable(object):
@@ -208,7 +218,7 @@ class Clause(object):
         self.weight = weight
 
     def __str__(self):
-        return "{{{}}}".format(','.join(str(l) for l in self.literals))
+        return "{{{}}} [{}]".format(','.join(str(l) for l in self.literals), self.weight)
 
     def cnf_line(self, top, variable_index):
         # w <literals> 0
