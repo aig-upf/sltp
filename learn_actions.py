@@ -23,7 +23,7 @@ from time import strftime, gmtime
 
 from extensions import ExtensionCache
 from utils import bootstrap
-import features
+import features as fgenerator
 
 signal(SIGPIPE, SIG_DFL)
 
@@ -49,99 +49,12 @@ def compute_qualitative_changes(transitions, all_features, model, substitution):
     return qchanges
 
 
-def create_variables(all_features, transitions, state_ids, writer):
-    selected_variables = {feat: writer.variable("selected({})".format(feat)) for feat in all_features}
-
-    d1_variables = {(s1, s2): writer.variable("D1[{}, {}]".format(s1, s2)) for s1, s2 in
-                    itertools.combinations(state_ids, 2)}
-
-    d2_variables = dict()
-
-    for s, t in itertools.combinations(transitions, 2):
-        for s_prime, t_prime in itertools.product(transitions[s], transitions[t]):
-            idx = compute_d2_index(s, s_prime, t, t_prime)
-            varname = "D2[({},{}), ({},{})]".format(*idx)
-            d2_variables[idx] = writer.variable(varname)
-    return selected_variables, d1_variables, d2_variables
-
-
 def main(args):
 
-    all_features, states, transitions, cache = features.main(args)
+    all_features, states, transitions, cache = fgenerator.main(args)
 
-    # TODO REMOVE UNIVERSE AND EMPTY FEATURES
-
-    model = Model(cache)
-    substitution = {}
-    qchanges = compute_qualitative_changes(transitions, all_features, model, substitution)
-
-    state_ids = sorted(list(states.keys()))
-
-    writer = CNFWriter()
-    selected_variables, d1_variables, d2_variables = create_variables(all_features, transitions, state_ids, writer)
-
-    # exp = sp.Cnf()
-
-    for (s0, s1, t0, t1), d2_var in d2_variables.items():
-        d2_distinguishing_features = []  # all features that d2-distinguish the current transition
-        for f in all_features:
-            if qchanges[(s0, s1, f)] != qchanges[(s0, s1, f)]:
-                d2_distinguishing_features.append(f)
-
-        # D2(s0,s1,t0,t2) iff OR_f selected(f), where f ranges over features that d2-distinguish the transition
-        d2_lit = Literal(d2_var)
-        forward_clause_literals = [-d2_lit]
-        for f in d2_distinguishing_features:
-            # big_or = big_or | selected_variables[f]
-            forward_clause_literals.append(Literal(selected_variables[f]))
-            writer.clause([d2_lit, -Literal(selected_variables[f])])
-
-        writer.clause(forward_clause_literals)
-
-    for s1, s2 in itertools.combinations(state_ids, 2):
-        d1_variable = d1_variables[(s1, s2)]
-
-        d1_distinguishing_features = []
-
-        for f in all_features:
-            x1 = model.compute_feature_value(f, s1, substitution)
-            x2 = model.compute_feature_value(f, s2, substitution)
-            if x1 != x2:  # f distinguishes s1 and s2
-                d1_distinguishing_features.append(f)
-
-        # Post the constraint: D1(si, sj) <=> OR active(f), where the OR ranges over all
-        # those features f that tell apart si from sj
-        d1_lit = Literal(d1_variable)
-        forward_clause_literals = [-d1_lit]
-
-        for f in d1_distinguishing_features:
-            # big_or = big_or | selected_variables[f]
-            forward_clause_literals.append(Literal(selected_variables[f]))
-            writer.clause([d1_lit, -Literal(selected_variables[f])])
-
-        writer.clause(forward_clause_literals)
-
-        for s1_prime in transitions[s1]:  # will be empty set if not initialized, which is ok
-            forward_clause_literals = [Literal(d1_variable)]
-
-            for s2_prime in transitions[s2]:
-                idx = compute_d2_index(s1, s1_prime, s2, s2_prime)
-                forward_clause_literals.append(-Literal(d2_variables[idx]))
-
-            writer.clause(forward_clause_literals)
-
-        for s2_prime in transitions[s2]:  # will be empty set if not initialized, which is ok
-            forward_clause_literals = [Literal(d1_variable)]
-            for s1_prime in transitions[s1]:
-                idx = compute_d2_index(s1, s1_prime, s2, s2_prime)
-                forward_clause_literals.append(-Literal(d2_variables[idx]))
-            writer.clause(forward_clause_literals)
-
-        # Add the weighted clauses to minimize the number of selected features
-        for feat_var in selected_variables.values():
-            writer.clause([-Literal(feat_var)], weight=1)
-
-    writer.save()
+    translator = ModelTranslator(all_features, states, transitions, cache)
+    translator.run()
 
 
 class Model(object):
@@ -159,8 +72,96 @@ class Model(object):
 
 
 class ModelTranslator(object):
-    def __init__(self):
-        pass
+    def __init__(self, features, states, transitions, cache):
+        self.features = features
+        self.states = states
+        self.transitions = transitions
+        self.cache = cache
+        self.model = Model(cache)
+        self.state_ids = sorted(list(self.states.keys()))
+        self.writer = CNFWriter()
+
+        self.selected_variables = None
+        self.d1_variables = None
+        self.d2_variables = None
+
+    def create_bridge_clauses(self, d1_literal, s, t):
+        for s_prime in self.transitions[s]:  # will be empty set if not initialized, which is ok
+            forward_clause_literals = [d1_literal]
+            for t_prime in self.transitions[t]:
+                idx = compute_d2_index(s, s_prime, t, t_prime)
+                forward_clause_literals.append(-Literal(self.d2_variables[idx]))
+            self.writer.clause(forward_clause_literals)
+
+    def create_variables(self):
+        self.selected_variables = {feat: self.writer.variable("selected({})".format(feat)) for feat in self.features}
+
+        self.d1_variables = {(s1, s2): self.writer.variable("D1[{}, {}]".format(s1, s2)) for s1, s2 in
+                             itertools.combinations(self.state_ids, 2)}
+
+        self.d2_variables = dict()
+
+        for s, t in itertools.combinations(self.transitions, 2):
+            for s_prime, t_prime in itertools.product(self.transitions[s], self.transitions[t]):
+                idx = compute_d2_index(s, s_prime, t, t_prime)
+                varname = "D2[({},{}), ({},{})]".format(*idx)
+                self.d2_variables[idx] = self.writer.variable(varname)
+
+    def run(self):
+        # TODO REMOVE UNIVERSE AND EMPTY FEATURES
+
+        substitution = {}
+        qchanges = compute_qualitative_changes(self.transitions, self.features, self.model, substitution)
+
+        self.create_variables()
+
+        for (s0, s1, t0, t1), d2_var in self.d2_variables.items():
+            d2_distinguishing_features = []  # all features that d2-distinguish the current transition
+            for f in self.features:
+                if qchanges[(s0, s1, f)] != qchanges[(s0, s1, f)]:
+                    d2_distinguishing_features.append(f)
+
+            # D2(s0,s1,t0,t2) iff OR_f selected(f), where f ranges over features that d2-distinguish the transition
+            d2_lit = Literal(d2_var)
+            forward_clause_literals = [-d2_lit]
+            for f in d2_distinguishing_features:
+                # big_or = big_or | selected_variables[f]
+                forward_clause_literals.append(Literal(self.selected_variables[f]))
+                self.writer.clause([d2_lit, -Literal(self.selected_variables[f])])
+
+            self.writer.clause(forward_clause_literals)
+
+        for s1, s2 in itertools.combinations(self.state_ids, 2):
+            d1_variable = self.d1_variables[(s1, s2)]
+
+            d1_distinguishing_features = []
+
+            for f in self.features:
+                x1 = self.model.compute_feature_value(f, s1, substitution)
+                x2 = self.model.compute_feature_value(f, s2, substitution)
+                if x1 != x2:  # f distinguishes s1 and s2
+                    d1_distinguishing_features.append(f)
+
+            # Post the constraint: D1(si, sj) <=> OR active(f), where the OR ranges over all
+            # those features f that tell apart si from sj
+            d1_lit = Literal(d1_variable)
+            forward_clause_literals = [-d1_lit]
+
+            for f in d1_distinguishing_features:
+                # big_or = big_or | selected_variables[f]
+                forward_clause_literals.append(Literal(self.selected_variables[f]))
+                self.writer.clause([d1_lit, -Literal(self.selected_variables[f])])
+
+            self.writer.clause(forward_clause_literals)
+
+            self.create_bridge_clauses(d1_lit, s1, s2)
+            self.create_bridge_clauses(d1_lit, s2, s1)
+
+            # Add the weighted clauses to minimize the number of selected features
+            for feat_var in self.selected_variables.values():
+                self.writer.clause([-Literal(feat_var)], weight=1)
+
+        self.writer.save()
 
 
 class Variable(object):
