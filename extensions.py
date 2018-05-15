@@ -152,7 +152,7 @@ class ExtensionCache(object):
         self.feature_values = dict()
 
     def register_feature_value(self, feature, sid, value):
-        self.index[(feature, sid)] = value
+        self.feature_values[(feature, sid)] = value
 
     def register_extension(self, term, sid, extension):
         self.index[(term, sid)] = compress_extension(extension, self.m, term.ARITY)
