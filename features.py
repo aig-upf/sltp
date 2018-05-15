@@ -30,9 +30,10 @@ from tarski.syntax import builtins
 
 # import profiling
 from extensions import UniverseIndex, ExtensionCache
+from parameters import add_domain_goal_parameters
 from syntax import Concept, Role, Atom, UniversalConcept, BasicConcept, NotConcept, ExistsConcept, ForallConcept, \
     EqualConcept, BasicRole, InverseRole, StarRole, RestrictRole, ConceptCardinalityFeature, \
-    MinDistanceFeature, AndConcept, most_restricted_type, EmptyConcept, CompositionRole
+    MinDistanceFeature, AndConcept, most_restricted_type, EmptyConcept, CompositionRole, SingletonConcept
 from transitions import read_transitions
 from utils import filter_subnodes, bootstrap
 
@@ -77,6 +78,10 @@ class TerminologicalFactory(object):
             else:
                 print("Predicate {} with arity > 2 ignored".format(predicate))
 
+        for c in self.language.constants():
+            concepts.append(SingletonConcept(c.symbol, c.sort))
+
+
         atoms = self.termbox.primitive_atoms
         print('{} input (nullary) atoms : {}'.format(len(atoms), list(map(str, atoms))))
         print('{} input (unary) concepts: {}'.format(len(concepts), list(map(str, concepts))))
@@ -86,7 +91,6 @@ class TerminologicalFactory(object):
     # derive new concepts (1-step derivation) from given set of concepts and roles
     def create_atomic_concepts(self, concepts):
         new_concepts = [self.top, self.bot] + concepts + [self.create_not_concept(c) for c in concepts]
-        # TODO Add ParametricConcepts and roles here
         return [term for term in new_concepts if self.processor.process_term(term)]
 
     def create_atomic_roles(self, roles):
@@ -400,14 +404,20 @@ def store_role_restrictions(roles, args):
         f.write("\n".join(map(str, roles)))
 
 
+def parse_pddl(domain_file):
+    print('Parsing PDDL domain')
+    reader = FstripsReader()
+    reader.parse_domain(domain_file)
+    problem = reader.problem
+    return problem, problem.language
+
+
 # @profile
 def main(args):
-    reader = FstripsReader()
-    reader.parse_domain(args.domain)
-    problem = reader.problem
-    language = problem.language
+    problem, language = parse_pddl(args.domain)
+    language = add_domain_goal_parameters(problem.domain_name, language)
 
-    print('\nLoading states and transitions...')
+    print('Loading states and transitions...')
     states, transitions = read_transitions(args.transitions)
 
     factory = TerminologicalFactory(language)

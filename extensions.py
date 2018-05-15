@@ -141,7 +141,7 @@ def trace_to_bits(trace, m, arity):
 
 class ExtensionCache(object):
     def __init__(self, universe: UniverseIndex, top, bot):
-        self._universe = universe
+        self.universe = universe
         self.m = len(universe)
         self.universe_set = universe.as_extension()
         self.top = top

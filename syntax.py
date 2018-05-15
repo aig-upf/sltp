@@ -90,27 +90,25 @@ class EmptyConcept(Concept):
         return [self]
 
 
-class ParametricConcept(Concept):
-    def __init__(self, parameter):
-        Concept.__init__(self, 'parametric', 0)
-        self.parameter = parameter
-        self.hash = hash((self.__class__, self.parameter))
+class SingletonConcept(Concept):
+    def __init__(self, name, sort):
+        Concept.__init__(self, sort, 0)
+        self.name = name
+        self.hash = hash((self.__class__, self.name))
 
     def __hash__(self):
         return self.hash
 
     def __eq__(self, other):
         return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
-                self.parameter == other.parameter)
+                self.name == other.name)
 
     def extension(self, cache, state, substitution):
-        assert self.parameter in substitution, "Parameter '?%s' should appear in substitution: %s" % (
-            self.parameter, str(substitution))
-        assert False, "Revise implementation details of following line!"
-        return set(parameter_subst[self.parameter])
+        singleton = {cache.universe.index(self.name)}
+        return cache.compress(singleton, self.ARITY)
 
     def __repr__(self):
-        return '?%s' % self.parameter
+        return "{{{}}}".format(self.name)
 
     __str__ = __repr__
 
