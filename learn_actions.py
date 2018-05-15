@@ -16,6 +16,7 @@
 #  Blai Bonet, bonet@ldc.usb.ve, bonetblai@gmail.com
 #  Guillem Frances, guillem.frances@unibas.ch
 import itertools
+import logging
 import math
 import sys
 from signal import signal, SIGPIPE, SIG_DFL
@@ -95,6 +96,7 @@ class ModelTranslator(object):
             self.writer.clause(forward_clause_literals)
 
     def create_variables(self):
+        print("Creating model variables".format())
         self.selected_variables = {feat: self.writer.variable("selected({})".format(feat)) for feat in self.features}
 
         self.d1_variables = {(s1, s2): self.writer.variable("D1[{}, {}]".format(s1, s2)) for s1, s2 in
@@ -108,12 +110,15 @@ class ModelTranslator(object):
                 varname = "D2[({},{}), ({},{})]".format(*idx)
                 self.d2_variables[idx] = self.writer.variable(varname)
 
+        print("A total of {} variables were created".format(len(self.writer.variables)))
+
     def run(self):
         print("Generating MAXSAT model from {} features".format(len(self.features)))
         qchanges = compute_qualitative_changes(self.transitions, self.features, self.model, self.substitution)
 
         self.create_variables()
 
+        print("Generating D2 constraints from {} D2 variables".format(len(self.d2_variables)))
         for (s0, s1, t0, t1), d2_var in self.d2_variables.items():
             d2_distinguishing_features = []  # all features that d2-distinguish the current transition
             for f in self.features:
@@ -129,6 +134,7 @@ class ModelTranslator(object):
 
             self.writer.clause(forward_clause_literals)
 
+        print("Generating D1 + bridge constraints from {} D1 variables".format(len(self.d1_variables)))
         for s1, s2 in itertools.combinations(self.state_ids, 2):
             d1_variable = self.d1_variables[(s1, s2)]
 
@@ -169,8 +175,8 @@ class ModelTranslator(object):
             if all_values.count(all_values[0]) != len(all_values):  # i.e. all elements are equal
                 pruned.append(f)
             else:
-                print("Feature \"{}\" has constant denotation ({}) over all states and will be ignored"
-                      .format(f, all_values[0]))
+                logging.debug("Feature \"{}\" has constant denotation ({}) over all states and will be ignored"
+                              .format(f, all_values[0]))
 
         return model, pruned
 
