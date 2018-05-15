@@ -31,7 +31,7 @@ from tarski.syntax import builtins
 # import profiling
 from extensions import UniverseIndex, ExtensionCache
 from syntax import Concept, Role, Atom, UniversalConcept, BasicConcept, NotConcept, ExistsConcept, ForallConcept, \
-    EqualConcept, BasicRole, InverseRole, StarRole, RestrictRole, NonEmptyConceptFeature, ConceptCardinalityFeature, \
+    EqualConcept, BasicRole, InverseRole, StarRole, RestrictRole, ConceptCardinalityFeature, \
     MinDistanceFeature, AndConcept, most_restricted_type, EmptyConcept, CompositionRole
 from transitions import read_transitions
 from utils import filter_subnodes, bootstrap
@@ -134,15 +134,16 @@ class TerminologicalFactory(object):
         return (t for t in itertools.chain(*generators) if self.processor.process_term(t))
 
     def derive_features(self, concepts, rest, k):
-        new_features = [NonEmptyConceptFeature(c) for c in concepts]
+        # new_features = [NonEmptyConceptFeature(c) for c in concepts]
+        new_features = []
         new_features.extend(ConceptCardinalityFeature(c) for c in concepts)
-
-        def accept(*args):
-            return True
-
-        card1_concepts = self.processor.singleton_extension_concepts
-        # new_features.extend(MinDistanceFeature(c1, r, c2) for c1, r, c2 in itertools.product(card1_concepts, rest, concepts) if c1.depth + r.depth + c2.depth <= k)
+        new_features.extend(self.create_distance_features(concepts, rest, k))
         return new_features
+
+    def create_distance_features(self, concepts, rest, k):
+        card1_concepts = self.processor.singleton_extension_concepts
+        return (MinDistanceFeature(c1, r, c2) for c1, r, c2 in itertools.product(card1_concepts, rest, concepts) if
+                c1.depth + r.depth + c2.depth <= k)
 
     def create_role_restrictions(self, concepts, roles):
         role_restrictions = (self.create_restrict_role(r, c) for r, c in itertools.product(roles, concepts))
@@ -452,7 +453,7 @@ def main(args):
 
     rest = list(factory.create_role_restrictions(concepts, roles))
     store_role_restrictions(rest, args)
-    k = 10
+    k = 5
     features = factory.derive_features(concepts, rest, k)
 
     print('Final number of features: {}'.format(len(features)))

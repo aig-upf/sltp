@@ -137,7 +137,7 @@ class ModelTranslator(object):
             for f in self.features:
                 x1 = self.model.compute_feature_value(f, s1, self.substitution)
                 x2 = self.model.compute_feature_value(f, s2, self.substitution)
-                if x1 != x2:  # f distinguishes s1 and s2
+                if f.bool_value(x1) != f.bool_value(x2):  # f distinguishes s1 and s2
                     d1_distinguishing_features.append(f)
 
             # Post the constraint: D1(si, sj) <=> OR active(f), where the OR ranges over all
@@ -166,7 +166,7 @@ class ModelTranslator(object):
         pruned = []
         for f in features:
             all_values = [model.compute_feature_value(f, s, self.substitution) for s in self.state_ids]
-            if all_values.count(all_values[0]) != len(all_values):
+            if all_values.count(all_values[0]) != len(all_values):  # i.e. all elements are equal
                 pruned.append(f)
             else:
                 print("Feature \"{}\" has constant denotation ({}) over all states and will be ignored"

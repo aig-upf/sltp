@@ -2,7 +2,7 @@ from enum import Enum
 
 import tarski as tsk
 
-from utils import transitive_closure
+from utils import transitive_closure, compute_min_distance
 
 
 # abstract classes for concepts and roles
@@ -491,41 +491,42 @@ class FeatureValueChange(Enum):
 
 
 class Feature(object):
-    def __init__(self):
-        pass
-
     def value(self, cache, state, substitution):
         raise NotImplementedError()
 
     def diff(self, x, y):
         raise NotImplementedError()
 
+    @staticmethod
+    def bool_value(value):
+        assert value >= 0
+        return value > 0
 
-class NonEmptyConceptFeature(Feature):
-    def __init__(self, c):
-        assert isinstance(c, Concept)
-        super().__init__()
-        self.c = c
-
-    def value(self, cache, state, substitution):
-        """ The feature is true iff the extension of the represented concept has non-empty cardinality"""
-        ext = self.c.extension(cache, state, substitution)
-        return ext.any()
-
-    def diff(self, x, y):
-        assert type(x) is bool
-        assert type(y) is bool
-        if x == y:
-            return FeatureValueChange.NIL
-        if x is True and y is False:
-            return FeatureValueChange.DEL
-        if x is False and y is True:
-            return FeatureValueChange.ADD
-
-    def __repr__(self):
-        return 'NonEmpty({})'.format(self.c)
-
-    __str__ = __repr__
+# class NonEmptyConceptFeature(Feature):
+#     def __init__(self, c):
+#         assert isinstance(c, Concept)
+#         super().__init__()
+#         self.c = c
+#
+#     def value(self, cache, state, substitution):
+#         """ The feature is true iff the extension of the represented concept has non-empty cardinality"""
+#         ext = self.c.extension(cache, state, substitution)
+#         return ext.any()
+#
+#     def diff(self, x, y):
+#         assert type(x) is bool
+#         assert type(y) is bool
+#         if x == y:
+#             return FeatureValueChange.NIL
+#         if x is True and y is False:
+#             return FeatureValueChange.DEL
+#         if x is False and y is True:
+#             return FeatureValueChange.ADD
+#
+#     def __repr__(self):
+#         return 'NonEmpty({})'.format(self.c)
+#
+#     __str__ = __repr__
 
 
 def compute_int_feature_diff(x, y):
@@ -542,7 +543,6 @@ def compute_int_feature_diff(x, y):
 class ConceptCardinalityFeature(Feature):
     def __init__(self, c):
         assert isinstance(c, Concept)
-        super().__init__()
         self.c = c
 
     def value(self, cache, state, substitution):
@@ -561,10 +561,7 @@ class ConceptCardinalityFeature(Feature):
 
 class MinDistanceFeature(Feature):
     def __init__(self, c1, r, c2):
-        assert isinstance(c1, Concept)
-        assert isinstance(r, Role)
-        assert isinstance(c2, Concept)
-        super().__init__()
+        assert isinstance(c1, Concept) and isinstance(r, Role) and isinstance(c2, Concept)
         self.c1 = c1
         self.r = r
         self.c2 = c2
@@ -576,8 +573,10 @@ class MinDistanceFeature(Feature):
         ext_c1 = self.c1.extension(cache, state, substitution)
         ext_c2 = self.c1.extension(cache, state, substitution)
         ext_r = self.r.extension(cache, state, substitution)
-        raise NotImplementedError()
-        return ext.any()
+        return compute_min_distance(cache.uncompress(ext_c1, self.c1.ARITY),
+                                    cache.uncompress(ext_r, self.r.ARITY),
+                                    cache.uncompress(ext_c2, self.c2.ARITY),
+                                    )
 
     def diff(self, x, y):
         return compute_int_feature_diff(x, y)
