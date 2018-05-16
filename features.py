@@ -380,7 +380,7 @@ class SemanticProcessor(object):
         singleton_extension_over_all_states = True and term.ARITY == 1
         for sid, ext in extensions:  # We register the compressed individual extensions
             self.cache.register_compressed_extension(term, sid, ext)
-            singleton_extension_over_all_states = singleton_extension_over_all_states and ext.count(True) <= 1
+            singleton_extension_over_all_states = singleton_extension_over_all_states and ext.count(True) == 1
 
         if singleton_extension_over_all_states:
             self.singleton_extension_concepts.append(term)
@@ -418,7 +418,7 @@ def main(args):
     language = add_domain_goal_parameters(problem.domain_name, language)
 
     print('Loading states and transitions...')
-    states, transitions = read_transitions(args.transitions)
+    states, goal_states, transitions = read_transitions(args.transitions)
 
     factory = TerminologicalFactory(language)
     factory.processor = SemanticProcessor(language, states, factory.top, factory.bot)
@@ -467,7 +467,7 @@ def main(args):
     features = factory.derive_features(concepts, rest, k)
 
     print('Final number of features: {}'.format(len(features)))
-    return features, states, transitions, factory.processor.cache
+    return features, states, goal_states, transitions, factory.processor.cache
 
 
 if __name__ == "__main__":

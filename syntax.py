@@ -552,7 +552,7 @@ class ConceptCardinalityFeature(Feature):
         return compute_int_feature_diff(x, y)
 
     def __repr__(self):
-        return 'card({})'.format(self.c)
+        return 'cardinality[{}]'.format(self.c)
 
     __str__ = __repr__
 
@@ -580,7 +580,7 @@ class MinDistanceFeature(Feature):
         return compute_int_feature_diff(x, y)
 
     def __repr__(self):
-        return 'MinDist({}, {}, {})'.format(self.c1, self.r, self.c2)
+        return 'min-distance[{}, {}, {}]'.format(self.c1, self.r, self.c2)
 
     __str__ = __repr__
 
