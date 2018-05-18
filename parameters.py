@@ -13,7 +13,7 @@ def add_domain_goal_parameters(domain_name, language):
     if domain_name == "blocks":
         # We simply add block "a" as a domain constant
         language.constant("a", "object")
-        language.constant("b", "object")
-        
-    print('WARNING: Domain name "{}" not recognized, no goal parameters added'.format(domain_name))
+        # language.constant("b", "object")
+    else:
+        print('WARNING: Domain name "{}" not recognized, no goal parameters added'.format(domain_name))
     return language

@@ -24,7 +24,7 @@ from signal import signal, SIGPIPE, SIG_DFL
 from time import strftime, gmtime
 
 from extensions import ExtensionCache
-from util.console import print_header
+from util.console import print_header, print_lines
 from utils import bootstrap
 import features as fgenerator
 from solvers import solve
@@ -106,6 +106,12 @@ class ModelTranslator(object):
         self.var_d1 = None
         self.var_d2 = None
 
+        self.n_selected_clauses = 0
+        self.n_d1_clauses = 0
+        self.n_d2_clauses = 0
+        self.n_bridge_clauses = 0
+        self.n_goal_clauses = 0
+
     def create_bridge_clauses(self, d1_literal, s, t):
         for s_prime in self.transitions[s]:  # will be empty set if not initialized, which is ok
             forward_clause_literals = [d1_literal]
@@ -113,6 +119,7 @@ class ModelTranslator(object):
                 idx = compute_d2_index(s, s_prime, t, t_prime)
                 forward_clause_literals.append(-Literal(self.var_d2[idx]))
             self.writer.clause(forward_clause_literals)
+            self.n_bridge_clauses += 1
 
     def create_variables(self):
         print("Creating model variables".format())
@@ -139,7 +146,7 @@ class ModelTranslator(object):
 
         print("Generating D2 constraints from {} D2 variables".format(len(self.var_d2)))
         for (s0, s1, t0, t1), d2_var in self.var_d2.items():
-            d2_distinguishing_features = []  # all features that d2-distinguish the current transition
+            d2_distinguishing_features = []  # all features that d2-distinguish the current pair of transitions
             for f in self.features:
                 if qchanges[(s0, s1, f)] != qchanges[(t0, t1, f)]:
                     d2_distinguishing_features.append(f)
@@ -150,8 +157,10 @@ class ModelTranslator(object):
             for f in d2_distinguishing_features:
                 forward_clause_literals.append(Literal(self.var_selected[f]))
                 self.writer.clause([d2_lit, -Literal(self.var_selected[f])])
+                self.n_d2_clauses += 1
 
             self.writer.clause(forward_clause_literals)
+            self.n_d2_clauses += 1
 
         print("Generating D1 + bridge constraints from {} D1 variables".format(len(self.var_d1)))
         for s1, s2 in itertools.combinations(self.state_ids, 2):
@@ -173,8 +182,10 @@ class ModelTranslator(object):
             for f in d1_distinguishing_features:
                 forward_clause_literals.append(Literal(self.var_selected[f]))
                 self.writer.clause([d1_lit, -Literal(self.var_selected[f])])
+                self.n_d1_clauses += 1
 
             self.writer.clause(forward_clause_literals)
+            self.n_d1_clauses += 1
 
             self.create_bridge_clauses(d1_lit, s1, s2)
             self.create_bridge_clauses(d1_lit, s2, s1)
@@ -182,11 +193,14 @@ class ModelTranslator(object):
             # Force D1(s1, s2) to be true if exactly one of the two states is a goal state
             if sum(1 for x in (s1, s2) if x in self.goal_states) == 1:
                 self.writer.clause([d1_lit])
+                self.n_goal_clauses += 1
 
-            # Add the weighted clauses to minimize the number of selected features
-            for feat_var in self.var_selected.values():
-                self.writer.clause([-Literal(feat_var)], weight=1)
+        # Add the weighted clauses to minimize the number of selected features
+        for feat_var in self.var_selected.values():
+            self.writer.clause([-Literal(feat_var)], weight=1)
+            self.n_selected_clauses += 1
 
+        self.report_stats()
         self.writer.save(model_filename)
 
         return self.writer.mapping
@@ -213,6 +227,17 @@ class ModelTranslator(object):
         selected_features = [feature_mapping[v] for v in true_variables if v in feature_mapping]
         print("Selected features: ")
         print('\n'.join(str(f) for f in selected_features))
+
+    def report_stats(self):
+        print_header("Max-sat encoding stats", 1)
+        print_lines("Clauses:".format(), 1)
+        print_lines("Selected: {}".format(self.n_selected_clauses), 2)
+        print_lines("D1: {}".format(self.n_d1_clauses), 2)
+        print_lines("D2: {}".format(self.n_d2_clauses), 2)
+        print_lines("Bridge: {}".format(self.n_bridge_clauses), 2)
+        print_lines("Goal: {}".format(self.n_goal_clauses), 2)
+        print_lines("TOTAL: {}".format(self.n_selected_clauses + self.n_d1_clauses + self.n_d2_clauses +
+                                       self.n_bridge_clauses + self.n_goal_clauses), 2)
 
 
 class Variable(object):
@@ -255,7 +280,7 @@ class Clause(object):
     def __init__(self, literals, weight=math.inf):
         assert all(isinstance(l, Literal) for l in literals)
         self.literals = tuple(literals)
-        assert len(set(literals)) == len(self.literals)  # Make sure all literals are unique
+        # assert len(set(literals)) == len(self.literals)  # Make sure all literals are unique
         self.weight = weight
 
     def __str__(self):
@@ -298,7 +323,8 @@ class CNFWriter(object):
         real_clause_printer = lambda c: c.cnf_line(top, variable_index)
         self._save(filename, numvars, numclauses, top, real_clause_printer)
 
-        debug = True
+        # debug = True
+        debug = False
         if debug:
             dfilename = "{}.txt".format(filename)
             debug_clause_printer = lambda c: str(c)
