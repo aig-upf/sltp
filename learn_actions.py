@@ -20,6 +20,7 @@ import logging
 import math
 import os
 import sys
+from collections import defaultdict
 from signal import signal, SIGPIPE, SIG_DFL
 from time import strftime, gmtime
 
@@ -106,6 +107,8 @@ class ModelTranslator(object):
         self.var_d1 = None
         self.var_d2 = None
 
+        self.d1_distinguishing_features = dict()
+
         self.n_selected_clauses = 0
         self.n_d1_clauses = 0
         self.n_d2_clauses = 0
@@ -145,35 +148,17 @@ class ModelTranslator(object):
 
         self.create_variables()
 
-        print("Generating D2 constraints from {} D2 variables".format(len(self.var_d2)))
-        for (s0, s1, t0, t1), d2_var in self.var_d2.items():
-            d2_distinguishing_features = []  # all features that d2-distinguish the current pair of transitions
-            for f in self.features:
-                if qchanges[(s0, s1, f)] != qchanges[(t0, t1, f)]:
-                    d2_distinguishing_features.append(f)
-
-            # D2(s0,s1,t0,t2) iff OR_f selected(f), where f ranges over features that d2-distinguish the transition
-            d2_lit = Literal(d2_var)
-            forward_clause_literals = [-d2_lit]
-            for f in d2_distinguishing_features:
-                forward_clause_literals.append(Literal(self.var_selected[f]))
-                self.writer.clause([d2_lit, -Literal(self.var_selected[f])])
-                self.n_d2_clauses += 1
-
-            self.writer.clause(forward_clause_literals)
-            self.n_d2_clauses += 1
-
         print("Generating D1 + bridge constraints from {} D1 variables".format(len(self.var_d1)))
         for s1, s2 in itertools.combinations(self.state_ids, 2):
             d1_variable = self.var_d1[(s1, s2)]
 
-            d1_distinguishing_features = []
+            self.d1_distinguishing_features[(s1, s2)] = d1_distinguishing_features = set()
 
             for f in self.features:
                 x1 = self.model.compute_feature_value(f, s1, self.substitution)
                 x2 = self.model.compute_feature_value(f, s2, self.substitution)
                 if f.bool_value(x1) != f.bool_value(x2):  # f distinguishes s1 and s2
-                    d1_distinguishing_features.append(f)
+                    d1_distinguishing_features.add(f)
 
             # Post the constraint: D1(si, sj) <=> OR active(f), where the OR ranges over all
             # those features f that tell apart si from sj
@@ -197,6 +182,26 @@ class ModelTranslator(object):
             else:
                 self.create_bridge_clauses(d1_lit, s1, s2)
                 self.create_bridge_clauses(d1_lit, s2, s1)
+
+        print("Generating D2 constraints from {} D2 variables".format(len(self.var_d2)))
+        for (s0, s1, t0, t1), d2_var in self.var_d2.items():
+            d2_distinguishing_features = []  # all features that d2-distinguish the current pair of transitions
+            for f in self.features:
+                if qchanges[(s0, s1, f)] != qchanges[(t0, t1, f)]:
+                    d2_distinguishing_features.append(f)
+
+            # D2(s0,s1,t0,t2) iff OR_f selected(f), where f ranges over features that d2-distinguish the transition
+            # but do _not_ d1-distinguish the two states at the origin of each transition.
+            d2_lit = Literal(d2_var)
+            forward_clause_literals = [-d2_lit]
+            for f in (x for x in d2_distinguishing_features if x not in self.d1_distinguishing_features[(s0, t0)]):
+                forward_clause_literals.append(Literal(self.var_selected[f]))
+                self.writer.clause([d2_lit, -Literal(self.var_selected[f])])
+                self.n_d2_clauses += 1
+
+            self.writer.clause(forward_clause_literals)
+            self.n_d2_clauses += 1
+
 
         # Add the weighted clauses to minimize the number of selected features
         for feat_var in self.var_selected.values():
