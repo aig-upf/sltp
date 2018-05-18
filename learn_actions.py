@@ -111,6 +111,7 @@ class ModelTranslator(object):
         self.n_d2_clauses = 0
         self.n_bridge_clauses = 0
         self.n_goal_clauses = 0
+        self.n_undistinguishable_state_pairs = 0
 
     def create_bridge_clauses(self, d1_literal, s, t):
         for s_prime in self.transitions[s]:  # will be empty set if not initialized, which is ok
@@ -183,17 +184,19 @@ class ModelTranslator(object):
                 forward_clause_literals.append(Literal(self.var_selected[f]))
                 self.writer.clause([d1_lit, -Literal(self.var_selected[f])])
                 self.n_d1_clauses += 1
-
+            if not d1_distinguishing_features:
+                self.n_undistinguishable_state_pairs += 1
             self.writer.clause(forward_clause_literals)
             self.n_d1_clauses += 1
-
-            self.create_bridge_clauses(d1_lit, s1, s2)
-            self.create_bridge_clauses(d1_lit, s2, s1)
 
             # Force D1(s1, s2) to be true if exactly one of the two states is a goal state
             if sum(1 for x in (s1, s2) if x in self.goal_states) == 1:
                 self.writer.clause([d1_lit])
                 self.n_goal_clauses += 1
+            # Else (i.e. D1(s1, s2) _might_ be false, create the bridge clauses between values of D1 and D2
+            else:
+                self.create_bridge_clauses(d1_lit, s1, s2)
+                self.create_bridge_clauses(d1_lit, s2, s1)
 
         # Add the weighted clauses to minimize the number of selected features
         for feat_var in self.var_selected.values():
@@ -230,6 +233,8 @@ class ModelTranslator(object):
 
     def report_stats(self):
         print_header("Max-sat encoding stats", 1)
+
+        print_lines("Number of D1-undistinguishable state pairs: {}".format(self.n_undistinguishable_state_pairs), 1)
         print_lines("Clauses:".format(), 1)
         print_lines("Selected: {}".format(self.n_selected_clauses), 2)
         print_lines("D1: {}".format(self.n_d1_clauses), 2)
