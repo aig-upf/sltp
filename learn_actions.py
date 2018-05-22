@@ -142,23 +142,33 @@ class ModelTranslator(object):
 
         print("A total of {} variables were created".format(len(self.writer.variables)))
 
+    def compute_d1_distinguishing_features(self):
+        for s1, s2 in itertools.combinations(self.state_ids, 2):
+            distinguishing = set()
+
+            for f in self.features:
+                x1 = self.model.compute_feature_value(f, s1, self.substitution)
+                x2 = self.model.compute_feature_value(f, s2, self.substitution)
+                if f.bool_value(x1) != f.bool_value(x2):  # f distinguishes s1 and s2
+                    distinguishing.add(f)
+
+            if not distinguishing:
+                self.n_undistinguishable_state_pairs += 1
+
+            self.d1_distinguishing_features[(s1, s2)] = distinguishing
+
     def run(self, model_filename):
         print("Generating MAXSAT model from {} features".format(len(self.features)))
         qchanges = compute_qualitative_changes(self.transitions, self.features, self.model, self.substitution)
+
+        self.compute_d1_distinguishing_features()
 
         self.create_variables()
 
         print("Generating D1 + bridge constraints from {} D1 variables".format(len(self.var_d1)))
         for s1, s2 in itertools.combinations(self.state_ids, 2):
             d1_variable = self.var_d1[(s1, s2)]
-
-            self.d1_distinguishing_features[(s1, s2)] = d1_distinguishing_features = set()
-
-            for f in self.features:
-                x1 = self.model.compute_feature_value(f, s1, self.substitution)
-                x2 = self.model.compute_feature_value(f, s2, self.substitution)
-                if f.bool_value(x1) != f.bool_value(x2):  # f distinguishes s1 and s2
-                    d1_distinguishing_features.add(f)
+            d1_distinguishing_features = self.d1_distinguishing_features[(s1, s2)]
 
             # Post the constraint: D1(si, sj) <=> OR active(f), where the OR ranges over all
             # those features f that tell apart si from sj
@@ -169,8 +179,7 @@ class ModelTranslator(object):
                 forward_clause_literals.append(Literal(self.var_selected[f]))
                 self.writer.clause([d1_lit, -Literal(self.var_selected[f])])
                 self.n_d1_clauses += 1
-            if not d1_distinguishing_features:
-                self.n_undistinguishable_state_pairs += 1
+
             self.writer.clause(forward_clause_literals)
             self.n_d1_clauses += 1
 
@@ -178,6 +187,11 @@ class ModelTranslator(object):
             if sum(1 for x in (s1, s2) if x in self.goal_states) == 1:
                 self.writer.clause([d1_lit])
                 self.n_goal_clauses += 1
+
+                if len(d1_distinguishing_features) == 0:
+                    print("WARNING: No feature in the pool able to distinguish state pair {}, but one of the states "
+                          "is a goal and the other is not. MAXSAT encoding will be UNSAT".format((s1, s2)))
+
             # Else (i.e. D1(s1, s2) _might_ be false, create the bridge clauses between values of D1 and D2
             else:
                 self.create_bridge_clauses(d1_lit, s1, s2)
@@ -237,9 +251,13 @@ class ModelTranslator(object):
         print('\n'.join(str(f) for f in selected_features))
 
     def report_stats(self):
-        print_header("Max-sat encoding stats", 1)
 
+        d1_distinguishing = self.d1_distinguishing_features.values()
+        avg_num_d1_dist_features = sum(len(feats) for feats in d1_distinguishing) / len(d1_distinguishing)
+
+        print_header("Max-sat encoding stats", 1)
         print_lines("Number of D1-undistinguishable state pairs: {}".format(self.n_undistinguishable_state_pairs), 1)
+        print_lines("Avg. # of D1-distinguishing features: {:.2f}".format(avg_num_d1_dist_features), 1)
         print_lines("Clauses:".format(), 1)
         print_lines("Selected: {}".format(self.n_selected_clauses), 2)
         print_lines("D1: {}".format(self.n_d1_clauses), 2)
