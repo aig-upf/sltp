@@ -20,11 +20,12 @@ import logging
 import math
 import os
 import sys
-from collections import defaultdict
+import tracemalloc
 from signal import signal, SIGPIPE, SIG_DFL
 from time import strftime, gmtime
 
 from extensions import ExtensionCache
+from util import memutils
 from util.console import print_header, print_lines
 from utils import bootstrap
 import features as fgenerator
@@ -58,6 +59,7 @@ def compute_qualitative_changes(transitions, all_features, model, substitution):
 
 
 def main(args):
+    # tracemalloc.start()
 
     all_features, states, goal_states, transitions, cache = fgenerator.main(args)
 
@@ -121,7 +123,7 @@ class ModelTranslator(object):
             forward_clause_literals = [d1_literal]
             for t_prime in self.transitions[t]:
                 idx = compute_d2_index(s, s_prime, t, t_prime)
-                forward_clause_literals.append(-Literal(self.var_d2[idx]))
+                forward_clause_literals.append(self.writer.literal(self.var_d2[idx], False))
             self.writer.clause(forward_clause_literals)
             self.n_bridge_clauses += 1
 
@@ -140,6 +142,7 @@ class ModelTranslator(object):
                 varname = "D2[({},{}), ({},{})]".format(*idx)
                 self.var_d2[idx] = self.writer.variable(varname)
 
+        self.writer.close()
         print("A total of {} variables were created".format(len(self.writer.variables)))
 
     def compute_d1_distinguishing_features(self):
@@ -172,12 +175,12 @@ class ModelTranslator(object):
 
             # Post the constraint: D1(si, sj) <=> OR active(f), where the OR ranges over all
             # those features f that tell apart si from sj
-            d1_lit = Literal(d1_variable)
-            forward_clause_literals = [-d1_lit]
+            d1_lit = self.writer.literal(d1_variable, True)
+            forward_clause_literals = [self.writer.literal(d1_variable, False)]
 
             for f in d1_distinguishing_features:
-                forward_clause_literals.append(Literal(self.var_selected[f]))
-                self.writer.clause([d1_lit, -Literal(self.var_selected[f])])
+                forward_clause_literals.append(self.writer.literal(self.var_selected[f], True))
+                self.writer.clause([d1_lit, self.writer.literal(self.var_selected[f], False)])
                 self.n_d1_clauses += 1
 
             self.writer.clause(forward_clause_literals)
@@ -206,24 +209,25 @@ class ModelTranslator(object):
 
             # D2(s0,s1,t0,t2) iff OR_f selected(f), where f ranges over features that d2-distinguish the transition
             # but do _not_ d1-distinguish the two states at the origin of each transition.
-            d2_lit = Literal(d2_var)
+            d2_lit = self.writer.literal(d2_var, True)
             forward_clause_literals = [-d2_lit]
             for f in (x for x in d2_distinguishing_features if x not in self.d1_distinguishing_features[(s0, t0)]):
-                forward_clause_literals.append(Literal(self.var_selected[f]))
-                self.writer.clause([d2_lit, -Literal(self.var_selected[f])])
+                forward_clause_literals.append(self.writer.literal(self.var_selected[f], True))
+                self.writer.clause([d2_lit, self.writer.literal(self.var_selected[f], False)])
                 self.n_d2_clauses += 1
 
             self.writer.clause(forward_clause_literals)
             self.n_d2_clauses += 1
 
-
         # Add the weighted clauses to minimize the number of selected features
         for feat_var in self.var_selected.values():
-            self.writer.clause([-Literal(feat_var)], weight=1)
+            self.writer.clause([self.writer.literal(feat_var, False)], weight=1)
             self.n_selected_clauses += 1
 
         self.report_stats()
         self.writer.save(model_filename)
+
+        # memutils.display_top(tracemalloc.take_snapshot())
 
         return self.writer.mapping
 
@@ -306,7 +310,7 @@ class Literal(object):
 
 class Clause(object):
     def __init__(self, literals, weight=math.inf):
-        assert all(isinstance(l, Literal) for l in literals)
+        # assert all(isinstance(l, Literal) for l in literals)
         self.literals = tuple(literals)
         # assert len(set(literals)) == len(self.literals)  # Make sure all literals are unique
         self.weight = weight
@@ -314,10 +318,16 @@ class Clause(object):
     def __str__(self):
         return "{{{}}} [{}]".format(','.join(str(l) for l in self.literals), self.weight)
 
+    # def cnf_line(self, top, variable_index):
+    #     # w <literals> 0
+    #     w = top if self.weight is math.inf else self.weight
+    #     literals = " ".join(l.to_cnf(variable_index) for l in self.literals)
+    #     return "{} {} 0".format(w, literals)
+
     def cnf_line(self, top, variable_index):
         # w <literals> 0
         w = top if self.weight is math.inf else self.weight
-        literals = " ".join(l.to_cnf(variable_index) for l in self.literals)
+        literals = " ".join(str(l) for l in self.literals)
         return "{} {} 0".format(w, literals)
 
     def __eq__(self, other):
@@ -332,14 +342,24 @@ class CNFWriter(object):
         self.variables = dict()
         self.clauses = set()
         self.mapping = dict()
+        self.closed = False
+        self.variable_index = None
 
     def variable(self, name):
+        assert not self.closed
         return self.variables.setdefault(name, Variable(name))
 
+    def literal(self, variable, polarity):
+        assert self.closed
+        i = self.variable_index[variable]
+        return i if polarity else -1*i
+
     def clause(self, literals, weight=math.inf):
+        assert self.closed
         self.clauses.add(Clause(literals=literals, weight=weight))
 
     def save(self, filename="model.cnf"):
+        assert self.closed
         numvars = len(self.variables)
         numclauses = len(self.clauses)
         top = sum(c.weight for c in self.clauses if c.weight is not math.inf) + 1
@@ -347,8 +367,8 @@ class CNFWriter(object):
         print("Model has {} variables and {} clauses. Top weight is {}".format(numvars, numclauses, top))
 
         # Literal indices must start at 1
-        variable_index = {var: i for i, var in enumerate(self.variables.values(), start=1)}
-        real_clause_printer = lambda c: c.cnf_line(top, variable_index)
+        real_clause_printer = lambda c: c.cnf_line(top, self.variable_index)
+
         self._save(filename, numvars, numclauses, top, real_clause_printer)
 
         # debug = True
@@ -358,8 +378,6 @@ class CNFWriter(object):
             debug_clause_printer = lambda c: str(c)
             self._save(dfilename, numvars, numclauses, top, debug_clause_printer)
 
-        # Save the variable mapping to parse the solution later
-        self.mapping = {i: name for name, i in variable_index.items()}
 
     def _save(self, filename, numvars, numclauses, top, clause_printer):
         with open(filename, "w") as file:
@@ -368,6 +386,17 @@ class CNFWriter(object):
             print("p wcnf {} {} {}".format(numvars, numclauses, top), file=file)
             for clause in self.clauses:
                 print(clause_printer(clause), file=file)
+
+    def close(self):  # Once closed, the writer won't admit more variable declarations
+        assert not self.closed
+        self.closed = True
+        self.variable_index = {var: i for i, var in enumerate(self.variables.values(), start=1)}
+        # Save the variable mapping to parse the solution later
+        self.mapping = {i: name for name, i in self.variable_index.items()}
+
+
+
+
 
 
 if __name__ == "__main__":
