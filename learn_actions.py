@@ -22,12 +22,13 @@ import os
 import sys
 import tracemalloc
 from signal import signal, SIGPIPE, SIG_DFL
-from time import strftime, gmtime
+import time
 
 from extensions import ExtensionCache
 from util import memutils
 from util.console import print_header, print_lines
-from utils import bootstrap
+from util.command import count_file_lines, remove_duplicate_lines
+from utils import bootstrap, read_file
 import features as fgenerator
 from solvers import solve
 
@@ -59,15 +60,15 @@ def compute_qualitative_changes(transitions, all_features, model, substitution):
 
 
 def main(args):
-    # tracemalloc.start()
+    tracemalloc.start()
 
     all_features, states, goal_states, transitions, cache = fgenerator.main(args)
 
     rundir = os.path.join(BASEDIR, "runs")
     cnf_filename = os.path.join(rundir, args.result_filename + ".cnf")
 
-    translator = ModelTranslator(all_features, states, goal_states, transitions, cache)
-    translator.run(cnf_filename)
+    translator = ModelTranslator(all_features, states, goal_states, transitions, cache, cnf_filename)
+    translator.run()
 
     # solution = solve(rundir, cnf_filename, 'wpm3')
     # solution = solve(rundir, cnf_filename, 'maxino')
@@ -95,7 +96,7 @@ class Model(object):
 
 
 class ModelTranslator(object):
-    def __init__(self, features, states, goal_states, transitions, cache):
+    def __init__(self, features, states, goal_states, transitions, cache, cnf_filename):
         self.states = states
         self.goal_states = goal_states
         self.transitions = transitions
@@ -103,7 +104,7 @@ class ModelTranslator(object):
         self.substitution = {}
 
         self.model, self.features = self.compute_feature_extensions(features, cache)
-        self.writer = CNFWriter()
+        self.writer = CNFWriter(cnf_filename)
 
         self.var_selected = None
         self.var_d1 = None
@@ -160,7 +161,7 @@ class ModelTranslator(object):
 
             self.d1_distinguishing_features[(s1, s2)] = distinguishing
 
-    def run(self, model_filename):
+    def run(self):
         print("Generating MAXSAT model from {} features".format(len(self.features)))
         qchanges = compute_qualitative_changes(self.transitions, self.features, self.model, self.substitution)
 
@@ -225,9 +226,9 @@ class ModelTranslator(object):
             self.n_selected_clauses += 1
 
         self.report_stats()
-        self.writer.save(model_filename)
+        self.writer.save()
 
-        # memutils.display_top(tracemalloc.take_snapshot())
+        memutils.display_top(tracemalloc.take_snapshot())
 
         return self.writer.mapping
 
@@ -262,7 +263,7 @@ class ModelTranslator(object):
         print_header("Max-sat encoding stats", 1)
         print_lines("Number of D1-undistinguishable state pairs: {}".format(self.n_undistinguishable_state_pairs), 1)
         print_lines("Avg. # of D1-distinguishing features: {:.2f}".format(avg_num_d1_dist_features), 1)
-        print_lines("Clauses:".format(), 1)
+        print_lines("Clauses (possibly with repetitions):".format(), 1)
         print_lines("Selected: {}".format(self.n_selected_clauses), 2)
         print_lines("D1: {}".format(self.n_d1_clauses), 2)
         print_lines("D2: {}".format(self.n_d2_clauses), 2)
@@ -311,7 +312,8 @@ class Literal(object):
 class Clause(object):
     def __init__(self, literals, weight=math.inf):
         # assert all(isinstance(l, Literal) for l in literals)
-        self.literals = tuple(literals)
+        # self.literals = tuple(literals)
+        self.literals = literals
         # assert len(set(literals)) == len(self.literals)  # Make sure all literals are unique
         self.weight = weight
 
@@ -324,26 +326,39 @@ class Clause(object):
     #     literals = " ".join(l.to_cnf(variable_index) for l in self.literals)
     #     return "{} {} 0".format(w, literals)
 
-    def cnf_line(self, top, variable_index):
-        # w <literals> 0
-        w = top if self.weight is math.inf else self.weight
-        literals = " ".join(str(l) for l in self.literals)
-        return "{} {} 0".format(w, literals)
+    # def cnf_line(self, top):
+    #     # w <literals> 0
+    #     w = top if self.weight is math.inf else self.weight
+    #     literals = " ".join(str(l) for l in self.literals)
+    #     return "{} {} 0".format(w, literals)
 
-    def __eq__(self, other):
-        return self.literals == other.literals
+    # def __eq__(self, other):
+    #     return self.literals == other.literals
+    #
+    # def __hash__(self):
+    #     return hash(self.literals)
 
-    def __hash__(self):
-        return hash(self.literals)
+
+def print_clause(literals, weight):
+    # w <literals> 0
+    w = "#TOP#" if weight is math.inf else weight
+    literals = " ".join(str(l) for l in literals)
+    return "{} {} 0".format(w, literals)
 
 
 class CNFWriter(object):
-    def __init__(self):
+    def __init__(self, filename):
+        self.filename = filename
         self.variables = dict()
         self.clauses = set()
+        self.num_clauses = 0
+        self.accumulated_weight = 0
         self.mapping = dict()
         self.closed = False
         self.variable_index = None
+
+        self.buffer_filename = self.filename + ".tmp"
+        self.buffer = open(self.buffer_filename, "w")
 
     def variable(self, name):
         assert not self.closed
@@ -356,36 +371,47 @@ class CNFWriter(object):
 
     def clause(self, literals, weight=math.inf):
         assert self.closed
-        self.clauses.add(Clause(literals=literals, weight=weight))
+        # self.clauses.add(Clause(literals=literals, weight=weight)) # Keeping the set in memory is expensive!
+        print(print_clause(literals, weight), file=self.buffer)
+        self.num_clauses += 1
+        self.accumulated_weight += weight if weight is not math.inf else 0
 
-    def save(self, filename="model.cnf"):
+    def save(self):
         assert self.closed
         numvars = len(self.variables)
-        numclauses = len(self.clauses)
-        top = sum(c.weight for c in self.clauses if c.weight is not math.inf) + 1
-        print("Writing model to file \"{}\"".format(filename))
-        print("Model has {} variables and {} clauses. Top weight is {}".format(numvars, numclauses, top))
+        numclauses = self.num_clauses
 
-        # Literal indices must start at 1
-        real_clause_printer = lambda c: c.cnf_line(top, self.variable_index)
-
-        self._save(filename, numvars, numclauses, top, real_clause_printer)
+        self.buffer.close()
+        self._save(self.filename, numvars, numclauses)
 
         # debug = True
-        debug = False
-        if debug:
-            dfilename = "{}.txt".format(filename)
-            debug_clause_printer = lambda c: str(c)
-            self._save(dfilename, numvars, numclauses, top, debug_clause_printer)
+        # debug = False
+        # if debug:
+        #     dfilename = "{}.txt".format(self.filename)
+        #     debug_clause_printer = lambda c: str(c)
+        #     self._save(dfilename, numvars, numclauses, top, debug_clause_printer)
 
+    def _save(self, filename, numvars, numclauses):
+        num_written_clauses = count_file_lines(self.buffer_filename)
+        assert numclauses == num_written_clauses
+        remove_duplicate_lines(self.buffer_filename)
+        num_unique_clauses = count_file_lines(self.buffer_filename)
+        # num_unique_clauses_in_mem = len(self.clauses)
+        # assert num_unique_clauses == num_unique_clauses_in_mem  # Keeping the set in memory is expensive!
+        top = str(self.accumulated_weight + 1)
 
-    def _save(self, filename, numvars, numclauses, top, clause_printer):
-        with open(filename, "w") as file:
-            print("c WCNF model generated on {}".format(strftime("%Y%m%d %H:%M:%S", gmtime())), file=file)
+        print("Writing max-sat encoding to file \"{}\"".format(self.filename))
+        print("Max-sat problem has {} variables and {} unique clauses (with repetitions: {}). Top weight is {}".format(
+            numvars, num_unique_clauses, numclauses, top))
+
+        with open(filename, "w") as output:
+            print("c WCNF model generated on {}".format(time.strftime("%Y%m%d %H:%M:%S", time.localtime())), file=output)
             # p wcnf nbvar nbclauses top
-            print("p wcnf {} {} {}".format(numvars, numclauses, top), file=file)
-            for clause in self.clauses:
-                print(clause_printer(clause), file=file)
+            print("p wcnf {} {} {}".format(numvars, num_unique_clauses, top), file=output)
+            for line in read_file(self.buffer_filename):
+                print(line.replace("#TOP#", top), file=output)
+                # for clause in self.clauses:
+                #     print(clause_printer(clause), file=file)
 
     def close(self):  # Once closed, the writer won't admit more variable declarations
         assert not self.closed

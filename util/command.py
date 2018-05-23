@@ -15,3 +15,19 @@ def run_command(solver, rundir, input_filename):
     if os.path.getsize(driver_err.name) == 0:  # Delete error log if empty
         os.remove(driver_err.name)
     return error, driver_log.name
+
+
+def count_file_lines(filename):  # Might be a bit faster with a call to "wc -l"
+    i = 0
+    with open(filename) as f:
+        for i, _ in enumerate(f, 1):
+            pass
+    return i
+
+
+def remove_duplicate_lines(filename):
+    """ Removes in-place any duplicate line in the file. Will also reorder the lines as a side-effect """
+    subprocess.call(['sort', '-u', '-o', filename, filename])
+
+
+
