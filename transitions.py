@@ -6,7 +6,7 @@ about expanded states.
 import json
 from collections import OrderedDict, defaultdict
 
-from utils import read_file
+from util.command import read_file
 
 
 def normalize_atom_name(name):

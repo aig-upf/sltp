@@ -19,7 +19,7 @@ import os
 import sys
 from signal import signal, SIGPIPE, SIG_DFL
 
-from utils import bootstrap
+from util.bootstrap import bootstrap
 from util.console import print_header
 import features as fgenerator
 from solvers import solve

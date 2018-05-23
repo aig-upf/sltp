@@ -30,4 +30,8 @@ def remove_duplicate_lines(filename):
     subprocess.call(['sort', '-u', '-o', filename, filename])
 
 
-
+def read_file(filename):
+    """ Read a file, line by line, ignoring end-of-line characters"""
+    with open(filename) as f:
+        for line in f:
+            yield line.rstrip('\n')

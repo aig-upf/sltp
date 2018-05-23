@@ -2,7 +2,7 @@ from enum import Enum
 
 import tarski as tsk
 
-from utils import transitive_closure, compute_min_distance
+from util.algorithms import transitive_closure, compute_min_distance
 
 
 # abstract classes for concepts and roles

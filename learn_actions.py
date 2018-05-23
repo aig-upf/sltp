@@ -27,8 +27,8 @@ import time
 from extensions import ExtensionCache
 from util import memutils
 from util.console import print_header, print_lines
-from util.command import count_file_lines, remove_duplicate_lines
-from utils import bootstrap, read_file
+from util.command import count_file_lines, remove_duplicate_lines, read_file
+from util.bootstrap import bootstrap
 import features as fgenerator
 from solvers import solve
 

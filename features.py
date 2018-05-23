@@ -35,7 +35,8 @@ from syntax import Concept, Role, Atom, UniversalConcept, BasicConcept, NotConce
     EqualConcept, BasicRole, InverseRole, StarRole, RestrictRole, ConceptCardinalityFeature, \
     MinDistanceFeature, AndConcept, most_restricted_type, EmptyConcept, CompositionRole, SingletonConcept
 from transitions import read_transitions
-from utils import filter_subnodes, bootstrap
+from util.bootstrap import bootstrap
+from util.algorithms import filter_subnodes
 
 signal(SIGPIPE, SIG_DFL)
 
