@@ -23,7 +23,7 @@ from signal import signal, SIGPIPE, SIG_DFL
 import time
 
 from extensions import ExtensionCache
-from util import memutils
+from util import performance
 from util.console import print_header, print_lines
 from util.command import count_file_lines, remove_duplicate_lines, read_file
 from solvers import solve

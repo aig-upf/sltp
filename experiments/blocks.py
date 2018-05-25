@@ -1,8 +1,11 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
 
-from learn import Experiment, generate_full_pipeline, BENCHMARK_DIR
+import sys
+sys.path.insert(0, '..')
+
+from driver import Experiment, generate_full_pipeline, BENCHMARK_DIR
 
 
 def main():

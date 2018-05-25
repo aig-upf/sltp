@@ -277,12 +277,12 @@ class StepRunner(object):
         # import tracemalloc
         # tracemalloc.start()
         # memutils.display_top(tracemalloc.take_snapshot())
-        from util import memutils
+        from util import performance
 
-        start = memutils.timer()
+        start = performance.timer()
         output = self.target(config=config, data=data)
         save(config.experiment_dir, output)
-        memutils.print_performance_stats(start)
+        performance.print_performance_stats(start)
         # profiling.start()
 
 

@@ -13,7 +13,7 @@ def compute_experiment_tag(instance_tag, concept_depth, **kwargs):
 
 
 def compute_serialization_name(basedir, name):
-    return os.path.join(basedir, '{}.json'.format(name))
+    return os.path.join(basedir, '{}.pickle'.format(name))
 
 
 def compute_maxsat_filename(config):
