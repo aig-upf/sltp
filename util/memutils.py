@@ -1,7 +1,12 @@
 
 import linecache
+import logging
 import os
+import resource
+import time
 import tracemalloc
+
+from util import console
 
 
 def display_top(snapshot, key_type='lineno', limit=3):
@@ -28,3 +33,24 @@ def display_top(snapshot, key_type='lineno', limit=3):
         print("%s other: %.1f KiB" % (len(other), size / 1024))
     total = sum(stat.size for stat in top_stats)
     print("Total allocated size: %.1f KiB" % (total / 1024))
+
+
+def memory_usage():
+    """ Return the memory usage in MB """
+    import psutil
+    process = psutil.Process(os.getpid())
+    mem = process.memory_info().rss / float(1024*1024)
+    return mem
+
+
+def print_memory_usage():
+    logging.info("Total memory usage: {:.2f}MB".format(memory_usage()))
+    logging.info('Max. memory usage: {:.2f}MB'.format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024))
+
+
+def print_performance_stats(start_time):
+    console.print_header("{:.2f} CPU sec - {:.2f} MB".format(time.process_time() - start_time, memory_usage()))
+
+
+def timer():
+    return time.process_time()

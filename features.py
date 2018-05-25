@@ -14,28 +14,23 @@
 #  ASSUME THE COST OF ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
 #
 #  Blai Bonet, bonet@ldc.usb.ve, bonetblai@gmail.com
-import resource
 import logging
-import sys
 import itertools
 from signal import signal, SIGPIPE, SIG_DFL
 
 import os
 import tarski as tsk
-import time
 
 from bitarray import bitarray
 from tarski.io import FstripsReader
 from tarski.syntax import builtins
 
-# import profiling
 from extensions import UniverseIndex, ExtensionCache
 from parameters import add_domain_goal_parameters
 from syntax import Concept, Role, Atom, UniversalConcept, BasicConcept, NotConcept, ExistsConcept, ForallConcept, \
     EqualConcept, BasicRole, InverseRole, StarRole, RestrictRole, ConceptCardinalityFeature, \
     MinDistanceFeature, AndConcept, most_restricted_type, EmptyConcept, CompositionRole, SingletonConcept
 from transitions import read_transitions
-from util.bootstrap import bootstrap
 from util.algorithms import filter_subnodes
 
 signal(SIGPIPE, SIG_DFL)
@@ -52,8 +47,8 @@ class TerminologicalFactory(object):
     def __init__(self, language: tsk.FirstOrderLanguage):
         self.language = language
         self.universe_sort = language.get_sort('object')
-        self.top = UniversalConcept(self.universe_sort)
-        self.bot = EmptyConcept(self.universe_sort)
+        self.top = UniversalConcept(self.universe_sort.name)
+        self.bot = EmptyConcept(self.universe_sort.name)
         self.termbox = TermBox()
         self.processor = None  # Will be set later
 
@@ -200,32 +195,26 @@ class TerminologicalFactory(object):
     def create_and_concept(self, c1: Concept, c2: Concept):
         # C1 AND C2 = { x | C1(x) AND C2(x) }
 
-        result = AndConcept(c1, c2)
+        sort = most_restricted_type(self.language, c1.sort, c2.sort)
 
         if c1 == c2:
             return None  # No sense in C and C
 
         if c1 in (self.top, self.bot) or c2 in (self.top, self.bot):
-            logging.debug('Concept "%s" pruned, no sense in AND\'ing with top or bot', result)
+            logging.debug('AND of {} and {} pruned, no sense in AND\'ing with top or bot'.format(c1, c2))
             return None
 
-        if most_restricted_type(c1.sort.language, c1.sort, c2.sort) is None:
+        if sort is None:
             # i.e. c1 and c2 are disjoint types
-            logging.debug('Concept "%s" pruned for type-inconsistency reasons', result)
+            logging.debug('AND of {} and {} pruned for type-inconsistency reasons'.format(c1, c2))
             return None
 
-        return result
+        return AndConcept(c1, c2, sort)
 
     def create_equal_concept(self, r1: Role, r2: Role):
         assert isinstance(r1, Role) and isinstance(r2, Role)
         # The sort of the resulting concept will be the most restricted sort between the left sorts of the two roles
-        if self.language.is_subtype(r1.sort[0], r2.sort[0]):
-            sort = r1.sort[0]
-        elif self.language.is_subtype(r2.sort[0], r1.sort[0]):
-            sort = r2.sort[0]
-        else:
-            sort = None
-
+        sort = most_restricted_type(self.language, r1.sort[0], r2.sort[0])
         result = EqualConcept(r1, r2, sort)
 
         if not self.language.are_vertically_related(r1.sort[0], r2.sort[0]) or \
@@ -392,16 +381,16 @@ class SemanticProcessor(object):
 
 
 def store_terms(concepts, roles, args):
-    os.makedirs('terms', exist_ok=True)
-    with open(os.path.join('terms', args.result_filename + '.concepts'), 'w') as f:
+    os.makedirs(args.experiment_dir, exist_ok=True)
+    with open(os.path.join(args.experiment_dir, 'concepts.txt'), 'w') as f:
         f.write("\n".join(map(str, concepts)))
-    with open(os.path.join('terms', args.result_filename + '.roles'), 'w') as f:
+    with open(os.path.join(args.experiment_dir, 'roles.txt'), 'w') as f:
         f.write("\n".join(map(str, roles)))
 
 
 def store_role_restrictions(roles, args):
-    os.makedirs('terms', exist_ok=True)
-    with open(os.path.join('terms', args.result_filename + '.role-restrictions'), 'w') as f:
+    os.makedirs(args.experiment_dir, exist_ok=True)
+    with open(os.path.join(args.experiment_dir, 'role-restrictions.txt'), 'w') as f:
         f.write("\n".join(map(str, roles)))
 
 
@@ -414,12 +403,13 @@ def parse_pddl(domain_file):
 
 
 # @profile
-def main(args):
-    problem, language = parse_pddl(args.domain)
+def run(config, data):
+    assert not data
+    problem, language = parse_pddl(config.domain)
     language = add_domain_goal_parameters(problem.domain_name, language)
 
     print('Loading states and transitions...')
-    states, goal_states, transitions = read_transitions(args.transitions)
+    states, goal_states, transitions = read_transitions(config.sample_file)
 
     factory = TerminologicalFactory(language)
     factory.processor = SemanticProcessor(language, states, factory.top, factory.bot)
@@ -435,9 +425,9 @@ def main(args):
     c_i, c_j = 0, len(concepts)
     r_i, r_j = 0, len(roles)
     print('\nDeriving concepts and roles using {} iteration(s), starting from {} atomic concepts and {} roles'.
-          format(args.k, c_j, r_j))
+          format(config.concept_depth, c_j, r_j))
 
-    for i in range(1, args.k+1):
+    for i in range(1, config.concept_depth + 1):
         # Update indexes
         old_c, new_c = concepts[0:c_i], concepts[c_i:c_j]
         old_r, new_r = roles[0:r_i], roles[r_i:r_j]
@@ -455,7 +445,7 @@ def main(args):
 
     # profiling.print_snapshot()
 
-    store_terms(concepts, roles, args)
+    store_terms(concepts, roles, config)
     print('Final output: %d concept(s) and %d role(s)' % (len(concepts), len(roles)))
     print('Number of states in the sample: {}'.format(len(states)))
     print('Number of concepts with singleton extensions over all states: {}'.format(
@@ -463,19 +453,17 @@ def main(args):
     print('Creating features from {} concepts and {} roles'.format(len(concepts), len(roles)))
 
     rest = list(factory.create_role_restrictions(concepts, roles))
-    store_role_restrictions(rest, args)
+    store_role_restrictions(rest, config)
     k = 5
     features = factory.derive_features(concepts, rest, k)
-
     print('Final number of features: {}'.format(len(features)))
-    return features, states, goal_states, transitions, factory.processor.cache
 
+    # return features, states, goal_states, transitions, factory.processor.cache
 
-if __name__ == "__main__":
-    _args = bootstrap(sys.argv[1:])
-    start = time.process_time()
-    # profiling.start()
-    main(_args)
-    print('CPU time: {:.2f}sec'.format(time.process_time()-start))
-    print('Max. memory usage: {:.2f}MB'.format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024))
-
+    return dict(
+        features=features,
+        states=states,
+        goal_states=goal_states,
+        transitions=transitions,
+        extensions=factory.processor.cache
+    )

@@ -92,7 +92,7 @@ class EmptyConcept(Concept):
 
 class SingletonConcept(Concept):
     def __init__(self, name, sort):
-        Concept.__init__(self, sort, 0)
+        Concept.__init__(self, sort.name, 0)
         self.name = name
         self.hash = hash((self.__class__, self.name))
 
@@ -119,9 +119,9 @@ class SingletonConcept(Concept):
 class BasicConcept(Concept):
     def __init__(self, predicate):
         assert isinstance(predicate, tsk.syntax.Predicate)
-        Concept.__init__(self, predicate.sort[0], 0)
-        self.predicate = predicate
+        Concept.__init__(self, predicate.sort[0].name, 0)
         # This is a bit aggressive, but we assume that predicate names are unique
+        self.name = predicate.symbol
         self.hash = hash((self.__class__, self.name))
 
     def __hash__(self):
@@ -130,10 +130,6 @@ class BasicConcept(Concept):
     def __eq__(self, other):
         return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
                 self.name == other.name)
-
-    @property
-    def name(self):
-        return self.predicate.symbol
 
     def extension(self, cache, state, substitution):
         return cache.as_bitarray(self, state)
@@ -150,7 +146,7 @@ class BasicConcept(Concept):
 class NotConcept(Concept):
     def __init__(self, c, universal_sort):
         assert isinstance(c, Concept)
-        Concept.__init__(self, universal_sort, 1 + c.depth)
+        Concept.__init__(self, universal_sort.name, 1 + c.depth)
         self.c = c
         self.hash = hash((self.__class__, self.c))
 
@@ -175,11 +171,10 @@ class NotConcept(Concept):
 
 
 class AndConcept(Concept):
-    def __init__(self, c1, c2):
+    def __init__(self, c1, c2, sort):
         assert isinstance(c1, Concept)
         assert isinstance(c2, Concept)
-        lang = c1.sort.language
-        Concept.__init__(self, most_restricted_type(lang, c1.sort, c2.sort), 1 + c1.depth + c2.depth)
+        Concept.__init__(self, sort, 1 + c1.depth + c2.depth)
         self.c1 = c1
         self.c2 = c2
         self.hash = hash((self.__class__, self.c1, self.c2))
@@ -322,8 +317,8 @@ class EqualConcept(Concept):
 class BasicRole(Role):
     def __init__(self, predicate):
         assert isinstance(predicate, tsk.syntax.Predicate)
-        super().__init__(predicate.sort, 0)
-        self.predicate = predicate
+        super().__init__([s.name for s in predicate.sort], 0)
+        self.name = predicate.symbol
 
         # This is a bit aggressive, but we assume that predicate names are unique
         self.hash = hash((self.__class__, self.name))
@@ -334,10 +329,6 @@ class BasicRole(Role):
     def __eq__(self, other):
         return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
                 self.name == other.name)
-
-    @property
-    def name(self):
-        return self.predicate.symbol
 
     def extension(self, cache, state, substitution):
         return cache.as_bitarray(self, state)

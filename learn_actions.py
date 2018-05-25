@@ -19,8 +19,6 @@ import itertools
 import logging
 import math
 import os
-import sys
-import tracemalloc
 from signal import signal, SIGPIPE, SIG_DFL
 import time
 
@@ -28,9 +26,8 @@ from extensions import ExtensionCache
 from util import memutils
 from util.console import print_header, print_lines
 from util.command import count_file_lines, remove_duplicate_lines, read_file
-from util.bootstrap import bootstrap
-import features as fgenerator
 from solvers import solve
+from util.naming import compute_maxsat_filename
 
 signal(SIGPIPE, SIG_DFL)
 
@@ -59,26 +56,23 @@ def compute_qualitative_changes(transitions, all_features, model, substitution):
     return qchanges
 
 
-def main(args):
-    tracemalloc.start()
+def run(config, data):
+    cnf_filename = compute_maxsat_filename(config)
 
-    all_features, states, goal_states, transitions, cache = fgenerator.main(args)
-
-    rundir = os.path.join(BASEDIR, "runs")
-    cnf_filename = os.path.join(rundir, args.result_filename + ".cnf")
-
-    translator = ModelTranslator(all_features, states, goal_states, transitions, cache, cnf_filename)
+    translator = ModelTranslator(data.features, data.states, data.goal_states, data.transitions, data.extensions, cnf_filename)
     translator.run()
 
-    # solution = solve(rundir, cnf_filename, 'wpm3')
-    # solution = solve(rundir, cnf_filename, 'maxino')
-    solution = solve(rundir, cnf_filename, 'openwbo')
+    # solution = solve(config.experiment_dir, cnf_filename, 'wpm3')
+    # solution = solve(config.experiment_dir, cnf_filename, 'maxino')
+    solution = solve(config.experiment_dir, cnf_filename, 'openwbo')
 
     if not solution.solved and solution.result == "UNSATISFIABLE":
         print_header("MAXSAT encoding is UNSATISFIABLE")
     else:
         print_header("MAXSAT solution with {} selected features found".format(solution.cost))
         translator.decode_solution(solution.assignment)
+
+    return dict()
 
 
 class Model(object):
@@ -228,8 +222,6 @@ class ModelTranslator(object):
         self.report_stats()
         self.writer.save()
 
-        memutils.display_top(tracemalloc.take_snapshot())
-
         return self.writer.mapping
 
     def compute_feature_extensions(self, features, cache):
@@ -351,6 +343,7 @@ class CNFWriter(object):
         self.filename = filename
         self.variables = dict()
         self.clauses = set()
+        self.clause_batch = []
         self.num_clauses = 0
         self.accumulated_weight = 0
         self.mapping = dict()
@@ -372,15 +365,25 @@ class CNFWriter(object):
     def clause(self, literals, weight=math.inf):
         assert self.closed
         # self.clauses.add(Clause(literals=literals, weight=weight)) # Keeping the set in memory is expensive!
-        print(print_clause(literals, weight), file=self.buffer)
         self.num_clauses += 1
         self.accumulated_weight += weight if weight is not math.inf else 0
+
+        self.clause_batch.append((literals, weight))
+        if len(self.clause_batch) == 1000:
+            self.flush_clauses()
+
+    def flush_clauses(self):
+        clauses_str = '\n'.join(print_clause(literals, weight) for literals, weight in self.clause_batch)
+        print(clauses_str, file=self.buffer)
+        del self.clause_batch
+        self.clause_batch = []
 
     def save(self):
         assert self.closed
         numvars = len(self.variables)
         numclauses = self.num_clauses
 
+        self.flush_clauses()
         self.buffer.close()
         self._save(self.filename, numvars, numclauses)
 
@@ -419,14 +422,3 @@ class CNFWriter(object):
         self.variable_index = {var: i for i, var in enumerate(self.variables.values(), start=1)}
         # Save the variable mapping to parse the solution later
         self.mapping = {i: name for name, i in self.variable_index.items()}
-
-
-
-
-
-
-if __name__ == "__main__":
-    _args = bootstrap(sys.argv[1:])
-    main(_args)
-
-
