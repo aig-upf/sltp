@@ -267,6 +267,8 @@ class Experiment(object):
 
 
 def save(basedir, output):
+    if not output:
+        return
 
     def serializer():
         return tuple(serialize(data, compute_serialization_name(basedir, name)) for name, data in output.items())

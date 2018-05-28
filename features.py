@@ -101,37 +101,43 @@ class TerminologicalFactory(object):
         return [term for term in new_roles if self.processor.process_term(term)]
 
     def derive_concepts(self, old_c, new_c, old_r, new_r):
-        generators = []
+        generated = []
+
+        def process(iterator):
+            generated.extend(x for x in iterator if self.processor.process_term(x))
 
         # EXISTS R.C, FORALL R.C
-        for concepts, roles in ((new_r, old_c), (old_r, new_c), (new_r, new_c)):
+        for roles, concepts in ((new_r, old_c), (old_r, new_c), (new_r, new_c)):
             for fun in (self.create_exists_concept, self.create_forall_concept):
-                generators.append((fun(r, c) for r, c in itertools.product(concepts, roles)))
+                process(fun(r, c) for c, r in itertools.product(concepts, roles))
 
         # R = R'
-        for pairings in (itertools.product(old_r, new_r), itertools.combinations(new_r, 2)):
-            generators.append((self.create_equal_concept(r1, r2) for r1, r2 in pairings))
+        for pairings in [itertools.product(old_r, new_r), itertools.combinations(new_r, 2)]:
+            process(self.create_equal_concept(r1, r2) for r1, r2 in pairings)
 
         # C AND C'
         for pairings in (itertools.product(new_c, old_c), itertools.combinations(new_c, 2)):
-            generators.append((self.create_and_concept(c1, c2) for c1, c2 in pairings))
+            process(self.create_and_concept(c1, c2) for c1, c2 in pairings)
 
-        return (t for t in itertools.chain(*generators) if self.processor.process_term(t))
+        return generated
 
     def derive_roles(self, old_c, new_c, old_r, new_r, derive_compositions=True):
-        generators = []
+        generated = []
         cart_prod = itertools.product
         # result.extend([ InverseRole(r) for r in roles if not isinstance(r, InverseRole) ])
         # result.extend([ StarRole(r) for r in roles if not isinstance(r, StarRole) ])
 
+        def process(iterator):
+            generated.extend(x for x in iterator if self.processor.process_term(x))
+
         if derive_compositions:
             for pairings in (cart_prod(old_r, new_r), cart_prod(new_r, new_r)):
-                generators.append((self.create_composition_role(r1, r2) for r1, r2 in pairings))
+                process(self.create_composition_role(r1, r2) for r1, r2 in pairings)
 
         # for pairings in (cart_prod(new_r, old_c), cart_prod(old_r, new_c), cart_prod(new_r, new_c)):
-        #     generators.append((self.create_restrict_role(r, c) for r, c in pairings))
+        #     process(self.create_restrict_role(r, c) for r, c in pairings)
 
-        return (t for t in itertools.chain(*generators) if self.processor.process_term(t))
+        return generated
 
     def derive_features(self, concepts, rest, k):
         # new_features = [NonEmptyConceptFeature(c) for c in concepts]
@@ -261,8 +267,9 @@ class TerminologicalFactory(object):
 
         return result
 
-    def tests(self, language, interpretations):
+    def tests(self, language):
         on_r = BasicRole(language.get_predicate("on"))
+        holding_c = BasicConcept(language.get_predicate("holding"))
         ontable_c = BasicConcept(language.get_predicate("ontable"))
         # r = StarRole(BasicRole(language.get_predicate("on")))
         # c = self.create_forall_concept(r, BasicConcept(language.get_predicate("clear")))
@@ -272,8 +279,33 @@ class TerminologicalFactory(object):
         # r = StarRole())
         c1 = self.create_exists_concept(on_r, self.top)
         c2 = self.create_not_concept(ontable_c)
-        x = list(interpretations.process_concepts([c2, c1]))
-        return x
+        # x = list(interpretations.process_concepts([c2, c1]))
+
+        ##
+        not_holding = self.create_not_concept(holding_c)
+        a_const = language.get_constant("a")
+        a = SingletonConcept("a", a_const.sort)
+        not_a = self.create_not_concept(a)
+
+        # Forall(Star(on),Not({a}))
+        above = StarRole(on_r)
+        below = StarRole(InverseRole(on_r))
+        not_above_a = self.create_forall_concept(above, not_a)
+        not_below_a = self.create_forall_concept(below, not_a)
+
+        M1 = self.create_and_concept(not_holding, not_a)
+        M2 = self.create_and_concept(not_above_a, not_below_a)
+        M = self.create_and_concept(M1, M2)
+
+
+
+        # (And(Not({a}),Not(holding)), 0)
+        # t1 = self.create_and_concept(not_a, not_holding)
+        # pt1 = self.processor.process_term(t1)
+
+        z = self.processor.process_term(M)
+
+        return z
 
 
 class SemanticProcessor(object):
@@ -419,8 +451,6 @@ def run(config, data):
     concepts = factory.create_atomic_concepts(concepts)
     roles = factory.create_atomic_roles(roles)
 
-    # factory.tests(language, interpretations)  # informal tests
-
     # construct derived concepts and rules obtained with grammar
     c_i, c_j = 0, len(concepts)
     r_i, r_j = 0, len(roles)
@@ -451,6 +481,8 @@ def run(config, data):
     print('Number of concepts with singleton extensions over all states: {}'.format(
         len(factory.processor.singleton_extension_concepts)))
     print('Creating features from {} concepts and {} roles'.format(len(concepts), len(roles)))
+
+    # factory.tests(language)  # some informal tests
 
     rest = list(factory.create_role_restrictions(concepts, roles))
     store_role_restrictions(rest, config)
