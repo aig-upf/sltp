@@ -25,7 +25,8 @@ from signal import signal, SIGPIPE, SIG_DFL
 from util.bootstrap import setup_global_parser
 from util.command import execute
 from util.console import print_header, log_time
-from util.naming import compute_instance_tag, compute_experiment_tag, compute_serialization_name
+from util.naming import compute_instance_tag, compute_experiment_tag, compute_serialization_name, \
+    compute_maxsat_filename
 from util.serialization import deserialize, serialize
 
 signal(SIGPIPE, SIG_DFL)
@@ -82,6 +83,9 @@ class Step(object):
         return config  # By default, we do nothing
 
     def get_required_attributes(self):
+        raise NotImplementedError()
+
+    def get_required_data(self):
         raise NotImplementedError()
 
     def parse_config(self, **kwargs):
@@ -155,6 +159,9 @@ class FeatureGenerationStep(Step):
     def get_required_attributes(self):
         return ["sample_file", "domain", "experiment_dir", "concept_depth"]
 
+    def get_required_data(self):
+        return []
+
     def process_config(self, config):
         check_int_parameter(config, "concept_depth")
 
@@ -165,7 +172,7 @@ class FeatureGenerationStep(Step):
 
     def run(self):
         import features
-        runner = StepRunner(features.run)
+        runner = StepRunner("Feature Generation", features.run)
         runner.run(config=Bunch(self.config), data=None)
 
 
@@ -177,15 +184,18 @@ class MaxsatProblemStep(Step):
     def get_required_attributes(self):
         return ["experiment_dir"]
 
+    def process_config(self, config):
+        config["cnf_filename"] = compute_maxsat_filename(config)
+        return config
+
     def get_required_data(self):
         return ["features", "extensions", "states", "goal_states", "transitions"]
 
     def run(self):
         data = load(self.config["experiment_dir"], self.get_required_data())
         import learn_actions
-        runner = StepRunner(learn_actions.run)
+        runner = StepRunner("Generation max-sat encoding", learn_actions.run)
         runner.run(config=Bunch(self.config), data=Bunch(data))
-
 
 
 class MaxsatSolverStep(Step):
@@ -196,6 +206,15 @@ class MaxsatSolverStep(Step):
 
     def get_required_attributes(self):
         return []
+
+    def get_required_data(self):
+        return ["cnf_translator"]
+
+    def run(self):
+        data = load(self.config["experiment_dir"], self.get_required_data())
+        import learn_actions
+        runner = StepRunner("Solution max-sat encoding", learn_actions.run_solver)
+        runner.run(config=Bunch(self.config), data=Bunch(data))
 
 
 class ActionModelStep(Step):
@@ -248,24 +267,27 @@ class Experiment(object):
 
 
 def save(basedir, output):
-    for name, data in output.items():
-        filename = compute_serialization_name(basedir, name)
-        log_time(lambda: serialize(data, filename),
-                 'Serializing data element "{}" to file "{}"'.format(name, filename))
+
+    def serializer():
+        return tuple(serialize(data, compute_serialization_name(basedir, name)) for name, data in output.items())
+
+    log_time(serializer,
+             'Serializing data elements "{}" to directory "{}"'.format(', '.join(output.keys()), basedir))
 
 
 def load(basedir, items):
-    output = dict()
-    for name in items:
-        filename = compute_serialization_name(basedir, name)
-        output[name] = log_time(lambda: deserialize(filename),
-                                'Deserializing data element "{}" to file "{}"'.format(name, filename))
+    def deserializer():
+        return dict((k, deserialize(compute_serialization_name(basedir, k))) for k in items)
+
+    output = log_time(deserializer,
+                      'Deserializing data elements "{}" from directory "{}"'.format(', '.join(items), basedir))
     return output
 
 
 class StepRunner(object):
-    def __init__(self, target):
+    def __init__(self, step_name, target):
         self.target = target
+        self.step_name = step_name
 
     def run(self, **kwargs):
         p = multiprocessing.Process(target=self._runner, kwargs=kwargs)
@@ -282,7 +304,7 @@ class StepRunner(object):
         start = performance.timer()
         output = self.target(config=config, data=data)
         save(config.experiment_dir, output)
-        performance.print_performance_stats(start)
+        performance.print_performance_stats(self.step_name, start)
         # profiling.start()
 
 

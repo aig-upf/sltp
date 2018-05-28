@@ -23,11 +23,9 @@ from signal import signal, SIGPIPE, SIG_DFL
 import time
 
 from extensions import ExtensionCache
-from util import performance
 from util.console import print_header, print_lines
 from util.command import count_file_lines, remove_duplicate_lines, read_file
 from solvers import solve
-from util.naming import compute_maxsat_filename
 
 signal(SIGPIPE, SIG_DFL)
 
@@ -57,20 +55,23 @@ def compute_qualitative_changes(transitions, all_features, model, substitution):
 
 
 def run(config, data):
-    cnf_filename = compute_maxsat_filename(config)
 
-    translator = ModelTranslator(data.features, data.states, data.goal_states, data.transitions, data.extensions, cnf_filename)
+    translator = ModelTranslator(data.features, data.states, data.goal_states, data.transitions, data.extensions,
+                                 config.cnf_filename)
     translator.run()
 
-    # solution = solve(config.experiment_dir, cnf_filename, 'wpm3')
-    # solution = solve(config.experiment_dir, cnf_filename, 'maxino')
-    solution = solve(config.experiment_dir, cnf_filename, 'openwbo')
+    return dict(cnf_translator=translator)
 
+
+def run_solver(config, data):
+    # solution = solve(config.experiment_dir, config["cnf_filename"], 'wpm3')
+    # solution = solve(config.experiment_dir, config["cnf_filename"], 'maxino')
+    solution = solve(config.experiment_dir, config.cnf_filename, 'openwbo')
     if not solution.solved and solution.result == "UNSATISFIABLE":
         print_header("MAXSAT encoding is UNSATISFIABLE")
     else:
         print_header("MAXSAT solution with {} selected features found".format(solution.cost))
-        translator.decode_solution(solution.assignment)
+        data.cnf_translator.decode_solution(solution.assignment)
 
     return dict()
 
@@ -385,6 +386,7 @@ class CNFWriter(object):
 
         self.flush_clauses()
         self.buffer.close()
+        self.buffer = None
         self._save(self.filename, numvars, numclauses)
 
         # debug = True
