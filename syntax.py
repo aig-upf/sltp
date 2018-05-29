@@ -486,36 +486,16 @@ class Feature(object):
     def diff(self, x, y):
         raise NotImplementedError()
 
+    def __hash__(self):
+        raise NotImplementedError()
+
+    def __eq__(self, other):
+        raise NotImplementedError()
+
     @staticmethod
     def bool_value(value):
         assert value >= 0
         return value > 0
-
-# class NonEmptyConceptFeature(Feature):
-#     def __init__(self, c):
-#         assert isinstance(c, Concept)
-#         super().__init__()
-#         self.c = c
-#
-#     def value(self, cache, state, substitution):
-#         """ The feature is true iff the extension of the represented concept has non-empty cardinality"""
-#         ext = self.c.extension(cache, state, substitution)
-#         return ext.any()
-#
-#     def diff(self, x, y):
-#         assert type(x) is bool
-#         assert type(y) is bool
-#         if x == y:
-#             return FeatureValueChange.NIL
-#         if x is True and y is False:
-#             return FeatureValueChange.DEL
-#         if x is False and y is True:
-#             return FeatureValueChange.ADD
-#
-#     def __repr__(self):
-#         return 'NonEmpty({})'.format(self.c)
-#
-#     __str__ = __repr__
 
 
 def compute_int_feature_diff(x, y):
@@ -533,6 +513,7 @@ class ConceptCardinalityFeature(Feature):
     def __init__(self, c):
         assert isinstance(c, Concept)
         self.c = c
+        self.hash = hash((self.__class__, self.c))
 
     def value(self, cache, state, substitution):
         """ The feature value _is_ the cardinality of the extension of the represented concept"""
@@ -547,6 +528,13 @@ class ConceptCardinalityFeature(Feature):
 
     __str__ = __repr__
 
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
+                self.c == other.c)
+
 
 class MinDistanceFeature(Feature):
     def __init__(self, c1, r, c2):
@@ -554,6 +542,14 @@ class MinDistanceFeature(Feature):
         self.c1 = c1
         self.r = r
         self.c2 = c2
+        self.hash = hash((self.__class__, self.c1, self.r, self.c2))
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
+                self.c1 == other.c1 and self.r == other.r and self.c2 == other.c2)
 
     def value(self, cache, state, substitution):
         """ The value of the feature is the min distance between any object in the extension of c1 and any object
