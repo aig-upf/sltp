@@ -26,7 +26,7 @@ from util.bootstrap import setup_global_parser
 from util.command import execute
 from util.console import print_header, log_time
 from util.naming import compute_instance_tag, compute_experiment_tag, compute_serialization_name, \
-    compute_maxsat_filename
+    compute_maxsat_filename, compute_feature_filename
 from util.serialization import deserialize, serialize
 
 signal(SIGPIPE, SIG_DFL)
@@ -117,6 +117,9 @@ class PlannerStep(Step):
     def get_required_attributes(self):
         return ["instance", "domain", "num_states", "planner_location", "driver"]
 
+    def get_required_data(self):
+        return []
+
     def process_config(self, config):
         if config["driver"] not in self.VALID_DRIVERS:
             raise InvalidConfigParameter('"driver" must be one of: {}'.format(self.VALID_DRIVERS))
@@ -138,12 +141,16 @@ class PlannerStep(Step):
         return config
 
     def run(self):
-        params = '--instance {} --domain {} --driver {} --disable-static-analysis --options="max_expansions={}"'.format(
-            self.config["instance"], self.config["domain"], self.config["driver"], self.config["num_states"])
-        return execute(command=[sys.executable, "run.py"] + params.split(' '),
-                       stdout=self.config["sample_file"],
-                       cwd=self.config["planner_location"]
-                       )
+        def r(config, data):
+            params = '--instance {} --domain {} --driver {} --disable-static-analysis --options="max_expansions={}"'.format(
+                config.instance, config.domain, config.driver, config.num_states)
+            execute(command=[sys.executable, "run.py"] + params.split(' '),
+                    stdout=config.sample_file,
+                    cwd=config.planner_location
+                    )
+            return dict()
+
+        StepRunner("Sample Generation", r).run(config=Bunch(self.config), data=None)
 
 
 class Bunch(object):
@@ -172,7 +179,7 @@ class FeatureGenerationStep(Step):
 
     def run(self):
         import features
-        runner = StepRunner("Feature Generation", features.run)
+        runner = StepRunner("Concept Generation", features.run)
         runner.run(config=Bunch(self.config), data=None)
 
 
@@ -186,6 +193,7 @@ class MaxsatProblemStep(Step):
 
     def process_config(self, config):
         config["cnf_filename"] = compute_maxsat_filename(config)
+        config["feature_filename"] = compute_feature_filename(config)
         return config
 
     def get_required_data(self):
