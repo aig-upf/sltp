@@ -19,6 +19,7 @@ import itertools
 import logging
 import math
 import os
+from collections import defaultdict
 from signal import signal, SIGPIPE, SIG_DFL
 import time
 
@@ -55,17 +56,27 @@ def compute_qualitative_changes(transitions, all_features, model, substitution):
 
 
 def run(config, data):
-
     translator = ModelTranslator(data.features, data.states, data.goal_states, data.transitions, data.extensions,
                                  config.cnf_filename)
+    translator.log_features(config.feature_filename)
+
+    # DEBUGGING: FORCE A CERTAIN SET OF FEATURES:
+    selected = None
+    # selected = [translator.features[i] for i in [8, 9, 25, 26, 1232]]
+    # selected = [translator.features[i] for i in [8, 9, 25, 26, 2390]]
+    # selected = [translator.features[i] for i in [1232]]
+    # translator.features = selected
+
+    # translator.log_feature_denotations(config.feature_denotation_filename, selected)
+
     translator.run()
 
     return dict(cnf_translator=translator)
 
 
 def run_solver(config, data):
-    # solution = solve(config.experiment_dir, config["cnf_filename"], 'wpm3')
-    # solution = solve(config.experiment_dir, config["cnf_filename"], 'maxino')
+    # solution = solve(config.experiment_dir, config.cnf_filename, 'wpm3')
+    # solution = solve(config.experiment_dir, config.cnf_filename, 'maxino')
     solution = solve(config.experiment_dir, config.cnf_filename, 'openwbo')
     if not solution.solved and solution.result == "UNSATISFIABLE":
         print_header("MAXSAT encoding is UNSATISFIABLE")
@@ -115,6 +126,10 @@ class ModelTranslator(object):
         self.n_undistinguishable_state_pairs = 0
 
     def create_bridge_clauses(self, d1_literal, s, t):
+        # If there are no transitions (t, t') in the sample set, then we do not post the bridge constraint.
+        if not self.transitions[t]:
+            return
+
         for s_prime in self.transitions[s]:  # will be empty set if not initialized, which is ok
             forward_clause_literals = [d1_literal]
             for t_prime in self.transitions[t]:
@@ -142,6 +157,7 @@ class ModelTranslator(object):
         print("A total of {} variables were created".format(len(self.writer.variables)))
 
     def compute_d1_distinguishing_features(self):
+        # self.undistinguishable_state_pairs = []
         for s1, s2 in itertools.combinations(self.state_ids, 2):
             distinguishing = set()
 
@@ -153,18 +169,19 @@ class ModelTranslator(object):
 
             if not distinguishing:
                 self.n_undistinguishable_state_pairs += 1
+                # self.undistinguishable_state_pairs.append((s1, s2))
 
             self.d1_distinguishing_features[(s1, s2)] = distinguishing
 
     def run(self):
-        print("Generating MAXSAT model from {} features".format(len(self.features)))
-        qchanges = compute_qualitative_changes(self.transitions, self.features, self.model, self.substitution)
+        print("Generating MAXSAT model from {} features".format(len(self.features)), flush=True)
+        self.qchanges = qchanges = compute_qualitative_changes(self.transitions, self.features, self.model, self.substitution)
 
         self.compute_d1_distinguishing_features()
 
         self.create_variables()
 
-        print("Generating D1 + bridge constraints from {} D1 variables".format(len(self.var_d1)))
+        print("Generating D1 + bridge constraints from {} D1 variables".format(len(self.var_d1)), flush=True)
         for s1, s2 in itertools.combinations(self.state_ids, 2):
             d1_variable = self.var_d1[(s1, s2)]
             d1_distinguishing_features = self.d1_distinguishing_features[(s1, s2)]
@@ -189,24 +206,29 @@ class ModelTranslator(object):
 
                 if len(d1_distinguishing_features) == 0:
                     print("WARNING: No feature in the pool able to distinguish state pair {}, but one of the states "
-                          "is a goal and the other is not. MAXSAT encoding will be UNSAT".format((s1, s2)))
+                          "is a goal and the other is not. MAXSAT encoding will be UNSAT".format((s1, s2)), flush=True)
 
             # Else (i.e. D1(s1, s2) _might_ be false, create the bridge clauses between values of D1 and D2
             else:
                 self.create_bridge_clauses(d1_lit, s1, s2)
                 self.create_bridge_clauses(d1_lit, s2, s1)
+                pass
 
-        print("Generating D2 constraints from {} D2 variables".format(len(self.var_d2)))
+        print("Generating D2 constraints from {} D2 variables".format(len(self.var_d2)), flush=True)
+        # self.d2_distinguished = set()
         for (s0, s1, t0, t1), d2_var in self.var_d2.items():
             d2_distinguishing_features = []  # all features that d2-distinguish the current pair of transitions
             for f in self.features:
                 if qchanges[(s0, s1, f)] != qchanges[(t0, t1, f)]:
                     d2_distinguishing_features.append(f)
 
+            # if len(d2_distinguishing_features) != 0:
+            #     self.d2_distinguished.add((s0, s1, t0, t1))
+
             # D2(s0,s1,t0,t2) iff OR_f selected(f), where f ranges over features that d2-distinguish the transition
             # but do _not_ d1-distinguish the two states at the origin of each transition.
             d2_lit = self.writer.literal(d2_var, True)
-            forward_clause_literals = [-d2_lit]
+            forward_clause_literals = [self.writer.literal(d2_var, False)]
             for f in (x for x in d2_distinguishing_features if x not in self.d1_distinguishing_features[(s0, t0)]):
                 forward_clause_literals.append(self.writer.literal(self.var_selected[f], True))
                 self.writer.clause([d2_lit, self.writer.literal(self.var_selected[f], False)])
@@ -221,6 +243,9 @@ class ModelTranslator(object):
             self.n_selected_clauses += 1
 
         self.report_stats()
+
+        # self.debug_tests()
+
         self.writer.save()
 
         return self.writer.mapping
@@ -264,6 +289,46 @@ class ModelTranslator(object):
         print_lines("Goal: {}".format(self.n_goal_clauses), 2)
         print_lines("TOTAL: {}".format(self.n_selected_clauses + self.n_d1_clauses + self.n_d2_clauses +
                                        self.n_bridge_clauses + self.n_goal_clauses), 2)
+
+    def log_features(self, feature_filename):
+        logging.info("Pruned feature set saved in file {}".format(feature_filename))
+        with open(feature_filename, 'w') as f:
+            for i, feat in enumerate(self.features, 0):
+                f.write("{}:\t{}\n".format(i, feat))
+                # serialized = serialize_to_string(feat)
+                # f.write("{}:\t{}\n".format(feat, serialized))
+                # assert deserialize_from_string(serialized) == feat
+
+    def log_feature_denotations(self, feature_denotation_filename, selected=None):
+        selected = selected or self.features
+        d = defaultdict(list)
+        for (f, s), v in self.model.cache.feature_values.items():
+            if f in selected:
+                d[s].append((f, v))
+
+        states = sorted(d.keys())
+        with open(feature_denotation_filename, 'w') as file:
+            for s in states:
+                for (f, v) in sorted(d[s], key=lambda x: str(x[0])):
+                    print("{} on state {}: {}".format(f, s, v), file=file)
+
+    def debug_tests(self):
+        undist = self.undistinguishable_state_pairs
+        for s, t in undist:
+            for s_prime in self.transitions[s]:
+                some_d2_indistinguishable = False
+                for t_prime in self.transitions[t]:
+                    idx = compute_d2_index(s, s_prime, t, t_prime)
+                    if idx not in self.d2_distinguished:
+                        some_d2_indistinguishable = True
+
+                if not some_d2_indistinguishable:
+                    print("State pair {} violates bridge clauses".format((s, t)))
+                    for t_prime in self.transitions[t]:
+                        for f in self.features:
+                            print("Delta[{}] for feature {}: {}".format((s, s_prime), f, self.qchanges[(s, s_prime, f)]))
+                            print("Delta[{}] for feature {}: {}".format((t, t_prime), f, self.qchanges[(t, t_prime, f)]))
+                    assert False
 
 
 class Variable(object):
@@ -361,7 +426,7 @@ class CNFWriter(object):
     def literal(self, variable, polarity):
         assert self.closed
         i = self.variable_index[variable]
-        return i if polarity else -1*i
+        return i if polarity else -1 * i
 
     def clause(self, literals, weight=math.inf):
         assert self.closed
@@ -410,7 +475,8 @@ class CNFWriter(object):
             numvars, num_unique_clauses, numclauses, top))
 
         with open(filename, "w") as output:
-            print("c WCNF model generated on {}".format(time.strftime("%Y%m%d %H:%M:%S", time.localtime())), file=output)
+            print("c WCNF model generated on {}".format(time.strftime("%Y%m%d %H:%M:%S", time.localtime())),
+                  file=output)
             # p wcnf nbvar nbclauses top
             print("p wcnf {} {} {}".format(numvars, num_unique_clauses, top), file=output)
             for line in read_file(self.buffer_filename):

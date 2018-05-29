@@ -17,8 +17,8 @@ def compute_serialization_name(basedir, name):
 
 
 def compute_maxsat_filename(config):
-    return os.path.join(config["experiment_dir"], 'encoding.cnf'.format())
+    return compute_info_filename(config, "encoding.cnf")
 
 
-def compute_feature_filename(config):
-    return os.path.join(config["experiment_dir"], 'features.txt'.format())
+def compute_info_filename(config, name):
+    return os.path.join(config["experiment_dir"], name)
