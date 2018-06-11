@@ -520,7 +520,7 @@ def compute_bool_feature_diff(x, y):
     if x and not y:
         return FeatureValueChange.DEL
     else:
-        return FeatureValueChange.INC
+        return FeatureValueChange.NIL
 
 
 class ConceptCardinalityFeature(Feature):
