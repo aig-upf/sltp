@@ -17,13 +17,14 @@
 #  Guillem Frances, guillem.frances@unibas.ch
 import itertools
 import logging
-import math
 import os
 from collections import defaultdict
+from enum import Enum
 from signal import signal, SIGPIPE, SIG_DFL
 import time
 
 from extensions import ExtensionCache
+from syntax import EmpiricalBinaryConcept
 from util.console import print_header, print_lines
 from util.command import count_file_lines, remove_duplicate_lines, read_file
 from solvers import solve
@@ -31,6 +32,12 @@ from solvers import solve
 signal(SIGPIPE, SIG_DFL)
 
 BASEDIR = os.path.dirname(os.path.realpath(__file__))
+
+
+class OptimizationPolicy(Enum):
+    NUM_FEATURES = 1  # Minimize number of features
+    TOTAL_FEATURE_DEPTH = 2  # Minimize the sum of depths of selected features
+    NUMERIC_FEATURES_FIRST = 3   # Minimize number of numeric features first, then overall features.
 
 
 def compute_d2_index(s0, s1, t0, t1):
@@ -56,8 +63,9 @@ def compute_qualitative_changes(transitions, all_features, model, substitution):
 
 
 def run(config, data):
+    optimization = config.optimization if hasattr(config, "optimization") else OptimizationPolicy.NUM_FEATURES
     translator = ModelTranslator(data.features, data.states, data.goal_states, data.transitions, data.extensions,
-                                 config.cnf_filename)
+                                 config.cnf_filename, optimization)
     translator.log_features(config.feature_filename)
 
     # DEBUGGING: FORCE A CERTAIN SET OF FEATURES:
@@ -81,10 +89,9 @@ def run_solver(config, data):
     if not solution.solved and solution.result == "UNSATISFIABLE":
         print_header("MAXSAT encoding is UNSATISFIABLE")
     else:
-        print_header("MAXSAT solution with {} selected features found".format(solution.cost))
-        data.cnf_translator.decode_solution(solution.assignment)
+        print_header("MAXSAT solution with cost {} found".format(solution.cost))
 
-    return dict()
+    return dict(cnf_translator=data.cnf_translator, cnf_solution=solution)
 
 
 class Model(object):
@@ -102,7 +109,7 @@ class Model(object):
 
 
 class ModelTranslator(object):
-    def __init__(self, features, states, goal_states, transitions, cache, cnf_filename):
+    def __init__(self, features, states, goal_states, transitions, cache, cnf_filename, optimization):
         self.states = states
         self.goal_states = goal_states
         self.transitions = transitions
@@ -124,6 +131,8 @@ class ModelTranslator(object):
         self.n_bridge_clauses = 0
         self.n_goal_clauses = 0
         self.n_undistinguishable_state_pairs = 0
+
+        self.compute_feature_weight = self.setup_optimization_policy(optimization)
 
     def create_bridge_clauses(self, d1_literal, s, t):
         # If there are no transitions (t, t') in the sample set, then we do not post the bridge constraint.
@@ -238,8 +247,9 @@ class ModelTranslator(object):
             self.n_d2_clauses += 1
 
         # Add the weighted clauses to minimize the number of selected features
-        for feat_var in self.var_selected.values():
-            self.writer.clause([self.writer.literal(feat_var, False)], weight=1)
+        for feature, feat_var in self.var_selected.items():
+            d = self.compute_feature_weight(feature)
+            self.writer.clause([self.writer.literal(feat_var, False)], weight=d)
             self.n_selected_clauses += 1
 
         self.report_stats()
@@ -253,16 +263,27 @@ class ModelTranslator(object):
     def compute_feature_extensions(self, features, cache):
         """ Cache all feature denotations and prune those which have constant denotation at the same time """
         model = Model(cache)
-        pruned = []
+        accepted = []
         for f in features:
-            all_values = [model.compute_feature_value(f, s, self.substitution) for s in self.state_ids]
-            if all_values.count(all_values[0]) != len(all_values):  # i.e. all elements are equal
-                pruned.append(f)
-            else:
-                logging.debug("Feature \"{}\" has constant denotation ({}) over all states and will be ignored"
-                              .format(f, all_values[0]))
+            all_equal, all_0_or_1 = True, True
+            previous = None
+            for s in self.state_ids:
+                denotation = model.compute_feature_value(f, s, self.substitution)
+                if previous is not None and previous != denotation:
+                    all_equal = False
+                if denotation not in (0, 1):
+                    all_0_or_1 = False
+                previous = denotation
 
-        return model, pruned
+            if all_equal:
+                logging.debug("Feature \"{}\" has constant denotation ({}) over all states and will be ignored"
+                              .format(f, previous))
+            elif all_0_or_1:
+                accepted.append(EmpiricalBinaryConcept(f))
+            else:
+                accepted.append(f)
+
+        return model, accepted
 
     def decode_solution(self, assignment):
         varmapping = self.writer.mapping
@@ -271,7 +292,7 @@ class ModelTranslator(object):
         assert len(feature_mapping) == len(self.var_selected)
         selected_features = [feature_mapping[v] for v in true_variables if v in feature_mapping]
         print("Selected features: ")
-        print('\n'.join(str(f) for f in selected_features))
+        print('\n'.join("{}. {}".format(i, f) for i, f in enumerate(selected_features, 1)))
 
     def report_stats(self):
 
@@ -330,6 +351,21 @@ class ModelTranslator(object):
                             print("Delta[{}] for feature {}: {}".format((t, t_prime), f, self.qchanges[(t, t_prime, f)]))
                     assert False
 
+    def opt_policy_num_features(self, feature):
+        return 1
+
+    def opt_policy_total_feature_depth(self, feature):
+        return feature.weight() + 1  # Make sure no clause weight is 0
+
+    def setup_optimization_policy(self, optimization):
+        if optimization == OptimizationPolicy.NUM_FEATURES:
+            return self.opt_policy_num_features
+
+        if optimization == OptimizationPolicy.TOTAL_FEATURE_DEPTH:
+            return self.opt_policy_total_feature_depth
+
+        raise RuntimeError("Unknown optimization policy")
+
 
 class Variable(object):
     def __init__(self, name):
@@ -368,7 +404,7 @@ class Literal(object):
 
 
 class Clause(object):
-    def __init__(self, literals, weight=math.inf):
+    def __init__(self, literals, weight=None):
         # assert all(isinstance(l, Literal) for l in literals)
         # self.literals = tuple(literals)
         self.literals = literals
@@ -399,7 +435,7 @@ class Clause(object):
 
 def print_clause(literals, weight):
     # w <literals> 0
-    w = "#TOP#" if weight is math.inf else weight
+    w = "#TOP#" if weight is None else weight
     literals = " ".join(str(l) for l in literals)
     return "{} {} 0".format(w, literals)
 
@@ -428,11 +464,11 @@ class CNFWriter(object):
         i = self.variable_index[variable]
         return i if polarity else -1 * i
 
-    def clause(self, literals, weight=math.inf):
+    def clause(self, literals, weight=None):
         assert self.closed
         # self.clauses.add(Clause(literals=literals, weight=weight)) # Keeping the set in memory is expensive!
         self.num_clauses += 1
-        self.accumulated_weight += weight if weight is not math.inf else 0
+        self.accumulated_weight += weight if weight is not None else 0
 
         self.clause_batch.append((literals, weight))
         if len(self.clause_batch) == 1000:
@@ -490,3 +526,11 @@ class CNFWriter(object):
         self.variable_index = {var: i for i, var in enumerate(self.variables.values(), start=1)}
         # Save the variable mapping to parse the solution later
         self.mapping = {i: name for name, i in self.variable_index.items()}
+
+
+def compute_action_model(config, data):
+    if not data.cnf_solution.solved:
+        print_lines("No action model available from UNSAT maxsat problem")
+        return dict()
+
+    data.cnf_translator.decode_solution(data.cnf_solution.assignment)

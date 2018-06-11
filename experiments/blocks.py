@@ -7,13 +7,17 @@ def main():
     import sys
     sys.path.insert(0, '..')
     from driver import Experiment, generate_full_pipeline, BENCHMARK_DIR
+    from learn_actions import OptimizationPolicy
 
     steps = generate_full_pipeline(domain=os.path.join(BENCHMARK_DIR, "blocks", "domain.pddl"),
-                                   instance=os.path.join(BENCHMARK_DIR, "blocks", "instance_5_clear_x.pddl"),
+                                   instance=os.path.join(BENCHMARK_DIR, "blocks", "instance_8_clear_x.pddl"),
                                    driver="bfs",
                                    planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
-                                   num_states=30,
-                                   concept_depth=2)
+                                   num_states=20,
+                                   concept_depth=2,
+                                   optimization=OptimizationPolicy.TOTAL_FEATURE_DEPTH
+                                   # optimization=OptimizationPolicy.NUM_FEATURES
+                                   )
     exp = Experiment(steps)
     exp.run()
 

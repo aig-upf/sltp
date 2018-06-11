@@ -497,6 +497,9 @@ class Feature(object):
         assert value >= 0
         return value > 0
 
+    def concept(self):
+        raise NotImplementedError()
+
 
 def compute_int_feature_diff(x, y):
     assert type(x) is int and x >= 0
@@ -505,6 +508,17 @@ def compute_int_feature_diff(x, y):
         return FeatureValueChange.NIL
     if x > y:
         return FeatureValueChange.DEC
+    else:
+        return FeatureValueChange.INC
+
+
+def compute_bool_feature_diff(x, y):
+    assert type(x) is bool
+    assert type(y) is bool
+    if y and not x:
+        return FeatureValueChange.ADD
+    if x and not y:
+        return FeatureValueChange.DEL
     else:
         return FeatureValueChange.INC
 
@@ -524,7 +538,7 @@ class ConceptCardinalityFeature(Feature):
         return compute_int_feature_diff(x, y)
 
     def __repr__(self):
-        return 'cardinality[{}]'.format(self.c)
+        return 'card[{}]'.format(self.c)
 
     __str__ = __repr__
 
@@ -534,6 +548,45 @@ class ConceptCardinalityFeature(Feature):
     def __eq__(self, other):
         return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
                 self.c == other.c)
+
+    def concept(self):
+        return self.c
+
+    def weight(self):
+        return self.concept().depth*2
+
+
+class EmpiricalBinaryConcept(Feature):
+    def __init__(self, f: ConceptCardinalityFeature):
+        self.f = f
+        self.hash = hash((self.__class__, self.f))
+
+    def value(self, cache, state, substitution):
+        """ The feature value _is_ whether the cardinality of the extension of the represented concept is 0 or 1 """
+        x = self.f.value(cache, state, substitution)
+        assert x == 0 or x == 1  # By definition of "empirical binary concept"
+        return bool(x)
+
+    def diff(self, x, y):
+        return compute_bool_feature_diff(x, y)
+
+    def __repr__(self):
+        return 'bool[{}]'.format(self.f.c)
+
+    __str__ = __repr__
+
+    def __hash__(self):
+        return self.hash
+
+    def __eq__(self, other):
+        return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
+                self.f == other.f)
+
+    def concept(self):
+        return self.f.concept()
+
+    def weight(self):
+        return self.concept().depth
 
 
 class MinDistanceFeature(Feature):

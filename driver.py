@@ -101,7 +101,7 @@ class Step(object):
         raise NotImplementedError()
 
     def run_step(self):
-        retcode = self.run()
+        self.run()
         # if retcode:
         #     logging.critical('Experiment step "{}" exited with return code {}'.format(self.name, retcode))
 
@@ -142,8 +142,8 @@ class PlannerStep(Step):
 
     def run(self):
         def r(config, data):
-            params = '--instance {} --domain {} --driver {} --disable-static-analysis --options="max_expansions={}"'.format(
-                config.instance, config.domain, config.driver, config.num_states)
+            params = '--instance {} --domain {} --driver {} --disable-static-analysis --options="max_expansions={}"'\
+                .format(config.instance, config.domain, config.driver, config.num_states)
             execute(command=[sys.executable, "run.py"] + params.split(' '),
                     stdout=config.sample_file,
                     cwd=config.planner_location
@@ -235,6 +235,15 @@ class ActionModelStep(Step):
     def get_required_attributes(self):
         return []
 
+    def get_required_data(self):
+        return ["cnf_translator", "cnf_solution"]
+
+    def run(self):
+        data = load(self.config["experiment_dir"], self.get_required_data())
+        import learn_actions
+        runner = StepRunner("Action Model Computation", learn_actions.compute_action_model)
+        runner.run(config=Bunch(self.config), data=Bunch(data))
+
 
 PIPELINE = [
     PlannerStep,
@@ -317,7 +326,3 @@ class StepRunner(object):
         save(config.experiment_dir, output)
         performance.print_performance_stats(self.step_name, start)
         # profiling.start()
-
-
-
-
