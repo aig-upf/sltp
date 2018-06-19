@@ -29,6 +29,8 @@ def execute(command, **kwargs):
     cwd = kwargs["cwd"] if "cwd" in kwargs else None
 
     logging.info('Executing "{}" on directory "{}"'.format(command, cwd))
+    if 'stdout' in kwargs:
+        logging.info('Output redirected to "{}"'.format(kwargs['stdout']))
     retcode = subprocess.call(command, cwd=cwd, stdout=stdout, stderr=stderr)
 
     if stdout:
