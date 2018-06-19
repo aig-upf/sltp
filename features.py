@@ -90,10 +90,9 @@ class TerminologicalFactory(object):
         return [term for term in new_concepts if self.processor.process_term(term)]
 
     def create_atomic_roles(self, roles):
-        new_roles = [t for t in roles if self.processor.process_term(t)]
+        new_roles = [t for t in roles]
 
         inverses = [InverseRole(r) for r in roles if not isinstance(r, InverseRole)]
-        inverses = [t for t in inverses if self.processor.process_term(t)]
 
         new_roles.extend(inverses)
         new_roles.extend(StarRole(r) for r in roles if not isinstance(r, StarRole))
@@ -484,8 +483,10 @@ def run(config, data):
 
     # factory.tests(language)  # some informal tests
 
-    rest = list(factory.create_role_restrictions(concepts, roles))
-    store_role_restrictions(rest, config)
+    # Temporarily deactivated, role restrictions very expensive
+    # rest = list(factory.create_role_restrictions(concepts, roles))
+    # store_role_restrictions(rest, config)
+    rest = []
     k = 5
     features = factory.derive_features(concepts, rest, k)
     print('Final number of features: {}'.format(len(features)))
