@@ -194,6 +194,8 @@ class MaxsatProblemStep(Step):
     def process_config(self, config):
         config["cnf_filename"] = compute_maxsat_filename(config)
         config["feature_filename"] = compute_info_filename(config, "features.txt")
+        config["feature_matrix_filename"] = compute_info_filename(config, "feature-matrix.txt")
+        config["transitions_filename"] = compute_info_filename(config, "transition-matrix.txt")
         config["feature_denotation_filename"] = compute_info_filename(config, "feat-denotations.txt")
         return config
 
