@@ -29,7 +29,8 @@ def setup_logging(level):
     console = ErrorAbortHandler(sys.stdout)
     # set a format which is simpler for console use
     format_ = '%(asctime)-s %(levelname)-8s %(message)s'
-    formatter = logging.Formatter(format_)
+    datefmt = '%Y-%m-%d %H:%M:%S'
+    formatter = logging.Formatter(format_, datefmt=datefmt)
     # tell the handler to use this format
     console.setFormatter(formatter)
     # add the handler to the root logger
