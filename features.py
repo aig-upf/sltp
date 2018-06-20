@@ -85,19 +85,29 @@ class TerminologicalFactory(object):
         return concepts, roles
 
     # derive new concepts (1-step derivation) from given set of concepts and roles
-    def create_atomic_concepts(self, concepts):
-        new_concepts = [self.top, self.bot] + concepts + [self.create_not_concept(c) for c in concepts]
-        return [term for term in new_concepts if self.processor.process_term(term)]
+    def create_atomic_concepts(self, base_concepts):
+        # Start with the base concepts
+        concepts = [self.top, self.bot] + base_concepts
+        concepts = [t for t in concepts if self.processor.process_term(t)]
 
-    def create_atomic_roles(self, roles):
-        new_roles = [t for t in roles]
+        # Add Not concepts
+        nots = [self.create_not_concept(c) for c in concepts]
+        concepts.extend(t for t in nots if self.processor.process_term(t))
+        return concepts
 
-        inverses = [InverseRole(r) for r in roles if not isinstance(r, InverseRole)]
+    def create_atomic_roles(self, base_roles):
+        # Start with the base roles
+        roles = [t for t in base_roles if self.processor.process_term(t)]
 
-        new_roles.extend(inverses)
-        new_roles.extend(StarRole(r) for r in roles if not isinstance(r, StarRole))
-        new_roles.extend(StarRole(r) for r in inverses)
-        return [term for term in new_roles if self.processor.process_term(term)]
+        # Add inverse roles
+        inverses = [InverseRole(r) for r in roles]
+        roles.extend(t for t in inverses if self.processor.process_term(t))
+
+        # Add star roles
+        stars = [StarRole(r) for r in roles]
+        roles.extend(t for t in stars if self.processor.process_term(t))
+
+        return roles
 
     def derive_concepts(self, old_c, new_c, old_r, new_r):
         generated = []
