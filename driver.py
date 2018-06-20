@@ -22,6 +22,7 @@ import os
 import sys
 from signal import signal, SIGPIPE, SIG_DFL
 
+from errors import CriticalPipelineError
 from util.bootstrap import setup_global_parser
 from util.command import execute
 from util.console import print_header, log_time
@@ -101,9 +102,19 @@ class Step(object):
         raise NotImplementedError()
 
     def run_step(self):
-        self.run()
+         return self.run()
         # if retcode:
         #     logging.critical('Experiment step "{}" exited with return code {}'.format(self.name, retcode))
+
+
+def _run_planner(config, data):
+    params = '--instance {} --domain {} --driver {} --disable-static-analysis --options="max_expansions={}"'\
+        .format(config.instance, config.domain, config.driver, config.num_states)
+    execute(command=[sys.executable, "run.py"] + params.split(' '),
+            stdout=config.sample_file,
+            cwd=config.planner_location
+            )
+    return dict()
 
 
 class PlannerStep(Step):
@@ -141,16 +152,7 @@ class PlannerStep(Step):
         return config
 
     def run(self):
-        def r(config, data):
-            params = '--instance {} --domain {} --driver {} --disable-static-analysis --options="max_expansions={}"'\
-                .format(config.instance, config.domain, config.driver, config.num_states)
-            execute(command=[sys.executable, "run.py"] + params.split(' '),
-                    stdout=config.sample_file,
-                    cwd=config.planner_location
-                    )
-            return dict()
-
-        StepRunner("Sample Generation", r).run(config=Bunch(self.config), data=None)
+        StepRunner("Sample Generation", _run_planner).run(config=Bunch(self.config), data=None)
 
 
 class Bunch(object):
@@ -206,7 +208,7 @@ class MaxsatProblemStep(Step):
         data = load(self.config["experiment_dir"], self.get_required_data())
         import learn_actions
         runner = StepRunner("Generation max-sat encoding", learn_actions.run)
-        runner.run(config=Bunch(self.config), data=Bunch(data))
+        return runner.run(config=Bunch(self.config), data=Bunch(data))
 
 
 class MaxsatSolverStep(Step):
@@ -283,7 +285,12 @@ class Experiment(object):
         steps = [get_step(self.steps, name) for name in self.args.steps] or self.steps
 
         for step in steps:
-            step.run_step()
+            result = step.run_step()
+            if result is not None:
+                logging.error('Critical error while processing step "{}". Execution will be terminated. '
+                              'Error message:'.format(step.name))
+                logging.error("\t{}".format(result))
+                break
 
 
 def save(basedir, output):
@@ -297,9 +304,13 @@ def save(basedir, output):
              'Serializing data elements "{}" to directory "{}"'.format(', '.join(output.keys()), basedir))
 
 
+def _deserializer(basedir, items):
+    return dict((k, deserialize(compute_serialization_name(basedir, k))) for k in items)
+
+
 def load(basedir, items):
     def deserializer():
-        return dict((k, deserialize(compute_serialization_name(basedir, k))) for k in items)
+        return _deserializer(basedir, items)
 
     output = log_time(deserializer,
                       'Deserializing data elements "{}" from directory "{}"'.format(', '.join(items), basedir))
@@ -312,10 +323,13 @@ class StepRunner(object):
         self.step_name = step_name
 
     def run(self, **kwargs):
-        p = multiprocessing.Process(target=self._runner, kwargs=kwargs)
-        p.start()
-        p.join()
-        # TODO Handle errors
+        pool = multiprocessing.Pool(processes=1)
+        result = pool.apply_async(self._runner, (), kwargs)
+        res = result.get()
+        pool.close()
+        pool.join()
+        return res
+
 
     def _runner(self, config, data):
         # import tracemalloc
@@ -323,8 +337,14 @@ class StepRunner(object):
         # memutils.display_top(tracemalloc.take_snapshot())
         from util import performance
 
+        result = None
         start = performance.timer()
-        output = self.target(config=config, data=data)
+        try:
+            output = self.target(config=config, data=data)
+        except CriticalPipelineError as exc:
+            output = dict()
+            result = exc
         save(config.experiment_dir, output)
         performance.print_performance_stats(self.step_name, start)
         # profiling.start()
+        return result

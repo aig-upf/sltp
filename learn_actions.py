@@ -23,6 +23,7 @@ from enum import Enum
 from signal import signal, SIGPIPE, SIG_DFL
 import time
 
+from errors import CriticalPipelineError
 from extensions import ExtensionCache
 from syntax import EmpiricalBinaryConcept, FeatureValueChange
 from util.console import print_header, print_lines
@@ -247,7 +248,9 @@ def run(config, data):
     if True:
         log_feature_matrix(features, state_ids, transitions, model, config.feature_matrix_filename, config.transitions_filename)
 
-    # def __init__(self, features, state_ids, goal_states, transitions, model, cnf_filename, optimization):
+    if not data.goal_states:
+        raise CriticalPipelineError("No goal state identified in the sample, SAT theory will be trivially satisfiable")
+
     translator = ModelTranslator(features, state_ids, data.goal_states, transitions, model,
                                  config.cnf_filename, d1_distinguishing_features, optimization)
     translator.log_features(config.feature_filename)
@@ -270,9 +273,9 @@ def run_solver(config, data):
     # solution = solve(config.experiment_dir, config.cnf_filename, 'maxino')
     solution = solve(config.experiment_dir, config.cnf_filename, 'openwbo')
     if not solution.solved and solution.result == "UNSATISFIABLE":
-        print_header("MAXSAT encoding is UNSATISFIABLE")
+        raise CriticalPipelineError("MAXSAT encoding is UNSATISFIABLE")
     else:
-        print_header("MAXSAT solution with cost {} found".format(solution.cost))
+        logging.info("MAXSAT solution with cost {} found".format(solution.cost))
 
     return dict(cnf_translator=data.cnf_translator, cnf_solution=solution)
 
@@ -500,6 +503,11 @@ class ModelTranslator(object):
         feature_mapping = {variable: feature for feature, variable in self.var_selected.items()}
         assert len(feature_mapping) == len(self.var_selected)
         selected_features = [feature_mapping[v] for v in true_variables if v in feature_mapping]
+
+        if not selected_features:
+            raise CriticalPipelineError("Zero-cost maxsat solution - "
+                                        "no action model possible, the encoding has likely some error")
+
         print("Selected features: ")
         print('\n'.join("F{}. {}".format(i, f) for i, f in enumerate(selected_features, 1)))
 
@@ -785,9 +793,7 @@ class CNFWriter(object):
 
 
 def compute_action_model(config, data):
-    if not data.cnf_solution.solved:
-        print_lines("No action model available from UNSAT maxsat problem")
-        return dict()
+    assert data.cnf_solution.solved
 
     states, actions = data.cnf_translator.decode_solution(data.cnf_solution.assignment)
     with open(os.path.join(config.experiment_dir, 'actions.txt'), 'w') as f:
