@@ -25,7 +25,7 @@ import time
 
 from errors import CriticalPipelineError
 from extensions import ExtensionCache
-from syntax import EmpiricalBinaryConcept, FeatureValueChange
+from tarski.dl import EmpiricalBinaryConcept, FeatureValueChange
 from util.console import print_header, print_lines
 from util.command import count_file_lines, remove_duplicate_lines, read_file
 from solvers import solve

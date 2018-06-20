@@ -27,13 +27,16 @@ from tarski.syntax import builtins
 
 from extensions import UniverseIndex, ExtensionCache
 from parameters import add_domain_goal_parameters
-from syntax import Concept, Role, Atom, UniversalConcept, BasicConcept, NotConcept, ExistsConcept, ForallConcept, \
+from tarski.dl import Concept, Role, Atom, UniversalConcept, BasicConcept, NotConcept, ExistsConcept, ForallConcept, \
     EqualConcept, BasicRole, InverseRole, StarRole, RestrictRole, ConceptCardinalityFeature, \
-    MinDistanceFeature, AndConcept, most_restricted_type, EmptyConcept, CompositionRole, SingletonConcept
+    MinDistanceFeature, AndConcept, EmptyConcept, CompositionRole, SingletonConcept
 from transitions import read_transitions
-from util.algorithms import filter_subnodes
 
 signal(SIGPIPE, SIG_DFL)
+
+
+def filter_subnodes(elem, t):
+    return list(filter(lambda x: type(x) == t, elem.flatten()))
 
 
 class TermBox(object):
@@ -210,7 +213,7 @@ class TerminologicalFactory(object):
     def create_and_concept(self, c1: Concept, c2: Concept):
         # C1 AND C2 = { x | C1(x) AND C2(x) }
 
-        sort = most_restricted_type(self.language, c1.sort, c2.sort)
+        sort = self.language.most_restricted_type(c1.sort, c2.sort)
 
         if c1 == c2:
             return None  # No sense in C and C
@@ -229,7 +232,7 @@ class TerminologicalFactory(object):
     def create_equal_concept(self, r1: Role, r2: Role):
         assert isinstance(r1, Role) and isinstance(r2, Role)
         # The sort of the resulting concept will be the most restricted sort between the left sorts of the two roles
-        sort = most_restricted_type(self.language, r1.sort[0], r2.sort[0])
+        sort = self.language.most_restricted_type(r1.sort[0], r2.sort[0])
         result = EqualConcept(r1, r2, sort)
 
         if not self.language.are_vertically_related(r1.sort[0], r2.sort[0]) or \
