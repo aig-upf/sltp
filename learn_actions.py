@@ -231,6 +231,7 @@ def log_feature_matrix(features, state_ids, transitions, model, feature_matrix_f
 def run(config, data):
     logging.info("Generating MAXSAT problem from {} concept-based features".format(len(data.features)))
     optimization = config.optimization if hasattr(config, "optimization") else OptimizationPolicy.NUM_FEATURES
+    # prune_undistinguishable_states = True
     prune_undistinguishable_states = False
 
     state_ids = sorted(list(data.states.keys()))
@@ -500,7 +501,7 @@ class ModelTranslator(object):
         assert len(feature_mapping) == len(self.var_selected)
         selected_features = [feature_mapping[v] for v in true_variables if v in feature_mapping]
         print("Selected features: ")
-        print('\n'.join("{}. {}".format(i, f) for i, f in enumerate(selected_features, 1)))
+        print('\n'.join("F{}. {}".format(i, f) for i, f in enumerate(selected_features, 1)))
 
         # selected_features = [f for f in selected_features if str(f) == "bool[And(clear,{a})]"]
 
@@ -530,7 +531,7 @@ class ModelTranslator(object):
                         abstract_effects.append(ActionEffect(f, concrete_qchange))
 
                 preconditions = [Atom(f, val) for f, val in zip(selected_features, abstract_s)]
-                abstract_actions.add(AbstractAction("a{}".format(len(already_computed)) ,preconditions, abstract_effects))
+                abstract_actions.add(AbstractAction("a{}".format(len(already_computed)), preconditions, abstract_effects))
                 if len(abstract_effects) == 0:
                     raise RuntimeError("Unsound state model abstraction!")
 
