@@ -14,7 +14,7 @@ def main():
                                    instance=os.path.join(BENCHMARK_DIR, domain_dir, "instance_8_clear_x.pddl"),
                                    driver="bfs",
                                    planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
-                                   num_states=100,
+                                   num_states=50,
                                    concept_depth=2,
                                    optimization=OptimizationPolicy.TOTAL_FEATURE_DEPTH
                                    # optimization=OptimizationPolicy.NUM_FEATURES
