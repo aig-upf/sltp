@@ -14,6 +14,14 @@ def add_domain_goal_parameters(domain_name, language):
         # We simply add block "a" as a domain constant
         language.constant("a", "object")
         # language.constant("b", "object")
+
+    elif domain_name == "gripper-strips":
+        # language.constant("ball1", "object")
+        language.constant("roomb", "object")
+
+    elif domain_name == "grid-visit-all":
+        language.constant("loc-x0-y0", "place")
+        language.constant("loc-x0-y1", "place")
     else:
         print('WARNING: Domain name "{}" not recognized, no goal parameters added'.format(domain_name))
     return language
