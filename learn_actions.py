@@ -25,7 +25,7 @@ import time
 
 from errors import CriticalPipelineError
 from extensions import ExtensionCache
-from tarski.dl import EmpiricalBinaryConcept, FeatureValueChange
+from tarski.dl import EmpiricalBinaryConcept, FeatureValueChange, NullaryAtomFeature
 from util.console import print_header, print_lines
 from util.command import count_file_lines, remove_duplicate_lines, read_file
 from solvers import solve
@@ -186,10 +186,11 @@ def compute_feature_extensions(states, features, model):
                 # print(" ".join(trace))
                 continue
 
-        if all_0_or_1:
+        if all_0_or_1 and not isinstance(f, NullaryAtomFeature):
             accepted.append(EmpiricalBinaryConcept(f))
         else:
             accepted.append(f)
+
 
     logging.info("{}/{} features have constant or duplicated denotations and have been pruned"
                  .format(len(features)-len(accepted), len(features)))

@@ -24,8 +24,8 @@ import tarski as tsk
 from bitarray import bitarray
 from tarski.io import FstripsReader
 from tarski.syntax import builtins
-from tarski.dl import Concept, Role, PrimitiveConcept, PrimitiveRole, InverseRole, StarRole, ConceptCardinalityFeature, \
-    MinDistanceFeature, SyntacticFactory
+from tarski.dl import Concept, Role, PrimitiveConcept, PrimitiveRole, InverseRole, StarRole, \
+    ConceptCardinalityFeature, MinDistanceFeature, SyntacticFactory, NullaryAtomFeature, NullaryAtom
 
 from extensions import UniverseIndex, ExtensionCache
 from parameters import add_domain_goal_parameters
@@ -36,16 +36,16 @@ signal(SIGPIPE, SIG_DFL)
 
 class TerminologicalFactory(object):
     def __init__(self, language: tsk.FirstOrderLanguage, states):
-        self.syntaxis = SyntacticFactory(language)
-        self.processor = SemanticProcessor(language, states, self.syntaxis.top, self.syntaxis.bot)
+        self.syntax = SyntacticFactory(language)
+        self.processor = SemanticProcessor(language, states, self.syntax.top, self.syntax.bot)
 
     def create_atomic_concepts(self, base_concepts):
         # Start with the base concepts
-        concepts = [self.syntaxis.top, self.syntaxis.bot] + base_concepts
+        concepts = [self.syntax.top, self.syntax.bot] + base_concepts
         concepts = [t for t in concepts if self.processor.process_term(t)]
 
         # Add Not concepts
-        nots = [self.syntaxis.create_not_concept(c) for c in concepts]
+        nots = [self.syntax.create_not_concept(c) for c in concepts]
         concepts.extend(t for t in nots if self.processor.process_term(t))
         return concepts
 
@@ -71,16 +71,16 @@ class TerminologicalFactory(object):
 
         # EXISTS R.C, FORALL R.C
         for roles, concepts in ((new_r, old_c), (old_r, new_c), (new_r, new_c)):
-            for fun in (self.syntaxis.create_exists_concept, self.syntaxis.create_forall_concept):
+            for fun in (self.syntax.create_exists_concept, self.syntax.create_forall_concept):
                 process(fun(r, c) for c, r in itertools.product(concepts, roles))
 
         # R = R'
         for pairings in [itertools.product(old_r, new_r), itertools.combinations(new_r, 2)]:
-            process(self.syntaxis.create_equal_concept(r1, r2) for r1, r2 in pairings)
+            process(self.syntax.create_equal_concept(r1, r2) for r1, r2 in pairings)
 
         # C AND C'
         for pairings in (itertools.product(new_c, old_c), itertools.combinations(new_c, 2)):
-            process(self.syntaxis.create_and_concept(c1, c2) for c1, c2 in pairings)
+            process(self.syntax.create_and_concept(c1, c2) for c1, c2 in pairings)
 
         return generated
 
@@ -95,7 +95,7 @@ class TerminologicalFactory(object):
 
         if derive_compositions:
             for pairings in (cart_prod(old_r, new_r), cart_prod(new_r, new_r)):
-                process(self.syntaxis.create_composition_role(r1, r2) for r1, r2 in pairings)
+                process(self.syntax.create_composition_role(r1, r2) for r1, r2 in pairings)
 
         # for pairings in (cart_prod(new_r, old_c), cart_prod(old_r, new_c), cart_prod(new_r, new_c)):
         #     process(self.create_restrict_role(r, c) for r, c in pairings)
@@ -115,7 +115,7 @@ class TerminologicalFactory(object):
                 c1.depth + r.depth + c2.depth <= k)
 
     def create_role_restrictions(self, concepts, roles):
-        role_restrictions = (self.syntaxis.create_restrict_role(r, c) for r, c in itertools.product(roles, concepts))
+        role_restrictions = (self.syntax.create_restrict_role(r, c) for r, c in itertools.product(roles, concepts))
         return (t for t in role_restrictions if self.processor.process_term(t))
 
 
@@ -126,7 +126,7 @@ class SemanticProcessor(object):
         self.top = top
         self.bot = bot
         self.relevant_predicates = set(p for p in self.language.predicates
-                                       if not builtins.is_builtin_predicate(p) and p.arity in (1, 2))
+                                       if not builtins.is_builtin_predicate(p) and p.arity in (0, 1, 2))
         self.universe = self.compute_universe(states)
         self.cache = self.create_cache_for_samples()
         self.singleton_extension_concepts = []
@@ -147,25 +147,30 @@ class SemanticProcessor(object):
 
     def build_cache_for_state(self, state, universe):
         cache = dict()
-        cache['_atoms_'] = []  # Not sure if we'll need this
         unprocessed = set(self.relevant_predicates)
 
         for atom in state:
             assert len(atom) in (1, 2, 3)
             name = atom[0]
 
-            if len(atom) == 1:
-                cache['_atoms_'].append(name)
-            else:
-                predicate = self.language.get_predicate(name)
-                if predicate in unprocessed:
-                    unprocessed.remove(predicate)
+            predicate = self.language.get_predicate(name)
+            if predicate in unprocessed:
+                unprocessed.remove(predicate)
 
-                if len(atom) == 2:
-                    cache.setdefault(PrimitiveConcept(predicate), set()).add(universe.index(atom[1]))
-                else:
-                    t = (universe.index(atom[1]), universe.index(atom[2]))
-                    cache.setdefault(PrimitiveRole(predicate), set()).add(t)
+            if len(atom) == 1:  # i.e. a nullary predicate
+                assert predicate.arity == 0
+                atom = NullaryAtom(predicate)
+                assert atom not in cache
+                cache[atom] = True
+
+            elif len(atom) == 2:  # i.e. a unary predicate
+                assert predicate.arity == 1
+                cache.setdefault(PrimitiveConcept(predicate), set()).add(universe.index(atom[1]))
+
+            else:  # i.e. a binary predicate
+                assert predicate.arity == 2
+                t = (universe.index(atom[1]), universe.index(atom[2]))
+                cache.setdefault(PrimitiveRole(predicate), set()).add(t)
 
         cache[self.top] = universe.as_extension()
         cache[self.bot] = set()
@@ -174,8 +179,13 @@ class SemanticProcessor(object):
 
         # CWA: those predicates not appearing on the state trace are assumed to have empty denotation
         for p in unprocessed:
-            term = PrimitiveConcept(p) if p.arity == 1 else PrimitiveRole(p)
-            cache[term] = set()
+            if p.arity == 1:
+                cache[PrimitiveConcept(p)] = set()
+            elif p.arity == 2:
+                cache[PrimitiveRole(p)] = set()
+            else:
+                assert p.arity == 0
+                cache[NullaryAtom(p)] = False
 
         return cache
 
@@ -199,6 +209,8 @@ class SemanticProcessor(object):
             for term, extension in all_terms.items():
                 if isinstance(term, (Concept, Role)):
                     cache.register_extension(term, sid, extension)
+                elif isinstance(term, NullaryAtom):
+                    cache.register_nullary_truth_value(term, sid, extension)
 
         return cache
 
@@ -245,6 +257,10 @@ def parse_pddl(domain_file):
     return problem, problem.language
 
 
+def create_nullary_features(atoms):
+    return [NullaryAtomFeature(a) for a in atoms]
+
+
 # @profile
 def run(config, data):
     assert not data
@@ -257,7 +273,10 @@ def run(config, data):
     factory = TerminologicalFactory(language, states)
 
     # Construct the primitive terms from the input language, and then add the atoms
-    concepts, roles, atoms = factory.syntaxis.generate_primitives_from_language()
+    concepts, roles, atoms = factory.syntax.generate_primitives_from_language()
+    logging.info('Primitive (nullary) atoms : {}'.format(", ".join(map(str, atoms))))
+    logging.info('Primitive (unary) concepts: {}'.format(", ".join(map(str, concepts))))
+    logging.info('Primitive (binary) roles  : {}'.format(", ".join(map(str, roles))))
     concepts = factory.create_atomic_concepts(concepts)
     roles = factory.create_atomic_roles(roles)
 
@@ -286,13 +305,10 @@ def run(config, data):
     # profiling.print_snapshot()
 
     store_terms(concepts, roles, config)
-    print('Final output: %d concept(s) and %d role(s)' % (len(concepts), len(roles)))
-    print('Number of states in the sample: {}'.format(len(states)))
-    print('Number of concepts with singleton extensions over all states: {}'.format(
+    logging.info('Final output: %d concept(s) and %d role(s)'.format(len(concepts), len(roles)))
+    logging.info('Number of states in the sample: {}'.format(len(states)))
+    logging.info('Number of concepts with singleton extensions over all states: {}'.format(
         len(factory.processor.singleton_extension_concepts)))
-    print('Creating features from {} concepts and {} roles'.format(len(concepts), len(roles)))
-
-    # factory.tests(language)  # some informal tests
 
     # Temporarily deactivated, role restrictions very expensive
     # rest = list(factory.create_role_restrictions(concepts, roles))
@@ -300,7 +316,9 @@ def run(config, data):
     rest = []
     k = 5
     features = factory.derive_features(concepts, rest, k)
-    print('Final number of features: {}'.format(len(features)))
+    features += create_nullary_features(atoms)
+
+    logging.info('Final number of features: {}'.format(len(features)))
 
     # return features, states, goal_states, transitions, factory.processor.cache
 

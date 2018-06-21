@@ -4,6 +4,7 @@ about expanded states.
 """
 
 import json
+import logging
 from collections import OrderedDict, defaultdict
 
 from util.command import read_file
@@ -60,7 +61,7 @@ def read_transitions(transitions_filename):
 
     assert sum([len(t) for t in transitions.values()]) == sum([len(t) for t in transitions_inv.values()])
 
-    print('#lines-raw-file=%d, #state-by-str=%d, #states-by-id=%d, #transition-entries=%d, #transitions=%d' % (
+    logging.info('#lines-raw-file=%d, #state-by-str=%d, #states-by-id=%d, #transition-entries=%d, #transitions=%d' % (
         len(raw_file), len(states_by_str), len(states_by_id), len(transitions),
         sum([len(targets) for targets in transitions.values()])))
 

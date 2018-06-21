@@ -147,6 +147,7 @@ class ExtensionCache(object):
         self.top = top
         self.bot = bot
         self.index = dict()
+        self.nullaries = dict()
         self.all_traces = dict()  # a dictionary from extension trace to simplest concept / role achieving it
         self.term_to_trace = dict()
         self.feature_values = dict()
@@ -160,11 +161,14 @@ class ExtensionCache(object):
     def register_compressed_extension(self, term, sid, extension):
         self.index[(term, sid)] = extension
 
+    def register_nullary_truth_value(self, atom, sid, value):
+        self.nullaries[(atom, sid)] = value
+
     def universe(self, state):
         return self.as_bitarray(self.top, state)
 
-    # def contains(self, term, state):
-    #     return (term, state) in self.index
+    def nullary_value(self, atom, sid):
+        return self.nullaries[(atom, sid)]
 
     def feature_value(self, feature, sid):
         return self.feature_values[(feature, sid)]
