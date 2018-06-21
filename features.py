@@ -24,12 +24,11 @@ import tarski as tsk
 from bitarray import bitarray
 from tarski.io import FstripsReader
 from tarski.syntax import builtins
+from tarski.dl import Concept, Role, BasicConcept, BasicRole, InverseRole, StarRole, ConceptCardinalityFeature, \
+    MinDistanceFeature, SyntacticFactory
 
 from extensions import UniverseIndex, ExtensionCache
-from factory import SyntacticFactory
 from parameters import add_domain_goal_parameters
-from tarski.dl import Concept, Role, BasicConcept, BasicRole, InverseRole, StarRole, ConceptCardinalityFeature, \
-    MinDistanceFeature
 from transitions import read_transitions
 
 signal(SIGPIPE, SIG_DFL)
