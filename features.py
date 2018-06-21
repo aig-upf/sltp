@@ -24,7 +24,7 @@ import tarski as tsk
 from bitarray import bitarray
 from tarski.io import FstripsReader
 from tarski.syntax import builtins
-from tarski.dl import Concept, Role, BasicConcept, BasicRole, InverseRole, StarRole, ConceptCardinalityFeature, \
+from tarski.dl import Concept, Role, PrimitiveConcept, PrimitiveRole, InverseRole, StarRole, ConceptCardinalityFeature, \
     MinDistanceFeature, SyntacticFactory
 
 from extensions import UniverseIndex, ExtensionCache
@@ -162,10 +162,10 @@ class SemanticProcessor(object):
                     unprocessed.remove(predicate)
 
                 if len(atom) == 2:
-                    cache.setdefault(BasicConcept(predicate), set()).add(universe.index(atom[1]))
+                    cache.setdefault(PrimitiveConcept(predicate), set()).add(universe.index(atom[1]))
                 else:
                     t = (universe.index(atom[1]), universe.index(atom[2]))
-                    cache.setdefault(BasicRole(predicate), set()).add(t)
+                    cache.setdefault(PrimitiveRole(predicate), set()).add(t)
 
         cache[self.top] = universe.as_extension()
         cache[self.bot] = set()
@@ -174,7 +174,7 @@ class SemanticProcessor(object):
 
         # CWA: those predicates not appearing on the state trace are assumed to have empty denotation
         for p in unprocessed:
-            term = BasicConcept(p) if p.arity == 1 else BasicRole(p)
+            term = PrimitiveConcept(p) if p.arity == 1 else PrimitiveRole(p)
             cache[term] = set()
 
         return cache
