@@ -24,6 +24,16 @@ string bit_string(int k) {
     return bitset<8>(k).to_string();
 }
 
+string filename(const string &prefix, int K, int N, const string &suffix, bool opt = true) {
+    string fn(prefix);
+    if( opt ) {
+        fn += string("_") + to_string(K);
+        fn += string("_") + to_string(N);
+    }
+    fn += suffix;
+    return fn;
+}
+
 class Var {
   protected:
     int index_;
@@ -104,18 +114,13 @@ class Implication {
     }
 };
 
-class GoalFeatures : public set<int> {
-    int num_goal_features_;
+class Items : public set<int> {
+    int num_;
   public:
-    GoalFeatures(int num_goal_features = 0) : num_goal_features_(num_goal_features) { }
-    ~GoalFeatures() { }
-    int num_goal_features() const {
-        return num_goal_features_;
-    }
-    bool sim(int i, int j) const {
-        set<int>::const_iterator it = find(i);
-        set<int>::const_iterator jt = find(j);
-        return ((it != end()) && (jt != end())) || ((it == end()) && (jt == end()));
+    Items(int num = 0) : num_(num) { }
+    ~Items() { }
+    int num() const {
+        return num_;
     }
     void dump(ostream &os) const {
         os << size();
@@ -124,19 +129,19 @@ class GoalFeatures : public set<int> {
         os << endl;
     }
     void read(istream &is) {
-        for( size_t i = 0; i < num_goal_features_; ++i ) {
-            int goal_feature;
-            is >> goal_feature;
-            insert(goal_feature);
+        for( size_t i = 0; i < num_; ++i ) {
+            int item;
+            is >> item;
+            insert(item);
         }
     }
-    static const GoalFeatures* read_dump(istream &is) {
-        int num_goal_features;
-        is >> num_goal_features;
-        GoalFeatures *GF = new GoalFeatures(num_goal_features);
-        GF->read(is);
-        cout << "GoalFeatures::read_dump: #goal-features=" << GF->num_goal_features() << endl;
-        return GF;
+    static const Items* read_dump(istream &is) {
+        int num;
+        is >> num;
+        Items *items = new Items(num);
+        items->read(is);
+        cout << "Items::read_dump: #items=" << items->num() << endl;
+        return items;
     }
 };
 
@@ -428,13 +433,30 @@ class Transitions {
 };
 
 class Theory {
+  public:
+    struct Options {
+        string prefix_;
+        bool ordering_;
+        bool decode_;
+        bool explicit_goals_;
+        bool add_features_;
+        bool only_soundness_;
+        Options()
+          : ordering_(true),
+            decode_(false),
+            explicit_goals_(false),
+            add_features_(false),
+            only_soundness_(false) {
+        }
+    };
+
   protected:
     const Matrix &M_;
     const Transitions &T_;
-    const GoalFeatures &G_;
     const int K_;
     const int N_;
-    const bool ordering_;
+
+    const Options options_;
 
     const int num_states_;
     const int num_features_;
@@ -504,8 +526,8 @@ class Theory {
     };
 
   public:
-    Theory(const Matrix &M, const Transitions &T, const GoalFeatures &G, int K, int N, bool ordering = true)
-      : M_(M), T_(T), G_(G), K_(K), N_(N), ordering_(ordering),
+    Theory(const Matrix &M, const Transitions &T, int K, int N, const Options &options)
+      : M_(M), T_(T), K_(K), N_(N), options_(options),
         num_states_(M_.num_states()),
         num_features_(M_.num_features()),
         log_num_features_(0),
@@ -530,14 +552,17 @@ class Theory {
         cout << "--------- base implications ----------" << endl;
         build_base();
 
-        //separate_goals();
-        add_goal_features();
+        if( options_.explicit_goals_ )
+            explicit_goals(options_.prefix_);
+        if( options_.add_features_ )
+            add_features(options_.prefix_);
+
         //force_features();
         //force_actions();
 
         cout << "------ soundness + completeness ------" << endl;
         enforce_soundness();
-        enforce_completeness();
+        if( !options_.only_soundness_ ) enforce_completeness();
         cout << "--------------------------------------" << endl;
     }
     virtual ~Theory() {
@@ -751,7 +776,7 @@ class Theory {
         }
         cout << "APPMATCH: #variables=" << variables_.size() - var_offsets_.back().first << " (TN), offset=" << var_offsets_.back().first << endl;
 
-        if( ordering_ ) {
+        if( options_.ordering_ ) {
             // df variables:
             var_offsets_.push_back(make_pair(variables_.size(), "df"));
             for( int j = 0; j + 1 < K_; ++j ) {
@@ -909,7 +934,7 @@ class Theory {
 #endif
 
         // ordering: if first affected feature by A^j is F^k, then A^{j-1} must affect some feature in {F^1, ..., F^k}
-        if( ordering_ ) {
+        if( options_.ordering_ ) {
             for( int j = 1; j < N_; ++j ) {
                 for( int k = 0; k < K_; ++k ) {
                     Implication *IP = new Implication;
@@ -946,7 +971,7 @@ class Theory {
         }
 
         // constraints: ordering of selected features F^0 < F^0 < ... < F^{K-1}
-        if( ordering_ ) {
+        if( options_.ordering_ ) {
             for( int k = 0; k + 1 < K_; ++k ) {
 #if 1 // CHECK: for some reason, it is more efficient to generate these implications here
                 for( int t = 0; t < log_num_features_; ++t ) {
@@ -1299,7 +1324,7 @@ class Theory {
         assert((0 <= j) && (j + 1 < K_));
         assert((0 <= k) && (k < log_num_features_));
 
-#if 0 // CHECK: generated with formulas for F as it is more efficient (for unknown reasons)
+#if 0 // CHECK: generated with formulas for F as it is more efficient (for unknown reasons... see above)
         Implication *IP1 = new Implication;
         IP1->add_antecedent(1 + df(j, k));
         IP1->add_consequent(-(1 + F(j, k)));
@@ -1396,21 +1421,54 @@ class Theory {
         //print_implications(cout, imp_offsets_.back().first, implications_.size());
     }
 
-    void force_feature(int j, int feature) {
+    // CHECK: this is broken. When ordering, force features doesn't work since every
+    // feature after forced ones need to have indices bigger than forced features
+    void force_feature(int index, int feature) {
         for( int k = 0; k < log_num_features_; ++k ) {
             Implication *IP = new Implication;
-            IP->add_consequent(bit(k, feature) ? 1 + F(j, k) : -(1 + F(j, k)));
+            IP->add_consequent(bit(k, feature) ? 1 + F(index, k) : -(1 + F(index, k)));
             add_implication(IP);
         }
     }
-    void add_goal_features() {
-        int j = 0;
+    void add_features(const Items &features) {
+        int index = 0;
         imp_offsets_.push_back(make_pair(implications_.size(), "goal"));
-        add_comment("Theory for goal features");
-        for( GoalFeatures::const_iterator it = G_.begin(); it != G_.end(); ++it, ++j )
-            force_feature(j, *it);
+        add_comment("Theory for features");
+        for( Items::const_iterator it = features.begin(); it != features.end(); ++it, ++index )
+            force_feature(index, *it);
         cout << "goal: #implications=" << implications_.size() - imp_offsets_.back().first << " (G x log2(#features))" << endl;
         //print_implications(cout, imp_offsets_.back().first, implications_.size());
+    }
+    void add_features(const string &prefix) {
+        string features_filename = filename(prefix, K_, N_, "_features.dat", false);
+        cout << "reading '" << features_filename << "' ... " << flush;
+        ifstream ifs(features_filename.c_str());
+        if( !ifs.fail() ) {
+            const Items *features = Items::read_dump(ifs);
+            ifs.close();
+            add_features(*features);
+            delete features;
+        } else {
+            cout << "error: opening file '" << features_filename << "'" << endl;
+        }
+    }
+
+    // CHECK: clauses to separate explicit goals from non-goals
+    void explicit_goals(const Items &goals) {
+        assert(0);
+    }
+    void explicit_goals(const string &prefix) {
+        string goals_filename = filename(prefix, K_, N_, "_goals.dat", false);
+        cout << "reading '" << goals_filename << "' ... " << flush;
+        ifstream ifs(goals_filename.c_str());
+        if( !ifs.fail() ) {
+            const Items *goals = Items::read_dump(ifs);
+            ifs.close();
+            explicit_goals(*goals);
+            delete goals;
+        } else {
+            cout << "error: opening file '" << goals_filename << "'" << endl;
+        }
     }
 
     void force_action(int j, const AbstractAction &action) {
@@ -1668,92 +1726,125 @@ class Theory {
     }
 };
 
-pair<const Matrix*, pair<const Transitions*, const GoalFeatures*> >
-read_data(const string &matrix_filename, const string &transitions_filename, const string &goals_filename) {
+pair<const Matrix*, const Transitions*>
+read_data(const string &matrix_filename, const string &transitions_filename) {
+    pair<const Matrix*, const Transitions*> p(nullptr, nullptr);
+
     cout << "reading '" << matrix_filename << "' ... " << flush;
     ifstream ifs_matrix(matrix_filename.c_str());
-    const Matrix *M = Matrix::read_dump(ifs_matrix);
-    ifs_matrix.close();
+    if( !ifs_matrix.fail() ) {
+        p.first = Matrix::read_dump(ifs_matrix);
+        ifs_matrix.close();
+    } else {
+        cout << "error: opening file '" << matrix_filename << "'" << endl;
+    }
 
     cout << "reading '" << transitions_filename << "' ... " << flush;
     ifstream ifs_transitions(transitions_filename.c_str());
-    const Transitions *T = Transitions::read_dump(ifs_transitions);
-    ifs_transitions.close();
-
-    cout << "reading '" << goals_filename << "' ... " << flush;
-    ifstream ifs_goals(goals_filename.c_str());
-    const GoalFeatures *G = GoalFeatures::read_dump(ifs_goals);
-    ifs_goals.close();
-
-    return make_pair(M, make_pair(T, G));
-}
-
-string filename(const string &prefix, int K, int N, const string &suffix, bool opt = true) {
-    string fn(prefix);
-    if( opt ) {
-        fn += string("_") + to_string(K);
-        fn += string("_") + to_string(N);
+    if( !ifs_transitions.fail() ) {
+        p.second = Transitions::read_dump(ifs_transitions);
+        ifs_transitions.close();
+    } else {
+        cout << "error: opening file '" << transitions_filename << "'" << endl;
     }
-    fn += suffix;
-    return fn;
+
+    return p;
 }
 
 void usage(ostream &os, const string &name) {
     cout << endl
-         << "usage: " << name << " <prefix> <K> <N> <decode>" << endl
+         << "usage: " << name << " [--add-features] [--decode] [--explicit-goals] [--only-soundness] <prefix> <K> <N>" << endl
          << endl
-         << "where <prefix> is prefix for all files, K=numer of selected features," << endl
-         << "N=number of abstract actions, decode=0 to generate SAT theory, and" << endl
-         << "decode=1 to decode SAT model generated by Minisat." << endl;
+         << "where" << endl
+         << "    <prefix> is prefix for all files" << endl
+         << "    K is numer of features to select" << endl
+         << "    N is number of abstract actions." << endl
+         << endl
+         << "For the options," << endl
+         << "    --add-features to force inclusion of features in '<prefix>_features.dat'" << endl
+         << "    --decode to decode model in '<prefix>_<K>_<N>_model.cnf' found by minisat" << endl
+         << "    --explicit-goals to separate goals from non-goals using goals in '<prefix>_goals.dat'" << endl
+         << "    --only-soundness to generate clauses that only enforce soundness instead of soundness+completeness" << endl
+         << endl
+         ;
 }
 
 int main(int argc, const char **argv) {
-    if( argc < 5 ) {
-        usage(cout, argv[0]);
+    // print call
+    cout << "call:";
+    for( int i = 0; i < argc; ++i )
+        cout << " " << argv[i];
+    cout << endl;
+
+    // read executable name
+    string name(*argv);
+
+    // read options
+    Theory::Options options;
+    for( ++argv, --argc; (argc > 0) && (**argv == '-'); ++argv, --argc ) {
+        if( string(*argv) == "--decode" ) {
+            options.decode_ = true;
+        } else if( string(*argv) == "--explicit-goals" ) {
+            options.explicit_goals_ = true;
+        } else if( string(*argv) == "--add-features" ) {
+            options.add_features_ = true;
+        } else if( string(*argv) == "--only-soundness" ) {
+            options.only_soundness_ = true;
+        } else {
+            cout << "error: unrecognized option '" << *argv << "'" << endl;
+            usage(cout, name);
+            exit(0);
+        }
+    }
+
+    // check we have enough arguments
+    if( argc < 3 ) {
+        usage(cout, name);
         exit(0);
     }
 
-    // arguments
-    string prefix(argv[1]);
-    int K = atoi(argv[2]);
-    int N = atoi(argv[3]);
-    int decode = atoi(argv[4]);
-    cout << "arguments: prefix=" << prefix << ", K=" << K << ", N=" << N << ", decode=" << decode << endl;
+    // read arguments
+    options.prefix_ = argv[0];
+    int K = atoi(argv[1]);
+    int N = atoi(argv[2]);
+    cout << "arguments: prefix=" << options.prefix_ << ", K=" << K << ", N=" << N << endl;
 
     // input filenames
-    string matrix_filename = filename(prefix, K, N, "_matrix.dat2", false);
-    string transitions_filename = filename(prefix, K, N, "_transitions.dat2", false);
-    string goal_features_filename = filename(prefix, K, N, "_goal_features.dat2", false);
+    string matrix_filename = filename(options.prefix_, K, N, "_matrix.dat", false);
+    string transitions_filename = filename(options.prefix_, K, N, "_transitions.dat", false);
 
     // read data
-    pair<const Matrix*, pair<const Transitions*, const GoalFeatures*> > p;
-    p = read_data(matrix_filename, transitions_filename, goal_features_filename);
+    pair<const Matrix*, const Transitions*> p;
+    p = read_data(matrix_filename, transitions_filename);
     const Matrix *M = p.first;
-    const Transitions *Tr = p.second.first;
-    const GoalFeatures *G = p.second.second;
+    const Transitions *Tr = p.second;
 
     // create theory
-    Theory Th(*M, *Tr, *G, K, N);
+    Theory Th(*M, *Tr, K, N, options);
     cout << "#variables=" << Th.num_variables() << endl;
     cout << "#implications=" << Th.num_implications() << endl;
 
     // decode
-    if( decode ) {
-        string model_filename = filename(prefix, K, N, "_model.sat2");
+    if( options.decode_ ) {
+        string model_filename = filename(options.prefix_, K, N, "_model.cnf");
         cout << "reading file '" << model_filename << "' ..." << flush;
-        ifstream is(model_filename.c_str());
-        Th.read_minisat_output(is);
-        is.close();
-        cout << " done!" << endl;
+        ifstream ifs(model_filename.c_str());
+        if( !ifs.fail() ) {
+            Th.read_minisat_output(ifs);
+            ifs.close();
+            cout << " done!" << endl;
 
-        //Th.print_model(cout);
-        Th.decode_model(cout);
+            //Th.print_model(cout);
+            Th.decode_model(cout);
+        } else {
+            cout << "error: opening file '" << model_filename << "'" << endl;
+        }
     } else {
         // output theory in human readable format
         //Th.print(cout);
 
         // output theory in SATLIB format
-        string theory_filename = filename(prefix, K, N, "_theory.sat2");
+        string theory_filename = filename(options.prefix_, K, N, "_theory.cnf");
         cout << "writing file '" << theory_filename << "' ..." << flush;
         ofstream os(theory_filename.c_str());
         Th.dump(os);
@@ -1763,7 +1854,6 @@ int main(int argc, const char **argv) {
 
     delete M;
     delete Tr;
-    delete G;
     return 0;
 }
 
