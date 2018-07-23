@@ -1,0 +1,26 @@
+There are two required input files: matrix and transitions.
+Optional files for features and goals are also possible.
+This file describes their format.
+
+
+1. Matrix file
+
+first line: <#states> <#features> <1 + index-last-numerical-feature> <index-first-boolean-feature>
+second line: <#features> <list of feature names>
+next lines: one per each state with format: <state-index> <#features-in-state> <list-features>
+each feature has format: <feature-index>:<value>
+
+only positive values should be specified.
+
+
+2. Transitions file
+
+first line: <#states> <#transitions>
+next lines: one for each state with format: <state-index> <#transitions-out-this-state> <list-state-indices>
+
+
+3. Other (items) files
+
+unique line: <#items> <list-of-items>
+
+

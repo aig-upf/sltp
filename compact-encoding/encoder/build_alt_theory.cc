@@ -1626,7 +1626,7 @@ class Theory {
         if( satisfiable_ ) {
             int var, lit;
             model_ = vector<bool>(variables_.size(), false);
-            for( size_t i = 0; i < variables_.size();  ++i ) {
+            for( size_t i = 0; i < variables_.size(); ++i ) {
                 is >> lit;
                 var = lit > 0 ? lit - 1 : -lit - 1;
                 assert(var == int(i));
