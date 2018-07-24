@@ -9,7 +9,7 @@ def main():
     from driver import Experiment, generate_full_pipeline, BENCHMARK_DIR
     from learn_actions import OptimizationPolicy
 
-    domain_dir = "grid-circles"
+    domain_dir = "gridworld"
     steps = generate_full_pipeline(domain=os.path.join(BENCHMARK_DIR, domain_dir, "domain.pddl"),
                                    instance=os.path.join(BENCHMARK_DIR, domain_dir, "instance.pddl"),
                                    driver="bfs",

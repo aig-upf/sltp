@@ -12,7 +12,7 @@ _CURRENT_DIR_ = os.path.dirname(os.path.realpath(__file__))
 
 def main():
     lang = language(theories=[Theory.EQUALITY, Theory.ARITHMETIC])
-    problem = create_fstrips_problem(domain_name='grid-circles',
+    problem = create_fstrips_problem(domain_name='gridworld',
                                      problem_name='10x10',
                                      language=lang)
 
