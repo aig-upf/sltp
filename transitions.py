@@ -11,7 +11,11 @@ from util.command import read_file
 
 
 def normalize_atom_name(name):
-    return name.replace('()', '').rstrip(')').replace('(', ',').split(',')
+    tmp = name.replace('()', '').replace(')', '').replace('(', ',')
+    if "=" in tmp:  # We have a functional atom
+        tmp = "=," + tmp.replace("=", ',')  # Mark the string putting the "=" as the first position
+
+    return tmp.split(',')
 
 
 def read_transitions(transitions_filename):

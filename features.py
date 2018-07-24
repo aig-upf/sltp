@@ -127,6 +127,8 @@ class SemanticProcessor(object):
         self.bot = bot
         self.relevant_predicates = set(p for p in self.language.predicates
                                        if not builtins.is_builtin_predicate(p) and p.arity in (0, 1, 2))
+        self.relevant_functions = set(f for f in self.language.functions
+                                      if not builtins.is_builtin_function(f) and f.arity in (0, 1))
         self.universe = self.compute_universe(states)
         self.cache = self.create_cache_for_samples()
         self.singleton_extension_concepts = []
@@ -147,30 +149,33 @@ class SemanticProcessor(object):
 
     def build_cache_for_state(self, state, universe):
         cache = dict()
-        unprocessed = set(self.relevant_predicates)
+        unprocessed = set(self.relevant_predicates) | set(self.relevant_functions)
 
         for atom in state:
-            assert len(atom) in (1, 2, 3)
-            name = atom[0]
+            assert atom
+            if atom[0] == "=":  # Functional atom
+                atom = atom[1:]
+                assert len(atom) <= 3, "Cannot deal with arity>1 functions yet"
+                predfun = self.language.get_function(atom[0])
 
-            predicate = self.language.get_predicate(name)
-            if predicate in unprocessed:
-                unprocessed.remove(predicate)
+            else:
+                assert len(atom) <= 3, "Cannot deal with arity>2 predicates yet"
+                predfun = self.language.get_predicate(atom[0])
 
+            assert predfun.uniform_arity() == len(atom) - 1
+
+            unprocessed.discard(predfun)
             if len(atom) == 1:  # i.e. a nullary predicate
-                assert predicate.arity == 0
-                atom = NullaryAtom(predicate)
+                atom = NullaryAtom(predfun)
                 assert atom not in cache
                 cache[atom] = True
 
-            elif len(atom) == 2:  # i.e. a unary predicate
-                assert predicate.arity == 1
-                cache.setdefault(PrimitiveConcept(predicate), set()).add(universe.index(atom[1]))
+            elif len(atom) == 2:  # i.e. a unary predicate or nullary function
+                cache.setdefault(PrimitiveConcept(predfun), set()).add(universe.index(atom[1]))
 
-            else:  # i.e. a binary predicate
-                assert predicate.arity == 2
+            else:  # i.e. a binary predicate or unary function
                 t = (universe.index(atom[1]), universe.index(atom[2]))
-                cache.setdefault(PrimitiveRole(predicate), set()).add(t)
+                cache.setdefault(PrimitiveRole(predfun), set()).add(t)
 
         cache[self.top] = universe.as_extension()
         cache[self.bot] = set()
@@ -196,8 +201,13 @@ class SemanticProcessor(object):
 
         for sid, (_, state) in states.items():
             for atom in state:
-                assert len(atom) in (1, 2, 3)
-                [universe.add(obj) for obj in atom[1:]]
+                assert atom
+                if atom[0] == "=":  # Functional atom
+                    assert len(atom) <= 4, "Cannot deal with arity>1 functions yet"
+                    [universe.add(obj) for obj in atom[2:]]
+                else:
+                    assert len(atom) in (1, 2, 3), "Cannot deal with arity>2 predicates yet"
+                    [universe.add(obj) for obj in atom[1:]]
 
         universe.finish()  # No more objects possible
         return universe
