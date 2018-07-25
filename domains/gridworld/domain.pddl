@@ -4,7 +4,7 @@
 ;;; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (domain grid-circles)
+(define (domain gridworld)
     (:requirements :numeric-fluents)
     (:types
         coordinate - int

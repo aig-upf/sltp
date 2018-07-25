@@ -20,7 +20,8 @@ def add_domain_goal_parameters(domain_name, language):
         language.constant("roomb", "object")
 
     elif domain_name == "gridworld":
-        language.constant("2", "coordinate")  # x-goal coordinate ??
+        language.constant("2", "coordinate")  # x-goal coordinate
+        language.constant("3", "coordinate")  # x-goal coordinate
 
     elif domain_name == "grid-visit-all":
         language.constant("loc-x0-y0", "place")

@@ -99,12 +99,16 @@ class Step(object):
         return config
 
     def run(self):
-        raise NotImplementedError()
+        req_data = self.get_required_data()
+        data = None
+        if req_data:
+            data = Bunch(load(self.config["experiment_dir"], self.get_required_data()))
+        runner = self.get_step_runner()
+        result = runner.run(config=Bunch(self.config), data=data)
+        return result
 
-    def run_step(self):
-         return self.run()
-        # if retcode:
-        #     logging.critical('Experiment step "{}" exited with return code {}'.format(self.name, retcode))
+    def get_step_runner(self):
+        raise NotImplementedError()
 
 
 def _run_planner(config, data):
@@ -151,8 +155,8 @@ class PlannerStep(Step):
 
         return config
 
-    def run(self):
-        StepRunner("Sample Generation", _run_planner).run(config=Bunch(self.config), data=None)
+    def get_step_runner(self):
+        return StepRunner("Sample Generation", _run_planner)
 
 
 class Bunch(object):
@@ -179,10 +183,9 @@ class FeatureGenerationStep(Step):
 
         return config
 
-    def run(self):
+    def get_step_runner(self):
         import features
-        runner = StepRunner("Concept Generation", features.run)
-        runner.run(config=Bunch(self.config), data=None)
+        return StepRunner("Concept Generation", features.run)
 
 
 class MaxsatProblemStep(Step):
@@ -204,11 +207,9 @@ class MaxsatProblemStep(Step):
     def get_required_data(self):
         return ["features", "extensions", "states", "goal_states", "transitions"]
 
-    def run(self):
-        data = load(self.config["experiment_dir"], self.get_required_data())
+    def get_step_runner(self):
         import learn_actions
-        runner = StepRunner("Generation max-sat encoding", learn_actions.run)
-        return runner.run(config=Bunch(self.config), data=Bunch(data))
+        return StepRunner("Generation max-sat encoding", learn_actions.run)
 
 
 class MaxsatSolverStep(Step):
@@ -223,11 +224,9 @@ class MaxsatSolverStep(Step):
     def get_required_data(self):
         return ["cnf_translator"]
 
-    def run(self):
-        data = load(self.config["experiment_dir"], self.get_required_data())
+    def get_step_runner(self):
         import learn_actions
-        runner = StepRunner("Solution max-sat encoding", learn_actions.run_solver)
-        runner.run(config=Bunch(self.config), data=Bunch(data))
+        return StepRunner("Solution max-sat encoding", learn_actions.run_solver)
 
 
 class ActionModelStep(Step):
@@ -242,11 +241,9 @@ class ActionModelStep(Step):
     def get_required_data(self):
         return ["cnf_translator", "cnf_solution"]
 
-    def run(self):
-        data = load(self.config["experiment_dir"], self.get_required_data())
+    def get_step_runner(self):
         import learn_actions
-        runner = StepRunner("Action Model Computation", learn_actions.compute_action_model)
-        runner.run(config=Bunch(self.config), data=Bunch(data))
+        return StepRunner("Action Model Computation", learn_actions.compute_action_model)
 
 
 PIPELINE = [
@@ -285,7 +282,7 @@ class Experiment(object):
         steps = [get_step(self.steps, name) for name in self.args.steps] or self.steps
 
         for step in steps:
-            result = step.run_step()
+            result = step.run()
             if result is not None:
                 logging.error('Critical error while processing step "{}". Execution will be terminated. '
                               'Error message:'.format(step.name))
@@ -329,7 +326,6 @@ class StepRunner(object):
         pool.close()
         pool.join()
         return res
-
 
     def _runner(self, config, data):
         # import tracemalloc

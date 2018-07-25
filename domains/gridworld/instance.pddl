@@ -5,7 +5,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (problem 10x10)
-    (:domain grid-circles)
+    (:domain gridworld)
 
     (:objects
         
