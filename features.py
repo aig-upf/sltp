@@ -171,10 +171,10 @@ class SemanticProcessor(object):
                 cache[atom] = True
 
             elif len(atom) == 2:  # i.e. a unary predicate or nullary function
-                cache.setdefault(PrimitiveConcept(predfun), set()).add(universe.index(atom[1]))
+                cache.setdefault(PrimitiveConcept(predfun), set()).add(universe.index(try_number(atom[1])))
 
             else:  # i.e. a binary predicate or unary function
-                t = (universe.index(atom[1]), universe.index(atom[2]))
+                t = (universe.index(try_number(atom[1])), universe.index(try_number(atom[2])))
                 cache.setdefault(PrimitiveRole(predfun), set()).add(t)
 
         cache[self.top] = universe.as_extension()
@@ -204,10 +204,10 @@ class SemanticProcessor(object):
                 assert atom
                 if atom[0] == "=":  # Functional atom
                     assert len(atom) <= 4, "Cannot deal with arity>1 functions yet"
-                    [universe.add(obj) for obj in atom[2:]]
+                    [universe.add(try_number(obj)) for obj in atom[2:]]
                 else:
                     assert len(atom) in (1, 2, 3), "Cannot deal with arity>2 predicates yet"
-                    [universe.add(obj) for obj in atom[1:]]
+                    [universe.add(try_number(obj)) for obj in atom[1:]]
 
         universe.finish()  # No more objects possible
         return universe
@@ -339,3 +339,13 @@ def run(config, data):
         transitions=transitions,
         extensions=factory.processor.cache
     )
+
+
+def try_number(x):
+    try:
+        return int(x)
+    except ValueError:
+        try:
+            return float(x)
+        except ValueError:
+            return x
