@@ -8,7 +8,6 @@
 #include <vector>
 
 // TODO: * action must be applicable at some state
-//       * force features: not enough to set given features as first features because of ordering
 //       * further ordering of actions to reduce more symmetries
 //       * separate goal from non-goal states (IMPORTANT)
 
@@ -457,6 +456,8 @@ class Theory {
     const int N_;
 
     const Options options_;
+    Items features_;
+    Items goals_;
 
     const int num_states_;
     const int num_features_;
@@ -546,17 +547,19 @@ class Theory {
              << ", log2(last_numerical_feature)=" << log_last_numerical_feature_
              << endl;
 
+        if( options_.add_features_ )
+            read_features(options_.prefix_);
+        if( options_.explicit_goals_ )
+            read_goals(options_.prefix_);
+
         cout << "-------- variables + literals --------" << endl;
         build_variables();
         build_literals();
         cout << "--------- base implications ----------" << endl;
         build_base();
 
-        if( options_.explicit_goals_ )
-            explicit_goals(options_.prefix_);
-        if( options_.add_features_ )
-            add_features(options_.prefix_);
-
+        add_implications_for_features();
+        add_implications_for_goals();
         //force_features();
         //force_actions();
 
@@ -789,6 +792,9 @@ class Theory {
             }
             cout << "df: #variables=" << variables_.size() - var_offsets_.back().first << " ((K-1) x log2(F)), offset=" << var_offsets_.back().first << endl;
         }
+
+        add_variables_for_features();
+        add_variables_for_goals();
     }
     void build_literals() {
         for( size_t i = 0; i < variables_.size(); ++i )
@@ -820,6 +826,13 @@ class Theory {
         int index = k + log_num_features_ * j;
         assert(var_offsets_[9].second == "df");
         return var_offsets_[9].first + index;
+    }
+    int MappedBy(int j, int k) const { // j in {0, ..., #forced-features-1}, k in {0, ..., K-1}
+        assert((0 <= j) && (j < int(features_.size())));
+        assert((0 <= k) && (k < K_));
+        int index = k + K_ * j;
+        assert(var_offsets_[10].second == "MappedBy");
+        return var_offsets_[10].first + index;
     }
 
     int phi(int k, int i, bool star) const { // k in {0, ..., K-1}, i in {0, ..., states-1}
@@ -1421,32 +1434,70 @@ class Theory {
         //print_implications(cout, imp_offsets_.back().first, implications_.size());
     }
 
-    // CHECK: this is broken. When ordering, force features doesn't work since every
-    // feature after forced ones need to have indices bigger than forced features
-    void force_feature(int index, int feature) {
-        for( int k = 0; k < log_num_features_; ++k ) {
+    // features added (forced)
+    void force_feature(int k, int feature_index) {
+        for( int t = 0; t < log_num_features_; ++t ) {
             Implication *IP = new Implication;
-            IP->add_consequent(bit(k, feature) ? 1 + F(index, k) : -(1 + F(index, k)));
+            IP->add_consequent(bit(t, feature_index) ? 1 + F(k, t) : -(1 + F(k, t)));
             add_implication(IP);
         }
     }
-    void add_features(const Items &features) {
-        int index = 0;
-        imp_offsets_.push_back(make_pair(implications_.size(), "goal"));
-        add_comment("Theory for features");
-        for( Items::const_iterator it = features.begin(); it != features.end(); ++it, ++index )
-            force_feature(index, *it);
-        cout << "goal: #implications=" << implications_.size() - imp_offsets_.back().first << " (G x log2(#features))" << endl;
-        //print_implications(cout, imp_offsets_.back().first, implications_.size());
+    void add_implications_for_features() {
+        assert(features_.size() < K_);
+        if( !features_.empty() ) {
+            imp_offsets_.push_back(make_pair(implications_.size(), "forced-features"));
+            add_comment("Implications for added (forced) features");
+        }
+
+        if( options_.ordering_ ) {
+            int j = 0;
+            for( Items::const_iterator it = features_.begin(); it != features_.end(); ++it, ++j ) {
+                Implication *IP = new Implication;
+                for( int k = 0; k < K_; ++k )
+                    IP->add_consequent(MappedBy(j, k));
+                add_implication(IP);
+
+                int feature_index = *it;
+                for( int k = 0; k < K_; ++k ) {
+                    for( int t = 0; t < log_num_features_; ++t ) {
+                        Implication *IP = new Implication;
+                        IP->add_antecedent(MappedBy(j, k));
+                        IP->add_consequent(bit(t, feature_index) ? (1 + F(k, t)) : -(1 + F(k, t)));
+                        add_implication(IP);
+                    }
+                }
+            }
+            cout << "features: #implications=" << implications_.size() - imp_offsets_.back().first << " (M x (1 + K x log2(#features)))" << endl;
+        } else {
+            int k = 0;
+            for( Items::const_iterator it = features_.begin(); it != features_.end(); ++it, ++k )
+                force_feature(k, *it);
+            cout << "features: #implications=" << implications_.size() - imp_offsets_.back().first << " (M x log2(#features))" << endl;
+            print_implications(cout, imp_offsets_.back().first, implications_.size());
+        }
     }
-    void add_features(const string &prefix) {
+    void add_variables_for_features() {
+        if( options_.ordering_ ) {
+            var_offsets_.push_back(make_pair(variables_.size(), "MappedBy"));
+            for( int j = 0; j < int(features_.size()); ++j ) {
+                for( int k = 0; k < K_; ++k ) {
+                    int index = variables_.size();
+                    string name = string("MappedBy(") + to_string(j) + "," + to_string(k) + ")";
+                    variables_.push_back(new Var(index, name));
+                    assert(index == MappedBy(j, k));
+                }
+            }
+            cout << "MappedBy: #variables=" << variables_.size() - var_offsets_.back().first << " (MK), offset=" << var_offsets_.back().first << endl;
+        }
+    }
+    void read_features(const string &prefix) {
         string features_filename = filename(prefix, K_, N_, "_features.dat", false);
         cout << "reading '" << features_filename << "' ... " << flush;
         ifstream ifs(features_filename.c_str());
         if( !ifs.fail() ) {
             const Items *features = Items::read_dump(ifs);
             ifs.close();
-            add_features(*features);
+            features_ = *features;
             delete features;
         } else {
             cout << "error: opening file '" << features_filename << "'" << endl;
@@ -1454,17 +1505,28 @@ class Theory {
     }
 
     // CHECK: clauses to separate explicit goals from non-goals
-    void explicit_goals(const Items &goals) {
+    // Suggestion:
+    //   1. Define variable not-sim(g,n,k) for goal state g and non-goal state n using feature k
+    //   2. Require for each g, n, that there is f such that not-sim(g,n,k). Each requirement is
+    //      a disjunction over k for not-sim(g,n,k)
+    //   3. not-sim(g,n,k) need two implications:
+    //      phi(g,f) & phi*(g,f) -> not-sim(g,n,k)
+    //      phi*(g,f) & phi(g,f) -> not-sim(g,n,k)
+    //   In total need G x N x L vars and G x N x (1 + 2K) implications where G=#goals and N=#non-goals
+    void add_implications_for_goals() {
+        assert(goals_.empty());
+    }
+    void add_variables_for_goals() {
         assert(0);
     }
-    void explicit_goals(const string &prefix) {
+    void read_goals(const string &prefix) {
         string goals_filename = filename(prefix, K_, N_, "_goals.dat", false);
         cout << "reading '" << goals_filename << "' ... " << flush;
         ifstream ifs(goals_filename.c_str());
         if( !ifs.fail() ) {
             const Items *goals = Items::read_dump(ifs);
             ifs.close();
-            explicit_goals(*goals);
+            goals_ = *goals;
             delete goals;
         } else {
             cout << "error: opening file '" << goals_filename << "'" << endl;
