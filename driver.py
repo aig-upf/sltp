@@ -76,8 +76,7 @@ def check_int_parameter(config, name, positive=False):
 
 class Step(object):
 
-    def __init__(self, name, **kwargs):
-        self.name = name
+    def __init__(self, **kwargs):
         self.config = self.process_config(self.parse_config(**kwargs))
 
     def process_config(self, config):
@@ -93,7 +92,7 @@ class Step(object):
         config = copy.deepcopy(kwargs)
         for attribute in self.get_required_attributes():
             if attribute not in kwargs:
-                raise RuntimeError('Missing attribute "{}" in step {}'.format(attribute, self.__class__.__name__))
+                raise RuntimeError('Missing attribute "{}" in step "{}"'.format(attribute, self.__class__.__name__))
             config[attribute] = kwargs[attribute]
 
         return config
@@ -103,9 +102,12 @@ class Step(object):
         data = None
         if req_data:
             data = Bunch(load(self.config["experiment_dir"], self.get_required_data()))
-        runner = self.get_step_runner()
+        runner = StepRunner(self.description(), self.get_step_runner())
         result = runner.run(config=Bunch(self.config), data=data)
         return result
+
+    def description(self):
+        raise NotImplementedError()
 
     def get_step_runner(self):
         raise NotImplementedError()
@@ -127,7 +129,7 @@ class PlannerStep(Step):
     VALID_DRIVERS = ("bfs", "ff", "iw2")
 
     def __init__(self, **kwargs):
-        super().__init__(name="sample", **kwargs)
+        super().__init__(**kwargs)
 
     def get_required_attributes(self):
         return ["instance", "domain", "num_states", "planner_location", "driver"]
@@ -155,19 +157,17 @@ class PlannerStep(Step):
 
         return config
 
+    def description(self):
+        return "Sampling of the state space"
+
     def get_step_runner(self):
-        return StepRunner("Sample Generation", _run_planner)
+        return _run_planner
 
 
-class Bunch(object):
-    def __init__(self, adict):
-        self.__dict__.update(adict)
-
-
-class FeatureGenerationStep(Step):
+class ConceptGenerationStep(Step):
     """ Generate systematically a set of features of bounded complexity from the transition (state) sample """
     def __init__(self, **kwargs):
-        super().__init__(name="features", **kwargs)
+        super().__init__(**kwargs)
 
     def get_required_attributes(self):
         return ["sample_file", "domain", "experiment_dir", "concept_depth"]
@@ -183,40 +183,68 @@ class FeatureGenerationStep(Step):
 
         return config
 
+    def description(self):
+        return "Generation of concepts"
+
     def get_step_runner(self):
         import features
-        return StepRunner("Concept Generation", features.run)
+        return features.run
 
 
-class MaxsatProblemStep(Step):
+class FeatureMatrixGenerationStep(Step):
+    """ Generate and output the feature and transition matrices for the problem  """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def get_required_attributes(self):
+        return ["experiment_dir"]
+
+    def process_config(self, config):
+        config["feature_filename"] = compute_info_filename(config, "features.txt")
+        config["feature_matrix_filename"] = compute_info_filename(config, "feature-matrix.txt")
+        config["transitions_filename"] = compute_info_filename(config, "transition-matrix.txt")
+        config["feature_denotation_filename"] = compute_info_filename(config, "feature-denotations.txt")
+        return config
+
+    def get_required_data(self):
+        return ["features", "extensions", "states", "goal_states", "transitions"]
+
+    def description(self):
+        return "Generation of the feature and transition matrices"
+
+    def get_step_runner(self):
+        from matrices import generate_features
+        return generate_features
+
+
+class MaxsatProblemGenerationStep(Step):
     """ Generate the max-sat problem from a given set of generated features """
     def __init__(self, **kwargs):
-        super().__init__(name="maxsat-encode", **kwargs)
+        super().__init__(**kwargs)
 
     def get_required_attributes(self):
         return ["experiment_dir"]
 
     def process_config(self, config):
         config["cnf_filename"] = compute_maxsat_filename(config)
-        config["feature_filename"] = compute_info_filename(config, "features.txt")
-        config["feature_matrix_filename"] = compute_info_filename(config, "feature-matrix.txt")
-        config["transitions_filename"] = compute_info_filename(config, "transition-matrix.txt")
-        config["feature_denotation_filename"] = compute_info_filename(config, "feat-denotations.txt")
         return config
 
     def get_required_data(self):
-        return ["features", "extensions", "states", "goal_states", "transitions"]
+        return ["features", "extensions", "states", "goal_states", "transitions", "state_ids", "feature_model"]
+
+    def description(self):
+        return "Generation of the max-sat problem"
 
     def get_step_runner(self):
         import learn_actions
-        return StepRunner("Generation max-sat encoding", learn_actions.run)
+        return learn_actions.generate_maxsat_problem
 
 
-class MaxsatSolverStep(Step):
+class MaxsatProblemSolutionStep(Step):
     """ Run some max-sat solver on the generated encoding """
 
     def __init__(self, **kwargs):
-        super().__init__(name="maxsat-solve", **kwargs)
+        super().__init__(**kwargs)
 
     def get_required_attributes(self):
         return []
@@ -224,16 +252,19 @@ class MaxsatSolverStep(Step):
     def get_required_data(self):
         return ["cnf_translator"]
 
+    def description(self):
+        return "Solution of the max-sat problem"
+
     def get_step_runner(self):
         import learn_actions
-        return StepRunner("Solution max-sat encoding", learn_actions.run_solver)
+        return learn_actions.run_solver
 
 
 class ActionModelStep(Step):
     """ Generate an abstract action model from the solution of the max-sat encoding """
 
     def __init__(self, **kwargs):
-        super().__init__(name="action-model", **kwargs)
+        super().__init__(**kwargs)
 
     def get_required_attributes(self):
         return []
@@ -241,16 +272,20 @@ class ActionModelStep(Step):
     def get_required_data(self):
         return ["cnf_translator", "cnf_solution"]
 
+    def description(self):
+        return "Computation of the action model"
+
     def get_step_runner(self):
         import learn_actions
-        return StepRunner("Action Model Computation", learn_actions.compute_action_model)
+        return learn_actions.compute_action_model
 
 
 PIPELINE = [
     PlannerStep,
-    FeatureGenerationStep,
-    MaxsatProblemStep,
-    MaxsatSolverStep,
+    ConceptGenerationStep,
+    FeatureMatrixGenerationStep,
+    MaxsatProblemGenerationStep,
+    MaxsatProblemSolutionStep,
     ActionModelStep,
 ]
 
@@ -344,3 +379,8 @@ class StepRunner(object):
         performance.print_performance_stats(self.step_name, start)
         # profiling.start()
         return result
+
+
+class Bunch(object):
+    def __init__(self, adict):
+        self.__dict__.update(adict)

@@ -25,7 +25,8 @@ from bitarray import bitarray
 from tarski.io import FstripsReader
 from tarski.syntax import builtins
 from tarski.dl import Concept, Role, PrimitiveConcept, PrimitiveRole, InverseRole, StarRole, \
-    ConceptCardinalityFeature, MinDistanceFeature, SyntacticFactory, NullaryAtomFeature, NullaryAtom
+    ConceptCardinalityFeature, MinDistanceFeature, SyntacticFactory, NullaryAtomFeature, NullaryAtom, \
+    EmpiricalBinaryConcept
 
 from extensions import UniverseIndex, ExtensionCache
 from parameters import add_domain_goal_parameters
@@ -82,11 +83,15 @@ class TerminologicalFactory(object):
         for pairings in (itertools.product(new_c, old_c), itertools.combinations(new_c, 2)):
             process(self.syntax.create_and_concept(c1, c2) for c1, c2 in pairings)
 
+        # NOT C
+        # process(self.syntax.create_not_concept(c) for c in new_c)
+
         return generated
 
     def derive_roles(self, old_c, new_c, old_r, new_r, derive_compositions=True):
         generated = []
         cart_prod = itertools.product
+
         # result.extend([ InverseRole(r) for r in roles if not isinstance(r, InverseRole) ])
         # result.extend([ StarRole(r) for r in roles if not isinstance(r, StarRole) ])
 
@@ -111,8 +116,14 @@ class TerminologicalFactory(object):
 
     def create_distance_features(self, concepts, rest, k):
         card1_concepts = self.processor.singleton_extension_concepts
-        return (MinDistanceFeature(c1, r, c2) for c1, r, c2 in itertools.product(card1_concepts, rest, concepts) if
-                c1.depth + r.depth + c2.depth <= k)
+
+        for c1, r, c2 in itertools.product(card1_concepts, rest, concepts):
+            if c1.depth + r.depth + c2.depth > k:
+                continue
+            if c2 in (self.syntax.top, self.syntax.bot):
+                continue  # No sense in creating a distance-to-nothing or distance-to-all feature
+
+            yield MinDistanceFeature(c1, r, c2)
 
     def create_role_restrictions(self, concepts, roles):
         role_restrictions = (self.syntax.create_restrict_role(r, c) for r, c in itertools.product(roles, concepts))
@@ -248,9 +259,11 @@ class SemanticProcessor(object):
 def store_terms(concepts, roles, args):
     os.makedirs(args.experiment_dir, exist_ok=True)
     with open(os.path.join(args.experiment_dir, 'concepts.txt'), 'w') as f:
-        f.write("\n".join(map(str, concepts)))
+        # f.write("\n".join(map(str, concepts)))
+        f.write("\n".join("{} [{}]".format(c, c.depth) for c in concepts))
     with open(os.path.join(args.experiment_dir, 'roles.txt'), 'w') as f:
-        f.write("\n".join(map(str, roles)))
+        # f.write("\n".join(map(str, roles)))
+        f.write("\n".join("{} [{}]".format(r, r.depth) for r in roles))
 
 
 def store_role_restrictions(roles, args):
@@ -310,12 +323,12 @@ def run(config, data):
         c_i, c_j = c_j, len(concepts)
         r_i, r_j = r_j, len(roles)
 
-        print("\t{} new concept(s) and {} new role(s) incorporated".format(c_j-c_i, r_j-r_i))
+        print("\t{} new concept(s) and {} new role(s) incorporated".format(c_j - c_i, r_j - r_i))
 
     # profiling.print_snapshot()
 
     store_terms(concepts, roles, config)
-    logging.info('Final output: %d concept(s) and %d role(s)'.format(len(concepts), len(roles)))
+    logging.info('Final output: {} concept(s) and {} role(s)'.format(len(concepts), len(roles)))
     logging.info('Number of states in the sample: {}'.format(len(states)))
     logging.info('Number of concepts with singleton extensions over all states: {}'.format(
         len(factory.processor.singleton_extension_concepts)))
@@ -323,14 +336,12 @@ def run(config, data):
     # Temporarily deactivated, role restrictions very expensive
     # rest = list(factory.create_role_restrictions(concepts, roles))
     # store_role_restrictions(rest, config)
-    rest = []
+    rest = roles
     k = 5
     features = factory.derive_features(concepts, rest, k)
     features += create_nullary_features(atoms)
 
     logging.info('Final number of features: {}'.format(len(features)))
-
-    # return features, states, goal_states, transitions, factory.processor.cache
 
     return dict(
         features=features,
@@ -349,3 +360,21 @@ def try_number(x):
             return float(x)
         except ValueError:
             return x
+
+
+class Model(object):
+    def __init__(self, cache):
+        assert isinstance(cache, ExtensionCache)
+        self.cache = cache
+
+    def compute_feature_value(self, feature, state_id, substitution={}):
+        try:
+            # HACK: no need to duplicately store denotations
+            # of empirical binary concepts and their base features
+            if isinstance(feature, EmpiricalBinaryConcept):
+                return bool(self.cache.feature_value(feature, state_id))
+            return self.cache.feature_value(feature, state_id)
+        except KeyError:
+            value = feature.value(self.cache, state_id, substitution)
+            self.cache.register_feature_value(feature, state_id, value)
+            return value

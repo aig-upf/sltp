@@ -20,12 +20,21 @@ def add_domain_goal_parameters(domain_name, language):
         language.constant("roomb", "object")
 
     elif domain_name == "gridworld":
-        language.constant("2", "coordinate")  # x-goal coordinate
-        language.constant("3", "coordinate")  # x-goal coordinate
+        # language.constant(2, "coordinate")  # x-goal coordinate
+        # language.constant(3, "coordinate")  # x-goal coordinate
+        # language.constant(10, "coordinate")  # grid limits!!
+        language.constant(1, "coordinate")  # grid limits!!
+
+        # [language.constant(i, "coordinate") for i in range(1, 11)]
+
+    elif domain_name == "gridworld-strips":
+        # language.constant("c1", "coordinate")  # grid limits!!
+        pass
 
     elif domain_name == "grid-visit-all":
         language.constant("loc-x0-y0", "place")
         language.constant("loc-x0-y1", "place")
+
     else:
         print('WARNING: Domain name "{}" not recognized, no goal parameters added'.format(domain_name))
     return language

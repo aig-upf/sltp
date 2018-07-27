@@ -24,8 +24,7 @@ from signal import signal, SIGPIPE, SIG_DFL
 import time
 
 from errors import CriticalPipelineError
-from extensions import ExtensionCache
-from tarski.dl import EmpiricalBinaryConcept, FeatureValueChange, NullaryAtomFeature
+from tarski.dl import FeatureValueChange
 from util.console import print_header, print_lines
 from util.command import count_file_lines, remove_duplicate_lines, read_file
 from solvers import solve
@@ -33,7 +32,6 @@ from solvers import solve
 signal(SIGPIPE, SIG_DFL)
 
 BASEDIR = os.path.dirname(os.path.realpath(__file__))
-PRUNE_DUPLICATE_FEATURES = True
 
 
 class OptimizationPolicy(Enum):
@@ -59,7 +57,8 @@ def compute_qualitative_changes(transitions, all_features, model):
                 x0 = model.compute_feature_value(f, s0)
                 x1 = model.compute_feature_value(f, s1)
                 qchanges[(s0, s1, f)] = f.diff(x0, x1)
-                # print("Denotation of feature \"{}\" along transition ({},{}) is: {}".format(f, s0, s1, qchanges[(s0, s1, f)]))
+                # print("Denotation of feature \"{}\" along transition "
+                #       "({},{}) is: {}".format(f, s0, s1, qchanges[(s0, s1, f)]))
 
     return qchanges
 
@@ -107,7 +106,6 @@ def compute_d1_distinguishing_features(states, transitions, features, model, pru
 
     return states, transitions, d1_distinguishing_features
 
-
     # def transition_is_distinguishable(s1, t1, s2):
     #     for t2 in self.transitions[s2]:
     #         both_transitions_qualitatively_equal_over_all_features = True
@@ -149,120 +147,28 @@ def compute_d1_distinguishing_features(states, transitions, features, model, pru
     #                 # from some transition starting in s2
     #                 can_ignore_s1 = False
 
-def compute_feature_extensions(states, features, model):
-    """ Cache all feature denotations and prune those which have constant denotation at the same time """
-    ns, nf = len(states), len(features)
-    logging.info("Computing feature denotations over a total of "
-                 "{} states and {} features ({:0.1f}K matrix entries)".format(ns, nf, nf*ns/1000))
-    accepted = []
-    traces = dict()
-    for f in features:
-        all_equal, all_0_or_1 = True, True
-        previous = None
-        all_denotations = []
-        for s in states:
-            denotation = model.compute_feature_value(f, s)
-            if previous is not None and previous != denotation:
-                all_equal = False
-            if denotation not in (0, 1):
-                all_0_or_1 = False
-            previous = denotation
-            all_denotations.append(denotation)
 
-        # If the denotation of the feature is exactly the same in all states, we remove it
-        if all_equal:
-            logging.debug("Feature \"{}\" has constant denotation ({}) over all states and will be ignored"
-                          .format(f, previous))
-            continue
-
-        if PRUNE_DUPLICATE_FEATURES:
-            trace = tuple(all_denotations)
-            duplicated = traces.get(trace, None)
-            if duplicated is None:
-                traces[trace] = f
-            else:
-                # logging.debug('Feature "{}" has same denotation trace as feature "{}" and will be ignored'
-                #               .format(f, duplicated))
-                # print(" ".join(trace))
-                continue
-
-        if all_0_or_1 and not isinstance(f, NullaryAtomFeature):
-            accepted.append(EmpiricalBinaryConcept(f))
-        else:
-            accepted.append(f)
-
-
-    logging.info("{}/{} features have constant or duplicated denotations and have been pruned"
-                 .format(len(features)-len(accepted), len(features)))
-    return accepted
-
-
-def log_feature_matrix(features, state_ids, transitions, model, feature_matrix_filename, transitions_filename):
-    denotations = model.cache.feature_values
-    logging.info("Logging feature matrix with {} features and {} states to '{}'".
-                 format(len(features), len(state_ids), feature_matrix_filename))
-
-    def feature_printer(feature, value):
-        return "1" if feature.bool_value(value) else "0"
-
-    def int_feature_printer(value):
-        return str(int(value))
-
-    with open(feature_matrix_filename + ".int", 'w') as f_int:
-        with open(feature_matrix_filename, 'w') as f:
-            print(" ".join(map(str, state_ids)), file=f)   # Header row with state IDs
-            for feat in features:
-                print(" ".join(feature_printer(feat, denotations[(feat, s)]) for s in state_ids), file=f)
-                print(" ".join(int_feature_printer(denotations[(feat, s)]) for s in state_ids), file=f_int)
-
-    with open(feature_matrix_filename + ".int", 'w') as f_int:
-        with open(feature_matrix_filename, 'w') as f:
-            print(" ".join(map(str, state_ids)), file=f)   # Header row with state IDs
-            for feat in features:
-                print(" ".join(feature_printer(feat, denotations[(feat, s)]) for s in state_ids), file=f)
-                print(" ".join(int_feature_printer(denotations[(feat, s)]) for s in state_ids), file=f_int)
-
-    logging.info("Logging transition matrix with {} states to '{}'".
-                 format(len(state_ids), transitions_filename))
-    with open(transitions_filename, 'w') as f:
-        for s, succ in transitions.items():
-            for sprime in succ:
-                print("{} {}".format(s, sprime), file=f)
-
-
-def run(config, data):
+def generate_maxsat_problem(config, data):
     logging.info("Generating MAXSAT problem from {} concept-based features".format(len(data.features)))
     optimization = config.optimization if hasattr(config, "optimization") else OptimizationPolicy.NUM_FEATURES
     # prune_undistinguishable_states = True
     prune_undistinguishable_states = False
 
-    state_ids = sorted(list(data.states.keys()))
-    model = Model(data.extensions)
-
-    # First keep only those features which are able to distinguish at least some pair of states
-    features = compute_feature_extensions(state_ids, data.features, model)
+    state_ids = data.state_ids
+    features = data.features
+    model = data.feature_model
+    transitions = data.transitions
+    goal_states = data.goal_states
 
     # Compute for each pair s and t of states which features distinguish s and t
     state_ids, transitions, d1_distinguishing_features = \
-        compute_d1_distinguishing_features(state_ids, data.transitions, features, model, prune_undistinguishable_states)
+        compute_d1_distinguishing_features(state_ids, transitions, features, model, prune_undistinguishable_states)
 
-    if True:
-        log_feature_matrix(features, state_ids, transitions, model, config.feature_matrix_filename, config.transitions_filename)
-
-    if not data.goal_states:
+    if not goal_states:
         raise CriticalPipelineError("No goal state identified in the sample, SAT theory will be trivially satisfiable")
 
-    translator = ModelTranslator(features, state_ids, data.goal_states, transitions, model,
+    translator = ModelTranslator(features, state_ids, goal_states, transitions, model,
                                  config.cnf_filename, d1_distinguishing_features, optimization)
-    translator.log_features(config.feature_filename)
-
-    # DEBUGGING: FORCE A CERTAIN SET OF FEATURES:
-    # selected = None
-    # selected = [translator.features[i] for i in [8, 9, 25, 26, 1232]]
-    # selected = [translator.features[i] for i in [8, 9, 25, 26, 2390]]
-    # selected = [translator.features[i] for i in [1232]]
-    # translator.features = selected
-    # translator.log_feature_denotations(config.feature_denotation_filename, selected)
 
     translator.run()
 
@@ -354,22 +260,9 @@ class Atom(object):
         raise RuntimeError("Unexpected effect type")
 
 
-class Model(object):
-    def __init__(self, cache):
-        assert isinstance(cache, ExtensionCache)
-        self.cache = cache
-
-    def compute_feature_value(self, feature, state_id, substitution={}):
-        try:
-            return self.cache.feature_value(feature, state_id)
-        except KeyError:
-            value = feature.value(self.cache, state_id, substitution)
-            self.cache.register_feature_value(feature, state_id, value)
-            return value
-
-
 class ModelTranslator(object):
-    def __init__(self, features, state_ids, goal_states, transitions, model, cnf_filename, d1_distinguishing_features, optimization):
+    def __init__(self, features, state_ids, goal_states, transitions, model, cnf_filename, d1_distinguishing_features,
+                 optimization):
         self.state_ids = state_ids
         self.transitions = transitions
         self.model = model
@@ -565,28 +458,6 @@ class ModelTranslator(object):
         print_lines("Goal: {}".format(self.n_goal_clauses), 2)
         print_lines("TOTAL: {}".format(self.n_selected_clauses + self.n_d1_clauses + self.n_d2_clauses +
                                        self.n_bridge_clauses + self.n_goal_clauses), 2)
-
-    def log_features(self, feature_filename):
-        logging.info("Feature set saved in file {}".format(feature_filename))
-        with open(feature_filename, 'w') as f:
-            for i, feat in enumerate(self.features, 0):
-                f.write("{}:\t{}\n".format(i, feat))
-                # serialized = serialize_to_string(feat)
-                # f.write("{}:\t{}\n".format(feat, serialized))
-                # assert deserialize_from_string(serialized) == feat
-
-    def log_feature_denotations(self, feature_denotation_filename, selected=None):
-        selected = selected or self.features
-        d = defaultdict(list)
-        for (f, s), v in self.model.cache.feature_values.items():
-            if f in selected:
-                d[s].append((f, v))
-
-        states = sorted(d.keys())
-        with open(feature_denotation_filename, 'w') as file:
-            for s in states:
-                for (f, v) in sorted(d[s], key=lambda x: str(x[0])):
-                    print("{} on state {}: {}".format(f, s, v), file=file)
 
     def debug_tests(self):
         undist = self.undistinguishable_state_pairs
