@@ -23,6 +23,7 @@ import sys
 from signal import signal, SIGPIPE, SIG_DFL
 
 from errors import CriticalPipelineError
+from util import console
 from util.bootstrap import setup_global_parser
 from util.command import execute
 from util.console import print_header, log_time
@@ -201,9 +202,12 @@ class FeatureMatrixGenerationStep(Step):
 
     def process_config(self, config):
         config["feature_filename"] = compute_info_filename(config, "features.txt")
-        config["feature_matrix_filename"] = compute_info_filename(config, "feature-matrix.txt")
-        config["transitions_filename"] = compute_info_filename(config, "transition-matrix.txt")
-        config["feature_denotation_filename"] = compute_info_filename(config, "feature-denotations.txt")
+        config["feature_matrix_filename"] = compute_info_filename(config, "feature-matrix.dat")
+        config["sat_feature_matrix_filename"] = compute_info_filename(config, "sat-feature-matrix.dat")
+        config["transitions_filename"] = compute_info_filename(config, "transition-matrix.dat")
+        config["goal_states_filename"] = compute_info_filename(config, "goal-states.dat")
+        config["sat_transitions_filename"] = compute_info_filename(config, "sat-transition-matrix.dat")
+        config["feature_denotation_filename"] = compute_info_filename(config, "feature-denotations.dat")
         return config
 
     def get_required_data(self):
@@ -369,6 +373,7 @@ class StepRunner(object):
         from util import performance
 
         result = None
+        console.print_header("STARTING STEP: {}".format(self.step_name))
         start = performance.timer()
         try:
             output = self.target(config=config, data=data)

@@ -109,10 +109,15 @@ class TerminologicalFactory(object):
 
     def derive_features(self, concepts, rest, k):
         # new_features = [NonEmptyConceptFeature(c) for c in concepts]
-        new_features = []
-        new_features.extend(ConceptCardinalityFeature(c) for c in concepts)
-        new_features.extend(self.create_distance_features(concepts, rest, k))
-        return new_features
+        feats = []
+        feats.extend(ConceptCardinalityFeature(c) for c in concepts)
+        k = len(feats)
+        logging.info('{} concept cardinality features created'.format(k))
+
+        # new_features.extend(self.create_distance_features(concepts, rest, k))
+        # logging.info('{} min-distance features created'.format(len(new_features) - k))
+
+        return feats
 
     def create_distance_features(self, concepts, rest, k):
         card1_concepts = self.processor.singleton_extension_concepts
