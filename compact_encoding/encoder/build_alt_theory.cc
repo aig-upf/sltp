@@ -453,8 +453,10 @@ class Theory {
         AbstractAction() : selected_precondition_(0), precondition_(0), selected_effect_(0), effect_(0) { }
         AbstractAction(const string &name) : name_(name), selected_precondition_(0), precondition_(0), selected_effect_(0), effect_(0) { }
         void add_precondition(const string &feature, int prec) {
-            assert(feature_map_ != nullptr);
-            assert(feature_map_->find(feature) != feature_map_->end());
+            if( (feature_map_ == nullptr) || (feature_map_->find(feature) == feature_map_->end()) ) {
+                cout << "error: add_precondition: feature '" << feature << "' not found in feature map; did you forget --add-features to add features in forced actions?" << endl;
+                exit(0);
+            }
             assert((prec == 0) || (prec == 1));
             int k = feature_map_->find(feature)->second;
             selected_precondition_ = selected_precondition_ | (1 << k);
@@ -462,8 +464,10 @@ class Theory {
             precondition_ += prec << k;
         }
         void add_effect(const string &feature, int effect) {
-            assert(feature_map_ != nullptr);
-            assert(feature_map_->find(feature) != feature_map_->end());
+            if( (feature_map_ == nullptr) || (feature_map_->find(feature) == feature_map_->end()) ) {
+                cout << "error: add_precondition: feature '" << feature << "' not found in feature map; did you forget --add-features to add features in forced actions?" << endl;
+                exit(0);
+            }
             assert((effect == 0) || (effect == 1));
             int k = feature_map_->find(feature)->second;
             selected_effect_ = selected_effect_ | (1 << k);
