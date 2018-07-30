@@ -203,10 +203,10 @@ class FeatureMatrixGenerationStep(Step):
     def process_config(self, config):
         config["feature_filename"] = compute_info_filename(config, "features.txt")
         config["feature_matrix_filename"] = compute_info_filename(config, "feature-matrix.dat")
-        config["sat_feature_matrix_filename"] = compute_info_filename(config, "sat-feature-matrix.dat")
         config["transitions_filename"] = compute_info_filename(config, "transition-matrix.dat")
         config["goal_states_filename"] = compute_info_filename(config, "goal-states.dat")
-        config["sat_transitions_filename"] = compute_info_filename(config, "sat-transition-matrix.dat")
+        config["sat_transitions_filename"] = compute_info_filename(config, "sat_transitions.dat")
+        config["sat_feature_matrix_filename"] = compute_info_filename(config, "sat_matrix.dat")
         config["feature_denotation_filename"] = compute_info_filename(config, "feature-denotations.dat")
         return config
 
@@ -242,6 +242,28 @@ class MaxsatProblemGenerationStep(Step):
     def get_step_runner(self):
         import learn_actions
         return learn_actions.generate_maxsat_problem
+
+
+class SatProblemGenerationStep(Step):
+    """ Call Blai's SAT-encoding generator from a given set of generated features """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def get_required_attributes(self):
+        return ["experiment_dir"]
+
+    def process_config(self, config):
+        return config
+
+    def get_required_data(self):
+        return ["features", "state_ids", "goal_states"]
+
+    def description(self):
+        return "Generation of the (alternative sat encoding) problem"
+
+    def get_step_runner(self):
+        from compact_encoding import runner
+        return runner.run
 
 
 class MaxsatProblemSolutionStep(Step):
@@ -298,6 +320,21 @@ def generate_full_pipeline(**kwargs):
     steps = []
     config = kwargs
     for klass in PIPELINE:
+        step = klass(**config)
+        config = step.config
+        steps.append(step)
+    return steps
+
+
+def generate_alt_pipeline(**kwargs):
+    steps = []
+    config = kwargs
+    for klass in [
+        PlannerStep,
+        ConceptGenerationStep,
+        FeatureMatrixGenerationStep,
+        SatProblemGenerationStep,
+    ]:
         step = klass(**config)
         config = step.config
         steps.append(step)

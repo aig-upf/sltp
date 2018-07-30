@@ -414,6 +414,7 @@ class Transitions {
             for( int j = 0; j < count; ++j ) {
                 is >> dst;
                 assert((0 <= dst) && (dst < num_states_));
+                std::cout << "j: " << j << " tr_[src].second[j - 1]: " << tr_[src].second[j - 1] << " dst: " << dst << std::endl;
                 assert((j == 0) || (tr_[src].second[j - 1] < dst)); // verify unique and ordered transitions
                 tr_[src].second[j] = dst;
             }
