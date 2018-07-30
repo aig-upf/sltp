@@ -420,8 +420,8 @@ class Transitions {
             tr_[src] = make_pair(count, new int[count]);
             for( int j = 0; j < count; ++j ) {
                 is >> dst;
+                // std::cout << "src: " << src << ", j: " << j << " tr_[src].second[j - 1]: " << tr_[src].second[j - 1] << " dst: " << dst << " num_states: " << num_states_ << std::endl;
                 assert((0 <= dst) && (dst < num_states_));
-                std::cout << "j: " << j << " tr_[src].second[j - 1]: " << tr_[src].second[j - 1] << " dst: " << dst << std::endl;
                 assert((j == 0) || (tr_[src].second[j - 1] < dst)); // verify unique and ordered transitions
                 tr_[src].second[j] = dst;
             }
@@ -1809,6 +1809,7 @@ read_data(const string &matrix_filename, const string &transitions_filename) {
         p.first = Matrix::read_dump(ifs_matrix);
         ifs_matrix.close();
     } else {
+            throw std::runtime_error("error: opening file '" + matrix_filename + "'");
         cout << "error: opening file '" << matrix_filename << "'" << endl;
     }
 

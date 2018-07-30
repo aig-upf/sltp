@@ -53,8 +53,9 @@ def read_transitions(transitions_filename):
         assert j['atoms_string'] not in states_by_str
         register_state(j)
 
-        if j['parent'] != j['id']:  # i.e. if not in the root node, which is not the target of any transition
-            assert json.loads(raw_file[j['parent']])['id'] == j['parent']  # Just a check
+        if j['parent'] != j['id']:  # i.e. if not in the root node, which has 0 as its "fake" parent
+            # BELOW CHECK NO LONGER CORRECT, AS REPEATED NODES ARE ALSO RECORDED WHEN ENCOUNTERED IN DIFF TRANSITIONS
+            # assert json.loads(raw_file[j['parent']])['id'] == j['parent']  # Just a check
             register_transition(j)
 
     # check soundness
