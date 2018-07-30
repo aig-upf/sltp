@@ -113,7 +113,8 @@ class Implication {
     }
 };
 
-class Items : public set<int> {
+template<typename T>
+class Items : public set<T> {
     int num_;
   public:
     Items(int num = 0) : num_(num) { }
@@ -122,22 +123,22 @@ class Items : public set<int> {
         return num_;
     }
     void dump(ostream &os) const {
-        os << size();
-        for( set<int>::const_iterator it = begin(); it != end(); ++it )
+        os << set<T>::size();
+        for( typename set<T>::const_iterator it = set<T>::begin(); it != set<T>::end(); ++it )
             os << " " << *it;
         os << endl;
     }
     void read(istream &is) {
         for( size_t i = 0; i < num_; ++i ) {
-            int item;
+            T item;
             is >> item;
-            insert(item);
+            set<T>::insert(item);
         }
     }
-    static const Items* read_dump(istream &is) {
+    static const Items<T>* read_dump(istream &is) {
         int num;
         is >> num;
-        Items *items = new Items(num);
+        Items<T> *items = new Items<T>(num);
         items->read(is);
         cout << "Items::read_dump: #items=" << items->num() << endl;
         return items;
@@ -153,6 +154,7 @@ class Matrix {
     int num_non_zero_entries_;
     vector<pair<int, pair<int, int>*> > rows_;
     vector<string> features_;
+    map<string, int> feature_map_;
 
   public:
     Matrix(int num_states, int num_features, int last_numerical_feature, int first_boolean_feature)
@@ -185,6 +187,10 @@ class Matrix {
     const string& feature(int i) const {
         assert((0 <= i) && (i < num_features_));
         return features_[i];
+    }
+    int feature(const string &f) const {
+        map<string, int>::const_iterator it = feature_map_.find(f);
+        return it != feature_map_.end() ? it->second : -1;
     }
     bool numerical(int i) const {
         return i < last_numerical_feature_;
@@ -265,6 +271,7 @@ class Matrix {
         for( int i = 0; i < num_features_; ++i ) {
             string feature;
             is >> feature;
+            feature_map_.insert(make_pair(feature, features_.size())); // there may be duplicate entries (e.g. 'dummy()')
             features_.push_back(feature);
         }
 
@@ -433,67 +440,32 @@ class Transitions {
 
 class Theory {
   public:
-    struct Options {
-        string prefix_;
-        bool ordering_;
-        bool decode_;
-        bool explicit_goals_;
-        bool add_features_;
-        bool only_soundness_;
-        Options()
-          : ordering_(true),
-            decode_(false),
-            explicit_goals_(false),
-            add_features_(false),
-            only_soundness_(false) {
-        }
-    };
-
-  protected:
-    const Matrix &M_;
-    const Transitions &T_;
-    const int K_;
-    const int N_;
-
-    const Options options_;
-    Items features_;
-    Items goals_;
-
-    const int num_states_;
-    const int num_features_;
-    int log_num_features_;
-    int log_last_numerical_feature_;
-
-    vector<pair<int, string> > var_offsets_;
-    vector<const Var*> variables_;
-    vector<const Literal*> literals_;
-
-    vector<pair<int, const string> > comments_;
-    vector<const Implication*> implications_;
-    vector<pair<int, string> > imp_offsets_;
-
-    mutable bool satisfiable_;
-    mutable vector<bool> model_;
-
     struct AbstractAction {
+        string name_;
         int selected_precondition_;
         int precondition_;
         int selected_effect_;
         int effect_;
+
+        static map<string, int> *feature_map_;
+
         AbstractAction() : selected_precondition_(0), precondition_(0), selected_effect_(0), effect_(0) { }
-        void add_precondition(const map<int, int> &feature_map, int f, int prec) {
+        AbstractAction(const string &name) : name_(name), selected_precondition_(0), precondition_(0), selected_effect_(0), effect_(0) { }
+        void add_precondition(const string &feature, int prec) {
+            assert(feature_map_ != nullptr);
+            assert(feature_map_->find(feature) != feature_map_->end());
             assert((prec == 0) || (prec == 1));
-            int k = feature_map.find(f)->second;
-            selected_precondition_ = selected_precondition_ & ~(1 << k);
-            selected_precondition_ += 1 << k;
+            int k = feature_map_->find(feature)->second;
+            selected_precondition_ = selected_precondition_ | (1 << k);
             precondition_ = precondition_ & ~(1 << k);
             precondition_ += prec << k;
         }
-        void add_effect(const map<int, int> &feature_map, int f, int effect) {
+        void add_effect(const string &feature, int effect) {
+            assert(feature_map_ != nullptr);
+            assert(feature_map_->find(feature) != feature_map_->end());
             assert((effect == 0) || (effect == 1));
-            int k = feature_map.find(f)->second;
-            selected_effect_ = selected_effect_ & ~(1 << k);
-            selected_effect_ += 1 << k;
+            int k = feature_map_->find(feature)->second;
+            selected_effect_ = selected_effect_ | (1 << k);
             effect_ = effect_ & ~(1 << k);
             effect_ += effect << k;
         }
@@ -527,6 +499,52 @@ class Theory {
     };
 
   public:
+    struct Options {
+        string prefix_;
+        bool ordering_;
+        bool decode_;
+        bool explicit_goals_;
+        bool add_actions_;
+        bool add_features_;
+        bool only_soundness_;
+        Options()
+          : ordering_(true),
+            decode_(false),
+            explicit_goals_(false),
+            add_actions_(false),
+            add_features_(false),
+            only_soundness_(false) {
+        }
+    };
+
+  protected:
+    const Matrix &M_;
+    const Transitions &T_;
+    const int K_;
+    const int N_;
+
+    const Options options_;
+    Items<AbstractAction> actions_;
+    Items<string> features_;
+    Items<int> goals_;
+
+    const int num_states_;
+    const int num_features_;
+    int log_num_features_;
+    int log_last_numerical_feature_;
+
+    vector<pair<int, string> > var_offsets_;
+    vector<const Var*> variables_;
+    vector<const Literal*> literals_;
+
+    vector<pair<int, const string> > comments_;
+    vector<const Implication*> implications_;
+    vector<pair<int, string> > imp_offsets_;
+
+    mutable bool satisfiable_;
+    mutable vector<bool> model_;
+
+  public:
     Theory(const Matrix &M, const Transitions &T, int K, int N, const Options &options)
       : M_(M), T_(T), K_(K), N_(N), options_(options),
         num_states_(M_.num_states()),
@@ -551,6 +569,8 @@ class Theory {
             read_features(options_.prefix_);
         if( options_.explicit_goals_ )
             read_goals(options_.prefix_);
+        if( options_.add_actions_ )
+            read_actions(options_.prefix_);
 
         cout << "-------- variables + literals --------" << endl;
         build_variables();
@@ -560,8 +580,7 @@ class Theory {
 
         add_implications_for_features();
         add_implications_for_goals();
-        //force_features();
-        //force_actions();
+        add_implications_for_actions();
 
         cout << "------ soundness + completeness ------" << endl;
         enforce_soundness();
@@ -779,7 +798,8 @@ class Theory {
         }
         cout << "APPMATCH: #variables=" << variables_.size() - var_offsets_.back().first << " (TN), offset=" << var_offsets_.back().first << endl;
 
-        if( options_.ordering_ ) {
+        bool disable_ordering = (features_.size() == K_) || ((features_.size() < K_) && !actions_.empty());
+        if( options_.ordering_ && !disable_ordering ) {
             // df variables:
             var_offsets_.push_back(make_pair(variables_.size(), "df"));
             for( int j = 0; j + 1 < K_; ++j ) {
@@ -947,7 +967,7 @@ class Theory {
 #endif
 
         // ordering: if first affected feature by A^j is F^k, then A^{j-1} must affect some feature in {F^1, ..., F^k}
-        if( options_.ordering_ ) {
+        if( options_.ordering_ && !options_.add_actions_ ) {
             for( int j = 1; j < N_; ++j ) {
                 for( int k = 0; k < K_; ++k ) {
                     Implication *IP = new Implication;
@@ -984,7 +1004,8 @@ class Theory {
         }
 
         // constraints: ordering of selected features F^0 < F^0 < ... < F^{K-1}
-        if( options_.ordering_ ) {
+        bool disable_ordering = (features_.size() == K_) || ((features_.size() < K_) && !actions_.empty());
+        if( options_.ordering_ && !disable_ordering ) {
             for( int k = 0; k + 1 < K_; ++k ) {
 #if 1 // CHECK: for some reason, it is more efficient to generate these implications here
                 for( int t = 0; t < log_num_features_; ++t ) {
@@ -1435,49 +1456,58 @@ class Theory {
     }
 
     // features added (forced)
-    void force_feature(int k, int feature_index) {
-        for( int t = 0; t < log_num_features_; ++t ) {
+    void force_feature(int j, int feature_index) {
+        bool disable_ordering = (features_.size() == K_) || ((features_.size() < K_) && !actions_.empty());
+        if( options_.ordering_ && !disable_ordering ) {
             Implication *IP = new Implication;
-            IP->add_consequent(bit(t, feature_index) ? 1 + F(k, t) : -(1 + F(k, t)));
+            for( int k = 0; k < K_; ++k )
+                IP->add_consequent(1 + MappedBy(j, k));
             add_implication(IP);
+
+            for( int k = 0; k < K_; ++k ) {
+                for( int t = 0; t < log_num_features_; ++t ) {
+                    Implication *IP = new Implication;
+                    IP->add_antecedent(1 + MappedBy(j, k));
+                    IP->add_consequent(bit(t, feature_index) ? (1 + F(k, t)) : -(1 + F(k, t)));
+                    add_implication(IP);
+                }
+            }
+        } else {
+            for( int t = 0; t < log_num_features_; ++t ) {
+                Implication *IP = new Implication;
+                IP->add_consequent(bit(t, feature_index) ? 1 + F(j, t) : -(1 + F(j, t)));
+                add_implication(IP);
+            }
         }
     }
+    void force_feature(int j, const string &feature) {
+        int feature_index = M_.feature(feature);
+        if( feature_index == -1 )
+            cout << "error: inexistent feature '" << feature << "'" << endl;
+        else
+            force_feature(j, feature_index);
+    }
     void add_implications_for_features() {
-        assert(features_.size() < K_);
+        assert(features_.size() <= K_);
         if( !features_.empty() ) {
             imp_offsets_.push_back(make_pair(implications_.size(), "forced-features"));
             add_comment("Implications for added (forced) features");
         }
 
-        if( options_.ordering_ ) {
-            int j = 0;
-            for( Items::const_iterator it = features_.begin(); it != features_.end(); ++it, ++j ) {
-                Implication *IP = new Implication;
-                for( int k = 0; k < K_; ++k )
-                    IP->add_consequent(MappedBy(j, k));
-                add_implication(IP);
+        int j = 0;
+        for( Items<string>::const_iterator it = features_.begin(); it != features_.end(); ++it, ++j )
+            force_feature(j, *it);
 
-                int feature_index = *it;
-                for( int k = 0; k < K_; ++k ) {
-                    for( int t = 0; t < log_num_features_; ++t ) {
-                        Implication *IP = new Implication;
-                        IP->add_antecedent(MappedBy(j, k));
-                        IP->add_consequent(bit(t, feature_index) ? (1 + F(k, t)) : -(1 + F(k, t)));
-                        add_implication(IP);
-                    }
-                }
-            }
+        bool disable_ordering = (features_.size() == K_) || ((features_.size() < K_) && !actions_.empty());
+        if( options_.ordering_ && !disable_ordering )
             cout << "features: #implications=" << implications_.size() - imp_offsets_.back().first << " (M x (1 + K x log2(#features)))" << endl;
-        } else {
-            int k = 0;
-            for( Items::const_iterator it = features_.begin(); it != features_.end(); ++it, ++k )
-                force_feature(k, *it);
+        else
             cout << "features: #implications=" << implications_.size() - imp_offsets_.back().first << " (M x log2(#features))" << endl;
-            print_implications(cout, imp_offsets_.back().first, implications_.size());
-        }
+        //print_implications(cout, imp_offsets_.back().first, implications_.size());
     }
     void add_variables_for_features() {
-        if( options_.ordering_ ) {
+        bool disable_ordering = (features_.size() == K_) || ((features_.size() < K_) && !actions_.empty());
+        if( options_.ordering_ && !disable_ordering ) {
             var_offsets_.push_back(make_pair(variables_.size(), "MappedBy"));
             for( int j = 0; j < int(features_.size()); ++j ) {
                 for( int k = 0; k < K_; ++k ) {
@@ -1495,7 +1525,7 @@ class Theory {
         cout << "reading '" << features_filename << "' ... " << flush;
         ifstream ifs(features_filename.c_str());
         if( !ifs.fail() ) {
-            const Items *features = Items::read_dump(ifs);
+            const Items<string> *features = Items<string>::read_dump(ifs);
             ifs.close();
             features_ = *features;
             delete features;
@@ -1517,14 +1547,14 @@ class Theory {
         assert(goals_.empty());
     }
     void add_variables_for_goals() {
-        assert(0);
+        //CHECK assert(0);
     }
     void read_goals(const string &prefix) {
         string goals_filename = filename(prefix, K_, N_, "_goals.dat", false);
         cout << "reading '" << goals_filename << "' ... " << flush;
         ifstream ifs(goals_filename.c_str());
         if( !ifs.fail() ) {
-            const Items *goals = Items::read_dump(ifs);
+            const Items<int> *goals = Items<int>::read_dump(ifs);
             ifs.close();
             goals_ = *goals;
             delete goals;
@@ -1533,8 +1563,9 @@ class Theory {
         }
     }
 
+    // actions added (forced)
     void force_action(int j, const AbstractAction &action) {
-        action.dump(cout);
+        add_comment(string("Forced action ") + action.name_);
         for( int k = 0; k < K_; ++k ) {
             Implication *IP1 = new Implication;
             IP1->add_consequent(action.selected_effect_ & (1 << k) ? 1 + A(1, j, k) : -(1 + A(1, j, k)));
@@ -1550,95 +1581,20 @@ class Theory {
             add_implication(IP4);
         }
     }
+    void add_implications_for_actions() {
+        assert(actions_.size() <= N_);
 
-    // just for testing encoding on *fixed* instance of blocksworld
-    void force_features() {
-        assert(5 <= K_);
-        int features[5];
-        features[0] = 0;  //  0.nabove(A)=0 = 0.n(x)
-        features[1] = 2;  //  2.nother(A)=0 = 2.m(x)
-        features[2] = 17; // 17.hold(A) = 17.X
-        features[3] = 18; // 18.hold-other(A) = 18.H
-        features[4] = 21; // 21.some-below(A) = 21.Z
-        imp_offsets_.push_back(make_pair(implications_.size(), "force-features"));
-        add_comment("Theory for forced features");
-        for( int i = 0; i < 5; ++i )
-            force_feature(i, features[i]);
-        cout << "goal: #implications=" << implications_.size() - imp_offsets_.back().first << endl;
-        print_implications(cout, imp_offsets_.back().first, implications_.size());
-    }
-    void force_actions() {
-        assert(11 <= N_);
         imp_offsets_.push_back(make_pair(implications_.size(), "force-actions"));
         add_comment("Theory for forced actions");
 
-        map<int, int> feature_map;
-        feature_map.insert(make_pair(0, 0));  // n(x)
-        feature_map.insert(make_pair(2, 1));  // m(x)
-        feature_map.insert(make_pair(17, 2)); // X
-        feature_map.insert(make_pair(18, 3)); // H
-        feature_map.insert(make_pair(21, 4)); // Z
+        int j = 0;
+        for( Items<AbstractAction>::const_iterator it = actions_.begin(); it != actions_.end(); ++it, ++j )
+            force_action(j, *it);
 
-        AbstractAction a0; // Pick-x-some-below = { not 18.H, not 17.X, 0.n(x) = 0, 21.Z ; 17.X, not 21.Z, INC(2.m(x)) }
-        a0.add_precondition(feature_map, 0, 0);
-        a0.add_precondition(feature_map, 17, 0);
-        a0.add_precondition(feature_map, 18, 0);
-        a0.add_precondition(feature_map, 21, 1);
-        a0.add_effect(feature_map, 2, 1);
-        a0.add_effect(feature_map, 17, 1);
-        a0.add_effect(feature_map, 21, 0);
-        force_action(0, a0);
-
-        AbstractAction a1; // Pick-x-none-below = { not 18.H, not 17.X, 0.n(x)=0, not 21.Z ; 17.X }
-        a1.add_precondition(feature_map, 0, 0);
-        a1.add_precondition(feature_map, 17, 0);
-        a1.add_precondition(feature_map, 18, 0);
-        a1.add_precondition(feature_map, 21, 0);
-        a1.add_effect(feature_map, 17, 1);
-        force_action(1, a1);
-
-        AbstractAction a2; // Pick-above-x = { not 18.H, not 17.X, 0.n(x)>0 ; 18.H, DEC(0.n(x)) }
-        a2.add_precondition(feature_map, 0, 1);
-        a2.add_precondition(feature_map, 17, 0);
-        a2.add_precondition(feature_map, 18, 0);
-        a2.add_effect(feature_map, 18, 1);
-        a2.add_effect(feature_map, 0, 0);
-        force_action(2, a2);
-
-        AbstractAction a3; // Pick-other = { not 18.H, not 17.X, 2.m(x)>0 ; 18.H, DEC(2.m(x)) }
-        a3.add_precondition(feature_map, 2, 1);
-        a3.add_precondition(feature_map, 17, 0);
-        a3.add_precondition(feature_map, 18, 0);
-        a3.add_effect(feature_map, 2, 0);
-        a3.add_effect(feature_map, 18, 1);
-        force_action(3, a3);
-
-        AbstractAction a4; // Put-x-on-table = { 17.X ; not 17.X }
-        a4.add_precondition(feature_map, 17, 1);
-        a4.add_effect(feature_map, 17, 0);
-        force_action(4, a4);
-
-        AbstractAction a5; // Put-x-above-some = { 17.X, 2.m(x)>0 ; not 17.X, 21.Z, DEC(2.m(x)) } ***
-        a5.add_precondition(feature_map, 2, 1);
-        a5.add_precondition(feature_map, 17, 1);
-        //a5.add_precondition(feature_map, 21, 0, 1);
-        a5.add_effect(feature_map, 2, 0);
-        a5.add_effect(feature_map, 17, 0);
-        a5.add_effect(feature_map, 21, 1);
-        force_action(5, a5);
-
-        AbstractAction a6; // Put-aside = { 18.H ; not 18.H, INC(2.m(x)) }
-        a6.add_precondition(feature_map, 18, 1);
-        a6.add_effect(feature_map, 2, 1);
-        a6.add_effect(feature_map, 18, 0);
-        force_action(6, a6);
-
-        AbstractAction a7; // Put-above-x = { 18.H ; not 18.H, INC(0.n(x)) }
-        a7.add_precondition(feature_map, 18, 1);
-        a7.add_effect(feature_map, 18, 0);
-        a7.add_effect(feature_map, 0, 1);
-        force_action(7, a7);
+        cout << "actions: #implications=" << implications_.size() - imp_offsets_.back().first << " (?)" << endl;
+        //print_implications(cout, imp_offsets_.back().first, implications_.size());
     }
+    void read_actions(const string &prefix); // defined below
 
     void enforce_soundness() {
         imp_offsets_.push_back(make_pair(implications_.size(), "soundness"));
@@ -1773,7 +1729,7 @@ class Theory {
         // abstract actions
         set<AbstractAction> unique;
         for( int j = 0; j < N_; ++j ) {
-            AbstractAction act;
+            AbstractAction act(string("decoded-") + to_string(j));
             for( int k = 0; k < K_; ++k ) {
                 act.selected_precondition_ += model_[A(3, j, k)] << k;
                 act.precondition_ += model_[A(4, j, k)] << k;
@@ -1787,6 +1743,56 @@ class Theory {
             it->print(os, *this, model_);
     }
 };
+
+// static member
+map<string, int> *Theory::AbstractAction::feature_map_ = nullptr;
+
+istream& operator>>(istream &is, Theory::AbstractAction &act) {
+    string name;
+    is >> name;
+    act.name_ = name;
+
+    int nprec, neffect;
+    for( is >> nprec; nprec > 0; --nprec ) {
+        string feature;
+        int value;
+        is >> feature >> value;
+        act.add_precondition(feature, value);
+    }
+    for( is >> neffect; neffect > 0; --neffect ) {
+        string feature;
+        int value;
+        is >> feature >> value;
+        act.add_effect(feature, value);
+    }
+  
+    return is;
+}
+
+void Theory::read_actions(const string &prefix) {
+    // construct and set feature map
+    int j = 0;
+    map<string, int> feature_map;
+    for( Items<string>::const_iterator it = features_.begin(); it != features_.end(); ++it, ++j )
+        feature_map.insert(make_pair(*it, j));
+    Theory::AbstractAction::feature_map_ = &feature_map;
+
+    // read file
+    string actions_filename = filename(prefix, K_, N_, "_actions.dat", false);
+    cout << "reading '" << actions_filename << "' ... " << flush;
+    ifstream ifs(actions_filename.c_str());
+    if( !ifs.fail() ) {
+        const Items<AbstractAction> *actions = Items<AbstractAction>::read_dump(ifs);
+        ifs.close();
+        actions_ = *actions;
+        delete actions;
+    } else {
+        cout << "error: opening file '" << actions_filename << "'" << endl;
+    }
+
+    // reset feature map
+    Theory::AbstractAction::feature_map_ = nullptr;
+}
 
 pair<const Matrix*, const Transitions*>
 read_data(const string &matrix_filename, const string &transitions_filename) {
@@ -1815,7 +1821,7 @@ read_data(const string &matrix_filename, const string &transitions_filename) {
 
 void usage(ostream &os, const string &name) {
     cout << endl
-         << "usage: " << name << " [--add-features] [--decode] [--explicit-goals] [--only-soundness] <prefix> <K> <N>" << endl
+         << "usage: " << name << " [--add-actions] [--add-features] [--decode] [--explicit-goals] [--only-soundness] <prefix> <K> <N>" << endl
          << endl
          << "where" << endl
          << "    <prefix> is prefix for all files" << endl
@@ -1823,10 +1829,15 @@ void usage(ostream &os, const string &name) {
          << "    N is number of abstract actions." << endl
          << endl
          << "For the options," << endl
+         << "    --add-actions to force inclusion of actions in '<prefix>_actions.dat'" << endl
          << "    --add-features to force inclusion of features in '<prefix>_features.dat'" << endl
          << "    --decode to decode model in '<prefix>_<K>_<N>_model.cnf' found by minisat" << endl
          << "    --explicit-goals to separate goals from non-goals using goals in '<prefix>_goals.dat'" << endl
          << "    --only-soundness to generate clauses that only enforce soundness instead of soundness+completeness" << endl
+         << endl
+         << "A feature file consists of number <n> of features in file, followed by space" << endl
+         << "followed by space-separated list of features names (the names need to match those" << endl
+         << "in matrix file." << endl
          << endl
          ;
 }
@@ -1848,6 +1859,8 @@ int main(int argc, const char **argv) {
             options.decode_ = true;
         } else if( string(*argv) == "--explicit-goals" ) {
             options.explicit_goals_ = true;
+        } else if( string(*argv) == "--add-actions" ) {
+            options.add_actions_ = true;
         } else if( string(*argv) == "--add-features" ) {
             options.add_features_ = true;
         } else if( string(*argv) == "--only-soundness" ) {
