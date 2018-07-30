@@ -171,7 +171,7 @@ class ConceptGenerationStep(Step):
         super().__init__(**kwargs)
 
     def get_required_attributes(self):
-        return ["sample_file", "domain", "experiment_dir", "concept_depth"]
+        return ["sample_file", "domain", "experiment_dir", "concept_depth", "use_distance_features"]
 
     def get_required_data(self):
         return []
@@ -207,7 +207,7 @@ class FeatureMatrixGenerationStep(Step):
         config["goal_states_filename"] = compute_info_filename(config, "goal-states.dat")
         config["sat_transitions_filename"] = compute_info_filename(config, "sat_transitions.dat")
         config["sat_feature_matrix_filename"] = compute_info_filename(config, "sat_matrix.dat")
-        config["feature_denotation_filename"] = compute_info_filename(config, "feature-denotations.dat")
+        config["feature_denotation_filename"] = compute_info_filename(config, "feature-denotations.txt")
         return config
 
     def get_required_data(self):
@@ -361,7 +361,7 @@ class Experiment(object):
             result = step.run()
             if result is not None:
                 logging.error('Critical error while processing step "{}". Execution will be terminated. '
-                              'Error message:'.format(step.name))
+                              'Error message:'.format(step.description()))
                 logging.error("\t{}".format(result))
                 break
 

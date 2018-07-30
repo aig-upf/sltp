@@ -10,20 +10,25 @@ from tarski.syntax import land
 _CURRENT_DIR_ = os.path.dirname(os.path.realpath(__file__))
 
 
-def main():
+def generate_domain(gridsize):
     lang = language(theories=[Theory.EQUALITY, Theory.ARITHMETIC])
     problem = create_fstrips_problem(domain_name='gridworld',
-                                     problem_name='10x10',
+                                     problem_name="gridworld-{}x{}".format(gridsize, gridsize),
                                      language=lang)
 
-    coord_t = lang.interval('coordinate', lang.Integer, 1, 10)
-    xpos = lang.function('X', coord_t)
-    ypos = lang.function('Y', coord_t)
+    coord_t = lang.interval('coordinate', lang.Integer, lower_bound=1, upper_bound=gridsize)
+    xpos = lang.function('xpos', coord_t)
+    ypos = lang.function('ypos', coord_t)
+    maxx = lang.function('maxpos', coord_t)
 
     # Create the actions
     problem.action(name='move-up', parameters=[],
-                   precondition=ypos() < coord_t.upper_bound,
+                   precondition=ypos() < maxx(),
                    effects=[ypos() << ypos() + 1])
+
+    problem.action(name='move-right', parameters=[],
+                   precondition=xpos() < maxx(),
+                   effects=[xpos() << xpos() + 1])
 
     problem.action(name='move-down', parameters=[],
                    precondition=ypos() > coord_t.lower_bound,
@@ -33,18 +38,65 @@ def main():
                    precondition=xpos() > coord_t.lower_bound,
                    effects=[xpos() << xpos() - 1])
 
-    problem.action(name='move-right', parameters=[],
-                   precondition=xpos() < coord_t.upper_bound,
-                   effects=[xpos() << xpos() + 1])
-
     problem.init.set(xpos, (), 1)
-    problem.init.set(ypos, (), 10)
+    problem.init.set(ypos, (), 1)
+    problem.init.set(maxx, (), gridsize)
 
-    problem.goal = land(xpos() == 2, ypos() == 3)
+    problem.goal = land(xpos() == gridsize, ypos() == gridsize)
 
-    writer = FstripsWriter(problem)
-    writer.write(domain_filename=os.path.join(_CURRENT_DIR_, "domain.pddl"),
-                 instance_filename=os.path.join(_CURRENT_DIR_, "instance.pddl"))
+    return problem
+
+
+def generate_propositional_domain(gridsize):
+    lang = language(theories=[Theory.EQUALITY])
+    problem = create_fstrips_problem(domain_name='gridworld-strips',
+                                     problem_name="gridworld-{}x{}".format(gridsize, gridsize),
+                                     language=lang)
+
+    coord_t = lang.sort('coordinate')
+    xpos = lang.function('xpos', coord_t)
+    ypos = lang.function('ypos', coord_t)
+    maxx = lang.function('maxpos', coord_t)
+    succ = lang.predicate("succ", coord_t, coord_t)
+
+    coordinates = ["c{}".format(i) for i in range(1, gridsize+1)]
+    _ = [lang.constant(c, coord_t) for c in coordinates]  # Create the "integer" objects
+
+    x1 = lang.variable("x1", coord_t)
+
+    # Create the actions
+    problem.action(name='move_x', parameters=[x1],
+                   precondition=succ(xpos(), x1) | succ(x1, xpos()),
+                   effects=[xpos() << x1])
+
+    problem.action(name='move_y', parameters=[x1],
+                   precondition=succ(ypos(), x1) | succ(x1, ypos()),
+                   effects=[ypos() << x1])
+
+    last = coordinates[-1]
+    problem.init.set(xpos, (), coordinates[0])
+    problem.init.set(ypos, (), coordinates[0])
+    problem.init.set(maxx, (), last)
+
+    _ = [problem.init.add(succ, x, y) for x, y in zip(coordinates, coordinates[1:])]
+
+    problem.goal = land(xpos() == last, ypos() == last)
+
+    return problem
+
+
+def main():
+
+    for gridsize in [3, 5, 7, 10]:
+        problem = generate_domain(gridsize)
+        writer = FstripsWriter(problem)
+        writer.write(domain_filename=os.path.join(_CURRENT_DIR_, "domain.pddl"),  # We can overwrite the domain
+                     instance_filename=os.path.join(_CURRENT_DIR_, "instance_{}.pddl".format(gridsize)))
+
+        problem = generate_propositional_domain(gridsize)
+        writer = FstripsWriter(problem)
+        writer.write(domain_filename=os.path.join(_CURRENT_DIR_, "domain_strips.pddl"),  # We can overwrite the domain
+                     instance_filename=os.path.join(_CURRENT_DIR_, "instance_strips_{}.pddl".format(gridsize)))
 
 
 if __name__ == "__main__":

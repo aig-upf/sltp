@@ -402,8 +402,8 @@ class ModelTranslator(object):
             raise CriticalPipelineError("Zero-cost maxsat solution - "
                                         "no action model possible, the encoding has likely some error")
 
-        print("Selected features: ")
-        print('\n'.join("F{}. {}".format(i, f) for i, f in enumerate(selected_features, 1)))
+        logging.info("Selected features: ")
+        print('\n'.join("F{}. {} [{}]".format(i, f, f.weight()) for i, f in enumerate(selected_features, 1)))
 
         # selected_features = [f for f in selected_features if str(f) == "bool[And(clear,{a})]"]
 
@@ -413,8 +413,8 @@ class ModelTranslator(object):
             sprime = self.compute_abstract_state(selected_features, state)
             abstract_states.add(sprime)
             state_abstraction[state] = sprime
-        print("Induced abstract state space:".format())
-        print("{} states".format(len(abstract_states)))
+        logging.info("Induced abstract state space:".format())
+        logging.info("{} states".format(len(abstract_states)))
 
         abstract_actions = set()
         already_computed = set()

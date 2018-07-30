@@ -34,7 +34,7 @@ def print_sat_transition_matrix(state_ids, transitions, transitions_filename):
         # first line: <#states> <#transitions>
         print("{} {}".format(len(state_ids), num_transitions), file=f)
         for s, succ in transitions.items():
-            print("{} {} {}".format(s, len(succ), " ".join("{}".format(sprime) for sprime in succ)), file=f)
+            print("{} {} {}".format(s, len(succ), " ".join("{}".format(sprime) for sprime in sorted(succ))), file=f)
 
 
 def print_feature_matrix(config, state_ids, features, model):
@@ -109,12 +109,12 @@ def compute_features(config, data):
     features, model = compute_feature_extensions(state_ids, data.features, data.extensions)
 
     # DEBUGGING: FORCE A CERTAIN SET OF FEATURES:
-    # selected = None
     # selected = [translator.features[i] for i in [8, 9, 25, 26, 1232]]
     # selected = [translator.features[i] for i in [8, 9, 25, 26, 2390]]
     # selected = [translator.features[i] for i in [1232]]
     # translator.features = selected
-    # translator.log_feature_denotations(config.feature_denotation_filename, selected)
+    selected = None
+    log_feature_denotations(features, model, config.feature_denotation_filename, selected)
 
     return state_ids, features, model
 
@@ -162,9 +162,9 @@ def compute_feature_extensions(states, features, concept_extensions):
             if duplicated is None:
                 traces[trace] = f
             else:
-                # logging.debug('Feature "{}" has same denotation trace as feature "{}" and will be ignored'
-                #               .format(f, duplicated))
-                # print(" ".join(trace))
+                logging.debug('Feature "{}" has same denotation trace as feature "{}" and will be ignored'
+                              .format(f, duplicated))
+                # logging.debug(" ".join(map(str, trace)))
                 continue
 
         if all_0_or_1 and not isinstance(f, NullaryAtomFeature):
@@ -177,10 +177,10 @@ def compute_feature_extensions(states, features, concept_extensions):
     return accepted, model
 
 
-def log_feature_denotations(self, feature_denotation_filename, selected=None):
-    selected = selected or self.features
+def log_feature_denotations(features, model, feature_denotation_filename, selected=None):
+    selected = selected or features
     d = defaultdict(list)
-    for (f, s), v in self.model.cache.feature_values.items():
+    for (f, s), v in model.cache.feature_values.items():
         if f in selected:
             d[s].append((f, v))
 

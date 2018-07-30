@@ -15,40 +15,41 @@
     )
 
     (:functions
-        (Y ) - coordinate
-        (X ) - coordinate
+        (maxpos ) - coordinate
+        (ypos ) - coordinate
+        (xpos ) - coordinate
     )
 
     
     (:action move-up
      :parameters ()
-     :precondition (< (Y ) 10)
+     :precondition (< (ypos ) (maxpos ))
      :effect (and
-        (assign (Y ) (+ (Y ) 1)))
-    ) 
-
-
-    (:action move-down
-     :parameters ()
-     :precondition (> (Y ) 1)
-     :effect (and
-        (assign (Y ) (- (Y ) 1)))
-    ) 
-
-
-    (:action move-left
-     :parameters ()
-     :precondition (> (X ) 1)
-     :effect (and
-        (assign (X ) (- (X ) 1)))
+        (assign (ypos ) (+ (ypos ) 1)))
     ) 
 
 
     (:action move-right
      :parameters ()
-     :precondition (< (X ) 10)
+     :precondition (< (xpos ) (maxpos ))
      :effect (and
-        (assign (X ) (+ (X ) 1)))
+        (assign (xpos ) (+ (xpos ) 1)))
+    ) 
+
+
+    (:action move-down
+     :parameters ()
+     :precondition (> (ypos ) 1)
+     :effect (and
+        (assign (ypos ) (- (ypos ) 1)))
+    ) 
+
+
+    (:action move-left
+     :parameters ()
+     :precondition (> (xpos ) 1)
+     :effect (and
+        (assign (xpos ) (- (xpos ) 1)))
     ) 
 
 )

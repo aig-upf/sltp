@@ -11,11 +11,11 @@ def main():
 
     domain_dir = "blocks"
     steps = generate_full_pipeline(domain=os.path.join(BENCHMARK_DIR, domain_dir, "domain.pddl"),
-                                   instance=os.path.join(BENCHMARK_DIR, domain_dir, "instance_8_clear_x.pddl"),
+                                   instance=os.path.join(BENCHMARK_DIR, domain_dir, "instance_5_clear_x.pddl"),
                                    driver="bfs",
                                    planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
-                                   num_states=50,
-                                   concept_depth=2,
+                                   num_states=30,
+                                   concept_depth=1,
                                    optimization=OptimizationPolicy.TOTAL_FEATURE_DEPTH
                                    # optimization=OptimizationPolicy.NUM_FEATURES
                                    )

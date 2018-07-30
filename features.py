@@ -107,26 +107,30 @@ class TerminologicalFactory(object):
 
         return generated
 
-    def derive_features(self, concepts, rest, k):
+    def derive_features(self, concepts, rest, max_distance_feature_depth, use_distance_features):
         # new_features = [NonEmptyConceptFeature(c) for c in concepts]
         feats = []
         feats.extend(ConceptCardinalityFeature(c) for c in concepts)
         k = len(feats)
         logging.info('{} concept cardinality features created'.format(k))
 
-        # new_features.extend(self.create_distance_features(concepts, rest, k))
-        # logging.info('{} min-distance features created'.format(len(new_features) - k))
+        if use_distance_features:
+            feats.extend(self.create_distance_features(concepts, rest, max_distance_feature_depth))
+            logging.info('{} min-distance features created'.format(len(feats) - k))
 
         return feats
 
     def create_distance_features(self, concepts, rest, k):
         card1_concepts = self.processor.singleton_extension_concepts
 
-        for c1, r, c2 in itertools.product(card1_concepts, rest, concepts):
+        # for c1, r, c2 in itertools.product(card1_concepts, rest, concepts):
+        for c1, r, c2 in itertools.product(card1_concepts, rest, card1_concepts):
             if c1.depth + r.depth + c2.depth > k:
                 continue
             if c2 in (self.syntax.top, self.syntax.bot):
                 continue  # No sense in creating a distance-to-nothing or distance-to-all feature
+            if c1 == c2:
+                continue
 
             yield MinDistanceFeature(c1, r, c2)
 
@@ -311,8 +315,8 @@ def run(config, data):
     # construct derived concepts and rules obtained with grammar
     c_i, c_j = 0, len(concepts)
     r_i, r_j = 0, len(roles)
-    print('\nDeriving concepts and roles using {} iteration(s), starting from {} atomic concepts and {} roles'.
-          format(config.concept_depth, c_j, r_j))
+    logging.info('\nDeriving concepts and roles using {} iteration(s), starting from {} atomic concepts and {} roles'.
+                 format(config.concept_depth, c_j, r_j))
 
     for i in range(1, config.concept_depth + 1):
         # Update indexes
@@ -322,13 +326,14 @@ def run(config, data):
         print("Starting iteration #{}...".format(i), end='', flush=True)
 
         derive_compositions = i <= 1
+        derive_compositions = False  # Temporarily deactivate compositions
         concepts.extend(factory.derive_concepts(old_c, new_c, old_r, new_r))
         roles.extend(factory.derive_roles(old_c, new_c, old_r, new_r, derive_compositions=derive_compositions))
 
         c_i, c_j = c_j, len(concepts)
         r_i, r_j = r_j, len(roles)
 
-        print("\t{} new concept(s) and {} new role(s) incorporated".format(c_j - c_i, r_j - r_i))
+        logging.info("\t{} new concept(s) and {} new role(s) incorporated".format(c_j - c_i, r_j - r_i))
 
     # profiling.print_snapshot()
 
@@ -342,8 +347,8 @@ def run(config, data):
     # rest = list(factory.create_role_restrictions(concepts, roles))
     # store_role_restrictions(rest, config)
     rest = roles
-    k = 5
-    features = factory.derive_features(concepts, rest, k)
+    max_distance_feature_depth = 2
+    features = factory.derive_features(concepts, rest, max_distance_feature_depth, config.use_distance_features)
     features += create_nullary_features(atoms)
 
     logging.info('Final number of features: {}'.format(len(features)))

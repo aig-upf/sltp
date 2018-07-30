@@ -10,13 +10,20 @@ def main():
     from learn_actions import OptimizationPolicy
 
     domain_dir = "gridworld"
-    steps = generate_full_pipeline(domain=os.path.join(BENCHMARK_DIR, domain_dir, "domain.pddl"),
-                                   instance=os.path.join(BENCHMARK_DIR, domain_dir, "instance.pddl"),
+
+    # domain = "domain.pddl"
+    # instance = "instance_3.pddl"
+    domain = "domain_strips.pddl"
+    instance = "instance_strips_5.pddl"
+
+    steps = generate_full_pipeline(domain=os.path.join(BENCHMARK_DIR, domain_dir, domain),
+                                   instance=os.path.join(BENCHMARK_DIR, domain_dir, instance),
                                    driver="bfs",
                                    planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
-                                   num_states=30,
+                                   num_states=60,
                                    concept_depth=2,
-                                   optimization=OptimizationPolicy.TOTAL_FEATURE_DEPTH
+                                   optimization=OptimizationPolicy.TOTAL_FEATURE_DEPTH,
+                                   use_distance_features=True
                                    # optimization=OptimizationPolicy.NUM_FEATURES
                                    )
     exp = Experiment(steps)
