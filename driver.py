@@ -23,6 +23,7 @@ import sys
 from signal import signal, SIGPIPE, SIG_DFL
 
 from errors import CriticalPipelineError
+from util import console
 from util.bootstrap import setup_global_parser
 from util.command import execute
 from util.console import print_header, log_time
@@ -76,8 +77,7 @@ def check_int_parameter(config, name, positive=False):
 
 class Step(object):
 
-    def __init__(self, name, **kwargs):
-        self.name = name
+    def __init__(self, **kwargs):
         self.config = self.process_config(self.parse_config(**kwargs))
 
     def process_config(self, config):
@@ -93,18 +93,25 @@ class Step(object):
         config = copy.deepcopy(kwargs)
         for attribute in self.get_required_attributes():
             if attribute not in kwargs:
-                raise RuntimeError('Missing attribute "{}" in step {}'.format(attribute, self.__class__.__name__))
+                raise RuntimeError('Missing attribute "{}" in step "{}"'.format(attribute, self.__class__.__name__))
             config[attribute] = kwargs[attribute]
 
         return config
 
     def run(self):
+        req_data = self.get_required_data()
+        data = None
+        if req_data:
+            data = Bunch(load(self.config["experiment_dir"], self.get_required_data()))
+        runner = StepRunner(self.description(), self.get_step_runner())
+        result = runner.run(config=Bunch(self.config), data=data)
+        return result
+
+    def description(self):
         raise NotImplementedError()
 
-    def run_step(self):
-         return self.run()
-        # if retcode:
-        #     logging.critical('Experiment step "{}" exited with return code {}'.format(self.name, retcode))
+    def get_step_runner(self):
+        raise NotImplementedError()
 
 
 def _run_planner(config, data):
@@ -123,7 +130,7 @@ class PlannerStep(Step):
     VALID_DRIVERS = ("bfs", "ff", "iw2")
 
     def __init__(self, **kwargs):
-        super().__init__(name="sample", **kwargs)
+        super().__init__(**kwargs)
 
     def get_required_attributes(self):
         return ["instance", "domain", "num_states", "planner_location", "driver"]
@@ -151,19 +158,17 @@ class PlannerStep(Step):
 
         return config
 
-    def run(self):
-        StepRunner("Sample Generation", _run_planner).run(config=Bunch(self.config), data=None)
+    def description(self):
+        return "Sampling of the state space"
+
+    def get_step_runner(self):
+        return _run_planner
 
 
-class Bunch(object):
-    def __init__(self, adict):
-        self.__dict__.update(adict)
-
-
-class FeatureGenerationStep(Step):
+class ConceptGenerationStep(Step):
     """ Generate systematically a set of features of bounded complexity from the transition (state) sample """
     def __init__(self, **kwargs):
-        super().__init__(name="features", **kwargs)
+        super().__init__(**kwargs)
 
     def get_required_attributes(self):
         return ["sample_file", "domain", "experiment_dir", "concept_depth"]
@@ -179,43 +184,93 @@ class FeatureGenerationStep(Step):
 
         return config
 
-    def run(self):
+    def description(self):
+        return "Generation of concepts"
+
+    def get_step_runner(self):
         import features
-        runner = StepRunner("Concept Generation", features.run)
-        runner.run(config=Bunch(self.config), data=None)
+        return features.run
 
 
-class MaxsatProblemStep(Step):
+class FeatureMatrixGenerationStep(Step):
+    """ Generate and output the feature and transition matrices for the problem  """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def get_required_attributes(self):
+        return ["experiment_dir"]
+
+    def process_config(self, config):
+        config["feature_filename"] = compute_info_filename(config, "features.txt")
+        config["feature_matrix_filename"] = compute_info_filename(config, "feature-matrix.dat")
+        config["transitions_filename"] = compute_info_filename(config, "transition-matrix.dat")
+        config["goal_states_filename"] = compute_info_filename(config, "goal-states.dat")
+        config["sat_transitions_filename"] = compute_info_filename(config, "sat_transitions.dat")
+        config["sat_feature_matrix_filename"] = compute_info_filename(config, "sat_matrix.dat")
+        config["feature_denotation_filename"] = compute_info_filename(config, "feature-denotations.dat")
+        return config
+
+    def get_required_data(self):
+        return ["features", "extensions", "states", "goal_states", "transitions"]
+
+    def description(self):
+        return "Generation of the feature and transition matrices"
+
+    def get_step_runner(self):
+        from matrices import generate_features
+        return generate_features
+
+
+class MaxsatProblemGenerationStep(Step):
     """ Generate the max-sat problem from a given set of generated features """
     def __init__(self, **kwargs):
-        super().__init__(name="maxsat-encode", **kwargs)
+        super().__init__(**kwargs)
 
     def get_required_attributes(self):
         return ["experiment_dir"]
 
     def process_config(self, config):
         config["cnf_filename"] = compute_maxsat_filename(config)
-        config["feature_filename"] = compute_info_filename(config, "features.txt")
-        config["feature_matrix_filename"] = compute_info_filename(config, "feature-matrix.txt")
-        config["transitions_filename"] = compute_info_filename(config, "transition-matrix.txt")
-        config["feature_denotation_filename"] = compute_info_filename(config, "feat-denotations.txt")
         return config
 
     def get_required_data(self):
-        return ["features", "extensions", "states", "goal_states", "transitions"]
+        return ["features", "extensions", "states", "goal_states", "transitions", "state_ids", "feature_model"]
 
-    def run(self):
-        data = load(self.config["experiment_dir"], self.get_required_data())
+    def description(self):
+        return "Generation of the max-sat problem"
+
+    def get_step_runner(self):
         import learn_actions
-        runner = StepRunner("Generation max-sat encoding", learn_actions.run)
-        return runner.run(config=Bunch(self.config), data=Bunch(data))
+        return learn_actions.generate_maxsat_problem
 
 
-class MaxsatSolverStep(Step):
+class SatProblemGenerationStep(Step):
+    """ Call Blai's SAT-encoding generator from a given set of generated features """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def get_required_attributes(self):
+        return ["experiment_dir"]
+
+    def process_config(self, config):
+        return config
+
+    def get_required_data(self):
+        return ["features", "state_ids", "goal_states"]
+
+    def description(self):
+        return "Generation of the (alternative sat encoding) problem"
+
+    def get_step_runner(self):
+        from compact_encoding import runner
+        return runner.run
+
+
+class MaxsatProblemSolutionStep(Step):
     """ Run some max-sat solver on the generated encoding """
 
     def __init__(self, **kwargs):
-        super().__init__(name="maxsat-solve", **kwargs)
+        super().__init__(**kwargs)
 
     def get_required_attributes(self):
         return []
@@ -223,18 +278,19 @@ class MaxsatSolverStep(Step):
     def get_required_data(self):
         return ["cnf_translator"]
 
-    def run(self):
-        data = load(self.config["experiment_dir"], self.get_required_data())
+    def description(self):
+        return "Solution of the max-sat problem"
+
+    def get_step_runner(self):
         import learn_actions
-        runner = StepRunner("Solution max-sat encoding", learn_actions.run_solver)
-        runner.run(config=Bunch(self.config), data=Bunch(data))
+        return learn_actions.run_solver
 
 
 class ActionModelStep(Step):
     """ Generate an abstract action model from the solution of the max-sat encoding """
 
     def __init__(self, **kwargs):
-        super().__init__(name="action-model", **kwargs)
+        super().__init__(**kwargs)
 
     def get_required_attributes(self):
         return []
@@ -242,18 +298,20 @@ class ActionModelStep(Step):
     def get_required_data(self):
         return ["cnf_translator", "cnf_solution"]
 
-    def run(self):
-        data = load(self.config["experiment_dir"], self.get_required_data())
+    def description(self):
+        return "Computation of the action model"
+
+    def get_step_runner(self):
         import learn_actions
-        runner = StepRunner("Action Model Computation", learn_actions.compute_action_model)
-        runner.run(config=Bunch(self.config), data=Bunch(data))
+        return learn_actions.compute_action_model
 
 
 PIPELINE = [
     PlannerStep,
-    FeatureGenerationStep,
-    MaxsatProblemStep,
-    MaxsatSolverStep,
+    ConceptGenerationStep,
+    FeatureMatrixGenerationStep,
+    MaxsatProblemGenerationStep,
+    MaxsatProblemSolutionStep,
     ActionModelStep,
 ]
 
@@ -262,6 +320,21 @@ def generate_full_pipeline(**kwargs):
     steps = []
     config = kwargs
     for klass in PIPELINE:
+        step = klass(**config)
+        config = step.config
+        steps.append(step)
+    return steps
+
+
+def generate_alt_pipeline(**kwargs):
+    steps = []
+    config = kwargs
+    for klass in [
+        PlannerStep,
+        ConceptGenerationStep,
+        FeatureMatrixGenerationStep,
+        SatProblemGenerationStep,
+    ]:
         step = klass(**config)
         config = step.config
         steps.append(step)
@@ -285,7 +358,7 @@ class Experiment(object):
         steps = [get_step(self.steps, name) for name in self.args.steps] or self.steps
 
         for step in steps:
-            result = step.run_step()
+            result = step.run()
             if result is not None:
                 logging.error('Critical error while processing step "{}". Execution will be terminated. '
                               'Error message:'.format(step.name))
@@ -330,7 +403,6 @@ class StepRunner(object):
         pool.join()
         return res
 
-
     def _runner(self, config, data):
         # import tracemalloc
         # tracemalloc.start()
@@ -338,6 +410,7 @@ class StepRunner(object):
         from util import performance
 
         result = None
+        console.print_header("STARTING STEP: {}".format(self.step_name))
         start = performance.timer()
         try:
             output = self.target(config=config, data=data)
@@ -348,3 +421,8 @@ class StepRunner(object):
         performance.print_performance_stats(self.step_name, start)
         # profiling.start()
         return result
+
+
+class Bunch(object):
+    def __init__(self, adict):
+        self.__dict__.update(adict)

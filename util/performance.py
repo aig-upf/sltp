@@ -49,7 +49,8 @@ def print_memory_usage():
 
 
 def print_performance_stats(name, start_time):
-    console.print_header("{}: {:.2f} CPU sec - {:.2f} MB".format(name, time.process_time() - start_time, memory_usage()))
+    console.print_header("END OF STEP {}: {:.2f} CPU sec - {:.2f} MB".format(name, time.process_time() - start_time,
+                                                                             memory_usage()))
 
 
 def timer():
