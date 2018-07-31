@@ -207,6 +207,7 @@ class FeatureMatrixGenerationStep(Step):
         config["goal_states_filename"] = compute_info_filename(config, "goal-states.dat")
         config["sat_transitions_filename"] = compute_info_filename(config, "sat_transitions.dat")
         config["sat_feature_matrix_filename"] = compute_info_filename(config, "sat_matrix.dat")
+        config["feature_info_filename"] = compute_info_filename(config, "feature-info.dat")
         config["feature_denotation_filename"] = compute_info_filename(config, "feature-denotations.txt")
         return config
 

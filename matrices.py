@@ -48,6 +48,15 @@ def print_feature_matrix(config, state_ids, features, model):
             print(line, file=f)
 
 
+def print_feature_info(config, features):
+    filename = config.feature_info_filename
+    logging.info("Printing feature info for {} features to '{}'".format(len(features), filename))
+
+    with open(filename, 'w') as f:
+        for feat in features:
+            print("{} {}".format(feat, feat.weight()), file=f)
+
+
 def print_sat_matrix(config, state_ids, features, model):
     filename = config.sat_feature_matrix_filename
     logging.info("Printing SAT feature matrix of {} features x {} states to '{}'".
@@ -93,6 +102,7 @@ def print_goal_states(goal_states, filename):
 
 def generate_features(config, data):
     state_ids, features, model = compute_features(config, data)
+    print_feature_info(config, features)
     print_feature_matrix(config, state_ids, features, model)
     print_transition_matrix(state_ids, data.transitions, config.transitions_filename)
     print_sat_matrix(config, state_ids, features, model)

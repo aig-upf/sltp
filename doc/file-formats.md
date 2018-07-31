@@ -25,3 +25,6 @@ The file contains a single line
     s_1 s_2 ... s_n
 
 with the IDs of all goal states.
+
+## `feature-info.dat`
+A list of feature names, one per line, ordered by consecutive ID, and followed by their feature complexity.
