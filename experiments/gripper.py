@@ -16,7 +16,7 @@ def main():
                                    planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
                                    num_states=250,
                                    concept_depth=1,
-                                   optimization=OptimizationPolicy.TOTAL_FEATURE_DEPTH
+                                   optimization=OptimizationPolicy.TOTAL_FEATURE_COMPLEXITY
                                    # optimization=OptimizationPolicy.NUM_FEATURES
                                    )
     exp = Experiment(steps)

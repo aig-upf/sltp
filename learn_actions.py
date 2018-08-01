@@ -24,7 +24,8 @@ from signal import signal, SIGPIPE, SIG_DFL
 import time
 
 from errors import CriticalPipelineError
-from tarski.dl import FeatureValueChange
+from tarski.dl import FeatureValueChange, MinDistanceFeature, NullaryAtomFeature, EmpiricalBinaryConcept, \
+    ConceptCardinalityFeature
 from util.console import print_header, print_lines
 from util.command import count_file_lines, remove_duplicate_lines, read_file
 from solvers import solve
@@ -36,7 +37,7 @@ BASEDIR = os.path.dirname(os.path.realpath(__file__))
 
 class OptimizationPolicy(Enum):
     NUM_FEATURES = 1  # Minimize number of features
-    TOTAL_FEATURE_DEPTH = 2  # Minimize the sum of depths of selected features
+    TOTAL_FEATURE_COMPLEXITY = 2  # Minimize the sum of depths of selected features
     NUMERIC_FEATURES_FIRST = 3   # Minimize number of numeric features first, then overall features.
 
 
@@ -403,7 +404,7 @@ class ModelTranslator(object):
                                         "no action model possible, the encoding has likely some error")
 
         logging.info("Selected features: ")
-        print('\n'.join("F{}. {} [{}]".format(i, f, f.weight()) for i, f in enumerate(selected_features, 1)))
+        print('\n'.join("F{}. {} [{}]".format(i, f, f.complexity()) for i, f in enumerate(selected_features, 1)))
 
         # selected_features = [f for f in selected_features if str(f) == "bool[And(clear,{a})]"]
 
@@ -481,13 +482,19 @@ class ModelTranslator(object):
         return 1
 
     def opt_policy_total_feature_depth(self, feature):
-        return feature.weight() + 1  # Make sure no clause weight is 0
+        penalizations = {
+            NullaryAtomFeature: 1,  # Start at 1 to make sure no clause weight is 0
+            EmpiricalBinaryConcept: 2,
+            ConceptCardinalityFeature: 2,
+            MinDistanceFeature: 2
+        }
+        return feature.complexity() + penalizations[feature.__class__]
 
     def setup_optimization_policy(self, optimization):
         if optimization == OptimizationPolicy.NUM_FEATURES:
             return self.opt_policy_num_features
 
-        if optimization == OptimizationPolicy.TOTAL_FEATURE_DEPTH:
+        if optimization == OptimizationPolicy.TOTAL_FEATURE_COMPLEXITY:
             return self.opt_policy_total_feature_depth
 
         raise RuntimeError("Unknown optimization policy")

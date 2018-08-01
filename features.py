@@ -125,7 +125,7 @@ class TerminologicalFactory(object):
 
         # for c1, r, c2 in itertools.product(card1_concepts, rest, concepts):
         for c1, r, c2 in itertools.product(card1_concepts, rest, card1_concepts):
-            if c1.depth + r.depth + c2.depth > k:
+            if c1.size + r.size + c2.size > k:
                 continue
             if c2 in (self.syntax.top, self.syntax.bot):
                 continue  # No sense in creating a distance-to-nothing or distance-to-all feature
@@ -261,18 +261,15 @@ class SemanticProcessor(object):
             self.singleton_extension_concepts.append(term)
         return True
 
-    def process_terms(self, elems):
-        return [x for x in elems if self.process_term(x)]
-
 
 def store_terms(concepts, roles, args):
     os.makedirs(args.experiment_dir, exist_ok=True)
     with open(os.path.join(args.experiment_dir, 'concepts.txt'), 'w') as f:
         # f.write("\n".join(map(str, concepts)))
-        f.write("\n".join("{} [{}]".format(c, c.depth) for c in concepts))
+        f.write("\n".join("{} [{}]".format(c, c.size) for c in concepts))
     with open(os.path.join(args.experiment_dir, 'roles.txt'), 'w') as f:
         # f.write("\n".join(map(str, roles)))
-        f.write("\n".join("{} [{}]".format(r, r.depth) for r in roles))
+        f.write("\n".join("{} [{}]".format(r, r.size) for r in roles))
 
 
 def store_role_restrictions(roles, args):
@@ -294,6 +291,36 @@ def create_nullary_features(atoms):
 
 
 # @profile
+def collect_all_terms(processor, atoms, concepts, roles):
+    """ Collect all simpler terms from the given atoms, concepts and roles """
+    assert not atoms  # To be implemented
+    all_terms = set()
+    for term in itertools.chain(atoms, concepts, roles):
+        all_terms.update(term.flatten())
+
+    # Sort elements into categories and from simpler to more complex.
+    sorter = lambda elem: elem.size
+    all_terms = sorted(all_terms, key=sorter)
+
+    interesting = []
+    for t in all_terms:
+        try:
+            if processor.process_term(t):
+                interesting.append(t)
+        except KeyError:  # i.e. the denotation of some subterm was not cached
+            logging.info('Term "{}" ignored as it involves some empty-denotation subterm'.format(t))
+            continue
+
+    def filter_elements(elements, t):
+        return [x for x in elements if isinstance(x, t)]
+
+    atoms = []  # TODO
+    concepts = filter_elements(interesting, Concept)
+    roles = filter_elements(interesting, Role)
+
+    return interesting, atoms, concepts, roles
+
+
 def run(config, data):
     assert not data
     problem, language = parse_pddl(config.domain)
@@ -304,36 +331,12 @@ def run(config, data):
 
     factory = TerminologicalFactory(language, states)
 
-    # Construct the primitive terms from the input language, and then add the atoms
-    concepts, roles, atoms = factory.syntax.generate_primitives_from_language()
-    logging.info('Primitive (nullary) atoms : {}'.format(", ".join(map(str, atoms))))
-    logging.info('Primitive (unary) concepts: {}'.format(", ".join(map(str, concepts))))
-    logging.info('Primitive (binary) roles  : {}'.format(", ".join(map(str, roles))))
-    concepts = factory.create_atomic_concepts(concepts)
-    roles = factory.create_atomic_roles(roles)
-
-    # construct derived concepts and rules obtained with grammar
-    c_i, c_j = 0, len(concepts)
-    r_i, r_j = 0, len(roles)
-    logging.info('\nDeriving concepts and roles using {} iteration(s), starting from {} atomic concepts and {} roles'.
-                 format(config.concept_depth, c_j, r_j))
-
-    for i in range(1, config.concept_depth + 1):
-        # Update indexes
-        old_c, new_c = concepts[0:c_i], concepts[c_i:c_j]
-        old_r, new_r = roles[0:r_i], roles[r_i:r_j]
-
-        print("Starting iteration #{}...".format(i), end='', flush=True)
-
-        derive_compositions = i <= 1
-        derive_compositions = False  # Temporarily deactivate compositions
-        concepts.extend(factory.derive_concepts(old_c, new_c, old_r, new_r))
-        roles.extend(factory.derive_roles(old_c, new_c, old_r, new_r, derive_compositions=derive_compositions))
-
-        c_i, c_j = c_j, len(concepts)
-        r_i, r_j = r_j, len(roles)
-
-        logging.info("\t{} new concept(s) and {} new role(s) incorporated".format(c_j - c_i, r_j - r_i))
+    if config.concept_generator is not None:
+        logging.info('Using handcrafted set of features!'.format())
+        atoms, concepts, roles = config.concept_generator(language)
+        all_terms, atoms, concepts, roles = collect_all_terms(factory.processor, atoms, concepts, roles)
+    else:
+        atoms, concepts, roles = generate_concepts(config, factory)
 
     # profiling.print_snapshot()
 
@@ -360,6 +363,38 @@ def run(config, data):
         transitions=transitions,
         extensions=factory.processor.cache
     )
+
+
+def generate_concepts(config, factory):
+    # Construct the primitive terms from the input language, and then add the atoms
+    concepts, roles, atoms = factory.syntax.generate_primitives_from_language()
+    logging.info('Primitive (nullary) atoms : {}'.format(", ".join(map(str, atoms))))
+    logging.info('Primitive (unary) concepts: {}'.format(", ".join(map(str, concepts))))
+    logging.info('Primitive (binary) roles  : {}'.format(", ".join(map(str, roles))))
+    concepts = factory.create_atomic_concepts(concepts)
+    roles = factory.create_atomic_roles(roles)
+    # construct derived concepts and rules obtained with grammar
+    c_i, c_j = 0, len(concepts)
+    r_i, r_j = 0, len(roles)
+    logging.info('\nDeriving concepts and roles using {} iteration(s), starting from {} atomic concepts and {} roles'.
+                 format(config.concept_depth, c_j, r_j))
+    for i in range(1, config.concept_depth + 1):
+        # Update indexes
+        old_c, new_c = concepts[0:c_i], concepts[c_i:c_j]
+        old_r, new_r = roles[0:r_i], roles[r_i:r_j]
+
+        print("Starting iteration #{}...".format(i), end='', flush=True)
+
+        derive_compositions = i <= 1
+        derive_compositions = False  # Temporarily deactivate compositions
+        concepts.extend(factory.derive_concepts(old_c, new_c, old_r, new_r))
+        roles.extend(factory.derive_roles(old_c, new_c, old_r, new_r, derive_compositions=derive_compositions))
+
+        c_i, c_j = c_j, len(concepts)
+        r_i, r_j = r_j, len(roles)
+
+        logging.info("\t{} new concept(s) and {} new role(s) incorporated".format(c_j - c_i, r_j - r_i))
+    return atoms, concepts, roles
 
 
 def try_number(x):

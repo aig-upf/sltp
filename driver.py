@@ -181,6 +181,7 @@ class ConceptGenerationStep(Step):
 
         config["concept_dir"] = os.path.join(config["experiment_dir"], 'terms')
         config["feature_stdout"] = os.path.join(config["experiment_dir"], 'feature-generation.stdout.txt')
+        config["concept_generator"] = config.get("concept_generator", None)
 
         return config
 

@@ -5,7 +5,6 @@ import math
 from collections import defaultdict
 
 from tarski.dl import EmpiricalBinaryConcept, NullaryAtomFeature, ConceptCardinalityFeature, MinDistanceFeature
-from tarski.dl.features import IntegerVariableFeature, Feature
 
 from features import Model
 
@@ -13,7 +12,9 @@ PRUNE_DUPLICATE_FEATURES = True
 
 
 def next_power_of_two(x):
-    """ Return the smallest power of two Z such that Z >= x"""
+    """ Return the smallest power of two Z such that Z >= x """
+    if x == 0:
+        return 0
     return 2 ** (math.ceil(math.log2(x)))
 
 
@@ -54,7 +55,7 @@ def print_feature_info(config, features):
 
     with open(filename, 'w') as f:
         for feat in features:
-            print("{} {}".format(feat, feat.weight()), file=f)
+            print("{} {}".format(feat, feat.complexity()), file=f)
 
 
 def print_sat_matrix(config, state_ids, features, model):
@@ -67,7 +68,7 @@ def print_sat_matrix(config, state_ids, features, model):
     for feat in features:
         if isinstance(feat, (NullaryAtomFeature, EmpiricalBinaryConcept)):
             binary.append(feat)
-        elif isinstance(feat, (ConceptCardinalityFeature, MinDistanceFeature, IntegerVariableFeature)):
+        elif isinstance(feat, (ConceptCardinalityFeature, MinDistanceFeature)):
             numeric.append(feat)
         else:
             assert 0, "Unknown feature type"

@@ -20,11 +20,11 @@ def main():
                                    instance=os.path.join(BENCHMARK_DIR, domain_dir, instance),
                                    driver="bfs",
                                    planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
-                                   num_states=60,
-                                   concept_depth=2,
-                                   optimization=OptimizationPolicy.TOTAL_FEATURE_DEPTH,
-                                   use_distance_features=True
-                                   # optimization=OptimizationPolicy.NUM_FEATURES
+                                   num_states=200,
+                                   concept_depth=1,
+                                   optimization=OptimizationPolicy.TOTAL_FEATURE_COMPLEXITY,
+                                   # optimization=OptimizationPolicy.NUM_FEATURES,
+                                   use_distance_features=True,
                                    )
     exp = Experiment(steps)
     exp.run()

@@ -16,7 +16,8 @@ def main():
                                   num_states=30,
                                   concept_depth=1,
                                   encoding_k=10,
-                                  encoding_m=10
+                                  encoding_m=10,
+                                  use_distance_features=False
                                   )
     exp = Experiment(steps)
     exp.run()
