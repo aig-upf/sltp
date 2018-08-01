@@ -349,30 +349,39 @@ class Transitions {
 
     // accessors
     int binary_search(int s, int t) const {
-        assert((0 <= s) && (s < tr_.size()));
-        int start = 0;
-        int end = tr_[s].first - 1;
-        while( start < end ) {
-            int mid = (start + end) / 2;
-            if( tr_[s].second[mid] == t ) {
+        assert((0 <= s) && (s < num_states_));
+        int count = tr_[s].first;
+        if( count == 0 ) {
+            return -1;
+        } else {
+            int start = 0;
+            int end = count - 1;
+            while( start < end ) {
+                int mid = (start + end) / 2;
+                if( tr_[s].second[mid] == t ) {
                 return mid;
-            } else if( tr_[s].second[mid] < t ) {
-                start = mid + 1;
-            } else {
-                end = mid - 1;
+                } else if( tr_[s].second[mid] < t ) {
+                    start = mid + 1;
+                } else {
+                    end = mid - 1;
+                }
             }
+            return tr_[s].second[start] == t ? start : -1;
         }
-        return tr_[s].second[start] == t ? start : -1;
     }
     bool tr(int s, int t) const {
         return binary_search(s, t) != -1;
     }
     int successors(int s, vector<int> &succ) const {
-        assert((0 <= s) && (s < tr_.size()));
+        assert((0 <= s) && (s < num_states_));
         int count = tr_[s].first;
-        succ = vector<int>(count, 0);
-        for( int i = 0; i < count; ++i )
-            succ[i] = tr_[s].second[i];
+        if( count == 0 ) {
+            succ.clear();
+        } else {
+            succ = vector<int>(count, 0);
+            for( int i = 0; i < count; ++i )
+                succ[i] = tr_[s].second[i];
+        }
         return count;
     }
 
@@ -381,18 +390,16 @@ class Transitions {
         os << num_states_ << " " << num_transitions_ << endl;
 
         int count = 0;
-        for( size_t src = 0; src < tr_.size(); ++src )
-            count += tr_[src].first > 0 ? 1 : 0;
+        for( size_t s = 0; s < num_states_; ++s )
+            count += tr_[s].first > 0 ? 1 : 0;
         os << count << endl;
 
-        for( size_t src = 0; src < tr_.size(); ++src ) {
-            int count = tr_[src].first;
+        for( size_t s = 0; s < num_states_; ++s ) {
+            int count = tr_[s].first;
             if( count > 0 ) {
-                os << src << " " << count;
-                for( int i = 0; i < count; ++i ) {
-                    int dst = tr_[src].second[i];
-                    os << " " << dst;
-                }
+                os << s << " " << count;
+                for( int i = 0; i < count; ++i )
+                    os << " " << tr_[s].second[i];
                 os << endl;
             }
         }
@@ -401,7 +408,7 @@ class Transitions {
         os << "Transitions stats: #states=" << num_states_
            << ", #transitions=" << num_transitions_
            << endl;
-        for( size_t s = 0; s < tr_.size(); ++s ) {
+        for( size_t s = 0; s < num_states_; ++s ) {
             int count = tr_[s].first;;
             if( count > 0 ) {
                 os << "state " << s << ":";
@@ -414,9 +421,17 @@ class Transitions {
 
     // readers
     void read(istream &is) {
-        for( int i = 0; i < num_states_; ++i ) {
+        int num_records = 0, last_src = -1;
+        is >> num_records;
+        for( int i = 0; i < num_records; ++i ) {
             int src, count, dst;
             is >> src >> count;
+
+            while( last_src < src ) {
+                offset_[last_src + 1] = last_src == -1 ? 0 : offset_[last_src];
+                ++last_src;
+            }
+
             tr_[src] = make_pair(count, new int[count]);
             for( int j = 0; j < count; ++j ) {
                 is >> dst;
@@ -425,8 +440,12 @@ class Transitions {
                 assert((j == 0) || (tr_[src].second[j - 1] < dst)); // verify unique and ordered transitions
                 tr_[src].second[j] = dst;
             }
-            if( i + 1 < num_states_ ) offset_[i + 1] = offset_[i] + count;
+
+            if( src + 1 < num_states_ ) offset_[src + 1] = offset_[src] + count;
+            assert(last_src == src);
+            ++last_src;
         }
+        cout << "X: " << offset_[num_states_ - 1] + tr_[num_states_ - 1].first << " " << num_transitions_ << endl;
         assert(offset_[num_states_ - 1] + tr_[num_states_ - 1].first == num_transitions_);
     }
     static const Transitions* read_dump(istream &is) {
