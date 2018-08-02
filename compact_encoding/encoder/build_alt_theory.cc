@@ -445,7 +445,14 @@ class Transitions {
             assert(last_src == src);
             ++last_src;
         }
-        cout << "X: " << offset_[num_states_ - 1] + tr_[num_states_ - 1].first << " " << num_transitions_ << endl;
+
+        // fill remaining offsets
+        while( last_src < num_states_ ) {
+            offset_[last_src + 1] = last_src == -1 ? 0 : offset_[last_src];
+            ++last_src;
+        }
+
+        // check all transitions are accounted for
         assert(offset_[num_states_ - 1] + tr_[num_states_ - 1].first == num_transitions_);
     }
     static const Transitions* read_dump(istream &is) {
