@@ -14,13 +14,31 @@ def main():
 
     domain_dir = "blocks"
     steps = generate_full_pipeline(domain=os.path.join(BENCHMARK_DIR, domain_dir, "domain.pddl"),
-                                   instance=os.path.join(BENCHMARK_DIR, domain_dir, "instance_5_clear_x.pddl"),
-                                   driver="bfs",
+                                   instance=os.path.join(BENCHMARK_DIR, domain_dir, "probBLOCKS-4-0.pddl"),
+
+                                   # Location of the FS planner, used to do the state space sampling
                                    planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
-                                   num_states=100,
-                                   concept_depth=1,
-                                   concept_generator=build_paper_concepts,
-                                   use_distance_features=False,
+
+                                   # Type of sampling procedure. Only breadth-first search implemented ATM
+                                   driver="bfs",
+
+                                   # Number of states to be expanded in the sampling procedure
+                                   num_states=90,
+
+                                   # Number of iterations of the concept generation grammar.
+                                   concept_depth=2,
+
+                                   # Provide a special, handcrafted method to generate concepts, if desired.
+                                   # This will override the standard concept generation procedure (default: None)
+                                   # concept_generator=build_paper_concepts,
+
+                                   # Whether to use distance features (default: False)
+                                   use_distance_features=True,
+
+                                   # Whether to use concepts based on goal predicate denotations (default: False)
+                                   use_goal_features=True,
+
+                                   # What optimization criteria to use in the max-sat problem
                                    optimization=OptimizationPolicy.TOTAL_FEATURE_COMPLEXITY,
                                    # optimization=OptimizationPolicy.NUM_FEATURES
                                    )
@@ -28,7 +46,7 @@ def main():
     exp.run()
 
 
-def build_paper_concepts(lang):
+def build_ijcai_paper_concepts(lang):
     """ Return the concepts from Hector & Blai's IJCAI paper """
     obj_t = lang.Object
     x_nominal = NominalConcept("a", obj_t)

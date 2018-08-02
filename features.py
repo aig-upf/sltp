@@ -22,11 +22,15 @@ import os
 import tarski as tsk
 
 from bitarray import bitarray
+from tarski import Predicate, Function
+from tarski.dl.concepts import GoalNullaryAtom, GoalConcept, GoalRole
 from tarski.io import FstripsReader
 from tarski.syntax import builtins
 from tarski.dl import Concept, Role, PrimitiveConcept, PrimitiveRole, InverseRole, StarRole, \
     ConceptCardinalityFeature, MinDistanceFeature, SyntacticFactory, NullaryAtomFeature, NullaryAtom, \
     EmpiricalBinaryConcept
+from tarski.syntax.transform.errors import TransformationError
+from tarski.syntax.transform.simplifications import transform_to_ground_atoms
 
 from extensions import UniverseIndex, ExtensionCache
 from parameters import add_domain_goal_parameters
@@ -36,9 +40,9 @@ signal(SIGPIPE, SIG_DFL)
 
 
 class TerminologicalFactory(object):
-    def __init__(self, language: tsk.FirstOrderLanguage, states):
+    def __init__(self, language: tsk.FirstOrderLanguage, states, goal_denotation):
         self.syntax = SyntacticFactory(language)
-        self.processor = SemanticProcessor(language, states, self.syntax.top, self.syntax.bot)
+        self.processor = SemanticProcessor(language, states, goal_denotation, self.syntax.top, self.syntax.bot)
 
     def create_atomic_concepts(self, base_concepts):
         # Start with the base concepts
@@ -140,7 +144,8 @@ class TerminologicalFactory(object):
 
 
 class SemanticProcessor(object):
-    def __init__(self, language, states, top, bot):
+
+    def __init__(self, language, states, goal_denotation, top, bot):
         self.language = language
         self.states = states
         self.top = top
@@ -149,70 +154,86 @@ class SemanticProcessor(object):
                                        if not builtins.is_builtin_predicate(p) and p.arity in (0, 1, 2))
         self.relevant_functions = set(f for f in self.language.functions
                                       if not builtins.is_builtin_function(f) and f.arity in (0, 1))
+        self.standard_dl_mapping = {0: NullaryAtom, 1: PrimitiveConcept, 2: PrimitiveRole}
+        self.goal_dl_mapping = {0: GoalNullaryAtom, 1: GoalConcept, 2: GoalRole}
         self.universe = self.compute_universe(states)
-        self.cache = self.create_cache_for_samples()
+        self.cache = self.create_cache_for_samples(goal_denotation)
         self.singleton_extension_concepts = []
 
     # @profile
     def generate_extension_trace(self, term):
         assert isinstance(term, (Concept, Role))
 
-        substitution = {}
         trace = bitarray()
         state_extensions = []
         for sid in self.states:
-            extension = term.extension(self.cache, sid, substitution)
+            extension = term.extension(self.cache, sid)
             trace += extension
             state_extensions.append((sid, extension))
 
         return trace, state_extensions
 
-    def build_cache_for_state(self, state, universe):
+    def build_cache_for_state(self, state, goal_denotation):
         cache = dict()
+        cache[self.top] = self.universe.as_extension()
+        cache[self.bot] = set()
+        # cache["_index_"] = universe
+        # cache["_state_"] = state
+
         unprocessed = set(self.relevant_predicates) | set(self.relevant_functions)
 
         for atom in state:
             assert atom
             if atom[0] == "=":  # Functional atom
                 atom = atom[1:]
-                assert len(atom) <= 3, "Cannot deal with arity>1 functions yet"
-                predfun = self.language.get_function(atom[0])
 
-            else:
-                assert len(atom) <= 3, "Cannot deal with arity>2 predicates yet"
-                predfun = self.language.get_predicate(atom[0])
-
-            assert predfun.uniform_arity() == len(atom) - 1
-
+            predfun = self.process_atom(atom, cache, self.standard_dl_mapping)
             unprocessed.discard(predfun)
-            if len(atom) == 1:  # i.e. a nullary predicate
-                atom = NullaryAtom(predfun)
-                assert atom not in cache
-                cache[atom] = True
-
-            elif len(atom) == 2:  # i.e. a unary predicate or nullary function
-                cache.setdefault(PrimitiveConcept(predfun), set()).add(universe.index(try_number(atom[1])))
-
-            else:  # i.e. a binary predicate or unary function
-                t = (universe.index(try_number(atom[1])), universe.index(try_number(atom[2])))
-                cache.setdefault(PrimitiveRole(predfun), set()).add(t)
-
-        cache[self.top] = universe.as_extension()
-        cache[self.bot] = set()
-        # cache["_index_"] = universe
-        cache["_state_"] = state
 
         # CWA: those predicates not appearing on the state trace are assumed to have empty denotation
-        for p in unprocessed:
-            if p.arity == 1:
-                cache[PrimitiveConcept(p)] = set()
-            elif p.arity == 2:
-                cache[PrimitiveRole(p)] = set()
-            else:
-                assert p.arity == 0
-                cache[NullaryAtom(p)] = False
+        def set_defaults_for_unprocessed_elements(cache_, unprocessed_, dl_mapping):
+            for p in unprocessed_:
+                dl_element = dl_mapping[p.uniform_arity()](p)
+                if p.arity == 1:
+                    cache_[dl_element] = set()
+                elif p.arity == 2:
+                    cache_[dl_element] = set()
+                else:
+                    assert p.arity == 0
+                    cache_[dl_element] = False
+
+        set_defaults_for_unprocessed_elements(cache, unprocessed, self.standard_dl_mapping)
+
+        # If some goal denotation is specified, then we create goal concepts and roles based on it
+        if goal_denotation:
+            unprocessed = set(self.relevant_predicates) | set(self.relevant_functions)
+
+            for atom in goal_denotation:
+                predfun = self.process_atom(atom, cache, self.goal_dl_mapping)
+                unprocessed.discard(predfun)
+            set_defaults_for_unprocessed_elements(cache, unprocessed, self.goal_dl_mapping)
 
         return cache
+
+    def process_atom(self, atom, cache, dl_mapping):
+        assert len(atom) <= 3, "Cannot deal with arity>2 predicates or arity>1 functions yet"
+        predfun = self.language.get(atom[0])
+        assert isinstance(predfun, (Predicate, Function))
+        assert predfun.uniform_arity() == len(atom) - 1
+        dl_element = dl_mapping[predfun.uniform_arity()](predfun)
+
+        if len(atom) == 1:  # i.e. a nullary predicate
+            assert dl_element not in cache
+            cache[dl_element] = True
+
+        elif len(atom) == 2:  # i.e. a unary predicate or nullary function
+            cache.setdefault(dl_element, set()).add(self.universe.index(try_number(atom[1])))
+
+        else:  # i.e. a binary predicate or unary function
+            t = (self.universe.index(try_number(atom[1])), self.universe.index(try_number(atom[2])))
+            cache.setdefault(dl_element, set()).add(t)
+
+        return predfun
 
     @staticmethod
     def compute_universe(states):
@@ -232,10 +253,12 @@ class SemanticProcessor(object):
         universe.finish()  # No more objects possible
         return universe
 
-    def create_cache_for_samples(self):
+    def create_cache_for_samples(self, goal_denotation):
         cache = ExtensionCache(self.universe, self.top, self.bot)
         for sid, (_, state) in self.states.items():
-            all_terms = self.build_cache_for_state(state, self.universe)
+            # TODO It is far from optimal to keep a per-state denotation of each static and goal concept!!
+            # TODO It'd require a bit of work to fix this at the moment though
+            all_terms = self.build_cache_for_state(state, goal_denotation)
             for term, extension in all_terms.items():
                 if isinstance(term, (Concept, Role)):
                     cache.register_extension(term, sid, extension)
@@ -278,12 +301,19 @@ def store_role_restrictions(roles, args):
         f.write("\n".join(map(str, roles)))
 
 
-def parse_pddl(domain_file):
-    print('Parsing PDDL domain')
+def parse_pddl(domain_file, instance_file=None):
+    """ Parse the given PDDL domain and instance files, the latter only if provided """
     reader = FstripsReader()
     reader.parse_domain(domain_file)
     problem = reader.problem
-    return problem, problem.language
+
+    # The generic constants are those which are parsed before parsing the instance file
+    generic_constants = problem.language.constants()
+
+    if instance_file is not None:
+        reader.parse_instance(instance_file)
+
+    return problem, problem.language, generic_constants
 
 
 def create_nullary_features(atoms):
@@ -323,20 +353,35 @@ def collect_all_terms(processor, atoms, concepts, roles):
 
 def run(config, data):
     assert not data
-    problem, language = parse_pddl(config.domain)
-    language = add_domain_goal_parameters(problem.domain_name, language)
 
     logging.info('Loading states and transitions...')
     states, goal_states, transitions = read_transitions(config.sample_file)
 
-    factory = TerminologicalFactory(language, states)
+    goal_denotation = []
+    goal_predicates = set()  # The predicates and functions that appear mentioned in the goal
+
+    if not config.use_goal_features:
+        logging.info('Disregarding goal representation and using goal parameters instead')
+        problem, language, generic_constants = parse_pddl(config.domain)
+        generic_constants += add_domain_goal_parameters(problem.domain_name, language)
+    else:
+        logging.info('Using goal representation to generate goal concepts and ignoring goal parameters')
+        problem, language, generic_constants = parse_pddl(config.domain, config.instance)
+        try:
+            goal_denotation = transform_to_ground_atoms(problem.goal)
+            goal_predicates = {x[0] for x in goal_denotation}
+        except TransformationError:
+            logging.critical("Cannot create goal concepts when problem goal is not a conjunction of ground atoms")
+            raise
+
+    factory = TerminologicalFactory(language, states, goal_denotation)
 
     if config.concept_generator is not None:
         logging.info('Using handcrafted set of features!'.format())
         atoms, concepts, roles = config.concept_generator(language)
         all_terms, atoms, concepts, roles = collect_all_terms(factory.processor, atoms, concepts, roles)
     else:
-        atoms, concepts, roles = generate_concepts(config, factory)
+        atoms, concepts, roles = generate_concepts(config, factory, generic_constants, goal_predicates)
 
     # profiling.print_snapshot()
 
@@ -365,9 +410,9 @@ def run(config, data):
     )
 
 
-def generate_concepts(config, factory):
+def generate_concepts(config, factory, generic_constants, goal_predicates):
     # Construct the primitive terms from the input language, and then add the atoms
-    concepts, roles, atoms = factory.syntax.generate_primitives_from_language()
+    concepts, roles, atoms = factory.syntax.generate_primitives_from_language(generic_constants, goal_predicates)
     logging.info('Primitive (nullary) atoms : {}'.format(", ".join(map(str, atoms))))
     logging.info('Primitive (unary) concepts: {}'.format(", ".join(map(str, concepts))))
     logging.info('Primitive (binary) roles  : {}'.format(", ".join(map(str, roles))))
@@ -412,7 +457,7 @@ class Model(object):
         assert isinstance(cache, ExtensionCache)
         self.cache = cache
 
-    def compute_feature_value(self, feature, state_id, substitution={}):
+    def compute_feature_value(self, feature, state_id):
         try:
             # HACK: no need to duplicately store denotations
             # of empirical binary concepts and their base features
@@ -420,6 +465,6 @@ class Model(object):
                 return bool(self.cache.feature_value(feature, state_id))
             return self.cache.feature_value(feature, state_id)
         except KeyError:
-            value = feature.value(self.cache, state_id, substitution)
+            value = feature.value(self.cache, state_id)
             self.cache.register_feature_value(feature, state_id, value)
             return value
