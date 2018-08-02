@@ -9,39 +9,40 @@ from tarski.dl import AndConcept, NominalConcept, PrimitiveConcept, NotConcept, 
 def main():
     import sys
     sys.path.insert(0, '..')
-    from driver import Experiment, generate_full_pipeline, BENCHMARK_DIR
+    from driver import Experiment, generate_pipeline, BENCHMARK_DIR
     from learn_actions import OptimizationPolicy
 
     domain_dir = "blocks"
-    steps = generate_full_pipeline(domain=os.path.join(BENCHMARK_DIR, domain_dir, "domain.pddl"),
-                                   instance=os.path.join(BENCHMARK_DIR, domain_dir, "probBLOCKS-4-0.pddl"),
+    steps = generate_pipeline(pipeline="maxsat",
+                              domain=os.path.join(BENCHMARK_DIR, domain_dir, "domain.pddl"),
+                              instance=os.path.join(BENCHMARK_DIR, domain_dir, "probBLOCKS-4-0.pddl"),
 
-                                   # Location of the FS planner, used to do the state space sampling
-                                   planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
+                              # Location of the FS planner, used to do the state space sampling
+                              planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
 
-                                   # Type of sampling procedure. Only breadth-first search implemented ATM
-                                   driver="bfs",
+                              # Type of sampling procedure. Only breadth-first search implemented ATM
+                              driver="bfs",
 
-                                   # Number of states to be expanded in the sampling procedure
-                                   num_states=90,
+                              # Number of states to be expanded in the sampling procedure
+                              num_states=90,
 
-                                   # Number of iterations of the concept generation grammar.
-                                   concept_depth=2,
+                              # Number of iterations of the concept generation grammar.
+                              concept_depth=2,
 
-                                   # Provide a special, handcrafted method to generate concepts, if desired.
-                                   # This will override the standard concept generation procedure (default: None)
-                                   # concept_generator=build_paper_concepts,
+                              # Provide a special, handcrafted method to generate concepts, if desired.
+                              # This will override the standard concept generation procedure (default: None)
+                              # concept_generator=build_paper_concepts,
 
-                                   # Whether to use distance features (default: False)
-                                   use_distance_features=True,
+                              # Whether to use distance features (default: False)
+                              use_distance_features=True,
 
-                                   # Whether to use concepts based on goal predicate denotations (default: False)
-                                   use_goal_features=True,
+                              # Whether to use concepts based on goal predicate denotations (default: False)
+                              use_goal_features=True,
 
-                                   # What optimization criteria to use in the max-sat problem
-                                   optimization=OptimizationPolicy.TOTAL_FEATURE_COMPLEXITY,
-                                   # optimization=OptimizationPolicy.NUM_FEATURES
-                                   )
+                              # What optimization criteria to use in the max-sat problem
+                              optimization=OptimizationPolicy.TOTAL_FEATURE_COMPLEXITY,
+                              # optimization=OptimizationPolicy.NUM_FEATURES
+                              )
     exp = Experiment(steps)
     exp.run()
 

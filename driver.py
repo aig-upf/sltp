@@ -310,35 +310,28 @@ class ActionModelStep(Step):
         return learn_actions.compute_action_model
 
 
-PIPELINE = [
-    PlannerStep,
-    ConceptGenerationStep,
-    FeatureMatrixGenerationStep,
-    MaxsatProblemGenerationStep,
-    MaxsatProblemSolutionStep,
-    ActionModelStep,
-]
-
-
-def generate_full_pipeline(**kwargs):
-    steps = []
-    config = kwargs
-    for klass in PIPELINE:
-        step = klass(**config)
-        config = step.config
-        steps.append(step)
-    return steps
-
-
-def generate_alt_pipeline(**kwargs):
-    steps = []
-    config = kwargs
-    for klass in [
+PIPELINES = dict(
+    maxsat=[
+        PlannerStep,
+        ConceptGenerationStep,
+        FeatureMatrixGenerationStep,
+        MaxsatProblemGenerationStep,
+        MaxsatProblemSolutionStep,
+        ActionModelStep,
+    ],
+    sat=[
         PlannerStep,
         ConceptGenerationStep,
         FeatureMatrixGenerationStep,
         SatProblemGenerationStep,
-    ]:
+    ]
+)
+
+
+def generate_pipeline(pipeline="maxsat", **kwargs):
+    steps = []
+    config = kwargs
+    for klass in PIPELINES[pipeline]:
         step = klass(**config)
         config = step.config
         steps.append(step)

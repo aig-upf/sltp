@@ -29,11 +29,17 @@ def print_transition_matrix(state_ids, transitions, transitions_filename):
 
 def print_sat_transition_matrix(state_ids, transitions, transitions_filename):
     num_transitions = sum(len(targets) for targets in transitions.values())
-    logging.info("Printing SAT transition matrix with {} states and {} transitions to '{}'".
-                 format(len(state_ids), num_transitions, transitions_filename))
+    num_states = len(state_ids)
+    num_expanded_states = len(transitions.keys())
+    logging.info("Printing SAT transition matrix with {} states, {} expanded states and {} transitions to '{}'".
+                 format(len(state_ids), num_expanded_states, num_transitions, transitions_filename))
     with open(transitions_filename, 'w') as f:
         # first line: <#states> <#transitions>
-        print("{} {}".format(len(state_ids), num_transitions), file=f)
+        print("{} {}".format(num_states, num_transitions), file=f)
+
+        # second line: <#expanded states>
+        print("{}".format(num_expanded_states), file=f)
+
         for s, succ in transitions.items():
             print("{} {} {}".format(s, len(succ), " ".join("{}".format(sprime) for sprime in sorted(succ))), file=f)
 

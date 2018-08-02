@@ -15,8 +15,9 @@ only positive values should be specified.
 
 2. Transitions file
 
-first line: <#states> <#transitions>
-next lines: one for each state with format: <state-index> <#transitions-out-this-state> <list-state-indices>
+first line: <total number of states in the sample> <total number of transitions in the sample>
+second line: <number of expanded states in the sample, i.e. number of lines that follow>
+next lines: one for each expanded state with format: <state-index> <#transitions-out-this-state> <list-state-indices>
 
 
 3. Other (items) files
