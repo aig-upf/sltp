@@ -212,7 +212,7 @@ class Matrix {
                 end = mid - 1;
             }
         }
-        return rows_[s].second[start].first == f ? start : -1;
+        return (start == end) && rows_[s].second[start].first == f ? start : -1;
     }
     int entry(int s, int f) const {
         int i = binary_search(s, f);
@@ -350,24 +350,19 @@ class Transitions {
     // accessors
     int binary_search(int s, int t) const {
         assert((0 <= s) && (s < num_states_));
-        int count = tr_[s].first;
-        if( count == 0 ) {
-            return -1;
-        } else {
-            int start = 0;
-            int end = count - 1;
-            while( start < end ) {
-                int mid = (start + end) / 2;
-                if( tr_[s].second[mid] == t ) {
+        int start = 0;
+        int end = tr_[s].first - 1;
+        while( start < end ) {
+            int mid = (start + end) / 2;
+            if( tr_[s].second[mid] == t ) {
                 return mid;
-                } else if( tr_[s].second[mid] < t ) {
-                    start = mid + 1;
-                } else {
-                    end = mid - 1;
-                }
+            } else if( tr_[s].second[mid] < t ) {
+                start = mid + 1;
+            } else {
+                end = mid - 1;
             }
-            return tr_[s].second[start] == t ? start : -1;
         }
+        return (start == end) && tr_[s].second[start] == t ? start : -1;
     }
     bool tr(int s, int t) const {
         return binary_search(s, t) != -1;
