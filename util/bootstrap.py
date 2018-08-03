@@ -38,7 +38,7 @@ def setup_logging(level):
     root_logger.setLevel(level)
 
 
-class RawAndDefaultsHelpFormatter(argparse.HelpFormatter):
+class RawAndDefaultsHelpFormatter(argparse.RawTextHelpFormatter):
     """
     Help message formatter which preserves the description format and adds
     default values to argument help messages.
@@ -46,7 +46,7 @@ class RawAndDefaultsHelpFormatter(argparse.HelpFormatter):
     def __init__(self, prog, **kwargs):
         # Use the whole terminal width.
         width, _ = get_terminal_size()
-        argparse.HelpFormatter.__init__(self, prog, width=width, **kwargs)
+        argparse.RawTextHelpFormatter.__init__(self, prog, width=width, **kwargs)
 
     def _fill_text(self, text, width, indent):
         return '\n'.join([indent + line for line in text.splitlines()])
@@ -74,12 +74,12 @@ def get_parser(add_log_option=True, **kwargs):
     return parser
 
 
-def setup_global_parser():
+def setup_global_parser(step_description):
     argparser = get_parser()
     steps_group = argparser.add_mutually_exclusive_group()
-    steps_group.add_argument(
-        'steps', metavar='step', nargs='*', default=[],
-        help='Name or number of a step below. If none is given, print help.')
+    steps_group.add_argument('steps', metavar='step', nargs='*', default=[],
+                             help='Name or number of a step below. If none is given, print help. '
+                                  'Available steps are: \n{}'.format(step_description))
     steps_group.add_argument(
         '--all', dest='run_all_steps', action='store_true',
         help='Run all steps.')
