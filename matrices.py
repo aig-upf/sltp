@@ -89,7 +89,7 @@ def print_sat_matrix(config, state_ids, features, model):
         print("{} {} {} {}".format(len(state_ids), len(all_with_dummy), num_numeric, npt), file=f)
 
         # second line: <#features> <list of feature names>
-        print("{} {}".format(len(all_with_dummy), " ".join(str(f) for f in all_with_dummy)), file=f)
+        print("{} {}".format(len(all_with_dummy), " ".join(str(f).replace(" ", "") for f in all_with_dummy)), file=f)
 
         # next lines: one per each state with format: <state-index> <#features-in-state> <list-features>
         # each feature has format: <feature-index>:<value>
