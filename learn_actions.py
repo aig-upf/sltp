@@ -233,32 +233,51 @@ class ActionEffect(object):
         raise RuntimeError("Unexpected effect type")
 
 
+class AbstractPrecondition(Enum):
+    ADD = 1
+    DEL = 2
+    GT0 = 3
+    EQ0 = 4
+
+
+def create_precondition_atom(feature, value):
+    if value is True:
+        return Atom(feature, AbstractPrecondition.ADD)
+    if value is False:
+        return Atom(feature, AbstractPrecondition.DEL)
+
+    assert isinstance(value, int) and value >= 0
+
+    if value > 0:
+        return Atom(feature, AbstractPrecondition.GT0)
+
+    return Atom(feature, AbstractPrecondition.EQ0)
+
+
 class Atom(object):
-    def __init__(self, feature, value):
+    def __init__(self, feature, ptype):
+        assert isinstance(ptype, AbstractPrecondition)
         self.feature = feature
-        self.value = value
-        self.hash = hash((self.__class__, self.feature, self.value))
+        self.ptype = ptype
+        self.hash = hash((self.__class__, self.feature, self.ptype))
 
     def __hash__(self):
         return self.hash
 
     def __eq__(self, other):
         return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
-                self.feature == other.feature and self.value == other.value)
+                self.feature == other.feature and self.ptype == other.ptype)
 
     def __str__(self):
-        if self.value is True:
+        if self.ptype is AbstractPrecondition.ADD:
             return str(self.feature)
-        if self.value is False:
+        if self.ptype is AbstractPrecondition.DEL:
             return "NOT {}".format(self.feature)
-
-        if isinstance(self.value, int):
-            if self.value > 0:
-                return "{} > 0".format(self.feature)
-            assert self.value == 0
+        if self.ptype is AbstractPrecondition.GT0:
+            return "{} > 0".format(self.feature)
+        if self.ptype is AbstractPrecondition.EQ0:
             return "{} = 0".format(self.feature)
-
-        raise RuntimeError("Unexpected effect type")
+        assert False, "Unknown precondition type"
 
 
 class ModelTranslator(object):
@@ -431,7 +450,8 @@ class ModelTranslator(object):
                     if concrete_qchange != FeatureValueChange.NIL:
                         abstract_effects.append(ActionEffect(f, concrete_qchange))
 
-                preconditions = [Atom(f, val) for f, val in zip(selected_features, abstract_s)]
+                preconditions = [create_precondition_atom(f, val) for f, val in zip(selected_features, abstract_s)]
+                # preconditions = [Atom(f, val) for f, val in zip(selected_features, abstract_s)]
                 abstract_actions.add(AbstractAction("a{}".format(len(already_computed)), preconditions,
                                                     abstract_effects))
                 if len(abstract_effects) == 0:
