@@ -34,7 +34,7 @@ from util.serialization import deserialize, serialize
 signal(SIGPIPE, SIG_DFL)
 
 BASEDIR = os.path.dirname(os.path.realpath(__file__))
-VERSION = "0.1"
+VERSION = "0.2"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 BENCHMARK_DIR = os.path.join(BASE_DIR, 'domains')
@@ -408,6 +408,8 @@ class Experiment(object):
         self.args = argparser.parse_args()
         if not self.args.steps and not self.args.run_all_steps:
             argparser.print_help()
+            print("Available steps:")
+            print("\t" + "\n\t".join("{}. {}".format(i, s.description()) for i, s in enumerate(self.steps, 1)))
             sys.exit(0)
 
         # If no steps were given on the commandline, run all exp steps.

@@ -415,7 +415,6 @@ class ModelTranslator(object):
             abstract_states.add(sprime)
             state_abstraction[state] = sprime
 
-
         abstract_actions = set()
         already_computed = set()
         for s, children in self.transitions.items():
@@ -433,7 +432,8 @@ class ModelTranslator(object):
                         abstract_effects.append(ActionEffect(f, concrete_qchange))
 
                 preconditions = [Atom(f, val) for f, val in zip(selected_features, abstract_s)]
-                abstract_actions.add(AbstractAction("a{}".format(len(already_computed)), preconditions, abstract_effects))
+                abstract_actions.add(AbstractAction("a{}".format(len(already_computed)), preconditions,
+                                                    abstract_effects))
                 if len(abstract_effects) == 0:
                     raise RuntimeError("Unsound state model abstraction!")
 
@@ -461,22 +461,25 @@ class ModelTranslator(object):
                                        self.n_bridge_clauses + self.n_goal_clauses), 2)
 
     def debug_tests(self):
-        undist = self.undistinguishable_state_pairs
-        for s, t in undist:
-            for s_prime in self.transitions[s]:
-                some_d2_indistinguishable = False
-                for t_prime in self.transitions[t]:
-                    idx = compute_d2_index(s, s_prime, t, t_prime)
-                    if idx not in self.d2_distinguished:
-                        some_d2_indistinguishable = True
-
-                if not some_d2_indistinguishable:
-                    print("State pair {} violates bridge clauses".format((s, t)))
-                    for t_prime in self.transitions[t]:
-                        for f in self.features:
-                            print("Delta[{}] for feature {}: {}".format((s, s_prime), f, self.qchanges[(s, s_prime, f)]))
-                            print("Delta[{}] for feature {}: {}".format((t, t_prime), f, self.qchanges[(t, t_prime, f)]))
-                    assert False
+        # undist = self.undistinguishable_state_pairs
+        # for s, t in undist:
+        #     for s_prime in self.transitions[s]:
+        #         some_d2_indistinguishable = False
+        #         for t_prime in self.transitions[t]:
+        #             idx = compute_d2_index(s, s_prime, t, t_prime)
+        #             if idx not in self.d2_distinguished:
+        #                 some_d2_indistinguishable = True
+        #
+        #         if not some_d2_indistinguishable:
+        #             print("State pair {} violates bridge clauses".format((s, t)))
+        #             for t_prime in self.transitions[t]:
+        #                 for f in self.features:
+        #                     print("Delta[{}] for feature {}: {}".format((s, s_prime),
+        #                                                                 f, self.qchanges[(s, s_prime, f)]))
+        #                     print("Delta[{}] for feature {}: {}".format((t, t_prime), f,
+        #                                                                 self.qchanges[(t, t_prime, f)]))
+        #             assert False
+        pass
 
     def opt_policy_num_features(self, feature):
         return 1
