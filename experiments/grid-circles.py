@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 import os
 
-from experiments.common import build_ijcai_paper_bw_concepts, add_bw_domain_parameters
+from tarski.dl import AndConcept, NominalConcept, PrimitiveConcept, NotConcept, ExistsConcept, InverseRole, \
+    PrimitiveRole, StarRole
 
 
 def main():
@@ -11,10 +12,10 @@ def main():
     from driver import Experiment, generate_pipeline, BENCHMARK_DIR
     from learn_actions import OptimizationPolicy
 
-    domain_dir = "blocks"
-    domain = "domain.pddl"
-    # instance = "probBLOCKS-4-0.pddl"
-    instance = "instance_5_clear_x.pddl"
+    domain_dir = "grid-circles"
+
+    domain = "domain_strips.pddl"
+    instance = "instance_strips_3.pddl"
 
     steps = generate_pipeline(pipeline="maxsat",
                               domain=os.path.join(BENCHMARK_DIR, domain_dir, domain),
@@ -27,21 +28,21 @@ def main():
                               driver="bfs",
 
                               # Number of states to be expanded in the sampling procedure
-                              num_states=90,
+                              num_states=1000,
 
                               # Number of iterations of the concept generation grammar.
                               concept_depth=2,
 
                               # Provide a special, handcrafted method to generate concepts, if desired.
                               # This will override the standard concept generation procedure (default: None)
-                              concept_generator=build_ijcai_paper_bw_concepts,
+                              concept_generator=build_expected_concepts,
 
                               # Whether to use distance features (default: False)
-                              # use_distance_features=True,
+                              use_distance_features=True,
 
                               # Method to generate domain parameters (goal or otherwise). If None, goal predicates will
                               # be used (default: None)
-                              parameter_generator=add_bw_domain_parameters,
+                              parameter_generator=add_domain_parameters,
 
                               # What optimization criteria to use in the max-sat problem
                               optimization=OptimizationPolicy.TOTAL_FEATURE_COMPLEXITY,
@@ -49,6 +50,28 @@ def main():
                               )
     exp = Experiment(steps)
     exp.run()
+
+
+def add_domain_parameters(language):
+    return []
+
+
+def build_expected_concepts(lang):
+    obj_t = lang.get_sort("cell")
+
+    current_cell = PrimitiveConcept(lang.get("at"))
+    reward_cells = PrimitiveConcept(lang.get("reward"))
+    blocked_cells = PrimitiveConcept(lang.get("blocked"))
+    unblocked_cells = NotConcept(blocked_cells, obj_t)
+    visited_cells = PrimitiveConcept(lang.get("visited"))
+    unvisited_cells = NotConcept(visited_cells, obj_t)
+    adjacent_role = PrimitiveRole(lang.get("adjacent"))
+    unvisited_cells_with_reward = AndConcept(unvisited_cells, reward_cells, "cell")
+
+    concepts = [current_cell, unvisited_cells, unvisited_cells_with_reward, unblocked_cells]
+    roles = [adjacent_role]
+
+    return [], concepts, roles  # atoms, concepts, roles
 
 
 if __name__ == "__main__":

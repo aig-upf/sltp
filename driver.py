@@ -182,7 +182,7 @@ class ConceptGenerationStep(Step):
         config["concept_dir"] = os.path.join(config["experiment_dir"], 'terms')
         config["feature_stdout"] = os.path.join(config["experiment_dir"], 'feature-generation.stdout.txt')
         config["concept_generator"] = config.get("concept_generator", None)
-        config["use_goal_features"] = config.get("use_goal_features", False)
+        config["parameter_generator"] = config.get("parameter_generator", None)
         config["use_distance_features"] = config.get("use_distance_features", False)
 
         return config
@@ -254,9 +254,10 @@ class SatProblemGenerationStep(Step):
         super().__init__(**kwargs)
 
     def get_required_attributes(self):
-        return ["experiment_dir"]
+        return ["experiment_dir", "encoding_k", "encoding_m"]
 
     def process_config(self, config):
+        config["sat_theory_prefix"] = os.path.join(config["experiment_dir"], "sat")
         return config
 
     def get_required_data(self):
@@ -266,8 +267,58 @@ class SatProblemGenerationStep(Step):
         return "Generation of the (alternative sat encoding) problem"
 
     def get_step_runner(self):
-        from compact_encoding import runner
-        return runner.run
+        from compact_encoding import encoder
+        return encoder.run
+
+
+class SatProblemSolutionStep(Step):
+    """ Call some SAT solver to solve Blai's SAT encoding """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def get_required_attributes(self):
+        return ["experiment_dir", "encoding_k", "encoding_m", "sat_theory_prefix"]
+
+    def process_config(self, config):
+        config["sat_theory_filename"] = "{}_{}_{}_theory.cnf".format(
+            config["sat_theory_prefix"], config["encoding_k"], config["encoding_m"])
+        config["sat_solution_filename"] = "{}_{}_{}_model.cnf".format(
+            config["sat_theory_prefix"], config["encoding_k"], config["encoding_m"])
+        return config
+
+    def get_required_data(self):
+        return ["features", "state_ids", "goal_states"]
+
+    def description(self):
+        return "Solution of the SAT problem"
+
+    def get_step_runner(self):
+        from compact_encoding import solver
+        return solver.run
+
+
+class SatSolutionDecodingStep(Step):
+    """ Decode the SAT solution from Blai's encoding """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def get_required_attributes(self):
+        return ["experiment_dir", "encoding_k", "encoding_m", "sat_theory_prefix"]
+
+    def process_config(self, config):
+        config["sat_theory_filename"] = "{}_{}_{}_theory.cnf".format(
+            config["sat_theory_prefix"], config["encoding_k"], config["encoding_m"])
+        return config
+
+    def get_required_data(self):
+        return ["features", "state_ids", "goal_states"]
+
+    def description(self):
+        return "Decoding of the SAT solution"
+
+    def get_step_runner(self):
+        from compact_encoding import solver
+        return solver.run
 
 
 class MaxsatProblemSolutionStep(Step):
@@ -324,7 +375,15 @@ PIPELINES = dict(
         ConceptGenerationStep,
         FeatureMatrixGenerationStep,
         SatProblemGenerationStep,
-    ]
+        SatProblemSolutionStep,
+        SatSolutionDecodingStep,
+    ],
+    heuristic=[
+        PlannerStep,
+        ConceptGenerationStep,
+        FeatureMatrixGenerationStep,
+        # ...
+    ],
 )
 
 

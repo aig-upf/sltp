@@ -33,7 +33,6 @@ from tarski.syntax.transform.errors import TransformationError
 from tarski.syntax.transform.simplifications import transform_to_ground_atoms
 
 from extensions import UniverseIndex, ExtensionCache
-from parameters import add_domain_goal_parameters
 from transitions import read_transitions
 
 signal(SIGPIPE, SIG_DFL)
@@ -127,8 +126,8 @@ class TerminologicalFactory(object):
     def create_distance_features(self, concepts, rest, k):
         card1_concepts = self.processor.singleton_extension_concepts
 
-        # for c1, r, c2 in itertools.product(card1_concepts, rest, concepts):
-        for c1, r, c2 in itertools.product(card1_concepts, rest, card1_concepts):
+        for c1, r, c2 in itertools.product(card1_concepts, rest, concepts):
+        # for c1, r, c2 in itertools.product(card1_concepts, rest, card1_concepts):
             if c1.size + r.size + c2.size > k:
                 continue
             if c2 in (self.syntax.top, self.syntax.bot):
@@ -341,8 +340,8 @@ def collect_all_terms(processor, atoms, concepts, roles):
             logging.info('Term "{}" ignored as it involves some empty-denotation subterm'.format(t))
             continue
 
-    def filter_elements(elements, t):
-        return [x for x in elements if isinstance(x, t)]
+    def filter_elements(elements, _t):
+        return [x for x in elements if isinstance(x, _t)]
 
     atoms = []  # TODO
     concepts = filter_elements(interesting, Concept)
@@ -360,12 +359,12 @@ def run(config, data):
     goal_denotation = []
     goal_predicates = set()  # The predicates and functions that appear mentioned in the goal
 
-    if not config.use_goal_features:
-        logging.info('Disregarding goal representation and using goal parameters instead')
+    if config.parameter_generator is not None:
+        logging.info('Using user-provided domain parameters and ignoring goal representation')
         problem, language, generic_constants = parse_pddl(config.domain)
-        generic_constants += add_domain_goal_parameters(problem.domain_name, language)
+        generic_constants += config.parameter_generator(language)
     else:
-        logging.info('Using goal representation to generate goal concepts and ignoring goal parameters')
+        logging.info('Using goal representation and no domain parameters')
         problem, language, generic_constants = parse_pddl(config.domain, config.instance)
         try:
             goal_denotation = transform_to_ground_atoms(problem.goal)
@@ -377,10 +376,13 @@ def run(config, data):
     factory = TerminologicalFactory(language, states, goal_denotation)
 
     if config.concept_generator is not None:
-        logging.info('Using handcrafted set of features!'.format())
-        atoms, concepts, roles = config.concept_generator(language)
-        all_terms, atoms, concepts, roles = collect_all_terms(factory.processor, atoms, concepts, roles)
+        logging.info('Using set of concepts and roles provided by the user'.format())
+        user_atoms, user_concepts, user_roles = config.concept_generator(language)
+        all_terms, atoms, concepts, roles = collect_all_terms(factory.processor, user_atoms, user_concepts, user_roles)
+        # i.e. stick with the user-provided concepts!
+        atoms, concepts, roles = user_atoms, user_concepts, user_roles
     else:
+        logging.info('Starting automatic generation of concepts'.format())
         atoms, concepts, roles = generate_concepts(config, factory, generic_constants, goal_predicates)
 
     # profiling.print_snapshot()
@@ -392,10 +394,10 @@ def run(config, data):
         len(factory.processor.singleton_extension_concepts)))
 
     # Temporarily deactivated, role restrictions very expensive
-    # rest = list(factory.create_role_restrictions(concepts, roles))
-    # store_role_restrictions(rest, config)
-    rest = roles
-    max_distance_feature_depth = 2
+    rest = list(factory.create_role_restrictions(concepts, roles))
+    store_role_restrictions(rest, config)
+    # rest = user_roles
+    max_distance_feature_depth = 10
     features = factory.derive_features(concepts, rest, max_distance_feature_depth, config.use_distance_features)
     features += create_nullary_features(atoms)
 

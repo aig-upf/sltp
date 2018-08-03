@@ -48,7 +48,7 @@ def choose_solver(solver):
 
 def solve(rundir, cnf_filename, solver='wpm3'):
     solver = choose_solver(solver)(rundir)
-    error, output = run(solver, rundir, cnf_filename)
+    error, output = run(solver, rundir, cnf_filename, 'maxsat_solver')
 
     if error:
         raise RuntimeError("There was an error running the MAXSAT solver. Check error logs")
@@ -56,10 +56,14 @@ def solve(rundir, cnf_filename, solver='wpm3'):
     return parse_maxsat_output(output)
 
 
-def run(solver, rundir, input_filename):
+def run(solver, rundir, input_filename, tag=None, stdout=None):
+    assert tag or stdout
     error = False
-    with open(os.path.join(rundir, 'driver.log'), 'w') as driver_log:
-        with open(os.path.join(rundir, 'driver.err'), 'w') as driver_err:
+    if stdout is None:
+        stdout = os.path.join(rundir, '{}_run.log'.format(tag))
+
+    with open(stdout, 'w') as driver_log:
+        with open(os.path.join(rundir, '{}_run.err'.format(tag)), 'w') as driver_err:
             cmd = solver.command(input_filename)
             print('Executing "{}" on directory "{}"'.format(cmd, rundir))
             retcode = subprocess.call(cmd, cwd=rundir, stdout=driver_log, stderr=driver_err)

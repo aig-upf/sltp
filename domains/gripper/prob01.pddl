@@ -16,4 +16,7 @@
           (at ball1 rooma)
           (gripper left)
           (gripper right))
-   (:goal (and (at ball1 roomb) (at ball2 roomb) (at ball3 roomb) (at ball4 roomb))))
+   (:goal (and (at ball4 roomb)
+               (at ball3 roomb)
+               (at ball2 roomb)
+               (at ball1 roomb))))

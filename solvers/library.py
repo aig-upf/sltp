@@ -32,3 +32,25 @@ class Openwbo(object):
     @staticmethod
     def command(input_filename):
         return ['open-wbo_static', input_filename]
+
+
+class Glucose(object):
+    TAG = 'glucose'
+
+    def __init__():
+        pass
+
+    @staticmethod
+    def command(input_filename):
+        return ['glucose_static', input_filename]
+
+
+class GlucoseSyrup(object):
+    TAG = 'glucose-syrup'
+
+    def __init__():
+        pass
+
+    @staticmethod
+    def command(input_filename):
+        return ['glucose-syrup_static', input_filename]

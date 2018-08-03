@@ -414,8 +414,7 @@ class ModelTranslator(object):
             sprime = self.compute_abstract_state(selected_features, state)
             abstract_states.add(sprime)
             state_abstraction[state] = sprime
-        logging.info("Induced abstract state space:".format())
-        logging.info("{} states".format(len(abstract_states)))
+
 
         abstract_actions = set()
         already_computed = set()
@@ -440,7 +439,8 @@ class ModelTranslator(object):
 
                 already_computed.add((abstract_s, abstract_sprime))
 
-        print("{} actions".format(len(abstract_actions)))
+        logging.info("Abstract state space: {} states and {} actions".
+                     format(len(abstract_states), len(abstract_actions)))
         return abstract_states, abstract_actions
 
     def report_stats(self):

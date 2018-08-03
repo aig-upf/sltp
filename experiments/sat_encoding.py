@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 import os
 
+from experiments.common import build_ijcai_paper_bw_concepts, add_bw_domain_parameters
+
 
 def main():
     import sys
@@ -14,10 +16,12 @@ def main():
                               instance=os.path.join(BENCHMARK_DIR, domain_dir, "instance_5_clear_x.pddl"),
                               driver="bfs",
                               planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
-                              num_states=30,
-                              concept_depth=1,
-                              encoding_k=10,
-                              encoding_m=10,
+                              num_states=90,
+                              concept_depth=2,
+                              encoding_k=5,
+                              encoding_m=8,
+                              concept_generator=build_ijcai_paper_bw_concepts,
+                              parameter_generator=add_bw_domain_parameters,
                               use_distance_features=False
                               )
     exp = Experiment(steps)
