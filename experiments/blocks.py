@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 
-from experiments.common import build_ijcai_paper_bw_concepts, add_bw_domain_parameters
+from experiments.common import build_ijcai_paper_bw_concepts, add_bw_domain_parameters, ijcai_paper_bw_feature_namer
 
 
 def main():
@@ -42,6 +42,10 @@ def main():
                               # Method to generate domain parameters (goal or otherwise). If None, goal predicates will
                               # be used (default: None)
                               parameter_generator=add_bw_domain_parameters,
+
+                              # Optionally, use a method that gives handcrafted names to the features
+                              # (default: use their string representation)
+                              feature_namer=ijcai_paper_bw_feature_namer,
 
                               # What optimization criteria to use in the max-sat problem
                               optimization=OptimizationPolicy.TOTAL_FEATURE_COMPLEXITY,

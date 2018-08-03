@@ -203,9 +203,12 @@ class AbstractAction(object):
                 self.preconditions == other.preconditions and self.effects == other.effects)
 
     def __str__(self):
-        precs = ", ".join(map(str, self.preconditions))
-        effs = ", ".join(map(str, self.effects))
-        return "Action {}\n\tPRE: {}\n\tEFFS: {}".format(self.name, precs, effs)
+        return self.print_named()
+
+    def print_named(self, namer=lambda s: s):
+        precs = ", ".join(sorted(prec.print_named(namer) for prec in self.preconditions))
+        effs = ", ".join(sorted(eff.print_named(namer) for eff in self.effects))
+        return "\tPRE: {}\n\tEFFS: {}".format(precs, effs)
 
 
 class ActionEffect(object):
@@ -222,14 +225,17 @@ class ActionEffect(object):
                 self.feature == other.feature and self.change == other.change)
 
     def __str__(self):
+        return self.print_named()
+
+    def print_named(self, namer=lambda s: s):
         if self.change == FeatureValueChange.ADD:
-            return str(self.feature)
+            return namer(self.feature)
         if self.change == FeatureValueChange.DEL:
-            return "NOT {}".format(self.feature)
+            return "NOT {}".format(namer(self.feature))
         if self.change == FeatureValueChange.INC:
-            return "INC {}".format(self.feature)
+            return "INC {}".format(namer(self.feature))
         if self.change == FeatureValueChange.DEC:
-            return "DEC {}".format(self.feature)
+            return "DEC {}".format(namer(self.feature))
         raise RuntimeError("Unexpected effect type")
 
 
@@ -269,14 +275,17 @@ class Atom(object):
                 self.feature == other.feature and self.ptype == other.ptype)
 
     def __str__(self):
+        return self.print_named()
+
+    def print_named(self, namer=lambda s: s):
         if self.ptype is AbstractPrecondition.ADD:
-            return str(self.feature)
+            return namer(self.feature)
         if self.ptype is AbstractPrecondition.DEL:
-            return "NOT {}".format(self.feature)
+            return "NOT {}".format(namer(self.feature))
         if self.ptype is AbstractPrecondition.GT0:
-            return "{} > 0".format(self.feature)
+            return "{} > 0".format(namer(self.feature))
         if self.ptype is AbstractPrecondition.EQ0:
-            return "{} = 0".format(self.feature)
+            return "{} = 0".format(namer(self.feature))
         assert False, "Unknown precondition type"
 
 
@@ -411,7 +420,7 @@ class ModelTranslator(object):
 
         return self.writer.mapping
 
-    def decode_solution(self, assignment):
+    def decode_solution(self, assignment, namer):
         varmapping = self.writer.mapping
         true_variables = set(varmapping[idx] for idx, value in assignment.items() if value is True)
         feature_mapping = {variable: feature for feature, variable in self.var_selected.items()}
@@ -423,7 +432,7 @@ class ModelTranslator(object):
                                         "no action model possible, the encoding has likely some error")
 
         logging.info("Selected features: ")
-        print('\n'.join("F{}. {} [{}]".format(i, f, f.complexity()) for i, f in enumerate(selected_features, 1)))
+        print('\n'.join("F{}. {} [{}]".format(i, namer(f), f.complexity()) for i, f in enumerate(selected_features, 1)))
 
         # selected_features = [f for f in selected_features if str(f) == "bool[And(clear,{a})]"]
 
@@ -452,7 +461,7 @@ class ModelTranslator(object):
 
                 preconditions = [create_precondition_atom(f, val) for f, val in zip(selected_features, abstract_s)]
                 # preconditions = [Atom(f, val) for f, val in zip(selected_features, abstract_s)]
-                abstract_actions.add(AbstractAction("a{}".format(len(already_computed)), preconditions,
+                abstract_actions.add(AbstractAction("anonymous", preconditions,
                                                     abstract_effects))
                 if len(abstract_effects) == 0:
                     raise RuntimeError("Unsound state model abstraction!")
@@ -697,7 +706,8 @@ class CNFWriter(object):
 def compute_action_model(config, data):
     assert data.cnf_solution.solved
 
-    states, actions = data.cnf_translator.decode_solution(data.cnf_solution.assignment)
+    states, actions = data.cnf_translator.decode_solution(data.cnf_solution.assignment, config.feature_namer)
     with open(os.path.join(config.experiment_dir, 'actions.txt'), 'w') as f:
-        f.write("\n".join(map(str, actions)))
+        f.write("\n\n".join("Action {}:\n{}".format(i, action.print_named(config.feature_namer))
+                            for i, action in enumerate(actions, 1)))
     return dict(abstract_states=states, abstract_actions=actions)

@@ -350,6 +350,11 @@ class ActionModelStep(Step):
     def get_required_attributes(self):
         return []
 
+    def process_config(self, config):
+        if "feature_namer" not in config:
+            config["feature_namer"] = None
+        return config
+
     def get_required_data(self):
         return ["cnf_translator", "cnf_solution"]
 

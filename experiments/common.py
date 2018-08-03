@@ -36,6 +36,17 @@ def build_ijcai_paper_bw_concepts(lang):
     return [], concepts, []  # atoms, concepts, roles
 
 
+def ijcai_paper_bw_feature_namer(feature):
+    s = str(feature)
+    return {
+        "bool[And({a}, holding)]": "X",
+        "bool[And(Not({a}), holding)]": "H",
+        "bool[Exists(Inverse(on),{a})]": "Z",
+        "card[Exists(Star(on),{a})]": "n(x)",
+        "card[And(And(And(Not(Exists(Star(on),{a})), Not(Exists(Star(Inverse(on)),{a}))), Not({a})), Not(holding))]": "m(x)",
+    }.get(s, s)
+
+
 def add_bw_domain_parameters(language):
     # We simply add block "a" as a domain constant
     return [language.constant("a", "object")]
