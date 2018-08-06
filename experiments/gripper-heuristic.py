@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 import os
 
+from tarski.dl import PrimitiveRole, NominalConcept, ExistsConcept, NotConcept, UniversalConcept
+
 
 def main():
     import sys
@@ -9,7 +11,7 @@ def main():
     from driver import Experiment, generate_pipeline, BENCHMARK_DIR
     from learn_actions import OptimizationPolicy
 
-    domain_dir = "gripper"
+    domain_dir = "gripper-m"
     domain = "domain.pddl"
     instance = "prob01.pddl"
 
@@ -27,7 +29,7 @@ def main():
                               num_states=250,
 
                               # Number of iterations of the concept generation grammar.
-                              concept_depth=2,
+                              concept_depth=3,
 
                               # Provide a special, handcrafted method to generate concepts, if desired.
                               # This will override the standard concept generation procedure (default: None)
@@ -50,21 +52,26 @@ def main():
 
 def generate_chosen_concepts(lang):
     """  """
+    # card[Exists(at,Not({roomb}))] 4    C1
+    # card[Exists(carry,<universe>)] 2   C2
+    # bool[Exists(at-robby,{roomb})] 3   RX
+    # card[Exists(gripper,Exists(at-robby,{roomb}))] 5   (intermediate)
+    # card[Exists(carry,Exists(gripper,Exists(at-robby,{roomb})))] 7
+
     obj_t = lang.Object
-    holding_p = lang.get_predicate("holding")
 
-    ontable = PrimitiveRole(lang.get("ontable"))
-    on_r = PrimitiveRole(lang.get("on"))
-    on_g = GoalRole(lang.get("on"))
-    on_g_closure = StarRole(on_g)
+    at = PrimitiveRole(lang.get("at"))
+    carry = PrimitiveRole(lang.get("carry"))
+    at_robby = PrimitiveRole(lang.get("at-robby"))
+    gripper = PrimitiveRole(lang.get("gripper"))
+    x_param = NominalConcept("roomb", obj_t)
+    c1 = ExistsConcept(at, NotConcept(x_param, obj_t))
+    c2 = ExistsConcept(carry, UniversalConcept("object"))
+    rx = ExistsConcept(at_robby, x_param)
+    c3 = ExistsConcept(gripper, rx)
+    c4 = ExistsConcept(carry, c3)
 
-    y = EqualConcept(on_g, on_r, "object")
-    x = ForallConcept(on_g_closure, y)
-    well_placed_block = ForallConcept(on_g, x)
-    misplaced_block = NotConcept(well_placed_block, obj_t)
-    misplaced_and_ontable = AndConcept(misplaced_block, ontable, "object")
-
-    concepts = [misplaced_block, misplaced_and_ontable]
+    concepts = [c1, c2, c3, c4]
     return [], concepts, []  # atoms, concepts, roles
 
 
