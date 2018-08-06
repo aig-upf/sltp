@@ -67,11 +67,12 @@ class TerminologicalFactory(object):
 
         return roles
 
-    def derive_concepts(self, old_c, new_c, old_r, new_r):
+    def derive_concepts(self, old_c, new_c, old_r, new_r, max_size):
         generated = []
 
         def process(iterator):
-            generated.extend(x for x in iterator if self.processor.process_term(x))
+            generated.extend(x for x in iterator
+                             if x is not None and x.size <= max_size and self.processor.process_term(x))
 
         # EXISTS R.C, FORALL R.C
         for roles, concepts in ((new_r, old_c), (old_r, new_c), (new_r, new_c)):
@@ -91,7 +92,7 @@ class TerminologicalFactory(object):
 
         return generated
 
-    def derive_roles(self, old_c, new_c, old_r, new_r, derive_compositions=True):
+    def derive_roles(self, old_c, new_c, old_r, new_r, max_size, derive_compositions=True):
         generated = []
         cart_prod = itertools.product
 
@@ -99,7 +100,9 @@ class TerminologicalFactory(object):
         # result.extend([ StarRole(r) for r in roles if not isinstance(r, StarRole) ])
 
         def process(iterator):
-            generated.extend(x for x in iterator if self.processor.process_term(x))
+            # -1 because the role will necessarily have to be used within some concept:
+            generated.extend(x for x in iterator
+                             if x is not None and x.size <= max_size - 1 and self.processor.process_term(x))
 
         if derive_compositions:
             for pairings in (cart_prod(old_r, new_r), cart_prod(new_r, new_r)):
@@ -427,9 +430,11 @@ def generate_concepts(config, factory, generic_constants, goal_predicates):
     # construct derived concepts and rules obtained with grammar
     c_i, c_j = 0, len(concepts)
     r_i, r_j = 0, len(roles)
-    logging.info('\nDeriving concepts and roles using {} iteration(s), starting from {} atomic concepts and {} roles'.
-                 format(config.concept_depth, c_j, r_j))
-    for i in range(1, config.concept_depth + 1):
+    logging.info('\nDeriving concepts/roles of max. size {}, starting from {} atomic concepts and {} roles'.
+                 format(config.max_concept_size, c_j, r_j))
+
+    i = 1
+    while True:
         # Update indexes
         old_c, new_c = concepts[0:c_i], concepts[c_i:c_j]
         old_r, new_r = roles[0:r_i], roles[r_i:r_j]
@@ -438,13 +443,18 @@ def generate_concepts(config, factory, generic_constants, goal_predicates):
 
         derive_compositions = i <= 1
         derive_compositions = False  # Temporarily deactivate compositions
-        concepts.extend(factory.derive_concepts(old_c, new_c, old_r, new_r))
-        roles.extend(factory.derive_roles(old_c, new_c, old_r, new_r, derive_compositions=derive_compositions))
+        concepts.extend(factory.derive_concepts(old_c, new_c, old_r, new_r, config.max_concept_size))
+        roles.extend(factory.derive_roles(old_c, new_c, old_r, new_r, config.max_concept_size,
+                                          derive_compositions=derive_compositions))
 
         c_i, c_j = c_j, len(concepts)
         r_i, r_j = r_j, len(roles)
-
-        logging.info("\t{} new concept(s) and {} new role(s) incorporated".format(c_j - c_i, r_j - r_i))
+        num_new_concepts = c_j - c_i
+        num_new_roles = r_j - r_i
+        logging.info("\t{} new concept(s) and {} new role(s) incorporated".format(num_new_concepts, num_new_roles))
+        if num_new_concepts + num_new_roles == 0:
+            break
+        i += 1
     return atoms, concepts, roles
 
 

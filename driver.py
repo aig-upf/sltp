@@ -171,13 +171,13 @@ class ConceptGenerationStep(Step):
         super().__init__(**kwargs)
 
     def get_required_attributes(self):
-        return ["sample_file", "domain", "experiment_dir", "concept_depth"]
+        return ["sample_file", "domain", "experiment_dir", "max_concept_size"]
 
     def get_required_data(self):
         return []
 
     def process_config(self, config):
-        check_int_parameter(config, "concept_depth")
+        check_int_parameter(config, "max_concept_size")
 
         config["concept_dir"] = os.path.join(config["experiment_dir"], 'terms')
         config["feature_stdout"] = os.path.join(config["experiment_dir"], 'feature-generation.stdout.txt')

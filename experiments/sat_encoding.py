@@ -17,7 +17,7 @@ def main():
                               driver="bfs",
                               planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
                               num_states=90,
-                              concept_depth=2,
+                              max_concept_size=10,
                               encoding_k=5,
                               encoding_m=8,
                               concept_generator=build_ijcai_paper_bw_concepts,

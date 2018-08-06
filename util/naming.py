@@ -8,8 +8,8 @@ def compute_instance_tag(instance, num_states, **kwargs):
     return tag
 
 
-def compute_experiment_tag(instance_tag, concept_depth, **kwargs):
-    return "{}.cd-{}".format(instance_tag, concept_depth)
+def compute_experiment_tag(instance_tag, max_concept_size, **kwargs):
+    return "{}.cs-{}".format(instance_tag, max_concept_size)
 
 
 def compute_serialization_name(basedir, name):

@@ -30,8 +30,7 @@ def main():
                               # Number of states to be expanded in the sampling procedure
                               num_states=600,
 
-                              # Number of iterations of the concept generation grammar.
-                              concept_depth=3,
+                              max_concept_size=10,
 
                               # Provide a special, handcrafted method to generate concepts, if desired.
                               # This will override the standard concept generation procedure (default: None)
