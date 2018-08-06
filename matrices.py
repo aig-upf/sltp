@@ -195,7 +195,7 @@ def compute_feature_extensions(states, features, concept_extensions):
 
 
 def log_feature_denotations(features, model, feature_denotation_filename, selected=None):
-    selected = selected or features
+    selected = set(selected or features)
     d = defaultdict(list)
     for (f, s), v in model.cache.feature_values.items():
         if f in selected:

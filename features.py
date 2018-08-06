@@ -390,7 +390,7 @@ def run(config, data):
 
     # profiling.print_snapshot()
 
-    store_terms(concepts, roles, config)
+    # store_terms(concepts, roles, config)
     logging.info('Final output: {} concept(s) and {} role(s)'.format(len(concepts), len(roles)))
     logging.info('Number of states in the sample: {}'.format(len(states)))
     logging.info('Number of concepts with singleton extensions over all states: {}'.format(
@@ -399,7 +399,7 @@ def run(config, data):
     # Temporarily deactivated, role restrictions very expensive
     if config.use_distance_features:
         rest = list(factory.create_role_restrictions(concepts, roles))
-        store_role_restrictions(rest, config)
+        # store_role_restrictions(rest, config)
         max_distance_feature_depth = 10
     else:
         rest = roles
