@@ -15,7 +15,6 @@
         (at ?x1 - cell)
         (adjacent ?x1 - cell ?x2 - cell)
         (blocked ?x1 - cell)
-        (visited ?x1 - cell)
     )
 
     (:functions
@@ -25,11 +24,18 @@
     
     (:action move
      :parameters (?from - cell ?to - cell)
-     :precondition (and (and (adjacent ?from ?to) (at ?from)) (not (blocked ?to)))
+     :precondition (and (and (and (adjacent ?from ?to) (at ?from)) (not (blocked ?to))) (exists (?c - cell) (reward ?c)))
      :effect (and
         (not (at ?from))
-        (at ?to)
-        (visited ?to))
+        (at ?to))
+    ) 
+
+
+    (:action pick-reward
+     :parameters (?x - cell)
+     :precondition (and (at ?x) (reward ?x))
+     :effect (and
+        (not (reward ?x)))
     ) 
 
 )

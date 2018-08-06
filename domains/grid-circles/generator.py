@@ -7,9 +7,42 @@ import random
 from tarski.fstrips import create_fstrips_problem, language, DelEffect, AddEffect
 from tarski.io import FstripsWriter
 from tarski.theories import Theory
-from tarski.syntax import forall, implies
+from tarski.syntax import forall, implies, exists, land
 
 _CURRENT_DIR_ = os.path.dirname(os.path.realpath(__file__))
+
+
+def create_single_action_version(problem):
+    lang = problem.language
+    cell_t, at, reward, blocked, adjacent = lang.get("cell", "at", "reward", "blocked", "adjacent")
+    from_ = lang.variable("from", cell_t)
+    to = lang.variable("to", cell_t)
+    c = lang.variable("c", cell_t)
+    problem.action(name='move', parameters=[from_, to],
+                   # precondition=adjacent(from_, to) & at(from_) & ~blocked(to),
+                   precondition=adjacent(from_, to) & at(from_) & ~blocked(to) & exists(c, reward(c)),
+                   effects=[DelEffect(at(from_)),
+                            AddEffect(at(to)),
+                            # AddEffect(visited(to)),
+                            DelEffect(reward(to))])
+
+
+def create_two_action_version(problem):
+    lang = problem.language
+    cell_t, at, reward, blocked, adjacent = lang.get("cell", "at", "reward", "blocked", "adjacent")
+    from_ = lang.variable("from", cell_t)
+    to = lang.variable("to", cell_t)
+    c = lang.variable("c", cell_t)
+    problem.action(name='move', parameters=[from_, to],
+                   # precondition=adjacent(from_, to) & at(from_) & ~blocked(to),
+                   precondition=adjacent(from_, to) & at(from_) & ~blocked(to) & exists(c, reward(c)),
+                   effects=[DelEffect(at(from_)),
+                            AddEffect(at(to))])
+
+    x = lang.variable("x", cell_t)
+    problem.action(name='pick-reward', parameters=[x],
+                   precondition=at(x) & reward(x),
+                   effects=[DelEffect(reward(x))])
 
 
 def generate_propositional_domain(gridsize, num_rewards, num_blocks):
@@ -23,16 +56,11 @@ def generate_propositional_domain(gridsize, num_rewards, num_blocks):
     reward = lang.predicate('reward', cell_t)
     blocked = lang.predicate('blocked', cell_t)
     adjacent = lang.predicate('adjacent', cell_t, cell_t)
-    visited = lang.predicate('visited', cell_t)
+    # visited = lang.predicate('visited', cell_t)
 
     # Create the actions
-    from_ = lang.variable("from", cell_t)
-    to = lang.variable("to", cell_t)
-    problem.action(name='move', parameters=[from_, to],
-                   precondition=adjacent(from_, to) & at(from_) & ~blocked(to),
-                   effects=[DelEffect(at(from_)),
-                            AddEffect(at(to)),
-                            AddEffect(visited(to))])
+    # create_single_action_version(problem)
+    create_two_action_version(problem)
 
     rng = range(0, gridsize)
     coordinates = list(itertools.product(rng, rng))
@@ -41,7 +69,7 @@ def generate_propositional_domain(gridsize, num_rewards, num_blocks):
         return "c_{}_{}".format(x, y)
 
     # Declare the constants:
-    _ = [lang.constant(cell_name(x, y), cell_t) for x, y in coordinates]
+    coord_objects = [lang.constant(cell_name(x, y), cell_t) for x, y in coordinates]
 
     # Declare the adjacencies:
     adjacent_coords = [(a, b, c, d) for (a, b), (c, d) in itertools.combinations(coordinates, 2)
@@ -59,8 +87,8 @@ def generate_propositional_domain(gridsize, num_rewards, num_blocks):
     initial_position = cell_name(0, 0)
 
     # The initial position is already visited, by definition
+    # problem.init.add(visited, initial_position)
     problem.init.add(at, initial_position)
-    problem.init.add(visited, initial_position)
 
     # Set some random rewards and cell blocks:
     if num_rewards + num_blocks > len(coordinates) - 1:
@@ -82,7 +110,8 @@ def generate_propositional_domain(gridsize, num_rewards, num_blocks):
 
     # Set the problem goal
     c = lang.variable("c", cell_t)
-    problem.goal = forall(c, implies(reward(c), visited(c)))
+    # problem.goal = forall(c, ~reward(c))
+    problem.goal = land(*[~reward(c) for c in coord_objects])
 
     return problem
 

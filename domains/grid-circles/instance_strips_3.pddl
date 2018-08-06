@@ -12,8 +12,7 @@
     )
 
     (:init
-        (reward c_2_2)
-        (blocked c_0_1)
+        (reward c_1_2)
         (at c_0_0)
         (adjacent c_1_2 c_1_1)
         (adjacent c_1_1 c_0_1)
@@ -39,11 +38,11 @@
         (adjacent c_2_1 c_1_1)
         (adjacent c_2_1 c_2_0)
         (adjacent c_1_2 c_2_2)
-        (visited c_0_0)
+        (blocked c_2_1)
     )
 
     (:goal
-        (forall (?c - cell) (or (not (reward ?c)) (visited ?c)))
+        (and (not (reward c_0_0)) (and (not (reward c_0_1)) (and (not (reward c_0_2)) (and (not (reward c_1_0)) (and (not (reward c_1_1)) (and (not (reward c_1_2)) (and (not (reward c_2_0)) (and (not (reward c_2_1)) (not (reward c_2_2))))))))))
     )
 
     

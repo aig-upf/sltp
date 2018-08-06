@@ -12,16 +12,11 @@
     )
 
     (:init
-        (reward c_3_0)
-        (reward c_4_4)
-        (reward c_3_6)
-        (reward c_3_2)
-        (reward c_4_1)
-        (blocked c_1_6)
-        (blocked c_5_2)
-        (blocked c_5_4)
-        (blocked c_6_5)
-        (blocked c_5_5)
+        (reward c_6_2)
+        (reward c_0_6)
+        (reward c_5_0)
+        (reward c_5_1)
+        (reward c_0_4)
         (at c_0_0)
         (adjacent c_2_1 c_3_1)
         (adjacent c_6_2 c_6_3)
@@ -191,11 +186,15 @@
         (adjacent c_2_1 c_2_0)
         (adjacent c_1_2 c_2_2)
         (adjacent c_2_3 c_1_3)
-        (visited c_0_0)
+        (blocked c_2_6)
+        (blocked c_4_0)
+        (blocked c_3_6)
+        (blocked c_6_1)
+        (blocked c_3_0)
     )
 
     (:goal
-        (forall (?c - cell) (or (not (reward ?c)) (visited ?c)))
+        (and (not (reward c_0_0)) (and (not (reward c_0_1)) (and (not (reward c_0_2)) (and (not (reward c_0_3)) (and (not (reward c_0_4)) (and (not (reward c_0_5)) (and (not (reward c_0_6)) (and (not (reward c_1_0)) (and (not (reward c_1_1)) (and (not (reward c_1_2)) (and (not (reward c_1_3)) (and (not (reward c_1_4)) (and (not (reward c_1_5)) (and (not (reward c_1_6)) (and (not (reward c_2_0)) (and (not (reward c_2_1)) (and (not (reward c_2_2)) (and (not (reward c_2_3)) (and (not (reward c_2_4)) (and (not (reward c_2_5)) (and (not (reward c_2_6)) (and (not (reward c_3_0)) (and (not (reward c_3_1)) (and (not (reward c_3_2)) (and (not (reward c_3_3)) (and (not (reward c_3_4)) (and (not (reward c_3_5)) (and (not (reward c_3_6)) (and (not (reward c_4_0)) (and (not (reward c_4_1)) (and (not (reward c_4_2)) (and (not (reward c_4_3)) (and (not (reward c_4_4)) (and (not (reward c_4_5)) (and (not (reward c_4_6)) (and (not (reward c_5_0)) (and (not (reward c_5_1)) (and (not (reward c_5_2)) (and (not (reward c_5_3)) (and (not (reward c_5_4)) (and (not (reward c_5_5)) (and (not (reward c_5_6)) (and (not (reward c_6_0)) (and (not (reward c_6_1)) (and (not (reward c_6_2)) (and (not (reward c_6_3)) (and (not (reward c_6_4)) (and (not (reward c_6_5)) (not (reward c_6_6))))))))))))))))))))))))))))))))))))))))))))))))))
     )
 
     
