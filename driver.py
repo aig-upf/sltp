@@ -341,6 +341,10 @@ class MaxsatProblemSolutionStep(Step):
         return learn_actions.run_solver
 
 
+def default_feature_namer(s):
+    return str(s)
+
+
 class ActionModelStep(Step):
     """ Generate an abstract action model from the solution of the max-sat encoding """
 
@@ -352,7 +356,7 @@ class ActionModelStep(Step):
 
     def process_config(self, config):
         if "feature_namer" not in config:
-            config["feature_namer"] = None
+            config["feature_namer"] = default_feature_namer
         return config
 
     def get_required_data(self):

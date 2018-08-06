@@ -394,10 +394,14 @@ def run(config, data):
         len(factory.processor.singleton_extension_concepts)))
 
     # Temporarily deactivated, role restrictions very expensive
-    rest = list(factory.create_role_restrictions(concepts, roles))
-    store_role_restrictions(rest, config)
-    # rest = user_roles
-    max_distance_feature_depth = 10
+    if config.use_distance_features:
+        rest = list(factory.create_role_restrictions(concepts, roles))
+        store_role_restrictions(rest, config)
+        max_distance_feature_depth = 10
+    else:
+        rest = roles
+        max_distance_feature_depth = 0
+
     features = factory.derive_features(concepts, rest, max_distance_feature_depth, config.use_distance_features)
     features += create_nullary_features(atoms)
 

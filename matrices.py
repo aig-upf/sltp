@@ -184,7 +184,7 @@ def compute_feature_extensions(states, features, concept_extensions):
                 # logging.debug(" ".join(map(str, trace)))
                 continue
 
-        if all_0_or_1 and not isinstance(f, NullaryAtomFeature):
+        if all_0_or_1 and not isinstance(f, (NullaryAtomFeature, MinDistanceFeature)):
             accepted.append(EmpiricalBinaryConcept(f))
         else:
             accepted.append(f)
