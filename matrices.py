@@ -1,8 +1,8 @@
 """ Formatting and printing of the output of the concept-based feature generation process,
 along with some other related output necessary for subsequent steps in the pipeline """
+import itertools
 import logging
 import math
-from collections import defaultdict
 
 from tarski.dl import EmpiricalBinaryConcept, NullaryAtomFeature, ConceptCardinalityFeature, MinDistanceFeature
 
@@ -194,18 +194,15 @@ def compute_feature_extensions(states, features, concept_extensions):
     return accepted, model
 
 
-def log_feature_denotations(features, model, feature_denotation_filename, selected=None):
-    selected = set(selected or features)
-    d = defaultdict(list)
-    for (f, s), v in model.cache.feature_values.items():
-        if f in selected:
-            d[s].append((f, v))
+def log_feature_denotations(state_ids, features, model, feature_denotation_filename, selected=None):
+    selected = selected or features
+    selected = ((str(f), f) for f in selected)
+    selected = sorted(selected, key=lambda x: x[0])  # Sort features by name
 
-    states = sorted(d.keys())
     with open(feature_denotation_filename, 'w') as file:
-        for s in states:
-            for (f, v) in sorted(d[s], key=lambda x: str(x[0])):
-                print("{} on state {}: {}".format(f, s, v), file=file)
+        for s, (fname, f) in itertools.product(state_ids, selected):
+            val = model.compute_feature_value(f, s)
+            print("s_{}[{}] = {}".format(s, fname, val), file=file)
 
 
 def printer(feature, value):
