@@ -13,7 +13,11 @@ _CURRENT_DIR_ = os.path.dirname(os.path.realpath(__file__))
 
 
 def create_noop(problem):
-    problem.action(name='noop', parameters=[], precondition=Tautology(), effects=[])
+    # A hackish no-op, to prevent the planner from detecting that the action is useless and pruning it
+    lang = problem.language
+    node_t, at = lang.get("node", "at")
+    x = lang.variable("x", node_t)
+    problem.action(name='noop', parameters=[x], precondition=at(x), effects=[AddEffect(at(x))])
 
 
 def generate_propositional_domain(nnodes, nedges, add_noop=False):
@@ -44,7 +48,7 @@ def generate_propositional_domain(nnodes, nedges, add_noop=False):
     nodes = [lang.constant(node_name(i), node_t) for i in node_ids]
 
     # Declare the adjacencies:
-    adjacencies = random.sample(list(itertools.product(nodes, nodes)), nedges)
+    adjacencies = random.sample(list(itertools.permutations(nodes, 2)), nedges)
     for n1, n2 in adjacencies:
         problem.init.add(adjacent, n1, n2)
 

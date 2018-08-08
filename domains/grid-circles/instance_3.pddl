@@ -38,7 +38,7 @@
         (adjacent c_2_1 c_1_1)
         (adjacent c_2_1 c_2_0)
         (adjacent c_1_2 c_2_2)
-        (blocked c_2_1)
+        (blocked c_2_2)
     )
 
     (:goal

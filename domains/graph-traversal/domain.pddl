@@ -30,9 +30,10 @@
 
 
     (:action noop
-     :parameters ()
-     :precondition (and )
-     :effect (and )
+     :parameters (?x - node)
+     :precondition (at ?x)
+     :effect (and
+        (at ?x))
     ) 
 
 )

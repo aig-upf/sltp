@@ -17,7 +17,8 @@ def main():
 
     domain = "domain.pddl"
     instance = "instance_5_12.pddl"
-    instance = "instance_10_50.pddl"
+    # instance = "instance_10_50.pddl"
+    # instance = "sample_line.pddl"
 
     steps = generate_pipeline(
         # pipeline="sat",

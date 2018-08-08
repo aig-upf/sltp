@@ -7,9 +7,17 @@ import random
 from tarski.fstrips import create_fstrips_problem, language, DelEffect, AddEffect
 from tarski.io import FstripsWriter
 from tarski.theories import Theory
-from tarski.syntax import forall, implies, exists, land
+from tarski.syntax import forall, implies, exists, land, Tautology
 
 _CURRENT_DIR_ = os.path.dirname(os.path.realpath(__file__))
+
+
+def create_noop(problem):
+    # A hackish no-op, to prevent the planner from detecting that the action is useless and pruning it
+    lang = problem.language
+    cell_t, at = lang.get("cell", "at")
+    x = lang.variable("x", cell_t)
+    problem.action(name='noop', parameters=[x], precondition=at(x), effects=[AddEffect(at(x))])
 
 
 def create_single_action_version(problem):
@@ -34,8 +42,8 @@ def create_two_action_version(problem):
     to = lang.variable("to", cell_t)
     c = lang.variable("c", cell_t)
     problem.action(name='move', parameters=[from_, to],
-                   # precondition=adjacent(from_, to) & at(from_) & ~blocked(to),
-                   precondition=adjacent(from_, to) & at(from_) & ~blocked(to) & exists(c, reward(c)),
+                   precondition=adjacent(from_, to) & at(from_) & ~blocked(to),
+                   # precondition=adjacent(from_, to) & at(from_) & ~blocked(to) & exists(c, reward(c)),
                    effects=[DelEffect(at(from_)),
                             AddEffect(at(to))])
 
@@ -45,7 +53,7 @@ def create_two_action_version(problem):
                    effects=[DelEffect(reward(x))])
 
 
-def generate_propositional_domain(gridsize, num_rewards, num_blocks):
+def generate_propositional_domain(gridsize, num_rewards, num_blocks, add_noop=False):
     lang = language(theories=[Theory.EQUALITY])
     problem = create_fstrips_problem(domain_name='grid-circles-strips',
                                      problem_name="grid-circles-{}x{}".format(gridsize, gridsize),
@@ -61,6 +69,8 @@ def generate_propositional_domain(gridsize, num_rewards, num_blocks):
     # Create the actions
     # create_single_action_version(problem)
     create_two_action_version(problem)
+    if add_noop:
+        create_noop(problem)
 
     rng = range(0, gridsize)
     coordinates = list(itertools.product(rng, rng))
@@ -78,7 +88,6 @@ def generate_propositional_domain(gridsize, num_rewards, num_blocks):
     for a, b, c, d in adjacent_coords:
         problem.init.add(adjacent, cell_name(a, b), cell_name(c, d))
         problem.init.add(adjacent, cell_name(c, d), cell_name(a, b))
-
 
     # for (x0, y0), (x1, y1) in itertools.combinations(coordinates, 2):
     #     if abs(x0-x1) + abs(y0-y1) == 1:
@@ -118,12 +127,13 @@ def generate_propositional_domain(gridsize, num_rewards, num_blocks):
 
 def main():
 
+    add_noop = True
     for gridsize in [3, 5, 7, 10]:
         num_blocks_and_rewards = gridsize
-        problem = generate_propositional_domain(gridsize, num_blocks_and_rewards-2, num_blocks_and_rewards-2)
+        problem = generate_propositional_domain(gridsize, num_blocks_and_rewards-2, num_blocks_and_rewards-2, add_noop)
         writer = FstripsWriter(problem)
-        writer.write(domain_filename=os.path.join(_CURRENT_DIR_, "domain_strips.pddl"),  # We can overwrite the domain
-                     instance_filename=os.path.join(_CURRENT_DIR_, "instance_strips_{}.pddl".format(gridsize)))
+        writer.write(domain_filename=os.path.join(_CURRENT_DIR_, "domain.pddl"),  # We can overwrite the domain
+                     instance_filename=os.path.join(_CURRENT_DIR_, "instance_{}.pddl".format(gridsize)))
 
 
 if __name__ == "__main__":

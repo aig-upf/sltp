@@ -12,11 +12,11 @@
     )
 
     (:init
-        (reward c_6_2)
-        (reward c_0_6)
+        (reward c_5_3)
+        (reward c_3_6)
         (reward c_5_0)
-        (reward c_5_1)
-        (reward c_0_4)
+        (reward c_2_5)
+        (reward c_6_1)
         (at c_0_0)
         (adjacent c_2_1 c_3_1)
         (adjacent c_6_2 c_6_3)
@@ -186,11 +186,11 @@
         (adjacent c_2_1 c_2_0)
         (adjacent c_1_2 c_2_2)
         (adjacent c_2_3 c_1_3)
-        (blocked c_2_6)
-        (blocked c_4_0)
-        (blocked c_3_6)
-        (blocked c_6_1)
-        (blocked c_3_0)
+        (blocked c_1_3)
+        (blocked c_6_4)
+        (blocked c_5_1)
+        (blocked c_4_2)
+        (blocked c_6_0)
     )
 
     (:goal

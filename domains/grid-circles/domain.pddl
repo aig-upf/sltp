@@ -24,7 +24,7 @@
     
     (:action move
      :parameters (?from - cell ?to - cell)
-     :precondition (and (and (and (adjacent ?from ?to) (at ?from)) (not (blocked ?to))) (exists (?c - cell) (reward ?c)))
+     :precondition (and (and (adjacent ?from ?to) (at ?from)) (not (blocked ?to)))
      :effect (and
         (not (at ?from))
         (at ?to))
@@ -36,6 +36,14 @@
      :precondition (and (at ?x) (reward ?x))
      :effect (and
         (not (reward ?x)))
+    ) 
+
+
+    (:action noop
+     :parameters (?x - cell)
+     :precondition (at ?x)
+     :effect (and
+        (at ?x))
     ) 
 
 )
