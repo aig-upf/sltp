@@ -527,13 +527,7 @@ class ModelTranslator(object):
         return 1
 
     def opt_policy_total_feature_depth(self, feature):
-        penalizations = {
-            NullaryAtomFeature: 1,  # Start at 1 to make sure no clause weight is 0
-            EmpiricalBinaryConcept: 2,
-            ConceptCardinalityFeature: 2,
-            MinDistanceFeature: 2
-        }
-        return feature.complexity() + penalizations[feature.__class__]
+        return feature.complexity()
 
     def setup_optimization_policy(self, optimization):
         if optimization == OptimizationPolicy.NUM_FEATURES:
