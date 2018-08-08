@@ -268,7 +268,7 @@ class SatProblemGenerationStep(Step):
 
     def get_step_runner(self):
         from compact_encoding import encoder
-        return encoder.run
+        return encoder.encode
 
 
 class SatProblemSolutionStep(Step):
@@ -303,11 +303,9 @@ class SatSolutionDecodingStep(Step):
         super().__init__(**kwargs)
 
     def get_required_attributes(self):
-        return ["experiment_dir", "encoding_k", "encoding_m", "sat_theory_prefix"]
+        return ["experiment_dir", "encoding_k", "encoding_m", "sat_theory_prefix", "sat_solution_filename"]
 
     def process_config(self, config):
-        config["sat_theory_filename"] = "{}_{}_{}_theory.cnf".format(
-            config["sat_theory_prefix"], config["encoding_k"], config["encoding_m"])
         return config
 
     def get_required_data(self):
@@ -317,8 +315,8 @@ class SatSolutionDecodingStep(Step):
         return "Decoding of the SAT solution"
 
     def get_step_runner(self):
-        from compact_encoding import solver
-        return solver.run
+        from compact_encoding import encoder
+        return encoder.decode
 
 
 class MaxsatProblemSolutionStep(Step):
