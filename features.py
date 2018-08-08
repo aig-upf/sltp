@@ -141,8 +141,10 @@ class TerminologicalFactory(object):
             yield MinDistanceFeature(c1, r, c2)
 
     def create_role_restrictions(self, concepts, roles):
+        all_roles = roles[:]
         role_restrictions = (self.syntax.create_restrict_role(r, c) for r, c in itertools.product(roles, concepts))
-        return (t for t in role_restrictions if self.processor.process_term(t))
+        all_roles.extend(t for t in role_restrictions if self.processor.process_term(t))
+        return all_roles
 
 
 class SemanticProcessor(object):
@@ -405,8 +407,12 @@ def run(config, data):
         rest = roles
         max_distance_feature_depth = 0
 
-    features = factory.derive_features(concepts, rest, max_distance_feature_depth, config.use_distance_features)
-    features += create_nullary_features(atoms)
+    if config.feature_generator is None:
+        features = factory.derive_features(concepts, rest, max_distance_feature_depth, config.use_distance_features)
+        features += create_nullary_features(atoms)
+    else:
+        logging.info('Using user-provided set of features instead of computing them automatically')
+        features = config.feature_generator(language)
 
     logging.info('Final number of features: {}'.format(len(features)))
 

@@ -17,7 +17,11 @@ def compute_serialization_name(basedir, name):
 
 
 def compute_maxsat_filename(config):
-    return compute_info_filename(config, "encoding.cnf")
+    return compute_info_filename(config, "maxsat_encoding.cnf")
+
+
+def compute_maxsat_variables_filename(config):
+    return compute_info_filename(config, "maxsat_variables.txt")
 
 
 def compute_info_filename(config, name):

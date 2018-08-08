@@ -131,7 +131,7 @@ def compute_features(config, data):
     # selected = [translator.features[i] for i in [1232]]
     # translator.features = selected
     # selected = None
-    # log_feature_denotations(features, model, config.feature_denotation_filename, selected)
+    # log_feature_denotations(state_ids, features, model, config.feature_denotation_filename, selected)
 
     return state_ids, features, model
 

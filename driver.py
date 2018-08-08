@@ -28,7 +28,7 @@ from util.bootstrap import setup_global_parser
 from util.command import execute
 from util.console import print_header, log_time
 from util.naming import compute_instance_tag, compute_experiment_tag, compute_serialization_name, \
-    compute_maxsat_filename, compute_info_filename
+    compute_maxsat_filename, compute_info_filename, compute_maxsat_variables_filename
 from util.serialization import deserialize, serialize
 
 signal(SIGPIPE, SIG_DFL)
@@ -182,6 +182,7 @@ class ConceptGenerationStep(Step):
         config["concept_dir"] = os.path.join(config["experiment_dir"], 'terms')
         config["feature_stdout"] = os.path.join(config["experiment_dir"], 'feature-generation.stdout.txt')
         config["concept_generator"] = config.get("concept_generator", None)
+        config["feature_generator"] = config.get("feature_generator", None)
         config["parameter_generator"] = config.get("parameter_generator", None)
         config["use_distance_features"] = config.get("use_distance_features", False)
 
@@ -235,6 +236,7 @@ class MaxsatProblemGenerationStep(Step):
 
     def process_config(self, config):
         config["cnf_filename"] = compute_maxsat_filename(config)
+        config["maxsat_variables_file"] = compute_maxsat_variables_filename(config)
         return config
 
     def get_required_data(self):

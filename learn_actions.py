@@ -23,6 +23,8 @@ from enum import Enum
 from signal import signal, SIGPIPE, SIG_DFL
 import time
 
+from tarski.dl.features import relax_int_feature_diff
+
 from errors import CriticalPipelineError
 from tarski.dl import FeatureValueChange, MinDistanceFeature, NullaryAtomFeature, EmpiricalBinaryConcept, \
     ConceptCardinalityFeature
@@ -49,7 +51,7 @@ def compute_d2_index(s0, s1, t0, t1):
         return t0, t1, s0, s1
 
 
-def compute_qualitative_changes(transitions, all_features, model):
+def compute_qualitative_changes(transitions, all_features, model, relax_numeric_increase):
     # For each feature and each transition, precompute the qualitative change that the transition induces on the feature
     qchanges = {}
     for s0 in transitions:
@@ -57,7 +59,12 @@ def compute_qualitative_changes(transitions, all_features, model):
             for f in all_features:
                 x0 = model.compute_feature_value(f, s0)
                 x1 = model.compute_feature_value(f, s1)
-                qchanges[(s0, s1, f)] = f.diff(x0, x1)
+                diff = f.diff(x0, x1)
+
+                # If requested, we consider INCs and NILs as the same qualitative change.
+                if relax_numeric_increase and isinstance(f, (MinDistanceFeature, )):
+                    diff = relax_int_feature_diff(diff)
+                qchanges[(s0, s1, f)] = diff
                 # print("Denotation of feature \"{}\" along transition "
                 #       "({},{}) is: {}".format(f, s0, s1, qchanges[(s0, s1, f)]))
 
@@ -171,7 +178,8 @@ def generate_maxsat_problem(config, data):
     translator = ModelTranslator(features, state_ids, goal_states, transitions, model,
                                  config.cnf_filename, d1_distinguishing_features, optimization)
 
-    translator.run()
+    translator.run(config.relax_numeric_increase)
+    # translator.writer.print_variables(config.maxsat_variables_file)
 
     return dict(cnf_translator=translator)
 
@@ -236,6 +244,8 @@ class ActionEffect(object):
             return "INC {}".format(namer(self.feature))
         if self.change == FeatureValueChange.DEC:
             return "DEC {}".format(namer(self.feature))
+        if self.change == FeatureValueChange.INC_OR_NIL:
+            return "INC* {}".format(namer(self.feature))
         raise RuntimeError("Unexpected effect type")
 
 
@@ -310,6 +320,7 @@ class ModelTranslator(object):
         self.n_d2_clauses = 0
         self.n_bridge_clauses = 0
         self.n_goal_clauses = 0
+        self.qchanges = None
 
         self.compute_feature_weight = self.setup_optimization_policy(optimization)
 
@@ -345,8 +356,9 @@ class ModelTranslator(object):
         self.writer.close()
         print("A total of {} variables were created".format(len(self.writer.variables)))
 
-    def run(self):
-        self.qchanges = qchanges = compute_qualitative_changes(self.transitions, self.features, self.model)
+    def run(self, relax_numeric_increase):
+        self.qchanges = qchanges = compute_qualitative_changes(self.transitions, self.features, self.model,
+                                                               relax_numeric_increase)
 
         self.create_variables()
 
@@ -398,6 +410,7 @@ class ModelTranslator(object):
             # but do _not_ d1-distinguish the two states at the origin of each transition.
             d2_lit = self.writer.literal(d2_var, True)
             forward_clause_literals = [self.writer.literal(d2_var, False)]
+            # for f in (x for x in d2_distinguishing_features):
             for f in (x for x in d2_distinguishing_features if x not in self.d1_distinguishing_features[(s0, t0)]):
                 forward_clause_literals.append(self.writer.literal(self.var_selected[f], True))
                 self.writer.clause([d2_lit, self.writer.literal(self.var_selected[f], False)])
@@ -555,6 +568,8 @@ class Variable(object):
     def __str__(self):
         return self.name
 
+    __repr__ = __str__
+
 
 class Literal(object):
     def __init__(self, variable, polarity=True):
@@ -577,6 +592,8 @@ class Literal(object):
     def __hash__(self):
         return hash((self.variable, self.polarity))
 
+    __repr__ = __str__
+
 
 class Clause(object):
     def __init__(self, literals, weight=None):
@@ -588,6 +605,8 @@ class Clause(object):
 
     def __str__(self):
         return "{{{}}} [{}]".format(','.join(str(l) for l in self.literals), self.weight)
+
+    __repr__ = __str__
 
     # def cnf_line(self, top, variable_index):
     #     # w <literals> 0
@@ -701,6 +720,12 @@ class CNFWriter(object):
         self.variable_index = {var: i for i, var in enumerate(self.variables.values(), start=1)}
         # Save the variable mapping to parse the solution later
         self.mapping = {i: name for name, i in self.variable_index.items()}
+
+    def print_variables(self, filename):
+        assert self.closed
+        variables = sorted(self.variable_index.items(), key=lambda x: x[1])  # Sort by var index
+        with open(filename, 'w') as f:
+            print("\n".join("{}: {}".format(i, v) for v, i in variables), file=f)
 
 
 def compute_action_model(config, data):
