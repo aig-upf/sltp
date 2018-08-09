@@ -185,6 +185,7 @@ class ConceptGenerationStep(Step):
         config["feature_generator"] = config.get("feature_generator", None)
         config["parameter_generator"] = config.get("parameter_generator", None)
         config["use_distance_features"] = config.get("use_distance_features", False)
+        config["max_concept_grammar_iterations"] = config.get("max_concept_grammar_iterations", None)
 
         return config
 
@@ -207,6 +208,9 @@ class FeatureMatrixGenerationStep(Step):
     def process_config(self, config):
         config["feature_filename"] = compute_info_filename(config, "features.txt")
         config["feature_matrix_filename"] = compute_info_filename(config, "feature-matrix.dat")
+        config["bin_feature_matrix_filename"] = compute_info_filename(config, "feature-matrix-bin.dat")
+        config["feature_complexity_filename"] = compute_info_filename(config, "feature-complexity.dat")
+        config["feature_names_filename"] = compute_info_filename(config, "feature-names.dat")
         config["transitions_filename"] = compute_info_filename(config, "transition-matrix.dat")
         config["goal_states_filename"] = compute_info_filename(config, "goal-states.dat")
         config["sat_transitions_filename"] = compute_info_filename(config, "sat_transitions.dat")
@@ -237,10 +241,11 @@ class MaxsatProblemGenerationStep(Step):
     def process_config(self, config):
         config["cnf_filename"] = compute_maxsat_filename(config)
         config["maxsat_variables_file"] = compute_maxsat_variables_filename(config)
+        config["relax_numeric_increase"] = config.get("relax_numeric_increase", False)
         return config
 
     def get_required_data(self):
-        return ["features", "extensions", "states", "goal_states", "transitions", "state_ids", "feature_model"]
+        return ["goal_states", "transitions", "state_ids"]
 
     def description(self):
         return "Generation of the max-sat problem"

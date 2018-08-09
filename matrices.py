@@ -3,6 +3,7 @@ along with some other related output necessary for subsequent steps in the pipel
 import itertools
 import logging
 import math
+import numpy as np
 
 from tarski.dl import EmpiricalBinaryConcept, NullaryAtomFeature, ConceptCardinalityFeature, MinDistanceFeature
 
@@ -53,6 +54,25 @@ def print_feature_matrix(config, state_ids, features, model):
         for s in state_ids:
             line = "{} {}".format(s, " ".join(int_printer(model.compute_feature_value(feat, s)) for feat in features))
             print(line, file=f)
+
+    # Convert features to a numpy array with n rows and m columns, where n=num states, m=num features
+    matrix = np.empty(shape=(len(state_ids), len(features)), dtype=np.int8)
+    bin_matrix = np.empty(shape=(len(state_ids), len(features)), dtype=np.bool_)
+    for i, s in enumerate(state_ids, 0):
+        assert i == s
+        matrix[i] = [model.compute_feature_value(feat, s) for feat in features]
+        bin_matrix[i] = [feat.bool_value(model.compute_feature_value(feat, s)) for feat in features]
+
+    np.save(config.feature_matrix_filename, matrix)
+    np.save(config.bin_feature_matrix_filename, bin_matrix)
+
+    np.save(config.feature_complexity_filename,
+            np.array([f.complexity() for f in features], dtype=np.uint8))
+
+    np.save(config.feature_names_filename,
+            np.array([str(f) for f in features], dtype=np.unicode_))
+
+    # np.savez(config.feature_matrix_filename, matrix)
 
 
 def print_feature_info(config, features):
@@ -211,3 +231,4 @@ def printer(feature, value):
 
 def int_printer(value):
     return str(int(value))
+

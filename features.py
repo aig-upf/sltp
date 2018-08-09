@@ -16,6 +16,7 @@
 #  Blai Bonet, bonet@ldc.usb.ve, bonetblai@gmail.com
 import logging
 import itertools
+import sys
 from signal import signal, SIGPIPE, SIG_DFL
 
 import os
@@ -440,7 +441,8 @@ def generate_concepts(config, factory, generic_constants, goal_predicates):
                  format(config.max_concept_size, c_j, r_j))
 
     i = 1
-    while True:
+    max_iterations = config.max_concept_grammar_iterations or sys.maxsize
+    while i <= max_iterations:
         # Update indexes
         old_c, new_c = concepts[0:c_i], concepts[c_i:c_j]
         old_r, new_r = roles[0:r_i], roles[r_i:r_j]
