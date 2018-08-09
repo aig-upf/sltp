@@ -23,8 +23,6 @@ from enum import Enum
 from signal import signal, SIGPIPE, SIG_DFL
 import time
 
-import numpy as np
-
 from tarski.dl.features import relax_int_feature_diff
 
 from errors import CriticalPipelineError
@@ -146,9 +144,6 @@ def generate_maxsat_problem(config, data):
     model = data.feature_model
     transitions = data.transitions
     goal_states = data.goal_states
-
-    feat_matrix = np.load(config.feature_matrix_filename + ".npy")
-    bin_feat_matrix = np.load(config.bin_feature_matrix_filename + ".npy")
 
     # Compute for each pair s and t of states which features distinguish s and t
     state_ids, transitions, d1_distinguishing_features = \
