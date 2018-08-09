@@ -12,6 +12,8 @@ def choose_solver(solver):
         return library.Glucose
     elif solver == 'glucose-syrup':
         return library.GlucoseSyrup
+    elif solver == 'openwbo':
+        return library.Openwbo
     raise RuntimeError('Unknown solver "{}"'.format(solver))
 
 
@@ -20,6 +22,7 @@ def run(config, data):
     # solution = solve(config.experiment_dir, config.cnf_filename, 'maxino')
 
     solver = "glucose-syrup"
+    # solver = "openwbo"
 
     solver = choose_solver(solver)
     error, output = common.run(solver, config.experiment_dir, config.sat_theory_filename,

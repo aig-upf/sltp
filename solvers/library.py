@@ -4,7 +4,7 @@ class WPM3(object):
     """ See http://web.udl.es/usuaris/q4374304/ """
     TAG = 'wpm3-co'
 
-    def __init__(self, rundir):
+    def __init__(self, rundir=None):
         self.run_dir = rundir
 
     @staticmethod
@@ -15,7 +15,7 @@ class WPM3(object):
 class Maxino(object):
     TAG = 'maxino'
 
-    def __init__(self, rundir):
+    def __init__(self, rundir=None):
         self.run_dir = rundir
 
     @staticmethod
@@ -26,7 +26,7 @@ class Maxino(object):
 class Openwbo(object):
     TAG = 'openwbo'
 
-    def __init__(self, rundir):
+    def __init__(self, rundir=None):
         self.run_dir = rundir
 
     @staticmethod
@@ -37,7 +37,7 @@ class Openwbo(object):
 class Glucose(object):
     TAG = 'glucose'
 
-    def __init__():
+    def __init__(self):
         pass
 
     @staticmethod
@@ -48,7 +48,7 @@ class Glucose(object):
 class GlucoseSyrup(object):
     TAG = 'glucose-syrup'
 
-    def __init__():
+    def __init__(self):
         pass
 
     @staticmethod
