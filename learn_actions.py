@@ -23,6 +23,8 @@ from enum import Enum
 from signal import signal, SIGPIPE, SIG_DFL
 import time
 
+import numpy as np
+
 from tarski.dl.features import relax_int_feature_diff
 
 from errors import CriticalPipelineError
@@ -71,7 +73,7 @@ def compute_qualitative_changes(transitions, all_features, model, relax_numeric_
     return qchanges
 
 
-def compute_d1_distinguishing_features(states, transitions, features, model, prune_undistinguishable_states):
+def compute_d1_distinguishing_features(states, transitions, features, model):
     ns, nf = len(states), len(features)
     logging.info("Computing sets of distinguishing features for each state pair over a total of "
                  "{} states and {} features ({:0.1f}K matrix entries)".format(ns, nf, nf*(ns*(ns-1))/(2*1000)))
@@ -80,7 +82,6 @@ def compute_d1_distinguishing_features(states, transitions, features, model, pru
 
     # representative[s] will hold a pointer to the lowest-id state s' such that it is not possible to distinguish
     # s from s' with any of the full set of features
-    representative = dict()
     for s1, s2 in itertools.combinations(states, 2):
         distinguishing = set()
 
@@ -90,27 +91,7 @@ def compute_d1_distinguishing_features(states, transitions, features, model, pru
             if f.bool_value(x1) != f.bool_value(x2):  # f distinguishes s1 and s2
                 distinguishing.add(f)
 
-        if not distinguishing:
-            # self.undistinguishable_state_pairs.append((s1, s2))
-            assert s1 < s2
-            r = representative.get(s1, None)
-            representative[s2] = s1 if r is None else r
-
         d1_distinguishing_features[(s1, s2)] = distinguishing
-
-    if not prune_undistinguishable_states:
-        logging.info("Undistinguishable states not being pruned")
-    else:
-        redundant = set(representative.keys())
-        prev_states = len(states)
-        states = [s for s in states if s not in redundant]
-        pruned = defaultdict(set)
-        for k, v in transitions.items():
-            if k not in redundant:
-                pruned[k] = {x if x not in representative else representative[x] for x in v}
-        transitions = pruned
-        logging.info("{}/{} states in the sample found to be redundant (given full set of features) have been "
-                     "abstracted away. {} states remain".format(len(redundant), prev_states, len(states)))
 
     return states, transitions, d1_distinguishing_features
 
@@ -159,8 +140,6 @@ def compute_d1_distinguishing_features(states, transitions, features, model, pru
 def generate_maxsat_problem(config, data):
     logging.info("Generating MAXSAT problem from {} concept-based features".format(len(data.features)))
     optimization = config.optimization if hasattr(config, "optimization") else OptimizationPolicy.NUM_FEATURES
-    # prune_undistinguishable_states = True
-    prune_undistinguishable_states = False
 
     state_ids = data.state_ids
     features = data.features
@@ -168,9 +147,12 @@ def generate_maxsat_problem(config, data):
     transitions = data.transitions
     goal_states = data.goal_states
 
+    feat_matrix = np.load(config.feature_matrix_filename + ".npy")
+    bin_feat_matrix = np.load(config.bin_feature_matrix_filename + ".npy")
+
     # Compute for each pair s and t of states which features distinguish s and t
     state_ids, transitions, d1_distinguishing_features = \
-        compute_d1_distinguishing_features(state_ids, transitions, features, model, prune_undistinguishable_states)
+        compute_d1_distinguishing_features(state_ids, transitions, features, model)
 
     if not goal_states:
         raise CriticalPipelineError("No goal state identified in the sample, SAT theory will be trivially satisfiable")
