@@ -18,13 +18,12 @@
 import itertools
 import logging
 import os
+from collections import defaultdict
 from enum import Enum
 from signal import signal, SIGPIPE, SIG_DFL
 import time
 
 import numpy as np
-
-from tarski.dl.features import relax_int_feature_diff
 
 from errors import CriticalPipelineError
 from tarski.dl import FeatureValueChange, MinDistanceFeature
@@ -108,7 +107,7 @@ def run_solver(config, data):
 class AbstractAction(object):
     def __init__(self, preconditions, effects, name=None):
         self.name = name
-        self.preconditions = frozenset(preconditions)
+        self.preconditions = preconditions
         self.effects = frozenset(effects)
         self.hash = hash((self.__class__, self.preconditions, self.effects))
 
@@ -120,12 +119,9 @@ class AbstractAction(object):
                 self.preconditions == other.preconditions and self.effects == other.effects)
 
     def __str__(self):
-        return self.print_named()
+        return "AbstractAction[]"
 
-    def print_named(self, namer=lambda s: s):
-        precs = ", ".join(prec.print_named(namer) for prec in self.preconditions)
-        effs = ", ".join(eff.print_named(namer) for eff in self.effects)
-        return "\tPRE: {}\n\tEFFS: {}".format(precs, effs)
+    __repr__ = __str__
 
 
 class ActionEffect(object):
@@ -144,6 +140,8 @@ class ActionEffect(object):
     def __str__(self):
         return self.print_named()
 
+    __repr__ = __str__
+
     def print_named(self, namer=lambda s: s):
         if self.change == FeatureValueChange.ADD:
             return namer(self.feature)
@@ -156,63 +154,6 @@ class ActionEffect(object):
         if self.change == FeatureValueChange.INC_OR_NIL:
             return "INC* {}".format(namer(self.feature))
         raise RuntimeError("Unexpected effect type")
-
-
-class AbstractPrecondition(Enum):
-    ADD = 1
-    DEL = 2
-    GT0 = 3
-    EQ0 = 4
-
-
-def create_precondition_atom(feature, value, type_):
-    assert value in (True, False)
-    assert type_ in (bool, int)
-    if type_ == bool:
-        return Atom(feature, AbstractPrecondition.ADD if value else AbstractPrecondition.DEL)
-
-    return Atom(feature, AbstractPrecondition.GT0 if value else AbstractPrecondition.EQ0)
-
-    # if value is True:
-    #     return Atom(feature, AbstractPrecondition.ADD)
-    # if value is False:
-    #     return Atom(feature, AbstractPrecondition.DEL)
-
-    # assert isinstance(value, int) and value >= 0
-
-    # if value > 0:
-    #     return Atom(feature, AbstractPrecondition.GT0)
-    #
-    # return Atom(feature, AbstractPrecondition.EQ0)
-
-
-class Atom(object):
-    def __init__(self, feature, ptype):
-        assert isinstance(ptype, AbstractPrecondition)
-        self.feature = feature
-        self.ptype = ptype
-        self.hash = hash((self.__class__, self.feature, self.ptype))
-
-    def __hash__(self):
-        return self.hash
-
-    def __eq__(self, other):
-        return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
-                self.feature == other.feature and self.ptype == other.ptype)
-
-    def __str__(self):
-        return self.print_named()
-
-    def print_named(self, namer=lambda s: s):
-        if self.ptype is AbstractPrecondition.ADD:
-            return namer(self.feature)
-        if self.ptype is AbstractPrecondition.DEL:
-            return "NOT {}".format(namer(self.feature))
-        if self.ptype is AbstractPrecondition.GT0:
-            return "{} > 0".format(namer(self.feature))
-        if self.ptype is AbstractPrecondition.EQ0:
-            return "{} = 0".format(namer(self.feature))
-        assert False, "Unknown precondition type"
 
 
 class ModelTranslator(object):
@@ -365,7 +306,7 @@ class ModelTranslator(object):
         return np.sign(self.feat_matrix[s0] - self.feat_matrix[s1])
 
     def relaxed_qchange(self, s0, s1):
-        assert 0
+        assert 0  # pending to implement
 
     def ftype(self, f):
         return bool if self.feature_types[f] else int
@@ -373,10 +314,10 @@ class ModelTranslator(object):
     def generate_eff_change(self, feat, qchange):
         assert qchange in (-1, 1)
         if self.ftype(feat) == bool:
-            return FeatureValueChange.ADD if qchange == 1 else FeatureValueChange.DEL
+            return FeatureValueChange.DEL if qchange == 1 else FeatureValueChange.ADD
 
         # else type must be int
-        return FeatureValueChange.INC if qchange == 1 else FeatureValueChange.DEC
+        return FeatureValueChange.DEC if qchange == 1 else FeatureValueChange.INC
         # TODO When do we return FeatureValueChange.INC_OR_NIL?
 
     def decode_solution(self, assignment, namer):
@@ -392,7 +333,7 @@ class ModelTranslator(object):
                                         "no action model possible, the encoding has likely some error")
 
         logging.info("Selected features: ")
-        print('\n'.join("F{}. {} [{}]".format(i, namer(self.feature_names[f]), self.feature_complexity[f])
+        print('\n'.join("F{}. {} [k={}, id={}]".format(i, namer(self.feature_names[f]), self.feature_complexity[f], f)
                         for i, f in enumerate(selected_features, 1)))
 
         # selected_features = [f for f in selected_features if str(f) == "bool[And(clear,{a})]"]
@@ -418,16 +359,8 @@ class ModelTranslator(object):
                 abstract_effects = [ActionEffect(self.feature_names[f], self.generate_eff_change(f, c))
                                     for f, c in zip(selected_features, qchanges[selected_features]) if c != 0]
 
-                # abstract_effects = []
-                # for f in selected_features:
-                #     concrete_qchange = self.qchanges[(s, sprime, f)]
-                #     if concrete_qchange != FeatureValueChange.NIL:
-                #         abstract_effects.append(ActionEffect(f, concrete_qchange))
-
-                preconditions = [create_precondition_atom(self.feature_names[f], val, self.ftype(f))
-                                 for f, val in zip(selected_features, abstract_s)]
-                # preconditions = [Atom(f, val) for f, val in zip(selected_features, abstract_s)]
-                abstract_actions.add(AbstractAction(preconditions, abstract_effects))
+                precondition_bitmap = frozenset(zip(selected_features, abstract_s))
+                abstract_actions.add(AbstractAction(precondition_bitmap, abstract_effects))
                 if len(abstract_effects) == 0:
                     raise RuntimeError("Unsound state model abstraction!")
 
@@ -499,6 +432,33 @@ class ModelTranslator(object):
 
         bin_values = self.bin_feat_matrix[state_id, features]
         return tuple(map(bool, bin_values))
+
+    def compute_action_model(self, solution, config):
+        states, actions = self.decode_solution(solution.assignment, config.feature_namer)
+        self.print_actions(actions, os.path.join(config.experiment_dir, 'actions.txt'), config.feature_namer)
+        states, actions = optimize_abstract_action_model(states, actions)
+        self.print_actions(actions, os.path.join(config.experiment_dir, 'actions-optimized.txt'), config.feature_namer)
+        return dict(abstract_states=states, abstract_actions=actions)
+
+    def print_actions(self, actions, filename, namer):
+        with open(filename, 'w') as f:
+            for i, action in enumerate(actions, 1):
+                action_str = self.print_abstract_action(action, namer)
+                print("\nAction {}:\n{}".format(i, action_str), file=f)
+
+    def print_abstract_action(self, action, namer=lambda s: s):
+        precs = ", ".join(self.print_precondition_atom(f, v, namer) for f, v in action.preconditions)
+        effs = ", ".join(eff.print_named(namer) for eff in action.effects)
+        return "\tPRE: {}\n\tEFFS: {}".format(precs, effs)
+
+    def print_precondition_atom(self, feature, value, namer):
+        assert value in (True, False)
+        type_ = self.ftype(feature)
+        fstr = namer(self.feature_names[feature])
+        if type_ == bool:
+            return fstr if value else "NOT {}".format(fstr)
+        assert type_ == int
+        return "{} > 0".format(fstr) if value else "{} = 0".format(fstr)
 
 
 class Variable(object):
@@ -674,11 +634,47 @@ class CNFWriter(object):
             print("\n".join("{}: {}".format(i, v) for v, i in variables), file=f)
 
 
+def attempt_single_merge(action_precs):
+    for p1, p2 in itertools.combinations(action_precs, 2):
+        diff = p1.symmetric_difference(p2)
+        diffl = list(diff)
+        if len(diffl) == 2 and diffl[0][0] == diffl[1][0]:
+            assert diffl[0][1] != diffl[1][1]
+            p_merged = p1.difference(diff)
+            return p1, p2, p_merged  # Meaning p1 and p2 should be merged into p_merged
+    return None
+
+
+def merge_precondition_sets(action_precs):
+    while True:
+        res = attempt_single_merge(action_precs)
+        if res is None:
+            break
+
+        # else do the actual merge
+        p1, p2, new = res
+        action_precs.remove(p1)
+        action_precs.remove(p2)
+        action_precs.add(new)
+    return action_precs
+
+
+def optimize_abstract_action_model(states, actions):
+    logging.info("Optimizing abstract action model with {} abstract actions".format(len(actions)))
+    actions_grouped_by_effects = defaultdict(set)
+    for a in actions:
+        actions_grouped_by_effects[a.effects].add(a.preconditions)
+    logging.info("There are {} effect groups".format(len(actions_grouped_by_effects)))
+
+    merged = []
+    for effs, action_precs in actions_grouped_by_effects.items():
+        for prec in merge_precondition_sets(action_precs):
+            merged.append(AbstractAction(prec, effs))
+
+    logging.info("Optimized abstract action model has {} actions".format(len(merged)))
+    return states, merged
+
+
 def compute_action_model(config, data):
     assert data.cnf_solution.solved
-
-    states, actions = data.cnf_translator.decode_solution(data.cnf_solution.assignment, config.feature_namer)
-    with open(os.path.join(config.experiment_dir, 'actions.txt'), 'w') as f:
-        f.write("\n\n".join("Action {}:\n{}".format(i, action.print_named(config.feature_namer))
-                            for i, action in enumerate(actions, 1)))
-    return dict(abstract_states=states, abstract_actions=actions)
+    return data.cnf_translator.compute_action_model(data.cnf_solution, config)

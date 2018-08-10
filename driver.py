@@ -360,8 +360,7 @@ class ActionModelStep(Step):
         return []
 
     def process_config(self, config):
-        if "feature_namer" not in config:
-            config["feature_namer"] = default_feature_namer
+        config["feature_namer"] = config.get("feature_namer", default_feature_namer) or default_feature_namer
         return config
 
     def get_required_data(self):

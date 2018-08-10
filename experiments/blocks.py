@@ -31,10 +31,10 @@ def main():
         driver="bfs",
 
         # Number of states to be expanded in the sampling procedure
-        num_states=80,
+        num_states=100,
 
         # Max. size of the generated concepts (mandatory)
-        max_concept_size=8,
+        max_concept_size=10,
 
         # Max. number of iterations of the concept-generation grammar. Optional. Defaults to infinity,
         # in which case the limit is set by max_concept_size alone.
@@ -66,8 +66,8 @@ def main():
         # optimization=OptimizationPolicy.NUM_FEATURES
 
         # The number of features and actions for the SAT encoding
-        encoding_k=10,
-        encoding_m=10,
+        # encoding_k=10,
+        # encoding_m=10,
     )
     exp = Experiment(steps)
     exp.run()
