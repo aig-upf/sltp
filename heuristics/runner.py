@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 
 import cplex
 
@@ -192,21 +193,14 @@ def report(problem, transitions, feature_names, features_per_state, goal_states,
 
 
 def run(config, data):
-    transition_file = config.transitions_filename
-    features_file = config.feature_matrix_filename
-    complexity_file = config.feature_info_filename
-    goal_states_file = config.goal_states_filename
     max_weight = config.lp_max_weight
-    mip_file_name = config.lp_filename
 
-    print("Reading files...")
-    transitions, adj_list = read_transition_file(transition_file)
-    features_per_state, num_features = read_features_file(features_file)
-    goal_states = read_goal_states(goal_states_file)
-    feature_complexity, feature_names = read_complexity_file(complexity_file)
-    print("Transitions: ", len(transitions))
-    print("Goal states: ", len(goal_states))
-    print("Number of features: ", num_features)
+    transitions, adj_list = read_transition_file(config.transitions_filename)
+    features_per_state, num_features = read_features_file(config.feature_matrix_filename)
+    goal_states = read_goal_states(config.goal_states_filename)
+    feature_complexity, feature_names = read_complexity_file(config.feature_info_filename)
+    logging.info("Read {} transitions, {} features, {} goal states".
+                 format(len(transitions), len(goal_states), num_features))
 
     print("Populating model")
     problem = cplex.Cplex()
@@ -223,7 +217,7 @@ def run(config, data):
     populate_max_weight_constraints(problem, num_features, max_weight)
 
     print("Writing file...")
-    problem.write(mip_file_name)
+    problem.write(config.lp_filename)
 
     print("Solving MIP...")
     problem.solve()

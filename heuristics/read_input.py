@@ -6,13 +6,8 @@ import sys
 def read_transition_file(path):
     transitions = []
     adj_list = {}
-    try:
-        f = open(path, 'r')
-    except IOError:
-        print("Could not read file:", path)
-        sys.exit()
 
-    with f:
+    with open(path, 'r') as f:
         for line in f.readlines():
             state = line.split()[0]
             adj_list['s' + state] = []
@@ -24,13 +19,7 @@ def read_transition_file(path):
 
 def read_features_file(path):
     features_per_state = {}
-    try:
-        f = open(path, 'r')
-    except IOError:
-        print("Could not read file:", path)
-        sys.exit()
-
-    with f:
+    with open(path, 'r') as f:
         for line in f.readlines():
             state = 's' + line.split()[0]
             features_per_state[state] = []
