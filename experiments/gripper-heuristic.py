@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 import os
 
-from tarski.dl import PrimitiveRole, NominalConcept, ExistsConcept, NotConcept, UniversalConcept
+from tarski.dl import PrimitiveRole, NominalConcept, ExistsConcept, NotConcept, UniversalConcept, AndConcept, \
+    ForallConcept, EmptyConcept
 
 
 def main():
@@ -26,13 +27,14 @@ def main():
                               driver="bfs",
 
                               # Number of states to be expanded in the sampling procedure
-                              num_states=250,
+                              num_states=300,
 
                               max_concept_size=10,
 
                               # Provide a special, handcrafted method to generate concepts, if desired.
                               # This will override the standard concept generation procedure (default: None)
                               # concept_generator=generate_chosen_concepts,
+                              # concept_generator=debug_weird_concept,
 
                               # Whether to use distance features (default: False)
                               # use_distance_features=True,
@@ -71,6 +73,24 @@ def generate_chosen_concepts(lang):
     c4 = ExistsConcept(carry, c3)
 
     concepts = [c1, c2, c3, c4]
+    return [], concepts, []  # atoms, concepts, roles
+
+
+def debug_weird_concept(lang):
+    #  card[And(Forall(carry,<empty>), Forall(at-robby,{roomb}))]
+
+    obj_t = lang.Object
+    bot = EmptyConcept("object")
+
+    carry = PrimitiveRole(lang.get("carry"))
+    at_robby = PrimitiveRole(lang.get("at-robby"))
+    x_param = NominalConcept("roomb", obj_t)
+
+    c1 = ForallConcept(carry, bot)
+    c2 = ForallConcept(at_robby, x_param)
+    c = AndConcept(c1, c2, "object")
+
+    concepts = [c]
     return [], concepts, []  # atoms, concepts, roles
 
 
