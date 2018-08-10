@@ -9,42 +9,51 @@ def main():
     import sys
     sys.path.insert(0, '..')
     from driver import Experiment, generate_pipeline, BENCHMARK_DIR
-    from learn_actions import OptimizationPolicy
 
     domain_dir = "gripper-m"
     domain = "domain.pddl"
     instance = "prob01.pddl"
 
-    steps = generate_pipeline(pipeline="heuristic",
-                              domain=os.path.join(BENCHMARK_DIR, domain_dir, domain),
-                              instance=os.path.join(BENCHMARK_DIR, domain_dir, instance),
+    steps = generate_pipeline(
+        pipeline="heuristic",
 
-                              # Location of the FS planner, used to do the state space sampling
-                              planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
+        domain=os.path.join(BENCHMARK_DIR, domain_dir, domain),
+        instance=os.path.join(BENCHMARK_DIR, domain_dir, instance),
 
-                              # Type of sampling procedure. Only breadth-first search implemented ATM
-                              driver="bfs",
+        # Location of the FS planner, used to do the state space sampling
+        planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
 
-                              # Number of states to be expanded in the sampling procedure
-                              num_states=250,
+        # Type of sampling procedure. Only breadth-first search implemented ATM
+        driver="bfs",
 
-                              max_concept_size=10,
+        # Number of states to be expanded in the sampling procedure
+        num_states=250,
 
-                              # Provide a special, handcrafted method to generate concepts, if desired.
-                              # This will override the standard concept generation procedure (default: None)
-                              # concept_generator=generate_chosen_concepts,
+        # Max. size of the generated concepts (mandatory)
+        max_concept_size=10,
 
-                              # Whether to use distance features (default: False)
-                              # use_distance_features=True,
+        # Max. number of iterations of the concept-generation grammar. Optional. Defaults to infinity,
+        # in which case the limit is set by max_concept_size alone.
+        max_concept_grammar_iterations=3,
 
-                              # Method to generate domain parameters (goal or otherwise). If None, goal predicates will
-                              # be used (default: None)
-                              parameter_generator=add_domain_parameters,
+        # Provide a special, handcrafted method to generate concepts, if desired.
+        # This will override the standard concept generation procedure (default: None)
+        # concept_generator=build_ijcai_paper_bw_concepts,
 
-                              # What optimization criteria to use in the max-sat problem
-                              optimization=OptimizationPolicy.TOTAL_FEATURE_COMPLEXITY,
-                              # optimization=OptimizationPolicy.NUM_FEATURES
-                              )
+        # Or, alternatively, provide directly the features instead of the concepts (default: None)
+        feature_generator=None,
+
+        # Method to generate domain parameters (goal or otherwise). If None, goal predicates will
+        # be used (default: None)
+        parameter_generator=add_domain_parameters,
+
+        # Optionally, use a method that gives handcrafted names to the features
+        # (default: None, which will use their string representation)
+        # feature_namer=ijcai_paper_bw_feature_namer,
+
+        lp_max_weight=10,
+
+    )
     exp = Experiment(steps)
     exp.run()
 

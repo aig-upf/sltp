@@ -20,7 +20,7 @@ def get_y_var(s, t):
 
 
 # Populate obj function and add all variables
-def populate_obj_function(problem, feature_complexity, goal_states):
+def populate_obj_function(problem, num_features, max_weight, transitions, feature_complexity, goal_states):
     # Add variables that occur in the opt function
     for f in range(0, num_features):
         problem.variables.add(names=['xplus_' + str(f), 'xminus_' + str(f)],
@@ -153,9 +153,9 @@ def populate_max_weight_constraints(problem, num_features, max_weight):
     problem.linear_constraints.set_coefficients(coefficients)
 
 
-def report(problem, transitions, feature_names, features_per_state, goal_states, adj_list):
+def report(problem, transitions, feature_names, features_per_state, goal_states, adj_list, config):
 
-    wvar_names = ((i, get_weight_var(i)) for i in range(0, num_features))
+    wvar_names = ((i, get_weight_var(i)) for i in range(0, len(feature_names)))
     feature_weights = ((i, wname, problem.solution.get_values(wname)) for i, wname in wvar_names)
     nonzero_features = [(i, var, val) for i, var, val in feature_weights if val != 0]
     print(("Heuristic:\n\t{}".format("\n\t".join("{} · {}".format(val, feature_names[i]) for i, _, val in nonzero_features))))
@@ -168,7 +168,7 @@ def report(problem, transitions, feature_names, features_per_state, goal_states,
         return h
 
     sorted_state_ids = natural_sort(features_per_state.keys())
-    with open("state-heuristic.txt", "w") as file:
+    with open(config.state_heuristic_filename, "w") as file:
         for s in sorted_state_ids:
             print("h({}) = {}".format(s, heuristic_function(s)), file=file)
 
@@ -191,19 +191,13 @@ def report(problem, transitions, feature_names, features_per_state, goal_states,
     hill_climbing("s0", adj_list, heuristic_function, goal_states)
 
 
-if __name__ == "__main__":
-    if len(sys.argv) < 7:
-        print("Wrong parameters")
-        print(
-            "Usage ./build-lp.py [TRANSITION FILE] [FEATURES FILE] [FEATURE COMPLEXITY FILE] [GOAL STATES FILE] [MAX WEIGHT] [MIP FILE OUTPUT]")
-        sys.exit()
-
-    transition_file = sys.argv[1]
-    features_file = sys.argv[2]
-    complexity_file = sys.argv[3]
-    goal_states_file = sys.argv[4]
-    max_weight = int(sys.argv[5])
-    mip_file_name = sys.argv[6]
+def run(config, data):
+    transition_file = config.transitions_filename
+    features_file = config.feature_matrix_filename
+    complexity_file = config.feature_info_filename
+    goal_states_file = config.goal_states_filename
+    max_weight = config.lp_max_weight
+    mip_file_name = config.lp_filename
 
     print("Reading files...")
     transitions, adj_list = read_transition_file(transition_file)
@@ -220,7 +214,7 @@ if __name__ == "__main__":
     problem.objective.set_sense(problem.objective.sense.minimize)
 
     print("Populating objective function")
-    populate_obj_function(problem, feature_complexity, goal_states)
+    populate_obj_function(problem, num_features, max_weight, transitions, feature_complexity, goal_states)
     print("Populating weight constraints")
     populate_weight_constraints(problem, transitions, features_per_state, goal_states, max_weight)
     print("Populating y-constraints")
@@ -235,4 +229,4 @@ if __name__ == "__main__":
     problem.solve()
     print("Solution value  = ", problem.solution.get_objective_value())
 
-    report(problem, transitions, feature_names, features_per_state, goal_states, adj_list)
+    report(problem, transitions, feature_names, features_per_state, goal_states, adj_list, config)

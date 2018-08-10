@@ -230,6 +230,31 @@ class FeatureMatrixGenerationStep(Step):
         return generate_features
 
 
+class HeuristicWeightsComputation(Step):
+    """  """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def get_required_attributes(self):
+        return ["experiment_dir", "lp_max_weight"]
+
+    def process_config(self, config):
+        config["lp_filename"] = compute_info_filename(config, "problem.lp")
+        config["state_heuristic_filename"] = compute_info_filename(config, "state-heuristic-values.txt")
+
+        return config
+
+    def get_required_data(self):
+        return []
+
+    def description(self):
+        return "Computation of the weights of a desceding heuristic"
+
+    def get_step_runner(self):
+        from heuristics import runner
+        return runner.run
+
+
 class MaxsatProblemGenerationStep(Step):
     """ Generate the max-sat problem from a given set of generated features """
     def __init__(self, **kwargs):
@@ -395,7 +420,7 @@ PIPELINES = dict(
         PlannerStep,
         ConceptGenerationStep,
         FeatureMatrixGenerationStep,
-        # ...
+        HeuristicWeightsComputation,
     ],
 )
 
