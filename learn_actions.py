@@ -447,8 +447,8 @@ class ModelTranslator(object):
                 print("\nAction {}:\n{}".format(i, action_str), file=f)
 
     def print_abstract_action(self, action, namer=lambda s: s):
-        precs = ", ".join(self.print_precondition_atom(f, v, namer) for f, v in action.preconditions)
-        effs = ", ".join(eff.print_named(namer) for eff in action.effects)
+        precs = ", ".join(sorted(self.print_precondition_atom(f, v, namer) for f, v in action.preconditions))
+        effs = ", ".join(sorted(eff.print_named(namer) for eff in action.effects))
         return "\tPRE: {}\n\tEFFS: {}".format(precs, effs)
 
     def print_precondition_atom(self, feature, value, namer):
