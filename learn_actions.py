@@ -335,6 +335,7 @@ class ModelTranslator(object):
         logging.info("Selected features: ")
         print('\n'.join("F{}. {} [k={}, id={}]".format(i, namer(self.feature_names[f]), self.feature_complexity[f], f)
                         for i, f in enumerate(selected_features, 1)))
+        logging.info(f"Total feature complexity: {sum(self.feature_complexity[f] for f in selected_features)}")
 
         # selected_features = [f for f in selected_features if str(f) == "bool[And(clear,{a})]"]
 
@@ -362,7 +363,10 @@ class ModelTranslator(object):
                 precondition_bitmap = frozenset(zip(selected_features, abstract_s))
                 abstract_actions.add(AbstractAction(precondition_bitmap, abstract_effects))
                 if len(abstract_effects) == 0:
-                    raise RuntimeError("Unsound state model abstraction!")
+                    msg = f"Abstract no-op necessary [concrete: ({s}, {sprime})," \
+                        f" abstract: ({abstract_s}, {abstract_sprime})"
+                    logging.warning(msg)
+                    # raise RuntimeError(msg)
 
                 already_computed.add((abstract_s, abstract_sprime))
 
