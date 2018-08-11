@@ -82,7 +82,7 @@ class UniverseIndex(object):
 
     def finish(self):
         # We sort the objects alphabetically and recreate the dictionary with the new indexes
-        self._objects = sorted(self._index.keys())
+        self._objects = sorted(self._index.keys(), key=lambda x: str(x))
         self._index = {obj: i for i, obj in enumerate(self._objects, 0)}
         self.closed = True
 
