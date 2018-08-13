@@ -184,7 +184,7 @@ class ConceptGenerationStep(Step):
         config["concept_generator"] = config.get("concept_generator", None)
         config["feature_generator"] = config.get("feature_generator", None)
         config["parameter_generator"] = config.get("parameter_generator", None)
-        config["use_distance_features"] = config.get("use_distance_features", False)
+        config["distance_feature_max_complexity"] = config.get("distance_feature_max_complexity", 0)
         config["max_concept_grammar_iterations"] = config.get("max_concept_grammar_iterations", None)
 
         return config

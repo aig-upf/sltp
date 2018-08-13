@@ -42,8 +42,8 @@ def main():
         # concept_generator=build_expected_concepts,
         # feature_generator=build_expected_features,
 
-        # Whether to use distance features (default: False)
-        use_distance_features=True,
+        # Max. allowed complexity for distance features (default: 0)
+        distance_feature_max_complexity=10,
 
         # Method to generate domain parameters (goal or otherwise). If None, goal predicates will
         # be used (default: None)

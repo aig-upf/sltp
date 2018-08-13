@@ -47,8 +47,8 @@ def main():
         # Or, alternatively, provide directly the features instead of the concepts (default: None)
         feature_generator=None,
 
-        # Whether to use distance features (default: False)
-        # use_distance_features=True,
+        # Max. allowed complexity for distance features (default: 0)
+        # distance_feature_max_complexity=10,
 
         # Method to generate domain parameters (goal or otherwise). If None, goal predicates will
         # be used (default: None)

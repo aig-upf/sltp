@@ -147,6 +147,8 @@ class ActionEffect(object):
             return namer(self.feature)
         if self.change == FeatureValueChange.DEL:
             return "NOT {}".format(namer(self.feature))
+        if self.change == FeatureValueChange.ADD_OR_NIL:
+            return "ADD* {}".format(namer(self.feature))
         if self.change == FeatureValueChange.INC:
             return "INC {}".format(namer(self.feature))
         if self.change == FeatureValueChange.DEC:
@@ -168,6 +170,9 @@ class ModelTranslator(object):
         self.state_ids = state_ids
         self.transitions = transitions
         self.goal_states = goal_states
+
+        # We'll need this later if using relaxed inc semantics:
+        self.all_twos = 2*np.ones(self.feat_matrix.shape[1], dtype=np.int8)
 
         # Compute for each pair s and t of states which features distinguish s and t
         self.np_d1_distinguishing_features = compute_d1_distinguishing_features(state_ids, bin_feat_matrix)
@@ -192,7 +197,7 @@ class ModelTranslator(object):
         # if t not in self.transitions or not self.transitions[t]:
         # TODO WE MIGHT NEED A BETTER WAY OF IDENTIFYING NON-EXPANDED STATES AND DISTINGUISHING THEM FROM
         # TODO STATES WHICH HAVE NO SUCCESSOR
-        if not self.transitions[t]:
+        if not self.transitions[s] or not self.transitions[t]:
             return
 
         for s_prime in self.transitions[s]:  # will be empty set if not initialized, which is ok
@@ -273,7 +278,7 @@ class ModelTranslator(object):
             qchanges_s0s1 = self.retrieve_possibly_cached_qchanges(s0, s1)
             qchanges_t0t1 = self.retrieve_possibly_cached_qchanges(t0, t1)
             equal_idxs = np.equal(qchanges_s0s1, qchanges_t0t1)
-            np_d2_distinguishing_features = np.where(equal_idxs == False)[0]
+            np_d2_distinguishing_features = np.where(equal_idxs==False)[0]
 
             # D2(s0,s1,t0,t2) iff OR_f selected(f), where f ranges over features that d2-distinguish the transition
             # but do _not_ d1-distinguish the two states at the origin of each transition.
@@ -303,22 +308,27 @@ class ModelTranslator(object):
         return self.writer.mapping
 
     def standard_qchange(self, s0, s1):
-        return np.sign(self.feat_matrix[s0] - self.feat_matrix[s1])
+        return np.sign(self.feat_matrix[s1] - self.feat_matrix[s0])
 
     def relaxed_qchange(self, s0, s1):
-        assert 0  # pending to implement
+        std = self.standard_qchange(s0, s1)
+        # For each feature, return the standard qchange value if the feature is boolean, or the qchange is -1 (DEC),
+        # but otherwise turn 0's (NO-CHANGE) and 1's (INCREASES) into value 2, denoted to mean "relaxed increase" (INC*)
+        relaxed = np.where(np.logical_or(std == -1, self.feature_types == True), std, self.all_twos)
+        return relaxed
 
     def ftype(self, f):
         return bool if self.feature_types[f] else int
 
     def generate_eff_change(self, feat, qchange):
-        assert qchange in (-1, 1)
+
         if self.ftype(feat) == bool:
-            return FeatureValueChange.DEL if qchange == 1 else FeatureValueChange.ADD
+            assert qchange in (-1, 1)
+            return {-1: FeatureValueChange.DEL, 1: FeatureValueChange.ADD, 2: FeatureValueChange.ADD_OR_NIL}[qchange]
 
         # else type must be int
-        return FeatureValueChange.DEC if qchange == 1 else FeatureValueChange.INC
-        # TODO When do we return FeatureValueChange.INC_OR_NIL?
+        assert qchange in (-1, 1, 2)
+        return {-1: FeatureValueChange.DEC, 1: FeatureValueChange.INC, 2: FeatureValueChange.INC_OR_NIL}[qchange]
 
     def decode_solution(self, assignment, namer):
         varmapping = self.writer.mapping

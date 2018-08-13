@@ -114,15 +114,15 @@ class TerminologicalFactory(object):
 
         return generated
 
-    def derive_features(self, concepts, rest, max_distance_feature_depth, use_distance_features):
+    def derive_features(self, concepts, rest, distance_feature_max_complexity):
         # new_features = [NonEmptyConceptFeature(c) for c in concepts]
         feats = []
         feats.extend(ConceptCardinalityFeature(c) for c in concepts)
         k = len(feats)
         logging.info('{} concept cardinality features created'.format(k))
 
-        if use_distance_features:
-            feats.extend(self.create_distance_features(concepts, rest, max_distance_feature_depth))
+        if distance_feature_max_complexity:
+            feats.extend(self.create_distance_features(concepts, rest, distance_feature_max_complexity))
             logging.info('{} min-distance features created'.format(len(feats) - k))
 
         return feats
@@ -131,7 +131,6 @@ class TerminologicalFactory(object):
         card1_concepts = self.processor.singleton_extension_concepts
 
         for c1, r, c2 in itertools.product(card1_concepts, rest, concepts):
-        # for c1, r, c2 in itertools.product(card1_concepts, rest, card1_concepts):
             if c1.size + r.size + c2.size > k:
                 continue
             if c2 in (self.syntax.top, self.syntax.bot):
@@ -198,13 +197,14 @@ class SemanticProcessor(object):
         # CWA: those predicates not appearing on the state trace are assumed to have empty denotation
         def set_defaults_for_unprocessed_elements(cache_, unprocessed_, dl_mapping):
             for p in unprocessed_:
-                dl_element = dl_mapping[p.uniform_arity()](p)
-                if p.arity == 1:
+                ar = p.uniform_arity()
+                dl_element = dl_mapping[ar](p)
+                if ar == 1:
                     cache_[dl_element] = set()
-                elif p.arity == 2:
+                elif ar == 2:
                     cache_[dl_element] = set()
                 else:
-                    assert p.arity == 0
+                    assert ar == 0
                     cache_[dl_element] = False
 
         set_defaults_for_unprocessed_elements(cache, unprocessed, self.standard_dl_mapping)
@@ -376,7 +376,7 @@ def run(config, data):
             goal_denotation = transform_to_ground_atoms(problem.goal)
             goal_predicates = {x[0] for x in goal_denotation}
         except TransformationError:
-            logging.critical("Cannot create goal concepts when problem goal is not a conjunction of ground atoms")
+            logging.error("Cannot create goal concepts when problem goal is not a conjunction of ground atoms")
             raise
 
     factory = TerminologicalFactory(language, states, goal_denotation)
@@ -399,17 +399,14 @@ def run(config, data):
     logging.info('Number of concepts with singleton extensions over all states: {}'.format(
         len(factory.processor.singleton_extension_concepts)))
 
-    # Temporarily deactivated, role restrictions very expensive
-    if config.use_distance_features:
+    if config.distance_feature_max_complexity:  # If we use Use distance features, we'll want role restrictions
         rest = list(factory.create_role_restrictions(concepts, roles))
         # store_role_restrictions(rest, config)
-        max_distance_feature_depth = 10
     else:
         rest = roles
-        max_distance_feature_depth = 0
 
     if config.feature_generator is None:
-        features = factory.derive_features(concepts, rest, max_distance_feature_depth, config.use_distance_features)
+        features = factory.derive_features(concepts, rest, config.distance_feature_max_complexity)
         features += create_nullary_features(atoms)
     else:
         logging.info('Using user-provided set of features instead of computing them automatically')

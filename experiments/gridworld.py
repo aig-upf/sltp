@@ -37,8 +37,8 @@ def main():
                               # This will override the standard concept generation procedure (default: None)
                               # concept_generator=build_expected_concepts,
 
-                              # Whether to use distance features (default: False)
-                              use_distance_features=True,
+                              # Max. allowed complexity for distance features (default: 0)
+                              distance_feature_max_complexity=10,
 
                               # Method to generate domain parameters (goal or otherwise). If None, goal predicates will
                               # be used (default: None)
