@@ -32,9 +32,8 @@ def main():
         # Max. size of the generated concepts (mandatory)
         max_concept_size=10,
 
-        # Max. number of iterations of the concept-generation grammar. Optional. Defaults to infinity,
-        # in which case the limit is set by max_concept_size alone.
-        max_concept_grammar_iterations=3,
+        # Max. allowed complexity for distance features (default: 0)
+        distance_feature_max_complexity=0,
 
         # Provide a special, handcrafted method to generate concepts, if desired.
         # This will override the standard concept generation procedure (default: None)

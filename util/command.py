@@ -26,9 +26,9 @@ def read_file(filename):
 def execute(command, **kwargs):
     stdout = open(kwargs["stdout"], 'w') if "stdout" in kwargs else None
     stderr = open(kwargs["stderr"], 'w') if "stderr" in kwargs else None
-    cwd = kwargs["cwd"] if "cwd" in kwargs else None
+    cwd = kwargs["cwd"] if "cwd" in kwargs else os.getcwd()
 
-    logging.info('Executing "{}" on directory "{}"'.format(' '.join(command), os.getcwd()))
+    logging.info('Executing "{}" on directory "{}"'.format(' '.join(command), cwd))
     if 'stdout' in kwargs:
         logging.info('Output redirected to "{}"'.format(kwargs['stdout']))
     retcode = subprocess.call(command, cwd=cwd, stdout=stdout, stderr=stderr)

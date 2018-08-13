@@ -10,6 +10,7 @@ def main():
     from learn_actions import OptimizationPolicy
 
     domain_dir = "gripper"
+    # domain_dir = "gripper-m"
     domain = "domain.pddl"
     instance = "prob01.pddl"
 
@@ -42,8 +43,8 @@ def main():
         # Or, alternatively, provide directly the features instead of the concepts (default: None)
         feature_generator=None,
 
-        # Whether to use distance features (default: False)
-        # use_distance_features=True,
+        # Max. allowed complexity for distance features (default: 0)
+        # distance_feature_max_complexity=10,
 
         # Method to generate domain parameters (goal or otherwise). If None, goal predicates will
         # be used (default: None)
@@ -54,7 +55,7 @@ def main():
 
         # Optionally, use a method that gives handcrafted names to the features
         # (default: None, which will use their string representation)
-        feature_namer=None,
+        feature_namer=feature_namer,
 
         # What optimization criteria to use in the max-sat problem
         optimization=OptimizationPolicy.TOTAL_FEATURE_COMPLEXITY,
@@ -70,6 +71,17 @@ def main():
 
 def add_domain_parameters(language):
     return [language.constant("roomb", "object")]
+
+
+def feature_namer(feature):
+    s = str(feature)
+    return {
+        "card[Exists(at,Not({roomb}))]": "nballs-A",
+        "card[Exists(at,{roomb})]": "nballs-B",
+        "card[Exists(carry,<universe>)]": "ncarried",
+        "bool[And(at-robby, {roomb})]": "robot-at-B",
+        "card[free]": "nfree-grippers",
+    }.get(s, s)
 
 
 if __name__ == "__main__":
