@@ -9,7 +9,7 @@ import itertools
 import logging
 
 from bitarray import bitarray
-
+from tarski.dl import PrimitiveRole, PrimitiveConcept, UniversalConcept, EmptyConcept
 
 _btrue = bitarray('1')
 _bfalse = bitarray('0')
@@ -156,10 +156,18 @@ class ExtensionCache(object):
         self.feature_values[(feature, sid)] = value
 
     def register_extension(self, term, sid, extension):
-        self.index[(term, sid)] = compress_extension(extension, self.m, term.ARITY)
+        self.register_compressed_extension(term, sid, compress_extension(extension, self.m, term.ARITY))
 
     def register_compressed_extension(self, term, sid, extension):
-        self.index[(term, sid)] = extension
+        assert isinstance(extension, bitarray)
+        key = term
+        if isinstance(term, (PrimitiveConcept, PrimitiveRole)):
+            key = term.name
+        elif isinstance(term, (UniversalConcept,)):
+            key = '<universe>'
+        elif isinstance(term, (EmptyConcept, )):
+            key = '<empty>'
+        self.index[(key, sid)] = extension
 
     def register_nullary_truth_value(self, atom, sid, value):
         self.nullaries[(atom, sid)] = value
@@ -174,12 +182,14 @@ class ExtensionCache(object):
         return self.feature_values[(feature, sid)]
 
     def as_bitarray(self, term, state):
-        return self.index[(term, state)]
-        # if (term, state) in self.index:
-        #     return self.index[(term, state)]
-        # return term.extension(self, state, {})
+        # return self.index[(term, state)]
+        if (term, state) in self.index:
+            return self.index[(term, state)]
+        ext = term.extension(self, state)
+        self.register_compressed_extension(term, state, ext)
+        return ext
 
-    def as_set(self, term, state):  # TODO CACHE A CERTAIN AMOUNT OF ITEMS
+    def as_set(self, term, state):  # TODO CACHE A CERTAIN AMOUNT OF ITEMS?
         return self.uncompress(self.as_bitarray(term, state), term.ARITY)
 
     def uncompress(self, data, arity):

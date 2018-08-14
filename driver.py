@@ -389,7 +389,7 @@ class ActionModelStep(Step):
         return config
 
     def get_required_data(self):
-        return ["cnf_translator", "cnf_solution"]
+        return ["cnf_translator", "cnf_solution", "features"]
 
     def description(self):
         return "Computation of the action model"

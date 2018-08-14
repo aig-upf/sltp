@@ -30,6 +30,7 @@ from tarski.dl import FeatureValueChange, MinDistanceFeature
 from util.console import print_header, print_lines
 from util.command import count_file_lines, remove_duplicate_lines, read_file
 from solvers import solve
+from util.serialization import serialize_to_string
 
 signal(SIGPIPE, SIG_DFL)
 
@@ -330,7 +331,7 @@ class ModelTranslator(object):
         assert qchange in (-1, 1, 2)
         return {-1: FeatureValueChange.DEC, 1: FeatureValueChange.INC, 2: FeatureValueChange.INC_OR_NIL}[qchange]
 
-    def decode_solution(self, assignment, namer):
+    def decode_solution(self, assignment, features, namer):
         varmapping = self.writer.mapping
         true_variables = set(varmapping[idx] for idx, value in assignment.items() if value is True)
         # feature_mapping = {variable: feature for feature, variable in self.var_selected.items()}
@@ -342,10 +343,12 @@ class ModelTranslator(object):
             raise CriticalPipelineError("Zero-cost maxsat solution - "
                                         "no action model possible, the encoding has likely some error")
 
-        logging.info("Selected features: ")
-        print('\n'.join("F{}. {} [k={}, id={}]".format(i, namer(self.feature_names[f]), self.feature_complexity[f], f)
+        logging.info(f"Features (total complexity: {sum(self.feature_complexity[f] for f in selected_features)}): ")
+        print('\t' + '\n\t'.join("{}. {} [k={}, id={}]".format(i, namer(self.feature_names[f]), self.feature_complexity[f], f)
                         for i, f in enumerate(selected_features, 1)))
-        logging.info(f"Total feature complexity: {sum(self.feature_complexity[f] for f in selected_features)}")
+
+        print("Only for machine eyes: ")
+        print(serialize_to_string([features[i] for i in selected_features]))
 
         # selected_features = [f for f in selected_features if str(f) == "bool[And(clear,{a})]"]
 
@@ -447,8 +450,8 @@ class ModelTranslator(object):
         bin_values = self.bin_feat_matrix[state_id, features]
         return tuple(map(bool, bin_values))
 
-    def compute_action_model(self, solution, config):
-        states, actions = self.decode_solution(solution.assignment, config.feature_namer)
+    def compute_action_model(self, solution, features, config):
+        states, actions = self.decode_solution(solution.assignment, features, config.feature_namer)
         self.print_actions(actions, os.path.join(config.experiment_dir, 'actions.txt'), config.feature_namer)
         states, actions = optimize_abstract_action_model(states, actions)
         self.print_actions(actions, os.path.join(config.experiment_dir, 'actions-optimized.txt'), config.feature_namer)
@@ -691,4 +694,4 @@ def optimize_abstract_action_model(states, actions):
 
 def compute_action_model(config, data):
     assert data.cnf_solution.solved
-    return data.cnf_translator.compute_action_model(data.cnf_solution, config)
+    return data.cnf_translator.compute_action_model(data.cnf_solution, data.features, config)
