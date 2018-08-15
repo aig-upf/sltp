@@ -99,12 +99,8 @@ class Step(object):
         return config
 
     def run(self):
-        req_data = self.get_required_data()
-        data = None
-        if req_data:
-            data = Bunch(load(self.config["experiment_dir"], self.get_required_data()))
-        runner = StepRunner(self.description(), self.get_step_runner())
-        result = runner.run(config=Bunch(self.config), data=data)
+        runner = StepRunner(self.description(), self.get_step_runner(), self.get_required_data())
+        result = runner.run(config=Bunch(self.config))
         return result
 
     def description(self):
@@ -186,6 +182,7 @@ class ConceptGenerationStep(Step):
         config["parameter_generator"] = config.get("parameter_generator", None)
         config["distance_feature_max_complexity"] = config.get("distance_feature_max_complexity", 0)
         config["max_concept_grammar_iterations"] = config.get("max_concept_grammar_iterations", None)
+        config["random_seed"] = config.get("random_seed", 1)
 
         return config
 
@@ -488,9 +485,10 @@ def load(basedir, items):
 
 
 class StepRunner(object):
-    def __init__(self, step_name, target):
+    def __init__(self, step_name, target, required_data):
         self.target = target
         self.step_name = step_name
+        self.required_data = required_data
 
     def run(self, **kwargs):
         pool = multiprocessing.Pool(processes=1)
@@ -500,14 +498,16 @@ class StepRunner(object):
         pool.join()
         return res
 
-    def _runner(self, config, data):
+    def _runner(self, config):
+        """ Entry point for the spawned subprocess """
         # import tracemalloc
         # tracemalloc.start()
         # memutils.display_top(tracemalloc.take_snapshot())
         from util import performance
 
         result = None
-        console.print_header("STARTING STEP: {}".format(self.step_name))
+        console.print_header("({}) STARTING STEP: {}".format(os.getpid(), self.step_name))
+        data = Bunch(load(config.experiment_dir, self.required_data)) if self.required_data else None
         start = performance.timer()
         try:
             output = self.target(config=config, data=data)
