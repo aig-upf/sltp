@@ -406,8 +406,8 @@ def run(config, data):
         rest = roles
 
     if config.feature_generator is None:
-        features = factory.derive_features(concepts, rest, config.distance_feature_max_complexity)
-        features += create_nullary_features(atoms)
+        features = create_nullary_features(atoms)
+        features += factory.derive_features(concepts, rest, config.distance_feature_max_complexity)
     else:
         logging.info('Using user-provided set of features instead of computing them automatically')
         features = config.feature_generator(language)
