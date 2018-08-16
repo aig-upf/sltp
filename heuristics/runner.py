@@ -192,7 +192,7 @@ def report(problem, transitions, feature_names, features_per_state, goal_states,
     hill_climbing("s0", adj_list, heuristic_function, goal_states)
 
 
-def run(config, data):
+def run(config, data, rng):
     max_weight = config.lp_max_weight
 
     transitions, adj_list = read_transition_file(config.transitions_filename)

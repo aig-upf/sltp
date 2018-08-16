@@ -21,6 +21,7 @@ import multiprocessing
 import os
 import sys
 from signal import signal, SIGPIPE, SIG_DFL
+import numpy as np
 
 from errors import CriticalPipelineError
 from util import console
@@ -110,7 +111,7 @@ class Step(object):
         raise NotImplementedError()
 
 
-def _run_planner(config, data):
+def _run_planner(config, data, rng):
     params = '--instance {} --domain {} --driver {} --disable-static-analysis --options="max_expansions={}"'\
         .format(config.instance, config.domain, config.driver, config.num_states)
     execute(command=[sys.executable, "run.py"] + params.split(' '),
@@ -183,6 +184,7 @@ class ConceptGenerationStep(Step):
         config["distance_feature_max_complexity"] = config.get("distance_feature_max_complexity", 0)
         config["max_concept_grammar_iterations"] = config.get("max_concept_grammar_iterations", None)
         config["random_seed"] = config.get("random_seed", 1)
+        config["num_sampled_states"] = config.get("num_sampled_states", None)
 
         return config
 
@@ -358,7 +360,7 @@ class MaxsatProblemSolutionStep(Step):
         return []
 
     def get_required_data(self):
-        return ["cnf_translator"]
+        return []
 
     def description(self):
         return "Solution of the max-sat problem"
@@ -508,9 +510,10 @@ class StepRunner(object):
         result = None
         console.print_header("({}) STARTING STEP: {}".format(os.getpid(), self.step_name))
         data = Bunch(load(config.experiment_dir, self.required_data)) if self.required_data else None
+        rng = np.random.RandomState(config.random_seed)  # ATM we simply create a RNG in each subprocess
         start = performance.timer()
         try:
-            output = self.target(config=config, data=data)
+            output = self.target(config=config, data=data, rng=rng)
         except CriticalPipelineError as exc:
             output = dict()
             result = exc

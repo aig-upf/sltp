@@ -127,7 +127,7 @@ def print_goal_states(goal_states, filename):
         print(" ".join(str(s) for s in goal_states), file=f)
 
 
-def generate_features(config, data):
+def generate_features(config, data, rng):
     state_ids, features, model = compute_features(config, data)
     print_feature_info(config, features)
     print_feature_matrix(config, state_ids, features, model)

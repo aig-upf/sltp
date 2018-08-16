@@ -17,7 +17,7 @@ def choose_solver(solver):
     raise RuntimeError('Unknown solver "{}"'.format(solver))
 
 
-def run(config, data):
+def run(config, data, rng):
     # solution = solve(config.experiment_dir, config.cnf_filename, 'wpm3')
     # solution = solve(config.experiment_dir, config.cnf_filename, 'maxino')
 

@@ -34,6 +34,7 @@ from tarski.syntax.transform.errors import TransformationError
 from tarski.syntax.transform.simplifications import transform_to_ground_atoms
 
 from extensions import UniverseIndex, ExtensionCache
+from sampling import sample_generated_states
 from transitions import read_transitions
 
 signal(SIGPIPE, SIG_DFL)
@@ -356,11 +357,15 @@ def collect_all_terms(processor, atoms, concepts, roles):
     return interesting, atoms, concepts, roles
 
 
-def run(config, data):
+def run(config, data, rng):
     assert not data
 
     logging.info('Loading states and transitions...')
     states, goal_states, transitions = read_transitions(config.sample_file)
+    if not goal_states:
+        raise RuntimeError("No goal found in the sample - increase # expanded states!")
+
+    states, goal_states, transitions = sample_generated_states(states, goal_states, transitions, config, rng)
 
     goal_denotation = []
     goal_predicates = set()  # The predicates and functions that appear mentioned in the goal
@@ -384,7 +389,7 @@ def run(config, data):
     if config.concept_generator is not None:
         logging.info('Using set of concepts and roles provided by the user'.format())
         user_atoms, user_concepts, user_roles = config.concept_generator(language)
-        all_terms, atoms, concepts, roles = collect_all_terms(factory.processor, user_atoms, user_concepts, user_roles)
+        _ = collect_all_terms(factory.processor, user_atoms, user_concepts, user_roles)
         # i.e. stick with the user-provided concepts!
         atoms, concepts, roles = user_atoms, user_concepts, user_roles
     else:

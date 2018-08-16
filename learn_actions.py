@@ -30,6 +30,7 @@ from tarski.dl import FeatureValueChange, MinDistanceFeature
 from util.console import print_header, print_lines
 from util.command import count_file_lines, remove_duplicate_lines, read_file
 from solvers import solve
+from util.performance import print_memory_usage
 from util.serialization import serialize_to_string
 
 signal(SIGPIPE, SIG_DFL)
@@ -65,7 +66,7 @@ def compute_d1_distinguishing_features(states, bin_feat_matrix):
     return np_d1_distinguishing_features
 
 
-def generate_maxsat_problem(config, data):
+def generate_maxsat_problem(config, data, rng):
     optimization = config.optimization if hasattr(config, "optimization") else OptimizationPolicy.NUM_FEATURES
 
     state_ids = data.state_ids
@@ -93,7 +94,7 @@ def generate_maxsat_problem(config, data):
     return dict(cnf_translator=translator)
 
 
-def run_solver(config, data):
+def run_solver(config, data, rng):
     # solution = solve(config.experiment_dir, config.cnf_filename, 'wpm3')
     # solution = solve(config.experiment_dir, config.cnf_filename, 'maxino')
     solution = solve(config.experiment_dir, config.cnf_filename, 'openwbo')
@@ -102,7 +103,7 @@ def run_solver(config, data):
     else:
         logging.info("MAXSAT solution with cost {} found".format(solution.cost))
 
-    return dict(cnf_translator=data.cnf_translator, cnf_solution=solution)
+    return dict(cnf_solution=solution)
 
 
 class AbstractAction(object):
@@ -281,12 +282,13 @@ class ModelTranslator(object):
             equal_idxs = np.equal(qchanges_s0s1, qchanges_t0t1)
             np_d2_distinguishing_features = np.where(equal_idxs==False)[0]
 
+            np_d1_dist = self.np_d1_distinguishing_features[(s0, t0)]
             # D2(s0,s1,t0,t2) iff OR_f selected(f), where f ranges over features that d2-distinguish the transition
             # but do _not_ d1-distinguish the two states at the origin of each transition.
             d2_lit = self.writer.literal(d2_var, True)
             forward_clause_literals = [self.writer.literal(d2_var, False)]
             for f in np_d2_distinguishing_features.flat:
-                if f not in self.np_d1_distinguishing_features[(s0, t0)]:
+                if f not in np_d1_dist:
                     forward_clause_literals.append(self.writer.literal(self.np_var_selected[f], True))
                     self.writer.clause([d2_lit, self.writer.literal(self.np_var_selected[f], False)])
                     self.n_d2_clauses += 1
@@ -300,10 +302,17 @@ class ModelTranslator(object):
             self.writer.clause([self.writer.literal(var, False)], weight=d)
             self.n_selected_clauses += 1
 
+        # from pympler.asizeof import asizeof
+        # print(f"asizeof(self.writer): {asizeof(self.writer)/(1024*1024)}MB")
+        # print(f"asizeof(self): {asizeof(self)/(1024*1024)}MB")
+        # print(f"asizeof(self.np_d1_distinguishing_features): {asizeof(self.np_d1_distinguishing_features)/(1024*1024)}MB")
+        # print(f"np_d2_distinguishing_features.nbytes: {np_d2_distinguishing_features.nbytes/(1024*1024)}MB")
+        print_memory_usage()
+
         self.report_stats()
 
         # self.debug_tests()
-
+        self.np_d1_distinguishing_features = None  # We won't need this anymore
         self.writer.save()
 
         return self.writer.mapping
@@ -450,8 +459,8 @@ class ModelTranslator(object):
         bin_values = self.bin_feat_matrix[state_id, features]
         return tuple(map(bool, bin_values))
 
-    def compute_action_model(self, solution, features, config):
-        states, actions = self.decode_solution(solution.assignment, features, config.feature_namer)
+    def compute_action_model(self, assignment, features, config):
+        states, actions = self.decode_solution(assignment, features, config.feature_namer)
         self.print_actions(actions, os.path.join(config.experiment_dir, 'actions.txt'), config.feature_namer)
         states, actions = optimize_abstract_action_model(states, actions)
         self.print_actions(actions, os.path.join(config.experiment_dir, 'actions-optimized.txt'), config.feature_namer)
@@ -692,6 +701,6 @@ def optimize_abstract_action_model(states, actions):
     return states, merged
 
 
-def compute_action_model(config, data):
+def compute_action_model(config, data, rng):
     assert data.cnf_solution.solved
-    return data.cnf_translator.compute_action_model(data.cnf_solution, data.features, config)
+    return data.cnf_translator.compute_action_model(data.cnf_solution.assignment, data.features, config)
