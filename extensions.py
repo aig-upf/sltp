@@ -162,7 +162,7 @@ class ExtensionCache(object):
         assert isinstance(extension, bitarray)
         key = term
         if isinstance(term, (PrimitiveConcept, PrimitiveRole)):
-            key = term.name
+            key = str(term)
         elif isinstance(term, (UniversalConcept,)):
             key = '<universe>'
         elif isinstance(term, (EmptyConcept, )):
