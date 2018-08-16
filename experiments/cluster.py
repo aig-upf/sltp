@@ -27,7 +27,7 @@ def main(parser, args):
         raise RuntimeError("No experiments found in the configuration file")
 
     if args.task is None:
-        generate_script(time=60, mem=16, num_tasks=len(experiments), experiment_set=args.exp)
+        generate_script(time=60, mem=64, num_tasks=len(experiments), experiment_set=args.exp)
     else:
         # Simply run the whole thing!
         if args.task - 1 > len(experiments):
@@ -39,7 +39,7 @@ def main(parser, args):
 
 
 def generate_script(num_tasks, time, mem, experiment_set):
-    tpl = """#!/usr/bin/env bash
+    tpl = """#!/usr/bin/env bash -ve
 
 ### Set name.
 #SBATCH --job-name=gen-feats
@@ -49,9 +49,9 @@ def generate_script(num_tasks, time, mem, experiment_set):
 ### Let later steps append their logs to the output and error files.
 #SBATCH --open-mode=append
 ### Set partition.
-#SBATCH --partition=infai_1
+#SBATCH --partition=infai
 ### Set quality-of-service group.
-#SBATCH --qos=normal
+#SBATCH --qos=infai
 ### Set time limit (in min).
 #SBATCH --time={time}
 ### Set memory limit.
@@ -70,11 +70,15 @@ LMOD_DISABLE_SAME_NAME_AUTOSWAP=no module load Python/3.5.2-goolf-1.7.20
 LMOD_DISABLE_SAME_NAME_AUTOSWAP=no module load GCC/5.4.0-2.26
 source ${{HOME}}/lib/virtualenvs/concepts/bin/activate
 
-./cluster.py --exp {experiment_set} --task ${{SLURM_ARRAY_TASK_ID}} > output_${{SLURM_ARRAY_TASK_ID}}
+export LIBRARY_PATH=$LIBRARY_PATH:{libpath}
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:{libpath}
+
+./cluster.py --exp {experiment_set} --task ${{SLURM_ARRAY_TASK_ID}} > output_{experiment_set}_${{SLURM_ARRAY_TASK_ID}}.log
 """
     filename = "{}.sh".format(experiment_set)
+    libpath = os.path.expanduser("~/local/lib")
     with open(filename, "w") as f:
-        f.write(tpl.format(time=time, mem=mem, num_tasks=num_tasks, experiment_set=experiment_set))
+        f.write(tpl.format(time=time, mem=mem, num_tasks=num_tasks, experiment_set=experiment_set, libpath=libpath))
     st = os.stat(filename)
     os.chmod(filename, st.st_mode | stat.S_IEXEC)
     print("Written cluster script {}".format(filename))
