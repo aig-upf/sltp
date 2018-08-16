@@ -1,0 +1,7 @@
+
+
+configurations:
+  - blocks test
+  - blocks simple_clear_3
+  - blocks bw_on_x_y_5
+  - blocks we_learn_ijcai_features_on_clear_5

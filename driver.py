@@ -442,10 +442,10 @@ class Experiment(object):
     def print_step_description(self):
         return "\t\t" + "\n\t\t".join("{}. {}".format(i, s.description()) for i, s in enumerate(self.steps, 1))
 
-    def run(self):
+    def run(self, args=None):
         print_header("Generalized Action Model Learner, v.{}".format(VERSION))
         argparser = setup_global_parser(step_description=self.print_step_description())
-        self.args = argparser.parse_args()
+        self.args = argparser.parse_args(args)
         if not self.args.steps and not self.args.run_all_steps:
             argparser.print_help()
             sys.exit(0)
