@@ -175,7 +175,7 @@ class ExtensionCache(object):
         self.index[(get_term_key(term), sid)] = extension
 
     def register_nullary_truth_value(self, atom, sid, value):
-        self.index[(get_term_key(atom), sid)] = value
+        self.nullaries[(get_term_key(atom), sid)] = value
 
     def universe(self, state):
         return self.as_bitarray(self.top, state)

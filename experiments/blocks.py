@@ -77,7 +77,8 @@ def main():
         feature_namer=ijcai_paper_bw_feature_namer,)
 
     # exp = generate_experiment(domain_dir, domain, **we_learn_ijcai_features_on_clear_5)
-    exp = generate_experiment(domain_dir, domain, **bw_on_x_y_5)
+    # exp = generate_experiment(domain_dir, domain, **bw_on_x_y_5)
+    exp = generate_experiment(domain_dir, domain, **debugging_test)
     exp.run()
 
 
