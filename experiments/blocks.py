@@ -10,12 +10,6 @@ from common import build_ijcai_paper_bw_concepts, add_bw_domain_parameters, ijca
 def experiment(experiment_name=None):
     domain_dir = "blocks"
     domain = "domain.pddl"
-    # instance = "probBLOCKS-4-0.pddl"
-    # instance = "instance_4_clear_x.pddl"
-    # instance = "instance_5_clear_x.pddl"
-
-    # concept_generator = build_ijcai_paper_bw_concepts
-    concept_generator = None
 
     # A small testing instance nonetheless producing an abstraction
     debugging_test = dict(
@@ -30,7 +24,7 @@ def experiment(experiment_name=None):
     simple_clear_3 = dict(
         instance="instance_3_clear_x.pddl",
         num_states=100, max_concept_size=10, max_concept_grammar_iterations=3,
-        concept_generator=concept_generator, parameter_generator=add_bw_domain_parameters,
+        concept_generator=None, parameter_generator=add_bw_domain_parameters,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
     # This example shows that with 4 blocks, even if we expand all states, the model is still overfit to the 4 blocks
@@ -43,20 +37,38 @@ def experiment(experiment_name=None):
     # With these settings we generate the desired m(x):
     # card[And(And(Forall(Star(on),Not({a})), Forall(Star(Inverse(on)),Not({a}))), And(Not(holding), Not({a})))] 18
     # And indeed learnt the correct state space!!!
-    we_learn_ijcai_features_on_clear_5 = dict(
+    ijcai_features_on_clear_5_rnd = dict(
         instance="instance_5_clear_x_1.pddl",
         num_states=2000, num_sampled_states=40, random_seed=12,
         max_concept_size=18, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=add_bw_domain_parameters,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
-    # Goal here is on(x,y). We use goal concepts.
-    bw_on_x_y_5 = dict(
+    #
+    ijcai_features_on_clear_5 = ijcai_features_on_clear_5_rnd.copy()
+    ijcai_features_on_clear_5.update(dict(num_sampled_states=None))
+
+    # Goal here is on(x,y).
+    bw_on_x_y_4 = dict(
         instance="instance_4_on_x_y.pddl",
-        num_states=1000, num_sampled_states=50, random_seed=12,
+        num_states=200, num_sampled_states=None, random_seed=12,
         max_concept_size=10, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
         feature_namer=ijcai_paper_bw_feature_namer,)
+
+    bw_on_x_y_4_rnd = bw_on_x_y_4.copy()
+    bw_on_x_y_4_rnd.update(dict(num_sampled_states=60))
+
+    # Goal here is on(x,y).
+    bw_on_x_y_5 = dict(
+        instance="instance_5_on_x_y.pddl",
+        num_states=1000, num_sampled_states=None, random_seed=12,
+        max_concept_size=10, max_concept_grammar_iterations=3,
+        concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
+        feature_namer=ijcai_paper_bw_feature_namer,)
+
+    bw_on_x_y_5_rnd = bw_on_x_y_5.copy()
+    bw_on_x_y_5_rnd.update(dict(num_sampled_states=60))
 
     check_ijcai_features_on_clear_5 = dict(
         instance="instance_5_clear_x.pddl",
@@ -73,12 +85,25 @@ def experiment(experiment_name=None):
 
     parameters = {
         "test": debugging_test,
+
         "simple_clear_3": simple_clear_3,
         "simple_clear_4": simple_clear_4,
+
+        "bw_on_x_y_4": bw_on_x_y_4,
+        "bw_on_x_y_4_rnd": bw_on_x_y_4_rnd,
+
         "bw_on_x_y_5": bw_on_x_y_5,
-        "we_learn_ijcai_features_on_clear_5": we_learn_ijcai_features_on_clear_5,
-        "check_ijcai_features_on_clear_5": check_ijcai_features_on_clear_5,
-        "check_clear4_features_on_clear_5": check_clear4_features_on_clear_5,
+        "bw_on_x_y_5_rnd": bw_on_x_y_5_rnd,
+
+        "ijcai_features_on_clear_5_rnd": ijcai_features_on_clear_5_rnd,
+        "ijcai_features_on_clear_5": ijcai_features_on_clear_5,
+
+
+
+
+
+        # "check_ijcai_features_on_clear_5": check_ijcai_features_on_clear_5,
+        # "check_clear4_features_on_clear_5": check_clear4_features_on_clear_5,
 
     }.get(experiment_name or "test")
 
@@ -103,5 +128,5 @@ def deserialize_features(feature_name):
 
 
 if __name__ == "__main__":
-    exp = experiment()
-    exp.run(sys.argv[1:])
+    exp = experiment(sys.argv[1])
+    exp.run(sys.argv[2:])

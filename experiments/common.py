@@ -64,3 +64,7 @@ def add_bw_domain_parameters(language):
 def add_bw_domain_parameters_2(language):
     return [language.constant("a", "object"), language.constant("b", "object")]
 
+
+def no_parameter(lang):
+    return []
+

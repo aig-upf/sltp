@@ -1,72 +1,44 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-import os
+import sys
+
+from abstractions_defaults import generate_experiment
 
 
-def main():
-    import sys
-    sys.path.insert(0, '..')
-    from driver import Experiment, generate_pipeline, BENCHMARK_DIR
-    from learn_actions import OptimizationPolicy
-
+def experiment(experiment_name=None):
     domain_dir = "gripper"
     # domain_dir = "gripper-m"
     domain = "domain.pddl"
-    instance = "prob01.pddl"
 
-    steps = generate_pipeline(
-        pipeline="maxsat",
-        # pipeline="sat",
-        domain=os.path.join(BENCHMARK_DIR, domain_dir, domain),
-        instance=os.path.join(BENCHMARK_DIR, domain_dir, instance),
+    sample_small = dict(
+        instance="sample-small.pddl",
+        num_states=200, max_concept_size=10, max_concept_grammar_iterations=3,
+        concept_generator=None, parameter_generator=add_domain_parameters,
+        feature_namer=feature_namer,)
 
-        # Location of the FS planner, used to do the state space sampling
-        planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
+    prob01 = dict(
+        instance="prob01.pddl",
+        num_states=300, num_sampled_states=None, random_seed=12,
+        max_concept_size=10, max_concept_grammar_iterations=3,
+        concept_generator=None, parameter_generator=add_domain_parameters,
+        feature_namer=feature_namer,)
 
-        # Type of sampling procedure. Only breadth-first search implemented ATM
-        driver="bfs",
+    #
+    prob01_rnd = dict(
+        instance="prob01.pddl",
+        num_states=2000, num_sampled_states=50, random_seed=12,
+        max_concept_size=10, max_concept_grammar_iterations=3,
+        concept_generator=None, parameter_generator=add_domain_parameters,
+        feature_namer=feature_namer,)
 
-        # Number of states to be expanded in the sampling procedure
-        num_states=250,
+    parameters = {
+        "sample_small": sample_small,
+        "prob01": prob01,
+        "prob01_rnd": prob01_rnd,
 
-        # Max. size of the generated concepts (mandatory)
-        max_concept_size=10,
+    }.get(experiment_name or "test")
 
-        # Max. number of iterations of the concept-generation grammar. Optional. Defaults to infinity,
-        # in which case the limit is set by max_concept_size alone.
-        max_concept_grammar_iterations=3,
-
-        # Provide a special, handcrafted method to generate concepts, if desired.
-        # This will override the standard concept generation procedure (default: None)
-        # concept_generator=build_ijcai_paper_bw_concepts,
-
-        # Or, alternatively, provide directly the features instead of the concepts (default: None)
-        feature_generator=None,
-
-        # Max. allowed complexity for distance features (default: 0)
-        # distance_feature_max_complexity=10,
-
-        # Method to generate domain parameters (goal or otherwise). If None, goal predicates will
-        # be used (default: None)
-        parameter_generator=add_domain_parameters,
-
-        # Use the relaxed (weak) increase semantics
-        relax_numeric_increase=False,
-
-        # Optionally, use a method that gives handcrafted names to the features
-        # (default: None, which will use their string representation)
-        feature_namer=feature_namer,
-
-        # What optimization criteria to use in the max-sat problem
-        optimization=OptimizationPolicy.TOTAL_FEATURE_COMPLEXITY,
-        # optimization=OptimizationPolicy.NUM_FEATURES
-
-        # The number of features and actions for the SAT encoding
-        # encoding_k=10,
-        # encoding_m=10,
-    )
-    exp = Experiment(steps)
-    exp.run()
+    return generate_experiment(domain_dir, domain, **parameters)
 
 
 def add_domain_parameters(language):
@@ -85,4 +57,5 @@ def feature_namer(feature):
 
 
 if __name__ == "__main__":
-    main()
+    exp = experiment(sys.argv[1])
+    exp.run(sys.argv[2:])

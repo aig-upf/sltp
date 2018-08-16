@@ -10,8 +10,7 @@ import yaml
 
 def create_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--exp', type=str,  required=True, help="Generate the cluster bash script to be run with squeue "
-                                                 "from the given experiment config file")
+    parser.add_argument('--exp', type=str,  required=True, help="Experiment configuration")
     parser.add_argument('--task', type=int, default=None, help="Task ID, if in run mode")
 
     return parser
@@ -21,20 +20,21 @@ def main(parser, args):
     args = parser.parse_args(args)
     with open("{}.yml".format(args.exp), 'r') as f:
         data = yaml.load(f)
-        experiments = data["configurations"]
+        experiments = [(dom, exp) for dom, exp in data["experiments"].split(" ")]
+        run = data["run"]
 
     if not experiments:
         raise RuntimeError("No experiments found in the configuration file")
 
     if args.task is None:
-        generate_script(time=60, mem=16, num_tasks=len(experiments), experiment_set=args.exp)
+        generate_script(time=run["time"], mem=run["mem"], num_tasks=len(experiments), experiment_set=args.exp)
     else:
         # Simply run the whole thing!
         if args.task - 1 > len(experiments):
             raise RuntimeError("Task ID #{} not defined on experiment set {}.".format(args.task, args.exp))
 
         import runner
-        d, e = experiments[args.task].split(" ")
+        d, e = experiments[args.task]
         runner.run(["-d", d, "-e", e])
 
 
@@ -55,7 +55,7 @@ def generate_script(num_tasks, time, mem, experiment_set):
 ### Set time limit (in min).
 #SBATCH --time={time}
 ### Set memory limit.
-#SBATCH --mem-per-cpu={mem}G
+#SBATCH --mem-per-cpu={mem}
 ### Number of tasks.
 #SBATCH --array=1-{num_tasks}
 ### Adjustment to priority ([-2147483645, 2147483645]).
@@ -73,12 +73,14 @@ source ${{HOME}}/lib/virtualenvs/concepts/bin/activate
 export LIBRARY_PATH=$LIBRARY_PATH:{libpath}
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:{libpath}
 
-./cluster.py --exp {experiment_set} --task ${{SLURM_ARRAY_TASK_ID}} > output_{experiment_set}_${{SLURM_ARRAY_TASK_ID}}.log
+./cluster.py --exp {experiment_set} --task ${{SLURM_ARRAY_TASK_ID}} > {output}.log  2>{output}.err
 """
     filename = "{}.sh".format(experiment_set)
     libpath = os.path.expanduser("~/local/lib")
     with open(filename, "w") as f:
-        f.write(tpl.format(time=time, mem=mem, num_tasks=num_tasks, experiment_set=experiment_set, libpath=libpath))
+        output = "output_{}_${{SLURM_ARRAY_TASK_ID}}".format(experiment_set)
+        f.write(tpl.format(time=time, mem=mem, num_tasks=num_tasks, experiment_set=experiment_set, libpath=libpath,
+                           output=output))
     st = os.stat(filename)
     os.chmod(filename, st.st_mode | stat.S_IEXEC)
     print("Written cluster script {}".format(filename))

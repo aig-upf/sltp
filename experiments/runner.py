@@ -6,10 +6,14 @@ import sys
 
 import blocks
 import gripper
+import logistics
+import tower
 
 DOMAINS = {
     "blocks": blocks,
+    "tower": tower,
     "gripper": gripper,
+    "logistics": logistics,
 }
 
 
