@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import os
+import stat
 import sys
 import yaml
 
@@ -73,6 +75,8 @@ source ${{HOME}}/lib/virtualenvs/concepts/bin/activate
     filename = "{}.sh".format(experiment_set)
     with open(filename, "w") as f:
         f.write(tpl.format(time=time, mem=mem, num_tasks=num_tasks, experiment_set=experiment_set))
+    st = os.stat(filename)
+    os.chmod('somefile', st.st_mode | stat.S_IEXEC)
     print("Written cluster script {}".format(filename))
 
 
