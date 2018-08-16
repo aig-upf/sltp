@@ -5,6 +5,7 @@ import argparse
 import sys
 
 import blocks
+import gridworld
 import gripper
 import logistics
 import tower
@@ -14,6 +15,7 @@ DOMAINS = {
     "tower": tower,
     "gripper": gripper,
     "logistics": logistics,
+    "gridworld": gridworld,
 }
 
 

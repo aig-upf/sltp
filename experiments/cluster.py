@@ -34,7 +34,7 @@ def main(parser, args):
             raise RuntimeError("Task ID #{} not defined on experiment set {}.".format(args.task, args.exp))
 
         import runner
-        d, e = experiments[args.task]
+        d, e = experiments[args.task-1]  # because slurm task IDs range from 1 to n, not from 0.
         runner.run(["-d", d, "-e", e])
 
 
