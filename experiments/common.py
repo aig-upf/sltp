@@ -46,6 +46,7 @@ def ijcai_paper_bw_feature_namer(feature):
     s = str(feature)
     return {
         "bool[And({a}, holding)]": "X",
+        "bool[And(holding, {a})]": "X",
         "bool[And(Not({a}), holding)]": "H",
         "bool[Exists(Inverse(on),{a})]": "Z",
         "card[Exists(Star(on),{a})]": "n(x)",

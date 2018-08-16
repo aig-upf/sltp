@@ -29,6 +29,10 @@ def generate_experiment(domain_dir, domain, **kwargs):
         # Number of states to be expanded in the sampling procedure
         num_states=50,
 
+        # Number randomly sampled states among the set of expanded states. The default of None means
+        # all expanded states will be used
+        num_sampled_states=None,
+
         # Max. size of the generated concepts (mandatory)
         max_concept_size=10,
 
@@ -60,6 +64,9 @@ def generate_experiment(domain_dir, domain, **kwargs):
         # What optimization criteria to use in the max-sat problem
         optimization=OptimizationPolicy.TOTAL_FEATURE_COMPLEXITY,
         # optimization=OptimizationPolicy.NUM_FEATURES
+
+        # Set a random seed for reproducibility (default: 1)
+        random_seed=1,
 
         # The number of features and actions for the SAT encoding
         encoding_k=10,
