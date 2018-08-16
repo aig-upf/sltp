@@ -27,7 +27,7 @@ def main(parser, args):
         raise RuntimeError("No experiments found in the configuration file")
 
     if args.task is None:
-        generate_script(time=60, mem=64, num_tasks=len(experiments), experiment_set=args.exp)
+        generate_script(time=60, mem=16, num_tasks=len(experiments), experiment_set=args.exp)
     else:
         # Simply run the whole thing!
         if args.task - 1 > len(experiments):
@@ -39,7 +39,7 @@ def main(parser, args):
 
 
 def generate_script(num_tasks, time, mem, experiment_set):
-    tpl = """#!/usr/bin/env bash -ve
+    tpl = """#!/usr/bin/env bash
 
 ### Set name.
 #SBATCH --job-name=gen-feats
@@ -49,9 +49,9 @@ def generate_script(num_tasks, time, mem, experiment_set):
 ### Let later steps append their logs to the output and error files.
 #SBATCH --open-mode=append
 ### Set partition.
-#SBATCH --partition=infai
+#SBATCH --partition=infai_1
 ### Set quality-of-service group.
-#SBATCH --qos=infai
+#SBATCH --qos=normal
 ### Set time limit (in min).
 #SBATCH --time={time}
 ### Set memory limit.
