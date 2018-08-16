@@ -9,7 +9,7 @@ import itertools
 import logging
 
 from bitarray import bitarray
-from tarski.dl import PrimitiveRole, PrimitiveConcept, UniversalConcept, EmptyConcept
+from tarski.dl import PrimitiveRole, PrimitiveConcept, UniversalConcept, EmptyConcept, NullaryAtom
 
 _btrue = bitarray('1')
 _bfalse = bitarray('0')
@@ -139,6 +139,18 @@ def trace_to_bits(trace, m, arity):
 #     return indexed
 
 
+def get_term_key(term):
+    """ Return the key corresponding to the given DL term.
+    For primitives we use a the string representation, otherwise we use the DL term itself.
+    The only reason for this is that often when unserializing DL elements from disk in different processes,
+    hashes change (as Python salts the hash computations with process-dependent values), so that equality comparisons
+    and indexing stop working. This way, primitives are at least recognized and the denotation of any DL
+    element can be rebuilt if necessary. It is not an optimal strategy, but works for our current purposes. """
+    if isinstance(term, (PrimitiveConcept, PrimitiveRole, UniversalConcept, EmptyConcept, NullaryAtom)):
+        return str(term)
+    return term
+
+
 class ExtensionCache(object):
     def __init__(self, universe: UniverseIndex, top, bot):
         self.universe = universe
@@ -160,17 +172,10 @@ class ExtensionCache(object):
 
     def register_compressed_extension(self, term, sid, extension):
         assert isinstance(extension, bitarray)
-        key = term
-        if isinstance(term, (PrimitiveConcept, PrimitiveRole)):
-            key = str(term)
-        elif isinstance(term, (UniversalConcept,)):
-            key = '<universe>'
-        elif isinstance(term, (EmptyConcept, )):
-            key = '<empty>'
-        self.index[(key, sid)] = extension
+        self.index[(get_term_key(term), sid)] = extension
 
     def register_nullary_truth_value(self, atom, sid, value):
-        self.nullaries[(atom, sid)] = value
+        self.index[(get_term_key(atom), sid)] = value
 
     def universe(self, state):
         return self.as_bitarray(self.top, state)
