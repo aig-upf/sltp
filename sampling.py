@@ -8,7 +8,7 @@ def sample_generated_states(states, goal_states, transitions, config, rng):
         return states, goal_states, transitions
 
     if config.num_sampled_states > num_expanded_states:
-        logging.warning(f"Only {num_expanded_states} were expanded, sampling all of them!")
+        logging.warning("Only {} were expanded, sampling all of them!".format(num_expanded_states))
         return states, goal_states, transitions
 
     # Although this might fail is some state was a dead-end? In that case we should perhaps revise the code below

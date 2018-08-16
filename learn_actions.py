@@ -352,7 +352,7 @@ class ModelTranslator(object):
             raise CriticalPipelineError("Zero-cost maxsat solution - "
                                         "no action model possible, the encoding has likely some error")
 
-        logging.info(f"Features (total complexity: {sum(self.feature_complexity[f] for f in selected_features)}): ")
+        logging.info("Features (total complexity: {}): ".format(sum(self.feature_complexity[f] for f in selected_features)))
         print('\t' + '\n\t'.join("{}. {} [k={}, id={}]".format(i, namer(self.feature_names[f]), self.feature_complexity[f], f)
                         for i, f in enumerate(selected_features, 1)))
 
@@ -385,8 +385,8 @@ class ModelTranslator(object):
                 precondition_bitmap = frozenset(zip(selected_features, abstract_s))
                 abstract_actions.add(AbstractAction(precondition_bitmap, abstract_effects))
                 if len(abstract_effects) == 0:
-                    msg = f"Abstract no-op necessary [concrete: ({s}, {sprime})," \
-                        f" abstract: ({abstract_s}, {abstract_sprime})"
+                    msg = "Abstract no-op necessary [concrete: ({}, {}), abstract: ({}, {})]"\
+                        .format(s, sprime, abstract_s, abstract_sprime)
                     logging.warning(msg)
                     # raise RuntimeError(msg)
 
