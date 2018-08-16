@@ -76,7 +76,7 @@ source ${{HOME}}/lib/virtualenvs/concepts/bin/activate
     with open(filename, "w") as f:
         f.write(tpl.format(time=time, mem=mem, num_tasks=num_tasks, experiment_set=experiment_set))
     st = os.stat(filename)
-    os.chmod('somefile', st.st_mode | stat.S_IEXEC)
+    os.chmod(filename, st.st_mode | stat.S_IEXEC)
     print("Written cluster script {}".format(filename))
 
 
