@@ -25,7 +25,7 @@ def main(parser, args):
         raise RuntimeError("No experiments found in the configuration file")
 
     if args.task is None:
-        generate_script(mem=10, num_tasks=len(experiments), experiment_set=args.exp)
+        generate_script(time=60, mem=64, num_tasks=len(experiments), experiment_set=args.exp)
     else:
         # Simply run the whole thing!
         if args.task - 1 > len(experiments):
@@ -36,7 +36,7 @@ def main(parser, args):
         runner.run(["-d", d, "-e", e])
 
 
-def generate_script(num_tasks, mem, experiment_set):
+def generate_script(num_tasks, time, mem, experiment_set):
     tpl = """#!/usr/bin/env bash -ve
 
 ### Set name.
@@ -50,6 +50,8 @@ def generate_script(num_tasks, mem, experiment_set):
 #SBATCH --partition=infai
 ### Set quality-of-service group.
 #SBATCH --qos=infai
+### Set time limit (in min).
+#SBATCH --time={time}
 ### Set memory limit.
 #SBATCH --mem-per-cpu={mem}G
 ### Number of tasks.
@@ -70,7 +72,7 @@ source ${{HOME}}/lib/virtualenvs/concepts/bin/activate
 """
     filename = "{}.sh".format(experiment_set)
     with open(filename, "w") as f:
-        f.write(tpl.format(mem=mem, num_tasks=num_tasks, experiment_set=experiment_set))
+        f.write(tpl.format(time=time, mem=mem, num_tasks=num_tasks, experiment_set=experiment_set))
     print("Written cluster script {}".format(filename))
 
 
