@@ -20,7 +20,7 @@ def main(parser, args):
     args = parser.parse_args(args)
     with open("{}.yml".format(args.exp), 'r') as f:
         data = yaml.load(f)
-        experiments = [(dom, exp) for dom, exp in data["experiments"].split(" ")]
+        experiments = [tuple(x.split(" ")) for x in data["experiments"]]
         run = data["run"]
 
     if not experiments:
