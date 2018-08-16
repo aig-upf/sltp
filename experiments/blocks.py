@@ -1,16 +1,18 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from experiments.abstractions_defaults import generate_experiment
-from experiments.common import build_ijcai_paper_bw_concepts, add_bw_domain_parameters, ijcai_paper_bw_feature_namer, \
-    build_alt_feature_set
+import os
+import sys
+DIR = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, os.path.join(DIR, '..'))
+
+from abstractions_defaults import generate_experiment
+from common import build_ijcai_paper_bw_concepts, add_bw_domain_parameters, ijcai_paper_bw_feature_namer, \
+    build_alt_feature_set, add_bw_domain_parameters_2
 from util.serialization import deserialize_from_string
 
 
 def main():
-    import sys
-    sys.path.insert(0, '..')
-
     domain_dir = "blocks"
     domain = "domain.pddl"
     # instance = "probBLOCKS-4-0.pddl"
@@ -53,6 +55,14 @@ def main():
         concept_generator=None, parameter_generator=add_bw_domain_parameters,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
+    # Goal here is on(x,y). We use goal concepts.
+    bw_on_x_y_5 = dict(
+        instance="instance_4_on_x_y.pddl",
+        num_states=1000, num_sampled_states=50, random_seed=12,
+        max_concept_size=10, max_concept_grammar_iterations=3,
+        concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
+        feature_namer=ijcai_paper_bw_feature_namer,)
+
     check_ijcai_features_on_clear_5 = dict(
         instance="instance_5_clear_x.pddl",
         num_states=1000, max_concept_size=1, max_concept_grammar_iterations=1, num_sampled_states=100, random_seed=2,
@@ -66,8 +76,8 @@ def main():
         feature_generator=try_clear5_features,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
-    exp = generate_experiment(domain_dir, domain, **we_learn_ijcai_features_on_clear_5)
-    # exp = generate_experiment(domain_dir, domain, **check_clear4_features_on_clear_5)
+    # exp = generate_experiment(domain_dir, domain, **we_learn_ijcai_features_on_clear_5)
+    exp = generate_experiment(domain_dir, domain, **bw_on_x_y_5)
     exp.run()
 
 
