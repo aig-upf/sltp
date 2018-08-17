@@ -14,8 +14,8 @@ experiments:
   - tower sample_4_2
   - tower sample_5_rnd
   - tower sample_5_rnd_2
-  - sample_5_base
-  - sample_5_base_2
+  - tower sample_5_base
+  - tower sample_5_base_2
 
   - gridworld sample_5
   - gridworld sample_5_not_corner
