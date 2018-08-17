@@ -16,8 +16,9 @@ experiments:
   - blocks ijcai_features_on_clear_5
   - blocks ijcai_features_on_clear_5_rnd
 
-  - tower sample_4
-  - tower sample_5
+  - tower sample_4_1
+  - tower sample_4_2
+  - tower sample_5_rnd
 
   - gripper sample_small
   - gripper prob01

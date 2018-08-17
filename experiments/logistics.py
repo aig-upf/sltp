@@ -3,6 +3,7 @@
 import sys
 
 from abstractions_defaults import generate_experiment
+from common import update_dict
 
 
 def experiment(experiment_name=None):
@@ -15,18 +16,9 @@ def experiment(experiment_name=None):
         concept_generator=None, parameter_generator=None,
         feature_namer=feature_namer,)
 
-    sample1_rnd = dict(
-        instance="sample1.pddl",
-        num_states=1000, num_sampled_states=60, random_seed=12,
-        max_concept_size=10, max_concept_grammar_iterations=3,
-        concept_generator=None, parameter_generator=None,
-        feature_namer=feature_namer,)
-
-    sample2 = sample1.copy()
-    sample2.update(dict(instance="sample2.pddl"))
-
-    sample2_rnd = sample1_rnd.copy()
-    sample2_rnd.update(dict(instance="sample2.pddl"))
+    sample1_rnd = update_dict(sample1, num_states=1000, num_sampled_states=60, random_seed=12)
+    sample2 = update_dict(sample1, instance="sample2.pddl")
+    sample2_rnd = update_dict(sample1_rnd, instance="sample2.pddl", num_states=1000, num_sampled_states=40)
 
     parameters = {
         "sample1": sample1,

@@ -312,6 +312,7 @@ def parse_pddl(domain_file, instance_file=None):
     reader = FstripsReader()
     reader.parse_domain(domain_file)
     problem = reader.problem
+    types = []
 
     # The generic constants are those which are parsed before parsing the instance file
     generic_constants = problem.language.constants()
@@ -319,7 +320,7 @@ def parse_pddl(domain_file, instance_file=None):
     if instance_file is not None:
         reader.parse_instance(instance_file)
 
-    return problem, problem.language, generic_constants
+    return problem, problem.language, generic_constants, types
 
 
 def create_nullary_features(atoms):
@@ -372,11 +373,11 @@ def run(config, data, rng):
 
     if config.parameter_generator is not None:
         logging.info('Using user-provided domain parameters and ignoring goal representation')
-        problem, language, generic_constants = parse_pddl(config.domain)
+        problem, language, generic_constants, types = parse_pddl(config.domain)
         generic_constants += config.parameter_generator(language)
     else:
         logging.info('Using goal representation and no domain parameters')
-        problem, language, generic_constants = parse_pddl(config.domain, config.instance)
+        problem, language, generic_constants, types = parse_pddl(config.domain, config.instance)
         try:
             goal_denotation = transform_to_ground_atoms(problem.goal)
             goal_predicates = {x[0] for x in goal_denotation}
@@ -394,7 +395,7 @@ def run(config, data, rng):
         atoms, concepts, roles = user_atoms, user_concepts, user_roles
     else:
         logging.info('Starting automatic generation of concepts'.format())
-        atoms, concepts, roles = generate_concepts(config, factory, generic_constants, goal_predicates)
+        atoms, concepts, roles = generate_concepts(config, factory, generic_constants, types, goal_predicates)
 
     # profiling.print_snapshot()
 
@@ -428,9 +429,9 @@ def run(config, data, rng):
     )
 
 
-def generate_concepts(config, factory, generic_constants, goal_predicates):
+def generate_concepts(config, factory, generic_constants, types, goal_predicates):
     # Construct the primitive terms from the input language, and then add the atoms
-    concepts, roles, atoms = factory.syntax.generate_primitives_from_language(generic_constants, goal_predicates)
+    concepts, roles, atoms = factory.syntax.generate_primitives_from_language(generic_constants, types, goal_predicates)
     logging.info('Primitive (nullary) atoms : {}'.format(", ".join(map(str, atoms))))
     logging.info('Primitive (unary) concepts: {}'.format(", ".join(map(str, concepts))))
     logging.info('Primitive (binary) roles  : {}'.format(", ".join(map(str, roles))))

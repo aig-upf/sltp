@@ -3,9 +3,12 @@
 
 import argparse
 import os
-import stat
 import sys
+import time
+
 import yaml
+
+CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
 def create_parser():
@@ -27,7 +30,7 @@ def main(parser, args):
         raise RuntimeError("No experiments found in the configuration file")
 
     if args.task is None:
-        generate_script(time=run["time"], mem=run["mem"], num_tasks=len(experiments), experiment_set=args.exp)
+        generate_script(timeout=run["time"], mem=run["mem"], num_tasks=len(experiments), experiment_set=args.exp)
     else:
         # Simply run the whole thing!
         if args.task - 1 > len(experiments):
@@ -38,7 +41,7 @@ def main(parser, args):
         runner.run(["-d", d, "-e", e])
 
 
-def generate_script(num_tasks, time, mem, experiment_set):
+def generate_script(num_tasks, timeout, mem, experiment_set):
     tpl = """#!/usr/bin/env bash
 
 ### Set name.
@@ -73,16 +76,18 @@ source ${{HOME}}/lib/virtualenvs/concepts/bin/activate
 export LIBRARY_PATH=$LIBRARY_PATH:{libpath}
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:{libpath}
 
-./cluster.py --exp {experiment_set} --task ${{SLURM_ARRAY_TASK_ID}} > {output}.log  2>{output}.err
+./cluster.py --exp {experiment_set} --task ${{SLURM_ARRAY_TASK_ID}} \
+    > {output}.log  \
+    2>{output}.err
 """
+
     filename = "{}.sh".format(experiment_set)
     libpath = os.path.expanduser("~/local/lib")
+    exp_dir = os.path.join(CURRENT_DIR, "{}_{}".format(experiment_set, time.strftime("%y%m%d")))
     with open(filename, "w") as f:
-        output = "output_{}_${{SLURM_ARRAY_TASK_ID}}".format(experiment_set)
-        f.write(tpl.format(time=time, mem=mem, num_tasks=num_tasks, experiment_set=experiment_set, libpath=libpath,
+        output = os.path.join(exp_dir, "out_${{SLURM_ARRAY_TASK_ID}}".format())
+        f.write(tpl.format(time=timeout, mem=mem, num_tasks=num_tasks, experiment_set=experiment_set, libpath=libpath,
                            output=output))
-    st = os.stat(filename)
-    os.chmod(filename, st.st_mode | stat.S_IEXEC)
     print("Written cluster script {}".format(filename))
 
 

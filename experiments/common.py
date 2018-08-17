@@ -68,3 +68,8 @@ def add_bw_domain_parameters_2(language):
 def no_parameter(lang):
     return []
 
+
+def update_dict(d, **kwargs):
+    res = d.copy()
+    res.update(kwargs)
+    return res
