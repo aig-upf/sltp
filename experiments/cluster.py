@@ -76,6 +76,7 @@ source ${{HOME}}/lib/virtualenvs/concepts/bin/activate
 export LIBRARY_PATH=$LIBRARY_PATH:{libpath}
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:{libpath}
 
+mkdir -p {exp_dir}
 ./cluster.py --exp {experiment_set} --task ${{SLURM_ARRAY_TASK_ID}} \
     > {output}.log  \
     2>{output}.err
@@ -87,7 +88,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:{libpath}
     with open(filename, "w") as f:
         output = os.path.join(exp_dir, "out_${{SLURM_ARRAY_TASK_ID}}".format())
         f.write(tpl.format(time=timeout, mem=mem, num_tasks=num_tasks, experiment_set=experiment_set, libpath=libpath,
-                           output=output))
+                           exp_dir=exp_dir, output=output))
     print("Written cluster script {}".format(filename))
 
 
