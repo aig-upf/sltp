@@ -54,7 +54,7 @@ requests==2.18.4
 scipy==1.1.0
 Send2Trash==1.5.0
 simplegeneric==0.8.1
--e git+git@github.com:aig-upf/tarski.git@08d79a115bf63502c732190d59bf601ef82ad548#egg=tarski
+-e git+git@github.com:aig-upf/tarski.git@cb92626051e79dca0439acd6b76a877adf30d497#egg=tarski
 terminado==0.8.1
 testpath==0.3.1
 tornado==5.1
