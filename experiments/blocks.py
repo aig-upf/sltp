@@ -4,7 +4,7 @@ import sys
 
 from abstractions_defaults import generate_experiment
 from common import build_ijcai_paper_bw_concepts, add_bw_domain_parameters, ijcai_paper_bw_feature_namer, \
-    add_bw_domain_parameters_2
+    add_bw_domain_parameters_2, build_on_x_y_feature_set
 
 
 def experiment(experiment_name=None):
@@ -52,7 +52,7 @@ def experiment(experiment_name=None):
     bw_on_x_y_4 = dict(
         instance="instance_4_on_x_y.pddl",
         num_states=200, num_sampled_states=None, random_seed=12,
-        max_concept_size=10, max_concept_grammar_iterations=3,
+        max_concept_size=31, max_concept_grammar_iterations=4,
         concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
@@ -74,6 +74,19 @@ def experiment(experiment_name=None):
         instance="instance_5_clear_x.pddl",
         num_states=1000, max_concept_size=1, max_concept_grammar_iterations=1, num_sampled_states=100, random_seed=2,
         concept_generator=build_ijcai_paper_bw_concepts, parameter_generator=add_bw_domain_parameters,
+        feature_namer=ijcai_paper_bw_feature_namer,)
+
+    check_ijcai_features_on_x_y = dict(
+        instance="instance_5_on_x_y.pddl",
+        num_states=1000, max_concept_size=1, max_concept_grammar_iterations=1, num_sampled_states=100, random_seed=2,
+        concept_generator=build_on_x_y_feature_set, parameter_generator=add_bw_domain_parameters_2,
+        feature_namer=ijcai_paper_bw_feature_namer,)
+
+
+    generate_ijcai_features_on_x_y = dict(
+        instance="instance_5_on_x_y.pddl",
+        num_states=1000, max_concept_size=34, max_concept_grammar_iterations=3, num_sampled_states=50, random_seed=2,
+        concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
     check_clear4_features_on_clear_5 = dict(
@@ -98,8 +111,8 @@ def experiment(experiment_name=None):
         "ijcai_features_on_clear_5_rnd": ijcai_features_on_clear_5_rnd,
         "ijcai_features_on_clear_5": ijcai_features_on_clear_5,
 
-
-
+        "check_ijcai_features_on_x_y": check_ijcai_features_on_x_y,
+        "generate_ijcai_features_on_x_y": generate_ijcai_features_on_x_y,
 
 
         # "check_ijcai_features_on_clear_5": check_ijcai_features_on_clear_5,
