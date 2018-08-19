@@ -26,6 +26,9 @@ def generate_experiment(domain_dir, domain, **kwargs):
         # Type of sampling procedure. Only breadth-first search implemented ATM
         driver="bfs",
 
+        # Whether to do IW-like pruning of nodes with novelty higher than the specified (default: -1, no pruning at all)
+        max_width=-1,
+
         # Number of states to be expanded in the sampling procedure
         num_states=50,
 

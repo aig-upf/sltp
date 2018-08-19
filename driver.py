@@ -112,8 +112,8 @@ class Step(object):
 
 
 def _run_planner(config, data, rng):
-    params = '--instance {} --domain {} --driver {} --disable-static-analysis --options="max_expansions={}"'\
-        .format(config.instance, config.domain, config.driver, config.num_states)
+    params = '--instance {} --domain {} --driver {} --disable-static-analysis --options="max_expansions={},width.max={}"'\
+        .format(config.instance, config.domain, config.driver, config.num_states, config.max_width)
     execute(command=[sys.executable, "run.py"] + params.split(' '),
             stdout=config.sample_file,
             cwd=config.planner_location
@@ -145,6 +145,7 @@ class PlannerStep(Step):
         if not os.path.isdir(config["planner_location"]):
             raise InvalidConfigParameter('"planner_location" must be the path to the actual planner')
         check_int_parameter(config, "num_states", positive=True)
+        config["max_width"] = config.get("max_width", -1)
         config["instance_tag"] = compute_instance_tag(**config)
         config["experiment_tag"] = compute_experiment_tag(**config)
         config["experiment_dir"] = os.path.join(EXPDATA_DIR, config["experiment_tag"])

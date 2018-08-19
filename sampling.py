@@ -1,24 +1,46 @@
-import logging
+
 from collections.__init__ import defaultdict, OrderedDict
 
 
+def iw_sampling(goal_states, states, transitions):
+    assert len(goal_states) == 1
+    goal = next(iter(goal_states))
+    parents = compute_parents(transitions)
+
+    selected = {goal}
+    current = goal
+    while current != 0:
+        # A small trick - node IDs are ordered by depth, so we can pick the min parent ID and know the resulting path
+        # will be optimal
+        current = min(parents[current])
+        selected.add(current)
+    return selected
+
+
 def sample_generated_states(states, goal_states, transitions, config, rng):
+
+    if config.num_sampled_states is None and config.max_width < 1:
+        return states, goal_states, transitions
+
+    if config.num_sampled_states is not None:
+        selected = random_sample(config, goal_states, rng, states, transitions)
+    else:
+        assert config.max_width >= 1
+        selected = iw_sampling(goal_states, states, transitions)
+
+    return remap_sample_expanded_states(set(selected), states, goal_states, transitions)
+
+
+def random_sample(config, goal_states, rng, states, transitions):
     num_expanded_states = min(len(states), config.num_states)
-    if config.num_sampled_states is None:
-        return states, goal_states, transitions
-
     if config.num_sampled_states > num_expanded_states:
-        logging.warning("Only {} were expanded, sampling all of them!".format(num_expanded_states))
-        return states, goal_states, transitions
-
+        raise RuntimeError(
+            "Only {} expanded statesm cannot sample {}".format(num_expanded_states, config.num_sampled_states))
     # Although this might fail is some state was a dead-end? In that case we should perhaps revise the code below
     assert num_expanded_states == len(transitions)
     parents = compute_parents(transitions)
-
     selected = sample_expanded_and_goal_states(config, goal_states, num_expanded_states, parents, rng)
-    sampled_expanded = set(selected)
-
-    return remap_sample_expanded_states(sampled_expanded, states, goal_states, transitions)
+    return selected
 
 
 def sample_expanded_and_goal_states(config, goal_states, num_expanded_states, parents, rng):

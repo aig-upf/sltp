@@ -67,6 +67,13 @@ def experiment(experiment_name=None):
         concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
+    bw_on_x_y_5_iw = dict(
+        instance="instance_5_on_x_y_1.pddl",
+        num_states=1000, max_width=2,
+        max_concept_size=10, max_concept_grammar_iterations=3,
+        concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
+        feature_namer=ijcai_paper_bw_feature_namer,)
+
     bw_on_x_y_5_rnd = bw_on_x_y_5.copy()
     bw_on_x_y_5_rnd.update(dict(num_sampled_states=60))
 
@@ -85,7 +92,7 @@ def experiment(experiment_name=None):
 
     generate_ijcai_features_on_x_y = dict(
         instance="instance_5_on_x_y.pddl",
-        num_states=1000, max_concept_size=34, max_concept_grammar_iterations=3, num_sampled_states=50, random_seed=2,
+        num_states=1000, max_concept_size=34, max_concept_grammar_iterations=4, num_sampled_states=50, random_seed=2,
         concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
@@ -107,6 +114,7 @@ def experiment(experiment_name=None):
 
         "bw_on_x_y_5": bw_on_x_y_5,
         "bw_on_x_y_5_rnd": bw_on_x_y_5_rnd,
+        "bw_on_x_y_5_iw": bw_on_x_y_5_iw,
 
         "ijcai_features_on_clear_5_rnd": ijcai_features_on_clear_5_rnd,
         "ijcai_features_on_clear_5": ijcai_features_on_clear_5,
