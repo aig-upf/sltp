@@ -29,7 +29,7 @@ from util.bootstrap import setup_global_parser
 from util.command import execute
 from util.console import print_header, log_time
 from util.naming import compute_instance_tag, compute_experiment_tag, compute_serialization_name, \
-    compute_maxsat_filename, compute_info_filename, compute_maxsat_variables_filename
+    compute_maxsat_filename, compute_info_filename, compute_maxsat_variables_filename, compute_sample_filenames
 from util.serialization import deserialize, serialize
 
 signal(SIGPIPE, SIG_DFL)
@@ -112,25 +112,25 @@ class Step(object):
 
 
 def _run_planner(config, data, rng):
-    params = '--instance {} --domain {} --driver {} --disable-static-analysis --options="max_expansions={},width.max={}"'\
-        .format(config.instance, config.domain, config.driver, config.num_states, config.max_width)
-    execute(command=[sys.executable, "run.py"] + params.split(' '),
-            stdout=config.sample_file,
-            cwd=config.planner_location
-            )
+    # Run the planner on all the instances
+    for i, o in zip(config.instances, config.sample_files):
+        params = '-i {} --domain {} --driver {} --disable-static-analysis --options="max_expansions={},width.max={}"'\
+            .format(i, config.domain, config.driver, config.num_states, config.max_width)
+        execute(command=[sys.executable, "run.py"] + params.split(' '),
+                stdout=o, cwd=config.planner_location)
     return dict()
 
 
 class PlannerStep(Step):
     """ Run some planner on certain instance(s) to get the sample of transitions """
 
-    VALID_DRIVERS = ("bfs", "ff", "iw2")
+    VALID_DRIVERS = ("bfs", "ff")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
     def get_required_attributes(self):
-        return ["instance", "domain", "num_states", "planner_location", "driver"]
+        return ["instances", "domain", "num_states", "planner_location", "driver"]
 
     def get_required_data(self):
         return []
@@ -138,8 +138,8 @@ class PlannerStep(Step):
     def process_config(self, config):
         if config["driver"] not in self.VALID_DRIVERS:
             raise InvalidConfigParameter('"driver" must be one of: {}'.format(self.VALID_DRIVERS))
-        if not os.path.isfile(config["instance"]):
-            raise InvalidConfigParameter('"instance" must be the path to an existing instance file')
+        if any(not os.path.isfile(i) for i in config["instances"]):
+            raise InvalidConfigParameter('"instances" must be the path to existing instance files')
         if not os.path.isfile(config["domain"]):
             raise InvalidConfigParameter('"domain" must be the path to an existing domain file')
         if not os.path.isdir(config["planner_location"]):
@@ -149,7 +149,7 @@ class PlannerStep(Step):
         config["instance_tag"] = compute_instance_tag(**config)
         config["experiment_tag"] = compute_experiment_tag(**config)
         config["experiment_dir"] = os.path.join(EXPDATA_DIR, config["experiment_tag"])
-        config["sample_file"] = os.path.join(config["experiment_dir"], "samples.txt")
+        config["sample_files"] = compute_sample_filenames(**config)
 
         # TODO This should prob be somewhere else:
         os.makedirs(config["experiment_dir"], exist_ok=True)
@@ -169,7 +169,7 @@ class ConceptGenerationStep(Step):
         super().__init__(**kwargs)
 
     def get_required_attributes(self):
-        return ["sample_file", "domain", "experiment_dir", "max_concept_size"]
+        return ["sample_files", "domain", "experiment_dir", "max_concept_size"]
 
     def get_required_data(self):
         return []
@@ -179,6 +179,7 @@ class ConceptGenerationStep(Step):
 
         config["concept_dir"] = os.path.join(config["experiment_dir"], 'terms')
         config["feature_stdout"] = os.path.join(config["experiment_dir"], 'feature-generation.stdout.txt')
+        config["resampled_states_filename"] = os.path.join(config["experiment_dir"], 'resampled.txt')
         config["concept_generator"] = config.get("concept_generator", None)
         config["feature_generator"] = config.get("feature_generator", None)
         config["parameter_generator"] = config.get("parameter_generator", None)

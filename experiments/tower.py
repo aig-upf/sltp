@@ -13,7 +13,7 @@ def experiment(experiment_name=None):
     domain = "domain.pddl"
 
     sample_4_1 = dict(
-        instance="sample_4.pddl",
+        instances=["sample_4.pddl"],
         num_states=200, max_concept_size=10, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=no_parameter,
         feature_namer=ijcai_paper_bw_feature_namer,)
@@ -22,7 +22,7 @@ def experiment(experiment_name=None):
     sample_4_2.update(dict(max_concept_size=15))
 
     sample_5_base = dict(
-        instance="sample_5_base_x.pddl",
+        instances="sample_5_base_x.pddl",
         num_states=2000,
         num_sampled_states=50, random_seed=12,
         max_concept_size=10, max_concept_grammar_iterations=3,
@@ -35,7 +35,7 @@ def experiment(experiment_name=None):
 
     # This one overfits!
     sample_5_rnd = dict(
-        instance="sample_5.pddl",
+        instances="sample_5.pddl",
         num_states=2000, num_sampled_states=40, random_seed=12,
         max_concept_size=15, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=no_parameter,

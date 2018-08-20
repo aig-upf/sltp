@@ -4,7 +4,7 @@ import sys
 
 from abstractions_defaults import generate_experiment
 from common import build_ijcai_paper_bw_concepts, add_bw_domain_parameters, ijcai_paper_bw_feature_namer, \
-    add_bw_domain_parameters_2, build_on_x_y_feature_set
+    add_bw_domain_parameters_2, build_on_x_y_feature_set, generate_features_n_ab
 
 
 def experiment(experiment_name=None):
@@ -13,7 +13,7 @@ def experiment(experiment_name=None):
 
     # A small testing instance nonetheless producing an abstraction
     debugging_test = dict(
-        instance="instance_4_clear_x.pddl",
+        instances="instance_4_clear_x.pddl",
         num_states=20, num_sampled_states=10,
         max_concept_size=3, max_concept_grammar_iterations=1,
         parameter_generator=add_bw_domain_parameters,
@@ -22,14 +22,14 @@ def experiment(experiment_name=None):
     # Learns a simple action model which is however overfit to 3 blocks,
     # and not sound in general
     simple_clear_3 = dict(
-        instance="instance_3_clear_x.pddl",
+        instances="instance_3_clear_x.pddl",
         num_states=100, max_concept_size=10, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=add_bw_domain_parameters,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
     # This example shows that with 4 blocks, even if we expand all states, the model is still overfit to the 4 blocks
     simple_clear_4 = dict(
-        instance="instance_4_clear_x.pddl",
+        instances="instance_4_clear_x.pddl",
         num_states=150, max_concept_size=10, max_concept_grammar_iterations=3, num_sampled_states=None,
         concept_generator=None, parameter_generator=add_bw_domain_parameters,
         feature_namer=ijcai_paper_bw_feature_namer,)
@@ -38,7 +38,7 @@ def experiment(experiment_name=None):
     # card[And(And(Forall(Star(on),Not({a})), Forall(Star(Inverse(on)),Not({a}))), And(Not(holding), Not({a})))] 18
     # And indeed learnt the correct state space!!!
     ijcai_features_on_clear_5_rnd = dict(
-        instance="instance_5_clear_x_1.pddl",
+        instances="instance_5_clear_x_1.pddl",
         num_states=2000, num_sampled_states=40, random_seed=12,
         max_concept_size=18, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=add_bw_domain_parameters,
@@ -50,7 +50,7 @@ def experiment(experiment_name=None):
 
     # Goal here is on(x,y).
     bw_on_x_y_4 = dict(
-        instance="instance_4_on_x_y.pddl",
+        instances="instance_4_on_x_y.pddl",
         num_states=200, num_sampled_states=None, random_seed=12,
         max_concept_size=31, max_concept_grammar_iterations=4,
         concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
@@ -61,43 +61,58 @@ def experiment(experiment_name=None):
 
     # Goal here is on(x,y).
     bw_on_x_y_5 = dict(
-        instance="instance_5_on_x_y.pddl",
+        instances="instance_5_on_x_y.pddl",
         num_states=1000, num_sampled_states=None, random_seed=12,
         max_concept_size=10, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
     bw_on_x_y_5_iw = dict(
-        instance="instance_5_on_x_y_1.pddl",
+        instances=["instance_9_on_x_y_1.pddl", "instance_9_on_x_y_2.pddl", "instance_9_on_x_y_3.pddl"],#, "instance_9_on_x_y_4.pddl"],
         num_states=1000, max_width=2,
         max_concept_size=10, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
+        feature_namer=ijcai_paper_bw_feature_namer,)
+
+    bw_on_x_y_dt_iw = dict(
+        instances=["on_x_y_dt_1.pddl", "instance_9_on_x_y_3.pddl"],
+        num_states=49999, max_width=2,
+        max_concept_size=10, max_concept_grammar_iterations=3,
+        parameter_generator=add_bw_domain_parameters_2,
+        feature_namer=ijcai_paper_bw_feature_namer,)
+
+    validate_bw_on_x_y_dt_iw = dict(
+        instances=["on_x_y_dt_1.pddl"],
+        num_states=49999, max_width=2,
+        max_concept_size=10, max_concept_grammar_iterations=3,
+        parameter_generator=add_bw_domain_parameters_2,
+        feature_generator=generate_features_n_ab,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
     bw_on_x_y_5_rnd = bw_on_x_y_5.copy()
     bw_on_x_y_5_rnd.update(dict(num_sampled_states=60))
 
     check_ijcai_features_on_clear_5 = dict(
-        instance="instance_5_clear_x.pddl",
+        instances="instance_5_clear_x.pddl",
         num_states=1000, max_concept_size=1, max_concept_grammar_iterations=1, num_sampled_states=100, random_seed=2,
         concept_generator=build_ijcai_paper_bw_concepts, parameter_generator=add_bw_domain_parameters,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
     check_ijcai_features_on_x_y = dict(
-        instance="instance_5_on_x_y.pddl",
+        instances="instance_5_on_x_y.pddl",
         num_states=1000, max_concept_size=1, max_concept_grammar_iterations=1, num_sampled_states=100, random_seed=2,
         concept_generator=build_on_x_y_feature_set, parameter_generator=add_bw_domain_parameters_2,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
 
     generate_ijcai_features_on_x_y = dict(
-        instance="instance_5_on_x_y.pddl",
+        instances="instance_5_on_x_y.pddl",
         num_states=1000, max_concept_size=34, max_concept_grammar_iterations=4, num_sampled_states=50, random_seed=2,
         concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
     check_clear4_features_on_clear_5 = dict(
-        instance="instance_5_clear_x.pddl",
+        instances="instance_5_clear_x.pddl",
         num_states=600, max_concept_size=1, max_concept_grammar_iterations=1,
         concept_generator=build_ijcai_paper_bw_concepts, parameter_generator=add_bw_domain_parameters,
         feature_generator=deserialize_features("clear5_features"),
@@ -115,6 +130,8 @@ def experiment(experiment_name=None):
         "bw_on_x_y_5": bw_on_x_y_5,
         "bw_on_x_y_5_rnd": bw_on_x_y_5_rnd,
         "bw_on_x_y_5_iw": bw_on_x_y_5_iw,
+        "bw_on_x_y_dt_iw": bw_on_x_y_dt_iw,
+        "validate_bw_on_x_y_dt_iw": validate_bw_on_x_y_dt_iw,
 
         "ijcai_features_on_clear_5_rnd": ijcai_features_on_clear_5_rnd,
         "ijcai_features_on_clear_5": ijcai_features_on_clear_5,

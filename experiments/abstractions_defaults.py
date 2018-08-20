@@ -9,11 +9,12 @@ def generate_experiment(domain_dir, domain, **kwargs):
     from driver import Experiment, generate_pipeline, BENCHMARK_DIR
     from learn_actions import OptimizationPolicy
 
-    if "instance" not in kwargs:
+    if "instances" not in kwargs:
         raise RuntimeError("Please specify domain and instance when generating an experiment")
 
+    instances = kwargs["instances"] if isinstance(kwargs["instances"], (list, tuple)) else [kwargs["instances"]]
     kwargs["domain"] = os.path.join(BENCHMARK_DIR, domain_dir, domain)
-    kwargs["instance"] = os.path.join(BENCHMARK_DIR, domain_dir, kwargs["instance"])
+    kwargs["instances"] = [os.path.join(BENCHMARK_DIR, domain_dir, i) for i in instances]
 
     defaults = dict(
         pipeline="maxsat",

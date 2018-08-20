@@ -35,7 +35,6 @@ from tarski.syntax.transform.simplifications import transform_to_ground_atoms
 
 from extensions import UniverseIndex, ExtensionCache
 from sampling import sample_generated_states
-from transitions import read_transitions
 
 signal(SIGPIPE, SIG_DFL)
 
@@ -361,12 +360,7 @@ def collect_all_terms(processor, atoms, concepts, roles):
 def run(config, data, rng):
     assert not data
 
-    logging.info('Loading states and transitions...')
-    states, goal_states, transitions = read_transitions(config.sample_file)
-    if not goal_states:
-        raise RuntimeError("No goal found in the sample - increase # expanded states!")
-
-    states, goal_states, transitions = sample_generated_states(states, goal_states, transitions, config, rng)
+    states, goal_states, transitions = sample_generated_states(config, rng)
 
     goal_denotation = []
     goal_predicates = set()  # The predicates and functions that appear mentioned in the goal

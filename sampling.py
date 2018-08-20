@@ -1,44 +1,81 @@
+import json
+import logging
 
-from collections.__init__ import defaultdict, OrderedDict
+from collections import defaultdict, OrderedDict
+
+from util.command import read_file
+from util.naming import filename_core
 
 
-def iw_sampling(goal_states, states, transitions):
-    assert len(goal_states) == 1
-    goal = next(iter(goal_states))
-    parents = compute_parents(transitions)
+def iw_sampling(goal_states, root_states, parents):
 
-    selected = {goal}
-    current = goal
-    while current != 0:
-        # A small trick - node IDs are ordered by depth, so we can pick the min parent ID and know the resulting path
-        # will be optimal
-        current = min(parents[current])
-        selected.add(current)
+    selected = set()
+    for goal in goal_states:
+        selected.add(goal)
+        current = goal
+        while current not in root_states:
+            # A small trick - node IDs are ordered by depth, so we can pick the min parent ID and know the resulting path
+            # will be optimal
+            current = min(parents[current])
+            selected.add(current)
     return selected
 
 
-def sample_generated_states(states, goal_states, transitions, config, rng):
+def print_atom(atom):
+    assert len(atom) > 0
+    if len(atom) == 1:
+        return atom[0]
+    return "{}({})".format(atom[0], ", ".join(atom[1:]))
+
+
+def log_sampled_states(states, goals, transitions, expanded, resampled_states_filename):
+    # We need to recompute the parenthood relation with the remapped states to log it!
+    parents = compute_parents(transitions)
+
+    with open(resampled_states_filename, 'w') as f:
+        for id, state in states.values():
+            state_parents = ", ".join(sorted(map(str, parents[id])))
+            state_children = ", ".join(sorted(map(str, transitions[id])))
+            atoms = ", ".join(print_atom(atom) for atom in state)
+            is_goal = "*" if id in goals else ""
+            is_expanded = "^" if expanded(id) else ""
+            print("#{}{}{} (parents: {}, children: {}):\n\t{}".
+                  format(id, is_goal, is_expanded, state_parents, state_children, atoms), file=f)
+    logging.info('Resampled states logged at "{}"'.format(resampled_states_filename))
+
+
+def sample_generated_states(config, rng):
+    logging.info('Loading state space samples...')
+    states, goal_states, transitions, root_states = read_transitions(config.sample_files)
+    if not goal_states:
+        raise RuntimeError("No goal found in the sample - increase # expanded states!")
 
     if config.num_sampled_states is None and config.max_width < 1:
         return states, goal_states, transitions
 
+    parents = compute_parents(transitions)
+
     if config.num_sampled_states is not None:
-        selected = random_sample(config, goal_states, rng, states, transitions)
+        selected = random_sample(config, goal_states, rng, states, transitions, parents)
     else:
         assert config.max_width >= 1
-        selected = iw_sampling(goal_states, states, transitions)
+        selected = iw_sampling(goal_states, root_states, parents)
 
-    return remap_sample_expanded_states(set(selected), states, goal_states, transitions)
+    states, goals, transitions = remap_sample_expanded_states(set(selected), states, goal_states, transitions)
+
+    expanded = lambda s: len(transitions[s]) > 0
+    log_sampled_states(states, goals, transitions, expanded, config.resampled_states_filename)
+    return states, goals, transitions
 
 
-def random_sample(config, goal_states, rng, states, transitions):
+def random_sample(config, goal_states, rng, states, transitions, parents):
     num_expanded_states = min(len(states), config.num_states)
     if config.num_sampled_states > num_expanded_states:
         raise RuntimeError(
             "Only {} expanded statesm cannot sample {}".format(num_expanded_states, config.num_sampled_states))
     # Although this might fail is some state was a dead-end? In that case we should perhaps revise the code below
     assert num_expanded_states == len(transitions)
-    parents = compute_parents(transitions)
+
     selected = sample_expanded_and_goal_states(config, goal_states, num_expanded_states, parents, rng)
     return selected
 
@@ -72,15 +109,13 @@ def compute_parents(transitions):
 
 
 def remap_sample_expanded_states(sampled_expanded, states, goal_states, transitions):
+    # all_in_sample will contain all states we want to sample plus their children state IDs
     all_in_sample = set(sampled_expanded)
     for s in sampled_expanded:
         all_in_sample.update(transitions[s])
 
-    # Now all_in_sample contains all states we want to sample plus their children state IDs
-
     ordered_sample = list(sorted(all_in_sample))
     idx = {x: i for i, x in enumerate(ordered_sample)}
-    revidx = {}
 
     # Pick the selected elements from the data structures
     new_goal_states = {idx[x] for x in ordered_sample if x in goal_states}
@@ -96,3 +131,102 @@ def remap_sample_expanded_states(sampled_expanded, states, goal_states, transiti
             new_transitions[idx[source]] = {idx[t] for t in targets}
 
     return new_states, new_goal_states, new_transitions
+
+
+def normalize_atom_name(name):
+    tmp = name.replace('()', '').replace(')', '').replace('(', ',')
+    if "=" in tmp:  # We have a functional atom
+        tmp = "=," + tmp.replace("=", ',')  # Mark the string putting the "=" as the first position
+
+    return tmp.split(',')
+
+
+def remap_state_ids(states, goals, transitions, remap):
+
+    new_goals = {remap(x) for x in goals}
+    new_states = OrderedDict()
+    for i, s in states.items():
+        assert i == s[0]
+        new_states[remap(i)] = (remap(i), s[1])
+
+    new_transitions = defaultdict(set)
+    for source, targets in transitions.items():
+        new_transitions[remap(source)] = {remap(t) for t in targets}
+
+    return new_states, new_goals, new_transitions
+
+
+def read_transitions(filenames):
+    all_samples = [read_single_sample_file(f) for f in filenames]
+    assert len(all_samples) > 0
+    states, goals, transitions = all_samples[0]
+    assert states[0][0] == 0
+    root_states = {0}
+    for s, g, tx in all_samples[1:]:
+        starting_state_id = len(states)
+        s, g, tx = remap_state_ids(s, g, tx, remap=lambda state: state + starting_state_id)
+        assert next(iter(s)) == starting_state_id
+        root_states.add(starting_state_id)
+        states.update(s)
+        transitions.update(tx)
+        goals.update(g)
+
+    return states, goals, transitions, root_states
+
+
+def read_single_sample_file(filename):
+    states_by_id = {}
+    states_by_str = {}
+    transitions = defaultdict(set)
+    transitions_inv = defaultdict(set)
+    seen = set()
+    goal_states = set()
+
+    def register_transition(state):
+        transitions[state['parent']].add(state['id'])
+        transitions_inv[state['id']].add(state['parent'])
+
+    def register_state(state):
+        data = (state['id'], state['normalized_atoms'])
+        states_by_str[state['atoms_string']] = data
+        states_by_id[state['id']] = data
+        seen.add(state['id'])
+        if j['goal']:
+            goal_states.add(state['id'])
+
+    raw_file = [line.replace(' ', '') for line in read_file(filename) if line[0:6] == '{"id":']
+    for raw_line in raw_file:
+        j = json.loads(raw_line)
+        j['normalized_atoms'] = [normalize_atom_name(atom) for atom in j['atoms']]
+        j['atoms_string'] = str(j['normalized_atoms'])
+
+        if j['id'] in seen:
+            # We hit a repeated state in the search, so we simply need to record the transition
+            register_transition(j)
+            continue
+
+        # The state must be _really_ new
+        assert j['atoms_string'] not in states_by_str
+        register_state(j)
+
+        if j['parent'] != j['id']:  # i.e. if not in the root node, which has 0 as its "fake" parent
+            # BELOW CHECK NO LONGER CORRECT, AS REPEATED NODES ARE ALSO RECORDED WHEN ENCOUNTERED IN DIFF TRANSITIONS
+            # assert json.loads(raw_file[j['parent']])['id'] == j['parent']  # Just a check
+            register_transition(j)
+
+    # check soundness
+    for src in transitions:
+        assert src in states_by_id
+        for dst in transitions[src]:
+            assert dst in states_by_id
+
+    assert sum([len(t) for t in transitions.values()]) == sum([len(t) for t in transitions_inv.values()])
+
+    logging.info('%s: #lines-raw-file=%d, #state-by-str=%d, #states-by-id=%d, #transition-entries=%d, #transitions=%d' %
+                 (filename_core(filename), len(raw_file), len(states_by_str), len(states_by_id), len(transitions),
+                  sum([len(targets) for targets in transitions.values()])))
+
+    ordered = OrderedDict()  # Make sure we return an ordered dictionary
+    for id_ in sorted(states_by_id.keys()):
+        ordered[id_] = states_by_id[id_]
+    return ordered, goal_states, transitions

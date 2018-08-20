@@ -1,14 +1,26 @@
 import os
 
 
-def compute_instance_tag(instance, num_states, **kwargs):
-    inst = os.path.splitext(os.path.basename(instance))[0]
-    dom = os.path.basename(os.path.dirname(instance))
+def filename_core(filename):
+    return os.path.splitext(os.path.basename(filename))[0]
+
+
+def compute_instance_tag(domain, instances, num_states, **_):
+    inst = "_".join(filename_core(i) for i in instances)
+    dom = os.path.basename(os.path.dirname(domain))
     tag = "{}.{}.{}".format(dom, inst, num_states)
     return tag
 
 
-def compute_experiment_tag(instance_tag, max_concept_size, **kwargs):
+def compute_sample_filename(instance):
+    return "samples_{}.txt".format(filename_core(instance))
+
+
+def compute_sample_filenames(experiment_dir, instances, **_):
+    return [os.path.join(experiment_dir, compute_sample_filename(i)) for i in instances]
+
+
+def compute_experiment_tag(instance_tag, max_concept_size, **_):
     return "{}.cs-{}".format(instance_tag, max_concept_size)
 
 
