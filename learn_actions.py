@@ -375,12 +375,10 @@ class ModelTranslator(object):
                 abstract_s = state_abstraction[s]
                 abstract_sprime = state_abstraction[sprime]
 
-                if (abstract_s, abstract_sprime) in already_computed:
-                    continue
-
                 qchanges = self.retrieve_possibly_cached_qchanges(s, sprime)
+                selected_qchanges = qchanges[selected_features]
                 abstract_effects = [ActionEffect(self.feature_names[f], self.generate_eff_change(f, c))
-                                    for f, c in zip(selected_features, qchanges[selected_features]) if c != 0]
+                                    for f, c in zip(selected_features, selected_qchanges) if c != 0]
 
                 precondition_bitmap = frozenset(zip(selected_features, abstract_s))
                 abstract_actions.add(AbstractAction(precondition_bitmap, abstract_effects))
