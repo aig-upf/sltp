@@ -1,5 +1,5 @@
 CC=g++
 
-qnp:	qnp.h main.cc
+qnp:	basic.h feature.h action.h problem.h main.cc
 	$(CC) -O3 -o qnp main.cc
 
