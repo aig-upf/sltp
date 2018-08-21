@@ -355,6 +355,7 @@ inline void Problem::translate(Problem *fond,
             }
         }
     } else {
+        std::cout << "**** Use loop_nesting=0" << std::endl;
         assert(0);
     }
 }
