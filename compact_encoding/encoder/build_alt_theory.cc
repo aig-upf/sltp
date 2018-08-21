@@ -502,18 +502,44 @@ class Theory {
               ((selected_precondition_ == a.selected_precondition_) && (precondition_ == a.precondition_) && (selected_effect_ < a.selected_effect_)) ||
               ((selected_precondition_ == a.selected_precondition_) && (precondition_ == a.precondition_) && (selected_effect_ == a.selected_effect_) && (effect_ < a.effect_));
         }
-        void print(ostream &os, const Theory &T, const vector<bool> &model) const {
-            os << "Prec={";
-            for( int k = 0; k < T.K_; ++k ) {
-                if( selected_precondition_ & (1 << k) )
-                    os << " " << T.condition_on_selected_feature(model, k, (precondition_ & (1 << k)) != 0) << ",";
+        void print(ostream &os, const Theory &T, const vector<bool> &model, bool qnp_format) const {
+            if( qnp_format ) {
+                os << name_ << endl;
+
+                int num_preconditions = 0;
+                for( int k = 0; k < T.K_; ++k )
+                    num_preconditions += selected_precondition_ & (1 << k) ? 1 : 0;
+                os << num_preconditions;
+                for( int k = 0; k < T.K_; ++k ) {
+                    if( selected_precondition_ & (1 << k) ) {
+                        os << " " << T.condition_on_selected_feature(model, k, (precondition_ & (1 << k)) != 0, qnp_format);
+                    }
+                }
+                os << endl;
+
+                int num_effects = 0;
+                for( int k = 0; k < T.K_; ++k )
+                    num_effects += selected_effect_ & (1 << k) ? 1 : 0;
+                os << num_effects;
+                for( int k = 0; k < T.K_; ++k ) {
+                    if( selected_effect_ & (1 << k) ) {
+                        os << " " << T.effect_on_selected_feature(model, k, (effect_ & (1 << k)) != 0, qnp_format);
+                    }
+                }
+                os << endl;
+            } else {
+                os << "Prec={";
+                for( int k = 0; k < T.K_; ++k ) {
+                    if( selected_precondition_ & (1 << k) )
+                        os << " " << T.condition_on_selected_feature(model, k, (precondition_ & (1 << k)) != 0, qnp_format) << ",";
+                }
+                os << " }; Effect={";
+                for( int k = 0; k < T.K_; ++k ) {
+                    if( selected_effect_ & (1 << k) )
+                        os << " " << T.effect_on_selected_feature(model, k, (effect_ & (1 << k)) != 0) << ",";
+                }
+                os << " }" << endl;
             }
-            os << " }; Effect={";
-            for( int k = 0; k < T.K_; ++k ) {
-                if( selected_effect_ & (1 << k) )
-                    os << " " << T.effect_on_selected_feature(model, k, (effect_ & (1 << k)) != 0) << ",";
-            }
-            os << " }" << endl;
         }
         void dump(ostream &os) const {
             os << bit_string(selected_precondition_)
@@ -660,13 +686,16 @@ class Theory {
         }
         return index;
     }
-    string condition_on_selected_feature(const vector<bool> &model, int k, bool prec) const {
+    string condition_on_selected_feature(const vector<bool> &model, int k, bool prec, bool qnp_format = false) const {
         // get feature index from model
         int f = index_for_selected_feature(model, k);
 
         // generate string
         string feature;
-        if( M_.numerical(f) ) {
+        if( qnp_format ) {
+            feature += M_.feature(f);
+            feature += prec ? " 1" : " 0";
+        } else if( M_.numerical(f) ) {
             feature += to_string(f) + "." + M_.feature(f);
             feature += prec ? ">0" : "=0";
         } else {
@@ -675,17 +704,20 @@ class Theory {
         }
         return feature;
     }
-    string effect_on_selected_feature(const vector<bool> &model, int k, bool prec) const {
+    string effect_on_selected_feature(const vector<bool> &model, int k, bool eff, bool qnp_format = false) const {
         // get feature index from model
         int f = index_for_selected_feature(model, k);
 
         // generate string
         string feature;
-        if( M_.numerical(f) ) {
-            feature += prec ? "INC(" : "DEC(";
+        if( qnp_format ) {
+            feature += M_.feature(f);
+            feature += eff ? " 1" : " 0";
+        } else if( M_.numerical(f) ) {
+            feature += eff ? "INC(" : "DEC(";
             feature += to_string(f) + "." + M_.feature(f) + ")";
         } else {
-            feature += prec ? "" : "-";
+            feature += eff ? "" : "-";
             feature += to_string(f) + "." + M_.feature(f);
         }
         return feature;
@@ -1739,18 +1771,26 @@ class Theory {
     }
 
     // print abstraction coded in model
-    void decode_model(ostream &os) const {
+    void decode_model(const string &name, ostream &os, bool qnp_format) const {
         assert(satisfiable_ && (model_.size() == variables_.size()));
 
+        // name
+        os << name << endl;
+        if( qnp_format )
+            os << K_;
+        else
+            os << "Features:" << endl;
+
         // features
-        os << "Features:" << endl;
         for( int j = 0; j < K_; ++j ) {
-            int feature_index = 0;
-            for( int k = 0; k < log_num_features_; ++k )
-                feature_index += model_[F(j, k)] ? (1 << k) : 0;
+            int feature_index = index_for_selected_feature(model_, j);
             assert(feature_index < num_features_);
-            os << "F" << j << ": " << M_.feature(feature_index) << endl;
+            if( qnp_format )
+                os << " " << M_.feature(feature_index) << " " << M_.numerical(feature_index);
+            else
+                os << "F" << j << ": " << M_.feature(feature_index) << endl;
         }
+        if( qnp_format ) os << endl;
 
         // abstract actions
         set<AbstractAction> unique;
@@ -1764,9 +1804,16 @@ class Theory {
             }
             unique.insert(act);
         }
-        os << "Abstract actions (#total=" << N_ << ", #unique=" << unique.size() << "):" << endl;
-        for( set<AbstractAction>::const_iterator it = unique.begin(); it != unique.end(); ++it )
-            it->print(os, *this, model_);
+
+        if( qnp_format ) {
+            os << unique.size() << endl;
+            for( set<AbstractAction>::const_iterator it = unique.begin(); it != unique.end(); ++it )
+                it->print(os, *this, model_, qnp_format);
+        } else {
+            os << "Abstract actions (#total=" << N_ << ", #unique=" << unique.size() << "):" << endl;
+            for( set<AbstractAction>::const_iterator it = unique.begin(); it != unique.end(); ++it )
+                it->print(os, *this, model_, qnp_format);
+        }
     }
 };
 
@@ -1820,8 +1867,7 @@ void Theory::read_actions(const string &prefix) {
     Theory::AbstractAction::feature_map_ = nullptr;
 }
 
-pair<const Matrix*, const Transitions*>
-read_data(const string &matrix_filename, const string &transitions_filename) {
+pair<const Matrix*, const Transitions*> read_data(const string &matrix_filename, const string &transitions_filename) {
     pair<const Matrix*, const Transitions*> p(nullptr, nullptr);
 
     cout << "reading '" << matrix_filename << "' ... " << flush;
@@ -1936,8 +1982,13 @@ int main(int argc, const char **argv) {
             ifs.close();
             cout << " done!" << endl;
 
-            //Th.print_model(cout);
-            Th.decode_model(cout);
+            // output model in qnp format
+            string qnp_filename = filename(options.prefix_, K, N, ".qnp");
+            cout << "writing file '" << qnp_filename << "' ..." << flush;
+            ofstream os(qnp_filename.c_str());
+            Th.decode_model(model_filename, os, true);
+            os.close();
+            cout << " done!" << endl;
         } else {
             cout << "error: opening file '" << model_filename << "'" << endl;
         }
