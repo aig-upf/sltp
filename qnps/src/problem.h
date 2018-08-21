@@ -18,8 +18,7 @@ class Problem {
     std::vector<const Action*> actions_;
     std::map<std::string, const Feature*> feature_map_;
 
-    void clone(Problem *fond, const Action *action) const;
-
+    // methods for qnp2fond translation
     void create_set_actions(Problem *fond,
                             int d,
                             int loop_nesting,
@@ -27,6 +26,30 @@ class Problem {
                             std::vector<const Feature*> &boolean_features,
                             std::vector<const Feature*> &bit_features,
                             std::vector<const Feature*> &q_features) const;
+    void create_unset_actions(Problem *fond,
+                              int d,
+                              int loop_nesting,
+                              std::vector<const Feature*> &numeric_features,
+                              std::vector<const Feature*> &boolean_features,
+                              std::vector<const Feature*> &bit_features,
+                              std::vector<const Feature*> &q_features) const;
+
+    void clone_qnp_action(Problem *fond, const Action *action) const;
+    void translate_qnp_action(Problem *fond,
+                              const Action *action,
+                              int d,
+                              int loop_nesting,
+                              std::vector<const Feature*> &numeric_features,
+                              std::vector<const Feature*> &boolean_features,
+                              std::vector<const Feature*> &bit_features,
+                              std::vector<const Feature*> &q_features) const;
+    void translate_qnp_actions(Problem *fond,
+                               int d,
+                               int loop_nesting,
+                               std::vector<const Feature*> &numeric_features,
+                               std::vector<const Feature*> &boolean_features,
+                               std::vector<const Feature*> &bit_features,
+                               std::vector<const Feature*> &q_features) const;
 
     void translate(Problem *fond,
                    int d,
@@ -248,25 +271,6 @@ class Problem {
     }
 };
 
-inline void Problem::clone(Problem *fond, const Action *action) const {
-    Action *a = new Action(action->name());
-
-    // preconditions
-    for( size_t k = 0; k < action->num_preconditions(); ++k ) {
-        const Feature *feature = action->precondition(k).first;
-        bool value = action->precondition(k).second;
-        a->add_precondition(fond->feature(feature->name()), value);
-    }
-
-    // effects
-    for( size_t k = 0; k < action->num_effects(); ++k ) {
-        const Feature *feature = action->effect(k).first;
-        bool value = action->effect(k).second;
-        a->add_effect(fond->feature(feature->name()), value);
-    }
-    fond->add_action(a);
-}
-
 inline void Problem::create_set_actions(Problem *fond,
                                         int d,
                                         int loop_nesting,
@@ -292,6 +296,102 @@ inline void Problem::create_set_actions(Problem *fond,
     }
 }
 
+inline void Problem::create_unset_actions(Problem *fond,
+                                        int d,
+                                        int loop_nesting,
+                                        std::vector<const Feature*> &numeric_features,
+                                        std::vector<const Feature*> &boolean_features,
+                                        std::vector<const Feature*> &bit_features,
+                                        std::vector<const Feature*> &q_features) const {
+    for( size_t i = 0; i < numeric_features.size(); ++i ) {
+        std::string name = std::string("Unset(") + numeric_features[i]->name() + ")";
+        Action *action = new Action(name);
+        action->add_precondition(q_features[i], true);
+        action->add_effect(q_features[i], false);
+        fond->add_action(action);
+    }
+}
+
+inline void Problem::clone_qnp_action(Problem *fond, const Action *action) const {
+    Action *a = new Action(action->name());
+
+    // preconditions
+    for( size_t k = 0; k < action->num_preconditions(); ++k ) {
+        const Feature *feature = action->precondition(k).first;
+        bool value = action->precondition(k).second;
+        a->add_precondition(fond->feature(feature->name()), value);
+    }
+
+    // effects
+    for( size_t k = 0; k < action->num_effects(); ++k ) {
+        const Feature *feature = action->effect(k).first;
+        bool value = action->effect(k).second;
+        a->add_effect(fond->feature(feature->name()), value);
+    }
+    fond->add_action(a);
+}
+
+inline void Problem::translate_qnp_action(Problem *fond,
+                                          const Action *action,
+                                          int d,
+                                          int loop_nesting,
+                                          std::vector<const Feature*> &numeric_features,
+                                          std::vector<const Feature*> &boolean_features,
+                                          std::vector<const Feature*> &bit_features,
+                                          std::vector<const Feature*> &q_features) const {
+    std::vector<const Feature*> features_increased;
+    std::vector<const Feature*> features_decreased;
+    for( size_t j = 0; j < action->num_effects(); ++j ) {
+        const Feature *feature = action->effect(j).first;
+        if( feature->numeric() && action->effect(j).second )
+            features_increased.push_back(feature);
+        else if( feature->numeric() )
+            features_decreased.push_back(feature);
+    }
+
+    if( !features_decreased.empty() ) {
+        for( size_t j = 0; j < features_decreased.size(); ++j ) {
+            std::string name = action->name();
+            if( features_decreased.size() > 1 )
+                name += std::string("_") + std::to_string(j);
+            Action *a = new Action(name);
+
+            // preconditions
+            for( size_t k = 0; k < action->num_preconditions(); ++k ) {
+                const Feature *feature = action->precondition(k).first;
+                bool value = action->precondition(k).second;
+                a->add_precondition(fond->feature(feature->name()), value);
+            }
+            a->add_precondition(q_features[j], true);
+            for( size_t k = 0; k < features_increased.size(); ++k )
+                a->add_precondition(fond->feature(features_increased[k]->name()), false);
+
+            // effects
+            for( size_t k = 0; k < action->num_effects(); ++k ) {
+                const Feature *feature = action->effect(k).first;
+                bool value = action->effect(k).second;
+                a->add_effect(fond->feature(feature->name()), value);
+            }
+            fond->add_action(a);
+        }
+    } else {
+        clone_qnp_action(fond, action);
+    }
+}
+
+inline void Problem::translate_qnp_actions(Problem *fond,
+                                           int d,
+                                           int loop_nesting,
+                                           std::vector<const Feature*> &numeric_features,
+                                           std::vector<const Feature*> &boolean_features,
+                                           std::vector<const Feature*> &bit_features,
+                                           std::vector<const Feature*> &q_features) const {
+    for( size_t i = 0; i < actions_.size(); ++i ) {
+        const Action *action = actions_[i];
+        translate_qnp_action(fond, action, d, loop_nesting, numeric_features, boolean_features, bit_features, q_features);
+    }
+}
+
 inline void Problem::translate(Problem *fond,
                                int d,
                                int loop_nesting,
@@ -301,59 +401,8 @@ inline void Problem::translate(Problem *fond,
                                std::vector<const Feature*> &q_features) const {
     if( loop_nesting == 0 ) {
         create_set_actions(fond, d, loop_nesting, numeric_features, boolean_features, bit_features, q_features);
-
-        // unset actions
-        for( size_t i = 0; i < numeric_features.size(); ++i ) {
-            std::string name = std::string("Unset(") + numeric_features[i]->name() + ")";
-            Action *action = new Action(name);
-            action->add_precondition(q_features[i], true);
-            action->add_effect(q_features[i], false);
-            fond->add_action(action);
-        }
-
-        // QNP actions
-        for( size_t i = 0; i < actions_.size(); ++i ) {
-            const Action *action = actions_[i];
-
-            std::vector<const Feature*> features_increased;
-            std::vector<const Feature*> features_decreased;
-            for( size_t j = 0; j < action->num_effects(); ++j ) {
-                const Feature *feature = action->effect(j).first;
-                if( feature->numeric() && action->effect(j).second )
-                    features_increased.push_back(feature);
-                else if( feature->numeric() )
-                    features_decreased.push_back(feature);
-            }
-
-            if( !features_decreased.empty() ) {
-                for( size_t j = 0; j < features_decreased.size(); ++j ) {
-                    std::string name = action->name();
-                    if( features_decreased.size() > 1 )
-                        name += std::string("_") + std::to_string(j);
-                    Action *a = new Action(name);
-
-                    // preconditions
-                    for( size_t k = 0; k < action->num_preconditions(); ++k ) {
-                        const Feature *feature = action->precondition(k).first;
-                        bool value = action->precondition(k).second;
-                        a->add_precondition(fond->feature(feature->name()), value);
-                    }
-                    a->add_precondition(q_features[j], true);
-                    for( size_t k = 0; k < features_increased.size(); ++k )
-                        a->add_precondition(fond->feature(features_increased[k]->name()), false);
-
-                    // effects
-                    for( size_t k = 0; k < action->num_effects(); ++k ) {
-                        const Feature *feature = action->effect(k).first;
-                        bool value = action->effect(k).second;
-                        a->add_effect(fond->feature(feature->name()), value);
-                    }
-                    fond->add_action(a);
-                }
-            } else {
-                clone(fond, action);
-            }
-        }
+        create_unset_actions(fond, d, loop_nesting, numeric_features, boolean_features, bit_features, q_features);
+        translate_qnp_actions(fond, d, loop_nesting, numeric_features, boolean_features, bit_features, q_features);
     } else {
         std::cout << "**** Use loop_nesting=0" << std::endl;
         assert(0);
