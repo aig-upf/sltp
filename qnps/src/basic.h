@@ -10,9 +10,11 @@ inline std::string PDDL_name(const std::string &name) {
     std::string copy(name);
     for( size_t n = copy.find('('); n != std::string::npos; n = copy.find('(') )
         copy.replace(n, 1, "_");
-    for( size_t n = copy.find(')'); n != std::string::npos; n = copy.find(')') )
-        copy.replace(n, 1, "");
     for( size_t n = copy.find(','); n != std::string::npos; n = copy.find(',') )
+        copy.replace(n, 1, "_");
+    for( size_t n = copy.find('.'); n != std::string::npos; n = copy.find('.') )
+        copy.replace(n, 1, "_");
+    for( size_t n = copy.find(')'); n != std::string::npos; n = copy.find(')') )
         copy.replace(n, 1, "");
     return copy;
 }
