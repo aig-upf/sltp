@@ -2,7 +2,7 @@
 (:domain BLOCKS)
 (:objects A B C D E F G H I J K L M N)
 (:init (CLEAR M) (ON M L) (ON L K) (ON K J) (ON J I) (ON I B) (ONTABLE B)
-       (CLEAR H) (ON H G) (ON G F) (ON F E) (ON E D) (ON D A) (ONTABLE A)
+       (CLEAR H) (ON H G) (ON G F) (ON F E) (ON E D) (ON D A) (on a c) (ONTABLE C)
        (CLEAR N) (ONTABLE N)
 (HANDEMPTY))
 (:goal (AND (ON A B)))

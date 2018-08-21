@@ -4,7 +4,7 @@ import sys
 
 from abstractions_defaults import generate_experiment
 from common import build_ijcai_paper_bw_concepts, add_bw_domain_parameters, ijcai_paper_bw_feature_namer, \
-    add_bw_domain_parameters_2, build_on_x_y_feature_set, generate_features_n_ab
+    add_bw_domain_parameters_2, build_on_x_y_feature_set, generate_features_n_ab, update_dict, get_on_x_y_feature
 
 
 def experiment(experiment_name=None):
@@ -89,8 +89,11 @@ def experiment(experiment_name=None):
         feature_generator=generate_features_n_ab,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
-    bw_on_x_y_5_rnd = bw_on_x_y_5.copy()
-    bw_on_x_y_5_rnd.update(dict(num_sampled_states=60))
+    bw_on_x_y_dt_iw_fixed_goal = update_dict(bw_on_x_y_dt_iw,
+                                             # instances=["on_x_y_dt_1.pddl"],
+                                             enforce_features=get_on_x_y_feature)
+
+    bw_on_x_y_5_rnd = update_dict(bw_on_x_y_5, num_sampled_states=60)
 
     check_ijcai_features_on_clear_5 = dict(
         instances="instance_5_clear_x.pddl",
@@ -132,6 +135,7 @@ def experiment(experiment_name=None):
         "bw_on_x_y_5_iw": bw_on_x_y_5_iw,
         "bw_on_x_y_dt_iw": bw_on_x_y_dt_iw,
         "validate_bw_on_x_y_dt_iw": validate_bw_on_x_y_dt_iw,
+        "bw_on_x_y_dt_iw_fixed_goal": bw_on_x_y_dt_iw_fixed_goal,
 
         "ijcai_features_on_clear_5_rnd": ijcai_features_on_clear_5_rnd,
         "ijcai_features_on_clear_5": ijcai_features_on_clear_5,

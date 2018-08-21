@@ -88,7 +88,7 @@ def generate_maxsat_problem(config, data, rng):
     translator = ModelTranslator(feat_matrix, bin_feat_matrix, feature_complexity, feature_names, feature_types, state_ids, goal_states, transitions,
                                  config.cnf_filename, optimization, config.relax_numeric_increase)
 
-    translator.run()
+    translator.run(data.enforced_feature_idxs)
     # translator.writer.print_variables(config.maxsat_variables_file)
 
     return dict(cnf_translator=translator)
@@ -236,7 +236,7 @@ class ModelTranslator(object):
         self.writer.close()
         print("A total of {} variables were created".format(len(self.writer.variables)))
 
-    def run(self):
+    def run(self, enforced_feature_idxs):
 
         self.create_variables()
 
@@ -301,6 +301,10 @@ class ModelTranslator(object):
             d = self.compute_feature_weight(feature)
             self.writer.clause([self.writer.literal(var, False)], weight=d)
             self.n_selected_clauses += 1
+
+        # Make sure those features we want to enforce in the solution, if any, are posted as necessarily selected
+        for enforced in enforced_feature_idxs:
+            self.writer.clause([self.writer.literal(self.np_var_selected[enforced], True)])
 
         # from pympler.asizeof import asizeof
         # print(f"asizeof(self.writer): {asizeof(self.writer)/(1024*1024)}MB")

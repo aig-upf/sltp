@@ -182,6 +182,7 @@ class ConceptGenerationStep(Step):
         config["resampled_states_filename"] = os.path.join(config["experiment_dir"], 'resampled.txt')
         config["concept_generator"] = config.get("concept_generator", None)
         config["feature_generator"] = config.get("feature_generator", None)
+        config["enforce_features"] = config.get("enforce_features", None)
         config["parameter_generator"] = config.get("parameter_generator", None)
         config["distance_feature_max_complexity"] = config.get("distance_feature_max_complexity", 0)
         config["max_concept_grammar_iterations"] = config.get("max_concept_grammar_iterations", None)
@@ -271,7 +272,7 @@ class MaxsatProblemGenerationStep(Step):
         return config
 
     def get_required_data(self):
-        return ["goal_states", "transitions", "state_ids"]
+        return ["goal_states", "transitions", "state_ids", "enforced_feature_idxs"]
 
     def description(self):
         return "Generation of the max-sat problem"

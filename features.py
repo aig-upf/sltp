@@ -405,8 +405,14 @@ def run(config, data, rng):
     else:
         rest = roles
 
+    if config.feature_generator is not None and config.enforce_features:
+        raise RuntimeError("Cannot use at the same time options 'feature_generator' and 'enforce_features'")
+
+    enforced_feature_idxs = []
     if config.feature_generator is None:
-        features = create_nullary_features(atoms)
+        features = config.enforce_features(language) if config.enforce_features else []
+        enforced_feature_idxs = list(range(0, len(features)))
+        features += create_nullary_features(atoms)
         features += factory.derive_features(concepts, rest, config.distance_feature_max_complexity)
     else:
         logging.info('Using user-provided set of features instead of computing them automatically')
@@ -419,7 +425,8 @@ def run(config, data, rng):
         states=states,
         goal_states=goal_states,
         transitions=transitions,
-        extensions=factory.processor.cache
+        extensions=factory.processor.cache,
+        enforced_feature_idxs=enforced_feature_idxs,
     )
 
 
