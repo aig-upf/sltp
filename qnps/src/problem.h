@@ -22,6 +22,7 @@ class Problem {
     mutable std::vector<const Feature*> numeric_features_;
     mutable std::vector<const Feature*> boolean_features_;
     mutable std::map<std::string, const Feature*> enablers_;
+    mutable std::map<std::string, int> variable_;
 
     // translation without loop nesting
     mutable std::vector<const Feature*> bit_features_;
@@ -196,7 +197,6 @@ inline void Problem::create_push_actions(Problem *fond, int d, int loop_nesting)
                 for( int t = 0; t <= d; ++t )
                     a->add_effect(fond->ctr_features_[(i + 1) * (d + 1) + t], true);
 
-                a->PDDL_dump(std::cout);
                 fond->add_action(a);
             }
         }
@@ -220,7 +220,6 @@ inline void Problem::create_pop_actions(Problem *fond, int d, int loop_nesting) 
             a->add_effect(fond->in_features_[j], false);
             a->add_effect(fond->idx_features_[(i - 1) * numeric_features_.size() + j], false);
 
-            a->PDDL_dump(std::cout);
             fond->add_action(a);
         }
     }
@@ -269,25 +268,49 @@ inline void Problem::translate_qnp_action(Problem *fond, const Action *action, i
         fond->add_action(a);
     } else {
         for( size_t j = 0; j < features_decreased.size(); ++j ) {
-            std::string name = action->name();
-            if( features_decreased.size() > 1 )
-                name += std::string("_") + std::to_string(j);
-            Action *a = clone_qnp_action(fond, action, name);
+            if( loop_nesting == 0 ) {
+                std::string name = action->name();
+                if( features_decreased.size() > 1 )
+                    name += std::string("_") + std::to_string(j);
+                Action *a = clone_qnp_action(fond, action, name);
 
-            // extra preconditions
-            assert(fond->enablers_.find(features_decreased[j]->name()) != fond->enablers_.end());
-            a->add_precondition(fond->enablers_[features_decreased[j]->name()], true);
-            for( size_t k = 0; k < features_increased.size(); ++k ) {
-                assert(fond->enablers_.find(features_increased[k]->name()) != fond->enablers_.end());
-                a->add_precondition(fond->enablers_[features_increased[k]->name()], false);
+                // extra preconditions
+                assert(fond->enablers_.find(features_decreased[j]->name()) != fond->enablers_.end());
+                a->add_precondition(fond->enablers_[features_decreased[j]->name()], true);
+                for( size_t k = 0; k < features_increased.size(); ++k ) {
+                    assert(fond->enablers_.find(features_increased[k]->name()) != fond->enablers_.end());
+                    a->add_precondition(fond->enablers_[features_increased[k]->name()], false);
+                }
+                fond->add_action(a);
+            } else {
+                for( int i = 1; i < loop_nesting; ++i ) {
+                    std::string name = action->name();
+                    if( features_decreased.size() > 1 )
+                        name += std::string("_") + std::to_string(j);
+                    name += std::string("_") + std::to_string(i);
+                    Action *a = clone_qnp_action(fond, action, name);
+
+                    // extra preconditions
+                    assert(fond->enablers_.find(features_decreased[j]->name()) != fond->enablers_.end());
+                    a->add_precondition(fond->enablers_[features_decreased[j]->name()], true);
+                    for( size_t k = 0; k < features_increased.size(); ++k ) {
+                        assert(fond->enablers_.find(features_increased[k]->name()) != fond->enablers_.end());
+                        a->add_precondition(fond->enablers_[features_increased[k]->name()], false);
+                    }
+                    assert(fond->variable_.find(features_decreased[j]->name()) != fond->variable_.end());
+                    int var = fond->variable_[features_decreased[j]->name()];
+                    a->add_precondition(fond->idx_features_[(i - 1) * numeric_features_.size() + var], true);
+
+                    // extra effects: reset counters when loop_nesting is activated
+                    for( int t = i; t <= loop_nesting; ++t ) {
+                        // reset ctr(t)
+                        for( int k = 0; k <= d; ++k )
+                            a->add_effect(fond->ctr_features_[t * (d + 1) + k], true);
+                    }
+
+                    fond->add_action(a);
+                }
             }
-
-            // extra effects: reset counters when loop_nesting is activated
-            if( loop_nesting > 0 ) {
-                assert(0);
-            }
-
-            fond->add_action(a);
         }
     }
 }
@@ -350,6 +373,7 @@ inline Problem* Problem::create_fond(int d, int loop_nesting) const {
             fond->in_features_.push_back(feature);
             fond->add_feature(feature);
             fond->enablers_.insert(std::make_pair(numeric_features_[i]->name(), feature));
+            fond->variable_.insert(std::make_pair(numeric_features_[i]->name(), i));
         }
 
         fond->idx_features_.clear();
