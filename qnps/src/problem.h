@@ -18,46 +18,34 @@ class Problem {
     std::vector<const Action*> actions_;
     std::map<std::string, const Feature*> feature_map_;
 
+    // temporal vars used in translation
+    mutable std::vector<const Feature*> numeric_features_;
+    mutable std::vector<const Feature*> boolean_features_;
+    mutable std::map<std::string, const Feature*> enablers_;
+
+    // translation without loop nesting
+    mutable std::vector<const Feature*> bit_features_;
+    mutable std::vector<const Feature*> q_features_;
+
+    // translation with loop nesting
+    mutable std::vector<const Feature*> d_features_;
+    mutable std::vector<const Feature*> in_features_;
+    mutable std::vector<const Feature*> idx_features_;
+    mutable std::vector<const Feature*> ctr_features_;
+
     // methods for qnp2fond translation
-    void create_set_actions(Problem *fond,
-                            int d,
-                            int loop_nesting,
-                            std::vector<const Feature*> &numeric_features,
-                            std::vector<const Feature*> &boolean_features,
-                            std::vector<const Feature*> &bit_features,
-                            std::vector<const Feature*> &q_features) const;
-    void create_unset_actions(Problem *fond,
-                              int d,
-                              int loop_nesting,
-                              std::vector<const Feature*> &numeric_features,
-                              std::vector<const Feature*> &boolean_features,
-                              std::vector<const Feature*> &bit_features,
-                              std::vector<const Feature*> &q_features) const;
+    void create_set_actions(Problem *fond, int d, int loop_nesting) const;
+    void create_unset_actions(Problem *fond, int d, int loop_nesting) const;
 
-    void clone_qnp_action(Problem *fond, const Action *action) const;
-    void translate_qnp_action(Problem *fond,
-                              const Action *action,
-                              int d,
-                              int loop_nesting,
-                              std::vector<const Feature*> &numeric_features,
-                              std::vector<const Feature*> &boolean_features,
-                              std::vector<const Feature*> &bit_features,
-                              std::vector<const Feature*> &q_features) const;
-    void translate_qnp_actions(Problem *fond,
-                               int d,
-                               int loop_nesting,
-                               std::vector<const Feature*> &numeric_features,
-                               std::vector<const Feature*> &boolean_features,
-                               std::vector<const Feature*> &bit_features,
-                               std::vector<const Feature*> &q_features) const;
+    void create_push_actions(Problem *fond, int d, int loop_nesting) const;
+    void create_pop_actions(Problem *fond, int d, int loop_nesting) const;
 
-    void translate(Problem *fond,
-                   int d,
-                   int loop_nesting,
-                   std::vector<const Feature*> &numeric_features,
-                   std::vector<const Feature*> &boolean_features,
-                   std::vector<const Feature*> &bit_features,
-                   std::vector<const Feature*> &q_features) const;
+    Action* clone_qnp_action(const Problem *fond, const Action *action, const std::string &name) const;
+    void translate_qnp_action(Problem *fond, const Action *action, int d, int loop_nesting) const;
+    void translate_qnp_actions(Problem *fond, int d, int loop_nesting) const;
+
+    Problem* create_fond(int d, int loop_nesting) const;
+    void translate(Problem *fond, int d, int loop_nesting) const;
 
   public:
     Problem(const std::string &name) : name_(name) { }
@@ -95,123 +83,6 @@ class Problem {
     }
 
     Problem* translate(int d, int loop_nesting = 0) const;
-#if 0
-    {
-        std::vector<const Feature*> numeric_features;
-        std::vector<const Feature*> boolean_features;
-        std::vector<const Feature*> q_features;
-        std::vector<const Feature*> bit_features;
-        for( size_t i = 0; i < features_.size(); ++i ) {
-            if( features_[i]->numeric() )
-                numeric_features.push_back(features_[i]);
-            else
-                boolean_features.push_back(features_[i]);
-        }
-
-        Problem *fond = new Problem(std::string("FOND_") + name_ + "_" + std::to_string(d));
-        for( size_t i = 0; i < numeric_features.size(); ++i )
-            fond->add_feature(new Feature(numeric_features[i]->name(), true));
-        for( size_t i = 0; i < boolean_features.size(); ++i )
-            fond->add_feature(new Feature(boolean_features[i]->name(), false));
-        for( size_t i = 0; i < numeric_features.size(); ++i ) {
-            //const Feature *feature = new Feature(std::string("Q(") + numeric_features[i]->name() + ")", false);
-            const Feature *feature = new Feature(PDDL_q(numeric_features[i]->name()), false, true);
-            q_features.push_back(feature);
-            fond->add_feature(feature);
-        }
-        for( int i = 0; i <= d; ++i ) {
-            const Feature *feature = new Feature(std::string("bit(") + std::to_string(i) + ")", false);
-            bit_features.push_back(feature);
-            fond->add_feature(feature);
-        }
-
-        // set actions
-        for( size_t i = 0; i < numeric_features.size(); ++i ) {
-            for( int t = 0; t <= d; ++t ) {
-                std::string name = std::string("Set(") + numeric_features[i]->name() + "," + std::to_string(t) + ")";
-                Action *action = new Action(name);
-                for( size_t j = 0; j < numeric_features.size(); ++j )
-                    action->add_precondition(q_features[j], false);
-                action->add_precondition(bit_features[t], true);
-                for( int j = t - 1; j >= 0; --j )
-                    action->add_precondition(bit_features[j], false);
-                action->add_effect(q_features[i], true);
-                action->add_effect(bit_features[t], false);
-                for( int j = t - 1; j >= 0; --j )
-                    action->add_effect(bit_features[j], true);
-                fond->add_action(action);
-            }
-        }
-
-        // unset actions
-        for( size_t i = 0; i < numeric_features.size(); ++i ) {
-            std::string name = std::string("Unset(") + numeric_features[i]->name() + ")";
-            Action *action = new Action(name);
-            action->add_precondition(q_features[i], true);
-            action->add_effect(q_features[i], false);
-            fond->add_action(action);
-        }
-
-        // QNP actions
-        for( size_t i = 0; i < actions_.size(); ++i ) {
-            std::vector<const Feature*> features_increased;
-            std::vector<const Feature*> features_decreased;
-            for( size_t j = 0; j < actions_[i]->num_effects(); ++j ) {
-                const Feature *feature = actions_[i]->effect(j).first;
-                if( feature->numeric() && actions_[i]->effect(j).second )
-                    features_increased.push_back(feature);
-                else if( feature->numeric() )
-                    features_decreased.push_back(feature);
-            }
-
-            if( !features_decreased.empty() ) {
-                for( size_t j = 0; j < features_decreased.size(); ++j ) {
-                    std::string name = actions_[i]->name();
-                    if( features_decreased.size() > 1 )
-                        name += std::string("_") + std::to_string(j);
-                    Action *action = new Action(name);
-
-                    // preconditions
-                    for( size_t k = 0; k < actions_[i]->num_preconditions(); ++k ) {
-                        const Feature *feature = actions_[i]->precondition(k).first;
-                        bool value = actions_[i]->precondition(k).second;
-                        action->add_precondition(fond->feature(feature->name()), value);
-                    }
-                    action->add_precondition(q_features[j], true);
-                    for( size_t k = 0; k < features_increased.size(); ++k )
-                        action->add_precondition(fond->feature(features_increased[k]->name()), false);
-
-                    // effects
-                    for( size_t k = 0; k < actions_[i]->num_effects(); ++k ) {
-                        const Feature *feature = actions_[i]->effect(k).first;
-                        bool value = actions_[i]->effect(k).second;
-                        action->add_effect(fond->feature(feature->name()), value);
-                    }
-                    fond->add_action(action);
-                }
-            } else {
-                Action *action = new Action(actions_[i]->name());
-
-                // preconditions
-                for( size_t k = 0; k < actions_[i]->num_preconditions(); ++k ) {
-                    const Feature *feature = actions_[i]->precondition(k).first;
-                    bool value = actions_[i]->precondition(k).second;
-                    action->add_precondition(fond->feature(feature->name()), value);
-                }
-
-                // effects
-                for( size_t k = 0; k < actions_[i]->num_effects(); ++k ) {
-                    const Feature *feature = actions_[i]->effect(k).first;
-                    bool value = actions_[i]->effect(k).second;
-                    action->add_effect(fond->feature(feature->name()), value);
-                }
-                fond->add_action(action);
-            }
-        }
-
-        return fond;
-    }
-#endif
 
     static Problem* read(std::istream &is) {
         std::string name;
@@ -271,49 +142,92 @@ class Problem {
     }
 };
 
-inline void Problem::create_set_actions(Problem *fond,
-                                        int d,
-                                        int loop_nesting,
-                                        std::vector<const Feature*> &numeric_features,
-                                        std::vector<const Feature*> &boolean_features,
-                                        std::vector<const Feature*> &bit_features,
-                                        std::vector<const Feature*> &q_features) const {
-    for( size_t i = 0; i < numeric_features.size(); ++i ) {
+inline void Problem::create_set_actions(Problem *fond, int d, int loop_nesting) const {
+    for( size_t i = 0; i < numeric_features_.size(); ++i ) {
         for( int t = 0; t <= d; ++t ) {
-            std::string name = std::string("Set(") + numeric_features[i]->name() + "," + std::to_string(t) + ")";
-            Action *action = new Action(name);
-            for( size_t j = 0; j < numeric_features.size(); ++j )
-                action->add_precondition(q_features[j], false);
-            action->add_precondition(bit_features[t], true);
+            std::string name = std::string("Set(") + numeric_features_[i]->name() + "," + std::to_string(t) + ")";
+            Action *a = new Action(name);
+            for( size_t j = 0; j < numeric_features_.size(); ++j )
+                a->add_precondition(fond->q_features_[j], false);
+            a->add_precondition(fond->bit_features_[t], true);
             for( int j = t - 1; j >= 0; --j )
-                action->add_precondition(bit_features[j], false);
-            action->add_effect(q_features[i], true);
-            action->add_effect(bit_features[t], false);
+                a->add_precondition(fond->bit_features_[j], false);
+            a->add_effect(fond->q_features_[i], true);
+            a->add_effect(fond->bit_features_[t], false);
             for( int j = t - 1; j >= 0; --j )
-                action->add_effect(bit_features[j], true);
-            fond->add_action(action);
+                a->add_effect(fond->bit_features_[j], true);
+            fond->add_action(a);
         }
     }
 }
 
-inline void Problem::create_unset_actions(Problem *fond,
-                                        int d,
-                                        int loop_nesting,
-                                        std::vector<const Feature*> &numeric_features,
-                                        std::vector<const Feature*> &boolean_features,
-                                        std::vector<const Feature*> &bit_features,
-                                        std::vector<const Feature*> &q_features) const {
-    for( size_t i = 0; i < numeric_features.size(); ++i ) {
-        std::string name = std::string("Unset(") + numeric_features[i]->name() + ")";
-        Action *action = new Action(name);
-        action->add_precondition(q_features[i], true);
-        action->add_effect(q_features[i], false);
-        fond->add_action(action);
+inline void Problem::create_unset_actions(Problem *fond, int d, int loop_nesting) const {
+    for( size_t i = 0; i < numeric_features_.size(); ++i ) {
+        std::string name = std::string("Unset(") + numeric_features_[i]->name() + ")";
+        Action *a = new Action(name);
+        a->add_precondition(fond->q_features_[i], true);
+        a->add_effect(fond->q_features_[i], false);
+        fond->add_action(a);
     }
 }
 
-inline void Problem::clone_qnp_action(Problem *fond, const Action *action) const {
-    Action *a = new Action(action->name());
+inline void Problem::create_push_actions(Problem *fond, int d, int loop_nesting) const {
+    for( int i = 0; i < loop_nesting; ++i ) {
+        for( size_t j = 0; j < numeric_features_.size(); ++j ) {
+            for( int k = 0; k <= d; ++k ) {
+                std::string name = std::string("Push(") + numeric_features_[j]->name() + ",d" + std::to_string(i) + "," + std::to_string(k) + ")";
+                Action *a = new Action(name);
+
+                // preconditions: (and (di) (not (in X)) (c i t) (not (c i t-1)) ... (not (c i 0)))
+                a->add_precondition(fond->d_features_[i], true);
+                if( i > 0 ) a->add_precondition(fond->in_features_[j], false);
+                a->add_precondition(fond->ctr_features_[i * (d + 1) + k], true);
+                for( int t = k - 1; t >= 0; --t )
+                    a->add_precondition(fond->ctr_features_[i * (d + 1) + t], false);
+
+                // effects: (and (not (di)) (di+1) (in X) (idx X i+1) (not (c i t)) (c i t-1) ... (c i 0) (reset i+1))
+                a->add_effect(fond->d_features_[i], false);
+                a->add_effect(fond->d_features_[i+1], true);
+                a->add_effect(fond->in_features_[j], true);
+                a->add_effect(fond->idx_features_[i * numeric_features_.size() + j], true);
+                a->add_effect(fond->ctr_features_[i * (d + 1) + k], false);
+                for( int t = k - 1; t >= 0; --t )
+                    a->add_effect(fond->ctr_features_[i * (d + 1) + t], true);
+                for( int t = 0; t <= d; ++t )
+                    a->add_effect(fond->ctr_features_[(i + 1) * (d + 1) + t], true);
+
+                a->PDDL_dump(std::cout);
+                fond->add_action(a);
+            }
+        }
+    }
+}
+
+inline void Problem::create_pop_actions(Problem *fond, int d, int loop_nesting) const {
+    for( int i = 1; i <= loop_nesting; ++i ) {
+        for( size_t j = 0; j < numeric_features_.size(); ++j ) {
+            std::string name = std::string("Pop(") + numeric_features_[j]->name() + "," + std::to_string(i) + ")";
+            Action *a = new Action(name);
+
+            // preconditions
+            a->add_precondition(fond->d_features_[i], true);
+            a->add_precondition(fond->in_features_[j], true);
+            a->add_precondition(fond->idx_features_[(i - 1) * numeric_features_.size() + j], true);
+
+            // effects
+            a->add_effect(fond->d_features_[i-1], true);
+            a->add_effect(fond->d_features_[i], false);
+            a->add_effect(fond->in_features_[j], false);
+            a->add_effect(fond->idx_features_[(i - 1) * numeric_features_.size() + j], false);
+
+            a->PDDL_dump(std::cout);
+            fond->add_action(a);
+        }
+    }
+}
+
+inline Action* Problem::clone_qnp_action(const Problem *fond, const Action *action, const std::string &name) const {
+    Action *a = new Action(name);
 
     // preconditions
     for( size_t k = 0; k < action->num_preconditions(); ++k ) {
@@ -328,17 +242,11 @@ inline void Problem::clone_qnp_action(Problem *fond, const Action *action) const
         bool value = action->effect(k).second;
         a->add_effect(fond->feature(feature->name()), value);
     }
-    fond->add_action(a);
+
+    return a;
 }
 
-inline void Problem::translate_qnp_action(Problem *fond,
-                                          const Action *action,
-                                          int d,
-                                          int loop_nesting,
-                                          std::vector<const Feature*> &numeric_features,
-                                          std::vector<const Feature*> &boolean_features,
-                                          std::vector<const Feature*> &bit_features,
-                                          std::vector<const Feature*> &q_features) const {
+inline void Problem::translate_qnp_action(Problem *fond, const Action *action, int d, int loop_nesting) const {
     std::vector<const Feature*> features_increased;
     std::vector<const Feature*> features_decreased;
     for( size_t j = 0; j < action->num_effects(); ++j ) {
@@ -349,101 +257,137 @@ inline void Problem::translate_qnp_action(Problem *fond,
             features_decreased.push_back(feature);
     }
 
-    if( !features_decreased.empty() ) {
+    if( features_decreased.empty() ) {
+        Action *a = clone_qnp_action(fond, action, action->name());
+
+        // extra preconditions
+        for( size_t k = 0; k < features_increased.size(); ++k ) {
+            assert(fond->enablers_.find(features_increased[k]->name()) != fond->enablers_.end());
+            a->add_precondition(fond->enablers_[features_increased[k]->name()], false);
+        }
+
+        fond->add_action(a);
+    } else {
         for( size_t j = 0; j < features_decreased.size(); ++j ) {
             std::string name = action->name();
             if( features_decreased.size() > 1 )
                 name += std::string("_") + std::to_string(j);
-            Action *a = new Action(name);
+            Action *a = clone_qnp_action(fond, action, name);
 
-            // preconditions
-            for( size_t k = 0; k < action->num_preconditions(); ++k ) {
-                const Feature *feature = action->precondition(k).first;
-                bool value = action->precondition(k).second;
-                a->add_precondition(fond->feature(feature->name()), value);
+            // extra preconditions
+            assert(fond->enablers_.find(features_decreased[j]->name()) != fond->enablers_.end());
+            a->add_precondition(fond->enablers_[features_decreased[j]->name()], true);
+            for( size_t k = 0; k < features_increased.size(); ++k ) {
+                assert(fond->enablers_.find(features_increased[k]->name()) != fond->enablers_.end());
+                a->add_precondition(fond->enablers_[features_increased[k]->name()], false);
             }
-            a->add_precondition(q_features[j], true);
-            for( size_t k = 0; k < features_increased.size(); ++k )
-                a->add_precondition(fond->feature(features_increased[k]->name()), false);
 
-            // effects
-            for( size_t k = 0; k < action->num_effects(); ++k ) {
-                const Feature *feature = action->effect(k).first;
-                bool value = action->effect(k).second;
-                a->add_effect(fond->feature(feature->name()), value);
+            // extra effects: reset counters when loop_nesting is activated
+            if( loop_nesting > 0 ) {
+                assert(0);
             }
+
             fond->add_action(a);
         }
-    } else {
-        clone_qnp_action(fond, action);
     }
 }
 
-inline void Problem::translate_qnp_actions(Problem *fond,
-                                           int d,
-                                           int loop_nesting,
-                                           std::vector<const Feature*> &numeric_features,
-                                           std::vector<const Feature*> &boolean_features,
-                                           std::vector<const Feature*> &bit_features,
-                                           std::vector<const Feature*> &q_features) const {
+inline void Problem::translate_qnp_actions(Problem *fond, int d, int loop_nesting) const {
     for( size_t i = 0; i < actions_.size(); ++i ) {
         const Action *action = actions_[i];
-        translate_qnp_action(fond, action, d, loop_nesting, numeric_features, boolean_features, bit_features, q_features);
+        translate_qnp_action(fond, action, d, loop_nesting);
     }
 }
 
-inline void Problem::translate(Problem *fond,
-                               int d,
-                               int loop_nesting,
-                               std::vector<const Feature*> &numeric_features,
-                               std::vector<const Feature*> &boolean_features,
-                               std::vector<const Feature*> &bit_features,
-                               std::vector<const Feature*> &q_features) const {
+inline void Problem::translate(Problem *fond, int d, int loop_nesting) const {
     if( loop_nesting == 0 ) {
-        create_set_actions(fond, d, loop_nesting, numeric_features, boolean_features, bit_features, q_features);
-        create_unset_actions(fond, d, loop_nesting, numeric_features, boolean_features, bit_features, q_features);
-        translate_qnp_actions(fond, d, loop_nesting, numeric_features, boolean_features, bit_features, q_features);
+        create_set_actions(fond, d, loop_nesting);
+        create_unset_actions(fond, d, loop_nesting);
     } else {
-        std::cout << "**** Use loop_nesting=0" << std::endl;
-        assert(0);
+        create_push_actions(fond, d, loop_nesting);
+        create_pop_actions(fond, d, loop_nesting);
     }
+    translate_qnp_actions(fond, d, loop_nesting);
+}
+
+inline Problem* Problem::create_fond(int d, int loop_nesting) const {
+    Problem *fond = new Problem(std::string("FOND_") + name_ + "_" + std::to_string(d) + "_" + std::to_string(loop_nesting));
+
+    // clone features
+    for( size_t i = 0; i < numeric_features_.size(); ++i )
+        fond->add_feature(new Feature(numeric_features_[i]->name(), true));
+    for( size_t i = 0; i < boolean_features_.size(); ++i )
+        fond->add_feature(new Feature(boolean_features_[i]->name(), false));
+
+    // create additional features (fluents)
+    if( loop_nesting == 0 ) {
+        fond->bit_features_.clear();
+        for( int i = 0; i <= d; ++i ) {
+            const Feature *feature = new Feature(std::string("bit(") + std::to_string(i) + ")", false);
+            fond->bit_features_.push_back(feature);
+            fond->add_feature(feature);
+        }
+
+        fond->enablers_.clear();
+        fond->q_features_.clear();
+        for( size_t i = 0; i < numeric_features_.size(); ++i ) {
+            const Feature *feature = new Feature(PDDL_q(numeric_features_[i]->name()), false, true);
+            fond->q_features_.push_back(feature);
+            fond->add_feature(feature);
+            fond->enablers_.insert(std::make_pair(numeric_features_[i]->name(), feature));
+        }
+    } else {
+        fond->d_features_.clear();
+        for( int i = 0; i <= loop_nesting; ++i ) {
+            const Feature *feature = new Feature(std::string("d(") + std::to_string(i) + ")", false);
+            fond->d_features_.push_back(feature);
+            fond->add_feature(feature);
+        }
+
+        fond->in_features_.clear();
+        for( size_t i = 0; i < numeric_features_.size(); ++i ) {
+            const Feature *feature = new Feature(std::string("in(") + numeric_features_[i]->name() + ")", false);
+            fond->in_features_.push_back(feature);
+            fond->add_feature(feature);
+            fond->enablers_.insert(std::make_pair(numeric_features_[i]->name(), feature));
+        }
+
+        fond->idx_features_.clear();
+        for( int i = 1; i <= loop_nesting; ++i ) {
+            for( size_t j = 0; j < numeric_features_.size(); ++j ) {
+                const Feature *feature = new Feature(std::string("idx(") + numeric_features_[j]->name() + "," + std::to_string(i) + ")", false);
+                fond->idx_features_.push_back(feature);
+                fond->add_feature(feature);
+            }
+        }
+
+        fond->ctr_features_.clear();
+        for( int i = 0; i <= loop_nesting; ++i ) {
+            for( int k = 0; k <= d; ++k ) {
+                const Feature *feature = new Feature(std::string("ctr(") + std::to_string(i) + "," + std::to_string(k) + ")", false);
+                fond->ctr_features_.push_back(feature);
+                fond->add_feature(feature);
+            }
+        }
+    }
+
+    return fond;
 }
 
 inline Problem* Problem::translate(int d, int loop_nesting) const {
     // separate features
-    std::vector<const Feature*> numeric_features;
-    std::vector<const Feature*> boolean_features;
+    numeric_features_.clear();
+    boolean_features_.clear();
     for( size_t i = 0; i < features_.size(); ++i ) {
         if( features_[i]->numeric() )
-            numeric_features.push_back(features_[i]);
+            numeric_features_.push_back(features_[i]);
         else
-            boolean_features.push_back(features_[i]);
+            boolean_features_.push_back(features_[i]);
     }
 
-    // create FOND
-    Problem *fond = new Problem(std::string("FOND_") + name_ + "_" + std::to_string(d) + "_" + std::to_string(loop_nesting));
-    for( size_t i = 0; i < numeric_features.size(); ++i )
-        fond->add_feature(new Feature(numeric_features[i]->name(), true));
-    for( size_t i = 0; i < boolean_features.size(); ++i )
-        fond->add_feature(new Feature(boolean_features[i]->name(), false));
-
-    // create new features
-    std::vector<const Feature*> bit_features;
-    for( int i = 0; i <= d; ++i ) {
-        const Feature *feature = new Feature(std::string("bit(") + std::to_string(i) + ")", false);
-        bit_features.push_back(feature);
-        fond->add_feature(feature);
-    }
-
-    std::vector<const Feature*> q_features;
-    for( size_t i = 0; i < numeric_features.size(); ++i ) {
-        const Feature *feature = new Feature(PDDL_q(numeric_features[i]->name()), false, true);
-        q_features.push_back(feature);
-        fond->add_feature(feature);
-    }
-
-    // finish translation
-    translate(fond, d, loop_nesting, numeric_features, boolean_features, bit_features, q_features);
+    // create FOND and finish translation
+    Problem *fond = create_fond(d, loop_nesting);
+    translate(fond, d, loop_nesting);
     return fond;
 }
 
