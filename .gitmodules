@@ -1,0 +1,3 @@
+[submodule "qnp2fond"]
+	path = qnp2fond
+	url = https://github.com/bonetblai/qnp2fond.git
