@@ -28,11 +28,8 @@ name_formula_file_extra = 'formula-extra-' + sys.argv[3] + '.txt'
 name_output_satsolver = 'outsat-' + sys.argv[3] + '.txt'
 name_sas_file = 'outputtrans-' + sys.argv[3] + '.sas'
 verbose = True
-print("X.0")
 p.generate_file(name_sas_file)
-print("X.1")
 p.generate_task(name_sas_file)
-print("X.2")
 my_task = p.translate_to_atomic()
 p.print_task()
 fair = my_task.is_fair()

@@ -26,6 +26,7 @@ def parse_list_aux(tokenstream):
     while True:
         try:
             token = next(tokenstream)
+            #print("Token: %s" % token)
         except StopIteration:
             raise ParseError()
         if token == ")":
