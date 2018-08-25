@@ -68,14 +68,14 @@ def experiment(experiment_name=None):
         feature_namer=ijcai_paper_bw_feature_namer,)
 
     bw_on_x_y_5_iw = dict(
-        instances=["instance_9_on_x_y_1.pddl", "instance_9_on_x_y_2.pddl", "instance_9_on_x_y_3.pddl"],#, "instance_9_on_x_y_4.pddl"],
+        instances=["instance_9_on_x_y_1.pddl", "instance_9_on_x_y_2.pddl", "holding_a_b_unclear.pddl"],#, "instance_9_on_x_y_4.pddl"],
         num_states=1000, max_width=2,
         max_concept_size=10, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
     bw_on_x_y_dt_iw = dict(
-        instances=["on_x_y_dt_1.pddl", "instance_9_on_x_y_3.pddl"],
+        instances=["on_x_y_dt_1.pddl", "holding_a_b_unclear.pddl"],
         num_states=49999, max_width=2,
         max_concept_size=10, max_concept_grammar_iterations=3,
         parameter_generator=add_bw_domain_parameters_2,
@@ -90,8 +90,23 @@ def experiment(experiment_name=None):
         feature_namer=ijcai_paper_bw_feature_namer,)
 
     bw_on_x_y_dt_iw_fixed_goal = update_dict(bw_on_x_y_dt_iw,
-                                             # instances=["on_x_y_dt_1.pddl"],
+                                             instances=["on_x_y_dt_1.pddl"],
                                              enforce_features=get_on_x_y_feature)
+
+    bw_on_x_y_dt_completeness_opt = update_dict(bw_on_x_y_dt_iw,
+                                                instances=["on_x_y_dt_1.pddl"],
+                                                num_states=50000, max_width=2,
+                                                num_sampled_states=3500,
+                                                complete_only_wrt_optimal=True,
+                                                enforce_features=get_on_x_y_feature)
+
+    simple_clear_3_completeness_opt = update_dict(simple_clear_3,
+                                                  instances=["instance_3_clear_x_2.pddl"],
+                                                num_states=500, max_width=2,
+                                                num_sampled_states=100,
+                                                complete_only_wrt_optimal=True,
+                                                # enforce_features=get_on_x_y_feature
+                                                  )
 
     bw_on_x_y_5_rnd = update_dict(bw_on_x_y_5, num_sampled_states=60)
 
@@ -136,6 +151,8 @@ def experiment(experiment_name=None):
         "bw_on_x_y_dt_iw": bw_on_x_y_dt_iw,
         "validate_bw_on_x_y_dt_iw": validate_bw_on_x_y_dt_iw,
         "bw_on_x_y_dt_iw_fixed_goal": bw_on_x_y_dt_iw_fixed_goal,
+        "bw_on_x_y_dt_completeness_opt": bw_on_x_y_dt_completeness_opt,
+        "simple_clear_3_completeness_opt": simple_clear_3_completeness_opt,
 
         "ijcai_features_on_clear_5_rnd": ijcai_features_on_clear_5_rnd,
         "ijcai_features_on_clear_5": ijcai_features_on_clear_5,

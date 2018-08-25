@@ -360,7 +360,7 @@ def collect_all_terms(processor, atoms, concepts, roles):
 def run(config, data, rng):
     assert not data
 
-    states, goal_states, transitions = sample_generated_states(config, rng)
+    states, goal_states, transitions, optimal = sample_generated_states(config, rng)
 
     goal_denotation = []
     goal_predicates = set()  # The predicates and functions that appear mentioned in the goal
@@ -424,6 +424,7 @@ def run(config, data, rng):
         features=features,
         states=states,
         goal_states=goal_states,
+        optimal_states=optimal,
         transitions=transitions,
         extensions=factory.processor.cache,
         enforced_feature_idxs=enforced_feature_idxs,

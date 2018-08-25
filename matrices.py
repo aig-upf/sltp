@@ -31,15 +31,15 @@ def print_transition_matrix(state_ids, transitions, transitions_filename):
 def print_sat_transition_matrix(state_ids, transitions, transitions_filename):
     num_transitions = sum(len(targets) for targets in transitions.values())
     num_states = len(state_ids)
-    num_expanded_states = len(transitions.keys())
+    num_states = len(transitions.keys())
     logging.info("Printing SAT transition matrix with {} states, {} expanded states and {} transitions to '{}'".
-                 format(len(state_ids), num_expanded_states, num_transitions, transitions_filename))
+                 format(len(state_ids), num_states, num_transitions, transitions_filename))
     with open(transitions_filename, 'w') as f:
         # first line: <#states> <#transitions>
         print("{} {}".format(num_states, num_transitions), file=f)
 
         # second line: <#expanded states>
-        print("{}".format(num_expanded_states), file=f)
+        print("{}".format(num_states), file=f)
 
         for s, succ in transitions.items():
             print("{} {} {}".format(s, len(succ), " ".join("{}".format(sprime) for sprime in sorted(succ))), file=f)
@@ -136,7 +136,7 @@ def generate_features(config, data, rng):
     print_sat_transition_matrix(state_ids, data.transitions, config.sat_transitions_filename)
     print_goal_states(data.goal_states, config.goal_states_filename)
     log_features(features, config.feature_filename)
-    return dict(state_ids=state_ids, features=features, feature_model=model)
+    return dict(state_ids=state_ids, features=features)
 
 
 def compute_features(config, data):

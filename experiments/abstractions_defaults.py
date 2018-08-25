@@ -30,6 +30,16 @@ def generate_experiment(domain_dir, domain, **kwargs):
         # Whether to do IW-like pruning of nodes with novelty higher than the specified (default: -1, no pruning at all)
         max_width=-1,
 
+        # Whether we are happy to obtain completeness guarantees only with respect to those states
+        # that lie in some arbitrary (one) optimal path. Default: False
+        complete_only_wrt_optimal=False,
+
+        # Type of sampling. Accepted options are:
+        # - "all" (default): Use all expanded states
+        # - "random": Use only a random sample of the expanded states, of size given by the option "num_sampled_states"
+        # - "optimal": Use those expanded states on some optimal path (only one arbitrary optimal path)
+        sampling="all",
+
         # Number of states to be expanded in the sampling procedure
         num_states=50,
 

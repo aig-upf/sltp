@@ -188,6 +188,14 @@ class ConceptGenerationStep(Step):
         config["max_concept_grammar_iterations"] = config.get("max_concept_grammar_iterations", None)
         config["random_seed"] = config.get("random_seed", 1)
         config["num_sampled_states"] = config.get("num_sampled_states", None)
+        config["complete_only_wrt_optimal"] = config.get("complete_only_wrt_optimal", False)
+        config["sampling"] = config.get("sampling", "all")
+
+        if config["sampling"] == "random" and config["num_sampled_states"] is None:
+            raise InvalidConfigParameter('sampling="random" requires that option "num_sampled_states" is set')
+
+        if config["sampling"] == "random" and config["complete_only_wrt_optimal"]:
+            raise InvalidConfigParameter('sampling="random" disallows the use of option "complete_only_wrt_optimal"')
 
         return config
 
@@ -272,7 +280,7 @@ class MaxsatProblemGenerationStep(Step):
         return config
 
     def get_required_data(self):
-        return ["goal_states", "transitions", "state_ids", "enforced_feature_idxs"]
+        return ["goal_states", "transitions", "state_ids", "enforced_feature_idxs", "optimal_states"]
 
     def description(self):
         return "Generation of the max-sat problem"
