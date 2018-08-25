@@ -387,11 +387,13 @@ def run(config, data, rng):
         _ = collect_all_terms(factory.processor, user_atoms, user_concepts, user_roles)
         # i.e. stick with the user-provided concepts!
         atoms, concepts, roles = user_atoms, user_concepts, user_roles
-    else:
+    elif config.feature_generator is None:
         logging.info('Starting automatic generation of concepts'.format())
         atoms, concepts, roles = generate_concepts(config, factory, generic_constants, types, goal_predicates)
+    else:
+        atoms, concepts, roles = [], [], []
 
-    # profiling.print_snapshot()
+        # profiling.print_snapshot()
 
     # store_terms(concepts, roles, config)
     logging.info('Final output: {} concept(s) and {} role(s)'.format(len(concepts), len(roles)))
