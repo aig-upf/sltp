@@ -113,9 +113,9 @@ class Step(object):
 
 def _run_planner(config, data, rng):
     # Run the planner on all the instances
-    for i, o in zip(config.instances, config.sample_files):
+    for i, o, w in zip(config.instances, config.sample_files, config.max_width):
         params = '-i {} --domain {} --driver {} --disable-static-analysis --options="max_expansions={},width.max={}"'\
-            .format(i, config.domain, config.driver, config.num_states, config.max_width)
+            .format(i, config.domain, config.driver, config.num_states, w)
         execute(command=[sys.executable, "run.py"] + params.split(' '),
                 stdout=o, cwd=config.planner_location)
     return dict()
@@ -145,10 +145,15 @@ class PlannerStep(Step):
         if not os.path.isdir(config["planner_location"]):
             raise InvalidConfigParameter('"planner_location" must be the path to the actual planner')
         check_int_parameter(config, "num_states", positive=True)
-        config["max_width"] = config.get("max_width", -1)
+
         config["instance_tag"] = compute_instance_tag(**config)
         config["experiment_tag"] = compute_experiment_tag(**config)
         config["experiment_dir"] = os.path.join(EXPDATA_DIR, config["experiment_tag"])
+
+        config["max_width"] = config.get("max_width", [-1] * len(config["instances"]))
+        if len(config["instances"]) != len(config["max_width"]):
+            raise InvalidConfigParameter('"max_width" should have same length as "instances"')
+
         config["sample_files"] = compute_sample_filenames(**config)
 
         # TODO This should prob be somewhere else:

@@ -101,12 +101,10 @@ def experiment(experiment_name=None):
                                                 # feature_generator=weird_feature_set,
                                                 enforce_features=get_on_x_y_feature)
 
-    bw_on_x_y_dt_completeness_opt2 = update_dict(bw_on_x_y_dt_iw,
-                                                instances=["on_x_y_dt_2.pddl"],
-                                                num_states=50000, max_width=2,
-                                                num_sampled_states=6000,
-                                                complete_only_wrt_optimal=True,
-                                                enforce_features=get_on_x_y_feature)
+    bw_on_x_y_dt_completeness_opt2 = update_dict(bw_on_x_y_dt_completeness_opt,
+                                                 instances=["on_x_y_dt_2.pddl", "on_x_y_dt_2.pddl"],
+                                                 num_states=50000, max_width=[2, -1],
+                                                 num_sampled_states=3000)
 
     simple_clear_3_completeness_opt = update_dict(simple_clear_3,
                                                   instances=["instance_3_clear_x_2.pddl"],

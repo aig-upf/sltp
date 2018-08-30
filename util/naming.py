@@ -12,12 +12,12 @@ def compute_instance_tag(domain, instances, num_states, **_):
     return tag
 
 
-def compute_sample_filename(instance):
-    return "samples_{}.txt".format(filename_core(instance))
+def compute_sample_filename(instance, width):
+    return "samples_{}_w{}.txt".format(filename_core(instance), width)
 
 
-def compute_sample_filenames(experiment_dir, instances, **_):
-    return [os.path.join(experiment_dir, compute_sample_filename(i)) for i in instances]
+def compute_sample_filenames(experiment_dir, instances, max_width, **_):
+    return [os.path.join(experiment_dir, compute_sample_filename(i, w)) for i, w in zip(instances, max_width)]
 
 
 def compute_experiment_tag(instance_tag, max_concept_size, **_):
