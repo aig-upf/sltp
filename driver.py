@@ -150,9 +150,17 @@ class PlannerStep(Step):
         config["experiment_tag"] = compute_experiment_tag(**config)
         config["experiment_dir"] = os.path.join(EXPDATA_DIR, config["experiment_tag"])
 
-        config["max_width"] = config.get("max_width", [-1] * len(config["instances"]))
-        if len(config["instances"]) != len(config["max_width"]):
-            raise InvalidConfigParameter('"max_width" should have same length as "instances"')
+        mw = config.get("max_width", [-1] * len(config["instances"]))
+        if isinstance(mw, int):
+            mw = [mw]
+
+        if len(config["instances"]) != len(mw):
+            if len(mw) == 1:
+                mw = mw * len(config["instances"])
+            else:
+                raise InvalidConfigParameter('"max_width" should have same length as "instances"')
+
+        config["max_width"] = mw
 
         config["sample_files"] = compute_sample_filenames(**config)
 
