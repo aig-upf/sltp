@@ -5,4 +5,4 @@ run:
   time: "8:0:0"
 
 experiments:
-  - blocks bw_on_x_y_dt_completeness_opt
+  - blocks bw_on_x_y_completeness_opt
