@@ -1,0 +1,23 @@
+blocks
+3 bool[holding] 0 n(a) 1 holding(a) 0
+3 bool[holding] 0 holding(a) 0 n(a) 1
+2 holding(a) 0 n(a) 0
+6
+action_1
+3 bool[holding] 0 holding(a) 0 n(a) 1
+2 bool[holding] 1 n(a) 0
+action_2
+2 bool[holding] 1 holding(a) 0
+2 bool[holding] 0 n(a) 1
+action_3
+2 bool[holding] 0 holding(a) 0
+1 bool[holding] 1
+action_4
+3 bool[holding] 0 holding(a) 0 n(a) 0
+2 bool[holding] 1 holding(a) 1
+action_5
+3 bool[holding] 1 holding(a) 1 n(a) 0
+2 bool[holding] 0 holding(a) 0
+action_6
+2 bool[holding] 1 holding(a) 0
+1 bool[holding] 0

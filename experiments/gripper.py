@@ -31,10 +31,21 @@ def experiment(experiment_name=None):
         concept_generator=None, parameter_generator=add_domain_parameters,
         feature_namer=feature_namer,)
 
+    #
+    aaai_prob01 = dict(
+        instances=["prob01.pddl"],
+        num_states=2000, max_width=[-1],
+        num_sampled_states=100,
+        complete_only_wrt_optimal=True,
+        max_concept_size=10, max_concept_grammar_iterations=3,
+        concept_generator=None, parameter_generator=add_domain_parameters,
+        feature_namer=feature_namer,)
+
     parameters = {
         "sample_small": sample_small,
         "prob01": prob01,
         "prob01_rnd": prob01_rnd,
+        "aaai_prob01": aaai_prob01,
 
     }.get(experiment_name or "test")
 

@@ -550,7 +550,9 @@ class ModelTranslator(object):
         states, actions, selected_features = self.decode_solution(assignment, features, config.feature_namer)
         self.print_actions(actions, os.path.join(config.experiment_dir, 'actions.txt'), config.feature_namer)
         states, actions = optimize_abstract_action_model(states, actions)
-        self.print_actions(actions, os.path.join(config.experiment_dir, 'actions-optimized.txt'), config.feature_namer)
+        opt_filename = os.path.join(config.experiment_dir, 'optimized.txt')
+        logging.info("Optimized action model saved in {}".format(opt_filename))
+        self.print_actions(actions, opt_filename, config.feature_namer)
         return states, actions, selected_features
 
     def print_actions(self, actions, filename, namer):

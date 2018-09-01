@@ -1,0 +1,11 @@
+
+
+run:
+  mem: "32G"
+  time: "8:0:0"
+
+experiments:
+  - blocks aaai_clear_x_simple_hybrid
+  - blocks aaai_bw_on_x_y_completeness_opt
+
+  - gripper aaai_prob01

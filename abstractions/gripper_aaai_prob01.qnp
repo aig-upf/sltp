@@ -1,0 +1,35 @@
+gripper
+4 nfree-grippers 1 ncarried 1 nballs-A 1 robot-at-B 0
+4 nfree-grippers 1 ncarried 0 robot-at-B 0 nballs-A 1
+3 nfree-grippers 1 ncarried 0 nballs-A 0
+10
+action_1
+3 ncarried 0 nfree-grippers 1 robot-at-B 1
+1 robot-at-B 0
+action_2
+2 ncarried 1 robot-at-B 1
+1 robot-at-B 0
+action_3
+2 nfree-grippers 1 robot-at-B 1
+2 ncarried 1 nfree-grippers 0
+action_4
+3 ncarried 0 nfree-grippers 1 robot-at-B 0
+1 robot-at-B 1
+action_5
+3 ncarried 1 nfree-grippers 0 robot-at-B 0
+1 robot-at-B 1
+action_6
+4 nballs-A 1 ncarried 1 nfree-grippers 1 robot-at-B 0
+1 robot-at-B 1
+action_7
+3 nballs-A 1 nfree-grippers 1 robot-at-B 0
+3 nballs-A 0 ncarried 1 nfree-grippers 0
+action_8
+2 ncarried 1 robot-at-B 1
+2 ncarried 0 nfree-grippers 1
+action_9
+3 nballs-A 1 ncarried 1 robot-at-B 0
+3 nballs-A 1 ncarried 0 nfree-grippers 1
+action_10
+4 nballs-A 0 ncarried 1 nfree-grippers 0 robot-at-B 0
+3 nballs-A 1 ncarried 0 nfree-grippers 1

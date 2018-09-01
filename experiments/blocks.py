@@ -37,16 +37,31 @@ def experiment(experiment_name=None):
     # With these settings we generate the desired m(x):
     # card[And(And(Forall(Star(on),Not({a})), Forall(Star(Inverse(on)),Not({a}))), And(Not(holding), Not({a})))] 18
     # And indeed learnt the correct state space!!!
-    ijcai_features_on_clear_5_rnd = dict(
+    aaai_ijcai_features_on_clear_5_rnd = dict(
         instances="instance_5_clear_x_1.pddl",
         num_states=2000, num_sampled_states=40, random_seed=12,
         max_concept_size=18, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=add_bw_domain_parameters,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
+
+    aaai_clear_x_simple_hybrid = dict(
+        instances="instance_5_clear_x_1.pddl",
+        num_states=2000, max_width=[-1],
+        num_sampled_states=300,
+        complete_only_wrt_optimal=True,
+        max_concept_size=18, max_concept_grammar_iterations=3,
+        concept_generator=None, parameter_generator=add_bw_domain_parameters,
+        feature_namer=ijcai_paper_bw_feature_namer,
+    )
+
+    aaai_clear_x_more_hybrid = update_dict(aaai_clear_x_simple_hybrid,
+                                           instances=["instance_5_clear_x_1.pddl",],
+                                           )
+
+
     #
-    ijcai_features_on_clear_5 = ijcai_features_on_clear_5_rnd.copy()
-    ijcai_features_on_clear_5.update(dict(num_sampled_states=None))
+    ijcai_features_on_clear_5 = update_dict(aaai_ijcai_features_on_clear_5_rnd, num_sampled_states=None)
 
     # Goal here is on(x,y).
     bw_on_x_y_4 = dict(
@@ -74,7 +89,7 @@ def experiment(experiment_name=None):
         concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
-    bw_on_x_y_completeness_opt = update_dict({},
+    aaai_bw_on_x_y_completeness_opt = update_dict({},
                                              instances=[#"inst_on_x_y_10.pddl",
                                                         "inst_on_x_y_11.pddl", "inst_on_x_y_12.pddl"],
                                              num_states=2000, max_width=[-1, -1],
@@ -176,9 +191,10 @@ def experiment(experiment_name=None):
         "bw_on_x_y_dt_completeness_opt2": bw_on_x_y_dt_completeness_opt2,
         "simple_clear_3_completeness_opt": simple_clear_3_completeness_opt,
 
-        "bw_on_x_y_completeness_opt": bw_on_x_y_completeness_opt,
+        "aaai_bw_on_x_y_completeness_opt": aaai_bw_on_x_y_completeness_opt,
 
-        "ijcai_features_on_clear_5_rnd": ijcai_features_on_clear_5_rnd,
+        "aaai_ijcai_features_on_clear_5_rnd": aaai_ijcai_features_on_clear_5_rnd,
+        "aaai_clear_x_simple_hybrid": aaai_clear_x_simple_hybrid,
         "ijcai_features_on_clear_5": ijcai_features_on_clear_5,
 
         "check_ijcai_features_on_x_y": check_ijcai_features_on_x_y,
