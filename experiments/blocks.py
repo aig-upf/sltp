@@ -75,9 +75,10 @@ def experiment(experiment_name=None):
         feature_namer=ijcai_paper_bw_feature_namer,)
 
     bw_on_x_y_completeness_opt = update_dict({},
-                                             instances=["inst_on_x_y_10.pddl", "inst_on_x_y_11.pddl", "inst_on_x_y_12.pddl"],
-                                             num_states=3000, max_width=[-1, -1, -1],
-                                             num_sampled_states=200,
+                                             instances=[#"inst_on_x_y_10.pddl",
+                                                        "inst_on_x_y_11.pddl", "inst_on_x_y_12.pddl"],
+                                             num_states=2000, max_width=[-1, -1],
+                                             num_sampled_states=50,
                                              complete_only_wrt_optimal=True,
                                              sampling="all",
                                              # enforce_features=get_on_x_y_feature

@@ -76,16 +76,19 @@ def sample_generated_states(config, rng):
 
         if config.sampling == "optimal":  # Select only the optimal states
             selected = set(optimal)
-        else:
-            selected = set(states)
+
+        else:  # sampling = "all"
             if config.num_sampled_states is not None:
                 selected = sample_first_x_states(root_states, config.num_sampled_states)
-                selected.update(optimal)
+                selected.update(list(optimal)[0:9])
+            else:
+                selected = set(states)
 
     states, goals, transitions, optimal = remap_sample_expanded_states(set(selected), states, goal_states, transitions, optimal)
 
     expanded = lambda s: len(transitions[s]) > 0
     log_sampled_states(states, goals, transitions, expanded, optimal, config.resampled_states_filename)
+    logging.info("Total sampled states / goals / optimal: {} / {} / {}".format(len(states), len(goals), len(optimal)))
     return states, goals, transitions, optimal
 
 
