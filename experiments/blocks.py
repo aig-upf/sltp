@@ -74,6 +74,18 @@ def experiment(experiment_name=None):
         concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
+    bw_on_x_y_completeness_opt = update_dict({},
+                                             instances=["inst_on_x_y_10.pddl", "inst_on_x_y_11.pddl", "inst_on_x_y_12.pddl"],
+                                             num_states=3000, max_width=[-1, -1, -1],
+                                             num_sampled_states=200,
+                                             complete_only_wrt_optimal=True,
+                                             sampling="all",
+                                             # enforce_features=get_on_x_y_feature
+                                             max_concept_size=10, max_concept_grammar_iterations=3,
+                                             concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
+                                             feature_namer=ijcai_paper_bw_feature_namer,
+                                             )
+
     bw_on_x_y_dt_iw = dict(
         instances=["on_x_y_dt_1.pddl", "holding_a_b_unclear.pddl"],
         num_states=49999, max_width=2,
@@ -104,11 +116,13 @@ def experiment(experiment_name=None):
     bw_on_x_y_dt_completeness_opt2 = update_dict(bw_on_x_y_dt_completeness_opt,
                                                  instances=["on_x_y_dt_2.pddl", "on_x_y_dt_2.pddl"],
                                                  num_states=50000, max_width=[2, -1],
+                                                 # feature_generator=weird_feature_set,
+                                                 # enforce_features=None,
                                                  num_sampled_states=3000)
 
     simple_clear_3_completeness_opt = update_dict(simple_clear_3,
-                                                  instances=["instance_3_clear_x_2.pddl"],
-                                                num_states=500, max_width=2,
+                                                  instances=["instance_3_clear_x_2.pddl"]*2,
+                                                num_states=500, max_width=[-1, 2],
                                                 num_sampled_states=100,
                                                 complete_only_wrt_optimal=True,
                                                 # enforce_features=get_on_x_y_feature
@@ -161,6 +175,8 @@ def experiment(experiment_name=None):
         "bw_on_x_y_dt_completeness_opt2": bw_on_x_y_dt_completeness_opt2,
         "simple_clear_3_completeness_opt": simple_clear_3_completeness_opt,
 
+        "bw_on_x_y_completeness_opt": bw_on_x_y_completeness_opt,
+
         "ijcai_features_on_clear_5_rnd": ijcai_features_on_clear_5_rnd,
         "ijcai_features_on_clear_5": ijcai_features_on_clear_5,
 
@@ -199,7 +215,8 @@ def weird_feature_set(lang):
     sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), '..'))
     from util.serialization import deserialize_from_string
     tower_features1 = '[{"c": {"sort": "object", "py/object": "tarski.dl.concepts.AndConcept", "c1": {"sort": "object", "size": 3, "py/object": "tarski.dl.concepts.ExistsConcept", "c": {"size": 1, "py/object": "tarski.dl.concepts.NominalConcept", "sort": "object", "name": "b", "hash": -8502480781994927151}, "r": {"size": 1, "py/object": "tarski.dl.concepts.PrimitiveRole", "sort": ["object", "object"], "name": "on", "hash": 5776189647135905784}, "hash": 2674091572547234808}, "c2": {"size": 1, "py/object": "tarski.dl.concepts.NominalConcept", "sort": "object", "name": "a", "hash": -2014675405248281288}, "size": 5, "hash": -9035486624804985343}, "py/object": "tarski.dl.features.EmpiricalBinaryConcept", "hash": -1364766800539080060}, {"c": {"size": 1, "py/object": "tarski.dl.concepts.PrimitiveConcept", "sort": "object", "name": "holding", "hash": 7229331559112486443}, "py/object": "tarski.dl.features.EmpiricalBinaryConcept", "hash": -540400808086029706}, {"c": {"sort": "object", "size": 8, "py/object": "tarski.dl.concepts.ExistsConcept", "c": {"sort": "object", "py/object": "tarski.dl.concepts.AndConcept", "c1": {"size": 1, "py/object": "tarski.dl.concepts.PrimitiveConcept", "sort": "object", "name": "clear", "hash": -739697115110111347}, "c2": {"c": {"size": 1, "py/object": "tarski.dl.concepts.NominalConcept", "sort": "object", "name": "b", "hash": -8502480781994927151}, "size": 2, "py/object": "tarski.dl.concepts.NotConcept", "sort": "object", "hash": 8756838853437654867}, "size": 4, "hash": -1298651480141169035}, "r": {"size": 3, "py/object": "tarski.dl.concepts.StarRole", "sort": {"py/id": 20}, "r": {"size": 2, "py/object": "tarski.dl.concepts.InverseRole", "sort": ["object", "object"], "r": {"size": 1, "py/object": "tarski.dl.concepts.PrimitiveRole", "sort": ["object", "object"], "name": "on", "hash": 5776189647135905784}, "hash": 6322400296151783085}, "hash": 1055936545429941421}, "hash": 2197512904378287901}, "py/object": "tarski.dl.features.ConceptCardinalityFeature", "hash": -3579927205244512055}]'
-    return deserialize_from_string(tower_features1)
+    tower_features2 = '[{"hash": 6949180927697451521, "c": {"c1": {"size": 3, "r": {"size": 1, "hash": -2740289688636584686, "name": "on", "py/object": "tarski.dl.concepts.PrimitiveRole", "sort": ["object", "object"]}, "c": {"size": 1, "hash": -3218902714185107259, "name": "b", "py/object": "tarski.dl.concepts.NominalConcept", "sort": "object"}, "sort": "object", "hash": -8028781711036654814, "py/object": "tarski.dl.concepts.ExistsConcept"}, "hash": 1384931444341254242, "sort": "object", "size": 5, "py/object": "tarski.dl.concepts.AndConcept", "c2": {"size": 1, "hash": -7897084271728384726, "name": "a", "py/object": "tarski.dl.concepts.NominalConcept", "sort": "object"}}, "py/object": "tarski.dl.features.EmpiricalBinaryConcept"}, {"hash": -867379600521222222, "py/object": "tarski.dl.features.NullaryAtomFeature", "atom": {"hash": -2168902777557022509, "depth": 0, "name": "handempty", "py/object": "tarski.dl.concepts.NullaryAtom"}}, {"hash": 7888742611717759350, "c": {"size": 8, "r": {"py/id": 17}, "c": {"size": 6, "r": {"hash": -1329032853697446873, "r": {"hash": 1042558110122865899, "r": {"size": 1, "hash": -2740289688636584686, "name": "on", "py/object": "tarski.dl.concepts.PrimitiveRole", "sort": ["object", "object"]}, "size": 2, "py/object": "tarski.dl.concepts.InverseRole", "sort": ["object", "object"]}, "size": 3, "py/object": "tarski.dl.concepts.StarRole", "sort": {"py/id": 19}}, "c": {"size": 2, "hash": 4195320596587080666, "c": {"size": 1, "hash": -3218902714185107259, "name": "b", "py/object": "tarski.dl.concepts.NominalConcept", "sort": "object"}, "py/object": "tarski.dl.concepts.NotConcept", "sort": "object"}, "sort": "object", "hash": -7579992454195058621, "py/object": "tarski.dl.concepts.ForallConcept"}, "sort": "object", "hash": 3102714834696527308, "py/object": "tarski.dl.concepts.ExistsConcept"}, "py/object": "tarski.dl.features.ConceptCardinalityFeature"}, {"hash": -6016550384825177845, "c": {"c1": {"size": 4, "r": {"hash": 1042414231418761324, "r": {"py/id": 17}, "size": 2, "py/object": "tarski.dl.concepts.StarRole", "sort": {"py/id": 18}}, "c": {"size": 1, "hash": -7897084271728384726, "name": "a", "py/object": "tarski.dl.concepts.NominalConcept", "sort": "object"}, "sort": "object", "hash": 5648141748725744941, "py/object": "tarski.dl.concepts.ExistsConcept"}, "hash": 8293571504602674188, "sort": "object", "size": 6, "py/object": "tarski.dl.concepts.AndConcept", "c2": {"py/id": 14}}, "py/object": "tarski.dl.features.EmpiricalBinaryConcept"}]'
+    return deserialize_from_string(tower_features2)
 
 
 if __name__ == "__main__":
