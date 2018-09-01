@@ -78,7 +78,7 @@ def experiment(experiment_name=None):
                                              instances=[#"inst_on_x_y_10.pddl",
                                                         "inst_on_x_y_11.pddl", "inst_on_x_y_12.pddl"],
                                              num_states=2000, max_width=[-1, -1],
-                                             num_sampled_states=50,
+                                             num_sampled_states=40,
                                              complete_only_wrt_optimal=True,
                                              sampling="all",
                                              # enforce_features=get_on_x_y_feature

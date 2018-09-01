@@ -1,3 +1,4 @@
+import itertools
 import json
 import logging
 
@@ -54,7 +55,7 @@ def sample_first_x_states(root_states, num_states):
 
 def sample_generated_states(config, rng):
     logging.info('Loading state space samples...')
-    states, goal_states, transitions, root_states = read_transitions(config.sample_files)
+    states, goal_states, transitions, root_states, goals_by_instance = read_transitions(config.sample_files)
     if not goal_states:
         raise RuntimeError("No goal found in the sample - increase # expanded states!")
 
@@ -73,6 +74,11 @@ def sample_generated_states(config, rng):
         assert config.sampling in ("all", "optimal")
 
         optimal = mark_optimal(goal_states, root_states, parents)
+        logging.info("Total: states/goals/optimal: {} / {} / {}".format(len(states), len(goal_states), len(optimal)))
+
+        goal_selection = set(itertools.chain.from_iterable(list(x)[0:4] for x in goals_by_instance))
+        optimal = mark_optimal(goal_selection, root_states, parents)
+        logging.info("After goal selection: states/goals/optimal: {} / {} / {}".format(len(states), len(goal_states), len(optimal)))
 
         if config.sampling == "optimal":  # Select only the optimal states
             selected = set(optimal)
@@ -80,15 +86,16 @@ def sample_generated_states(config, rng):
         else:  # sampling = "all"
             if config.num_sampled_states is not None:
                 selected = sample_first_x_states(root_states, config.num_sampled_states)
-                selected.update(list(optimal)[0:9])
+                # selected.update(list(optimal)[0:9])
+                selected.update(optimal)
             else:
                 selected = set(states)
 
     states, goals, transitions, optimal = remap_sample_expanded_states(set(selected), states, goal_states, transitions, optimal)
 
     expanded = lambda s: len(transitions[s]) > 0
+    logging.info("Selected (states / goals / optimal): {} / {} / {}".format(len(states), len(goals), len(optimal)))
     log_sampled_states(states, goals, transitions, expanded, optimal, config.resampled_states_filename)
-    logging.info("Total sampled states / goals / optimal: {} / {} / {}".format(len(states), len(goals), len(optimal)))
     return states, goals, transitions, optimal
 
 
@@ -188,6 +195,7 @@ def read_transitions(filenames):
     states, goals, transitions = all_samples[0]
     assert states[0][0] == 0
     root_states = {0}
+    goals_by_instance = [set(goals)]
     for s, g, tx in all_samples[1:]:
         starting_state_id = len(states)
         s, g, tx = remap_state_ids(s, g, tx, remap=lambda state: state + starting_state_id)
@@ -196,8 +204,9 @@ def read_transitions(filenames):
         states.update(s)
         transitions.update(tx)
         goals.update(g)
+        goals_by_instance.append(g)
 
-    return states, goals, transitions, root_states
+    return states, goals, transitions, root_states, goals_by_instance
 
 
 def read_single_sample_file(filename):
