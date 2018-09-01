@@ -148,6 +148,18 @@ class ActionEffect(object):
             return "INC* {}".format(namer(self.feature))
         raise RuntimeError("Unexpected effect type")
 
+    def print_qnp_named(self, namer=lambda s: s):
+        name = namer(self.feature)
+        if self.change in (FeatureValueChange.ADD, FeatureValueChange.INC):
+            return "{} 1".format(name)
+
+        if self.change in (FeatureValueChange.DEL, FeatureValueChange.DEC):
+            return "{} 0".format(name)
+
+        if self.change in (FeatureValueChange.INC_OR_NIL, FeatureValueChange.ADD_OR_NIL):
+            assert False, "Relaxed INC semantics not supported for QNP"
+        raise RuntimeError("Unexpected effect type")
+
 
 class ModelTranslator(object):
     def __init__(self, feat_matrix, bin_feat_matrix, feature_complexity, feature_names, feature_types, state_ids,
@@ -431,6 +443,10 @@ class ModelTranslator(object):
 
         print("Only for machine eyes: ")
         print(serialize_to_string([features[i] for i in selected_features]))
+        selected_data = [dict(idx=f,
+                              name=namer(self.feature_names[f]),
+                              type=int(not self.feature_types[f]))
+                         for f in selected_features]
 
         # selected_features = [f for f in selected_features if str(f) == "bool[And(clear,{a})]"]
 
@@ -465,7 +481,7 @@ class ModelTranslator(object):
 
         logging.info("Abstract state space: {} states and {} actions".
                      format(len(abstract_states), len(abstract_actions)))
-        return abstract_states, abstract_actions
+        return abstract_states, abstract_actions, selected_data
 
     def report_stats(self):
 
@@ -531,11 +547,11 @@ class ModelTranslator(object):
         return tuple(map(bool, bin_values))
 
     def compute_action_model(self, assignment, features, config):
-        states, actions = self.decode_solution(assignment, features, config.feature_namer)
+        states, actions, selected_features = self.decode_solution(assignment, features, config.feature_namer)
         self.print_actions(actions, os.path.join(config.experiment_dir, 'actions.txt'), config.feature_namer)
         states, actions = optimize_abstract_action_model(states, actions)
         self.print_actions(actions, os.path.join(config.experiment_dir, 'actions-optimized.txt'), config.feature_namer)
-        return dict(abstract_states=states, abstract_actions=actions)
+        return states, actions, selected_features
 
     def print_actions(self, actions, filename, namer):
         with open(filename, 'w') as f:
@@ -548,6 +564,10 @@ class ModelTranslator(object):
         effs = ", ".join(sorted(eff.print_named(namer) for eff in action.effects))
         return "\tPRE: {}\n\tEFFS: {}".format(precs, effs)
 
+    def print_qnp_precondition_atom(self, feature, value, namer):
+        assert value in (True, False)
+        return "{} {}".format(namer(self.feature_names[feature]), int(value))
+
     def print_precondition_atom(self, feature, value, namer):
         assert value in (True, False)
         type_ = self.ftype(feature)
@@ -556,6 +576,53 @@ class ModelTranslator(object):
             return fstr if value else "NOT {}".format(fstr)
         assert type_ == int
         return "{} > 0".format(fstr) if value else "{} = 0".format(fstr)
+
+    def compute_qnp(self, states, actions, features, config, data):
+        logging.info("Writing QNP abstraction to {}".format(config.qnp_abstraction_filename))
+        namer = lambda x: config.feature_namer(x).replace(" ", "")  # let's make sure no spaces in feature names
+
+        init, goal = self.compute_init_goals(data, features)
+
+        init = next(iter(init))  # TODO ATM we just pick the first initial state, without minimization
+        goal = next(iter(goal))  # TODO ATM we just pick the first goal state, without minimization
+
+        with open(config.qnp_abstraction_filename, "w") as f:
+            print(config.domain_dir, file=f)
+
+            name_types = " ".join("{} {}".format(namer(f["name"]), f["type"]) for f in features)
+            feat_line = "{} {}".format(len(features), name_types)
+            print(feat_line, file=f)
+
+            init_conds = [self.print_qnp_precondition_atom(f, v, namer) for f, v in init]
+            goal_conds = [self.print_qnp_precondition_atom(f, v, namer) for f, v in goal]
+            print("{} {}".format(len(init_conds), " ".join(init_conds)), file=f)
+            print("{} {}".format(len(goal_conds), " ".join(goal_conds)), file=f)
+
+            # Actions
+            print("{}".format(len(actions)), file=f)
+            for i, action in enumerate(actions, 1):
+                precs = sorted(self.print_qnp_precondition_atom(f, v, namer) for f, v in action.preconditions)
+                effs = sorted(eff.print_qnp_named(namer) for eff in action.effects)
+                print("action_{}".format(i), file=f)
+                print("{} {}".format(len(precs), " ".join(precs)), file=f)
+                print("{} {}".format(len(effs), " ".join(effs)), file=f)
+
+    def extract_dnf(self, feature_indexes, states):
+        """ """
+        dnf = self.bin_feat_matrix[np.ix_(states, feature_indexes)]  # see https://stackoverflow.com/q/22927181
+        dnf = set(frozenset((i, val) for i, val in zip(feature_indexes, f)) for f in dnf)
+        return self.minimize_dnf(dnf)
+
+    def compute_init_goals(self, data, features):
+        fidxs = [f["idx"] for f in features]
+
+        init_dnf = self.extract_dnf(fidxs, sorted(data.root_states))
+        goal_dnf = self.extract_dnf(fidxs, sorted(data.goal_states))
+
+        return init_dnf, goal_dnf
+
+    def minimize_dnf(self, dnf):
+        return merge_precondition_sets(dnf)
 
 
 class Variable(object):
@@ -736,6 +803,7 @@ def attempt_single_merge(action_precs):
         diff = p1.symmetric_difference(p2)
         diffl = list(diff)
         if len(diffl) == 2 and diffl[0][0] == diffl[1][0]:
+            # The two conjunctions differ in that one has one literal L and the other its negation, the rest being equal
             assert diffl[0][1] != diffl[1][1]
             p_merged = p1.difference(diff)
             return p1, p2, p_merged  # Meaning p1 and p2 should be merged into p_merged
@@ -743,6 +811,7 @@ def attempt_single_merge(action_precs):
 
 
 def merge_precondition_sets(action_precs):
+    action_precs = action_precs.copy()
     while True:
         res = attempt_single_merge(action_precs)
         if res is None:
@@ -774,4 +843,7 @@ def optimize_abstract_action_model(states, actions):
 
 def compute_action_model(config, data, rng):
     assert data.cnf_solution.solved
-    return data.cnf_translator.compute_action_model(data.cnf_solution.assignment, data.features, config)
+    states, actions, features = data.cnf_translator.compute_action_model(data.cnf_solution.assignment, data.features, config)
+    data.cnf_translator.compute_qnp(states, actions, features, config, data)
+    # return dict(abstract_states=states, abstract_actions=actions)
+    return dict()

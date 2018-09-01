@@ -409,10 +409,11 @@ class ActionModelStep(Step):
 
     def process_config(self, config):
         config["feature_namer"] = config.get("feature_namer", default_feature_namer) or default_feature_namer
+        config["qnp_abstraction_filename"] = compute_info_filename(config, "abstraction.qnp")
         return config
 
     def get_required_data(self):
-        return ["cnf_translator", "cnf_solution", "features"]
+        return ["cnf_translator", "cnf_solution", "features", "states", "goal_states", "root_states"]
 
     def description(self):
         return "Computation of the action model"

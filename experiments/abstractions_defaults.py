@@ -89,6 +89,8 @@ def generate_experiment(domain_dir, domain, **kwargs):
         # The number of features and actions for the SAT encoding
         encoding_k=10,
         encoding_m=10,
+
+        domain_dir=domain_dir,
     )
 
     parameters = {**defaults, **kwargs}  # Copy defaults, overwrite with user-specified parameters

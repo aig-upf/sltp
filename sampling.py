@@ -91,12 +91,12 @@ def sample_generated_states(config, rng):
             else:
                 selected = set(states)
 
-    states, goals, transitions, optimal = remap_sample_expanded_states(set(selected), states, goal_states, transitions, optimal)
+    states, goals, transitions, optimal, root_states = remap_sample_expanded_states(set(selected), states, goal_states, transitions, optimal, root_states)
 
     expanded = lambda s: len(transitions[s]) > 0
     logging.info("Selected (states / goals / optimal): {} / {} / {}".format(len(states), len(goals), len(optimal)))
     log_sampled_states(states, goals, transitions, expanded, optimal, config.resampled_states_filename)
-    return states, goals, transitions, optimal
+    return states, goals, transitions, optimal, root_states
 
 
 def random_sample(config, goal_states, rng, states, transitions, parents):
@@ -139,7 +139,7 @@ def compute_parents(transitions):
     return parents
 
 
-def remap_sample_expanded_states(sampled_expanded, states, goal_states, transitions, optimal):
+def remap_sample_expanded_states(sampled_expanded, states, goal_states, transitions, optimal, root_states):
     # all_in_sample will contain all states we want to sample plus their children state IDs
     all_in_sample = set(sampled_expanded)
     for s in sampled_expanded:
@@ -151,6 +151,7 @@ def remap_sample_expanded_states(sampled_expanded, states, goal_states, transiti
     # Pick the selected elements from the data structures
     new_goal_states = {idx[x] for x in ordered_sample if x in goal_states}
     new_optimal = {idx[x] for x in ordered_sample if x in optimal}
+    new_root = {idx[x] for x in ordered_sample if x in root_states}
 
     new_states = OrderedDict()
     for i, s in states.items():
@@ -163,7 +164,7 @@ def remap_sample_expanded_states(sampled_expanded, states, goal_states, transiti
         if source in sampled_expanded:
             new_transitions[idx[source]] = {idx[t] for t in targets}
 
-    return new_states, new_goal_states, new_transitions, new_optimal
+    return new_states, new_goal_states, new_transitions, new_optimal, new_root
 
 
 def normalize_atom_name(name):
