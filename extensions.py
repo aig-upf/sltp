@@ -9,7 +9,7 @@ import itertools
 import logging
 
 from bitarray import bitarray
-
+from tarski.dl import PrimitiveRole, PrimitiveConcept, UniversalConcept, EmptyConcept, NullaryAtom
 
 _btrue = bitarray('1')
 _bfalse = bitarray('0')
@@ -82,7 +82,7 @@ class UniverseIndex(object):
 
     def finish(self):
         # We sort the objects alphabetically and recreate the dictionary with the new indexes
-        self._objects = sorted(self._index.keys())
+        self._objects = sorted(self._index.keys(), key=lambda x: str(x))
         self._index = {obj: i for i, obj in enumerate(self._objects, 0)}
         self.closed = True
 
@@ -139,6 +139,18 @@ def trace_to_bits(trace, m, arity):
 #     return indexed
 
 
+def get_term_key(term):
+    """ Return the key corresponding to the given DL term.
+    For primitives we use a the string representation, otherwise we use the DL term itself.
+    The only reason for this is that often when unserializing DL elements from disk in different processes,
+    hashes change (as Python salts the hash computations with process-dependent values), so that equality comparisons
+    and indexing stop working. This way, primitives are at least recognized and the denotation of any DL
+    element can be rebuilt if necessary. It is not an optimal strategy, but works for our current purposes. """
+    if isinstance(term, (PrimitiveConcept, PrimitiveRole, UniversalConcept, EmptyConcept, NullaryAtom)):
+        return str(term)
+    return term
+
+
 class ExtensionCache(object):
     def __init__(self, universe: UniverseIndex, top, bot):
         self.universe = universe
@@ -156,13 +168,14 @@ class ExtensionCache(object):
         self.feature_values[(feature, sid)] = value
 
     def register_extension(self, term, sid, extension):
-        self.index[(term, sid)] = compress_extension(extension, self.m, term.ARITY)
+        self.register_compressed_extension(term, sid, compress_extension(extension, self.m, term.ARITY))
 
     def register_compressed_extension(self, term, sid, extension):
-        self.index[(term, sid)] = extension
+        assert isinstance(extension, bitarray)
+        self.index[(get_term_key(term), sid)] = extension
 
     def register_nullary_truth_value(self, atom, sid, value):
-        self.nullaries[(atom, sid)] = value
+        self.nullaries[(get_term_key(atom), sid)] = value
 
     def universe(self, state):
         return self.as_bitarray(self.top, state)
@@ -174,12 +187,14 @@ class ExtensionCache(object):
         return self.feature_values[(feature, sid)]
 
     def as_bitarray(self, term, state):
-        return self.index[(term, state)]
-        # if (term, state) in self.index:
-        #     return self.index[(term, state)]
-        # return term.extension(self, state, {})
+        # return self.index[(term, state)]
+        if (term, state) in self.index:
+            return self.index[(term, state)]
+        ext = term.extension(self, state)
+        self.register_compressed_extension(term, state, ext)
+        return ext
 
-    def as_set(self, term, state):  # TODO CACHE A CERTAIN AMOUNT OF ITEMS
+    def as_set(self, term, state):  # TODO CACHE A CERTAIN AMOUNT OF ITEMS?
         return self.uncompress(self.as_bitarray(term, state), term.ARITY)
 
     def uncompress(self, data, arity):

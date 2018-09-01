@@ -21,6 +21,7 @@ import multiprocessing
 import os
 import sys
 from signal import signal, SIGPIPE, SIG_DFL
+import numpy as np
 
 from errors import CriticalPipelineError
 from util import console
@@ -28,7 +29,7 @@ from util.bootstrap import setup_global_parser
 from util.command import execute
 from util.console import print_header, log_time
 from util.naming import compute_instance_tag, compute_experiment_tag, compute_serialization_name, \
-    compute_maxsat_filename, compute_info_filename, compute_maxsat_variables_filename
+    compute_maxsat_filename, compute_info_filename, compute_maxsat_variables_filename, compute_sample_filenames
 from util.serialization import deserialize, serialize
 
 signal(SIGPIPE, SIG_DFL)
@@ -99,12 +100,8 @@ class Step(object):
         return config
 
     def run(self):
-        req_data = self.get_required_data()
-        data = None
-        if req_data:
-            data = Bunch(load(self.config["experiment_dir"], self.get_required_data()))
-        runner = StepRunner(self.description(), self.get_step_runner())
-        result = runner.run(config=Bunch(self.config), data=data)
+        runner = StepRunner(self.description(), self.get_step_runner(), self.get_required_data())
+        result = runner.run(config=Bunch(self.config))
         return result
 
     def description(self):
@@ -114,26 +111,26 @@ class Step(object):
         raise NotImplementedError()
 
 
-def _run_planner(config, data):
-    params = '--instance {} --domain {} --driver {} --disable-static-analysis --options="max_expansions={}"'\
-        .format(config.instance, config.domain, config.driver, config.num_states)
-    execute(command=[sys.executable, "run.py"] + params.split(' '),
-            stdout=config.sample_file,
-            cwd=config.planner_location
-            )
+def _run_planner(config, data, rng):
+    # Run the planner on all the instances
+    for i, o, w in zip(config.instances, config.sample_files, config.max_width):
+        params = '-i {} --domain {} --driver {} --disable-static-analysis --options="max_expansions={},width.max={}"'\
+            .format(i, config.domain, config.driver, config.num_states, w)
+        execute(command=[sys.executable, "run.py"] + params.split(' '),
+                stdout=o, cwd=config.planner_location)
     return dict()
 
 
 class PlannerStep(Step):
     """ Run some planner on certain instance(s) to get the sample of transitions """
 
-    VALID_DRIVERS = ("bfs", "ff", "iw2")
+    VALID_DRIVERS = ("bfs", "ff")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
     def get_required_attributes(self):
-        return ["instance", "domain", "num_states", "planner_location", "driver"]
+        return ["instances", "domain", "num_states", "planner_location", "driver"]
 
     def get_required_data(self):
         return []
@@ -141,17 +138,31 @@ class PlannerStep(Step):
     def process_config(self, config):
         if config["driver"] not in self.VALID_DRIVERS:
             raise InvalidConfigParameter('"driver" must be one of: {}'.format(self.VALID_DRIVERS))
-        if not os.path.isfile(config["instance"]):
-            raise InvalidConfigParameter('"instance" must be the path to an existing instance file')
+        if any(not os.path.isfile(i) for i in config["instances"]):
+            raise InvalidConfigParameter('"instances" must be the path to existing instance files')
         if not os.path.isfile(config["domain"]):
             raise InvalidConfigParameter('"domain" must be the path to an existing domain file')
         if not os.path.isdir(config["planner_location"]):
             raise InvalidConfigParameter('"planner_location" must be the path to the actual planner')
         check_int_parameter(config, "num_states", positive=True)
+
         config["instance_tag"] = compute_instance_tag(**config)
         config["experiment_tag"] = compute_experiment_tag(**config)
         config["experiment_dir"] = os.path.join(EXPDATA_DIR, config["experiment_tag"])
-        config["sample_file"] = os.path.join(config["experiment_dir"], "samples.txt")
+
+        mw = config.get("max_width", [-1] * len(config["instances"]))
+        if isinstance(mw, int):
+            mw = [mw]
+
+        if len(config["instances"]) != len(mw):
+            if len(mw) == 1:
+                mw = mw * len(config["instances"])
+            else:
+                raise InvalidConfigParameter('"max_width" should have same length as "instances"')
+
+        config["max_width"] = mw
+
+        config["sample_files"] = compute_sample_filenames(**config)
 
         # TODO This should prob be somewhere else:
         os.makedirs(config["experiment_dir"], exist_ok=True)
@@ -171,7 +182,7 @@ class ConceptGenerationStep(Step):
         super().__init__(**kwargs)
 
     def get_required_attributes(self):
-        return ["sample_file", "domain", "experiment_dir", "max_concept_size"]
+        return ["sample_files", "domain", "experiment_dir", "max_concept_size"]
 
     def get_required_data(self):
         return []
@@ -181,10 +192,23 @@ class ConceptGenerationStep(Step):
 
         config["concept_dir"] = os.path.join(config["experiment_dir"], 'terms')
         config["feature_stdout"] = os.path.join(config["experiment_dir"], 'feature-generation.stdout.txt')
+        config["resampled_states_filename"] = os.path.join(config["experiment_dir"], 'resampled.txt')
         config["concept_generator"] = config.get("concept_generator", None)
         config["feature_generator"] = config.get("feature_generator", None)
+        config["enforce_features"] = config.get("enforce_features", None)
         config["parameter_generator"] = config.get("parameter_generator", None)
-        config["use_distance_features"] = config.get("use_distance_features", False)
+        config["distance_feature_max_complexity"] = config.get("distance_feature_max_complexity", 0)
+        config["max_concept_grammar_iterations"] = config.get("max_concept_grammar_iterations", None)
+        config["random_seed"] = config.get("random_seed", 1)
+        config["num_sampled_states"] = config.get("num_sampled_states", None)
+        config["complete_only_wrt_optimal"] = config.get("complete_only_wrt_optimal", False)
+        config["sampling"] = config.get("sampling", "all")
+
+        if config["sampling"] == "random" and config["num_sampled_states"] is None:
+            raise InvalidConfigParameter('sampling="random" requires that option "num_sampled_states" is set')
+
+        if config["sampling"] == "random" and config["complete_only_wrt_optimal"]:
+            raise InvalidConfigParameter('sampling="random" disallows the use of option "complete_only_wrt_optimal"')
 
         return config
 
@@ -207,6 +231,9 @@ class FeatureMatrixGenerationStep(Step):
     def process_config(self, config):
         config["feature_filename"] = compute_info_filename(config, "features.txt")
         config["feature_matrix_filename"] = compute_info_filename(config, "feature-matrix.dat")
+        config["bin_feature_matrix_filename"] = compute_info_filename(config, "feature-matrix-bin.dat")
+        config["feature_complexity_filename"] = compute_info_filename(config, "feature-complexity.dat")
+        config["feature_names_filename"] = compute_info_filename(config, "feature-names.dat")
         config["transitions_filename"] = compute_info_filename(config, "transition-matrix.dat")
         config["goal_states_filename"] = compute_info_filename(config, "goal-states.dat")
         config["sat_transitions_filename"] = compute_info_filename(config, "sat_transitions.dat")
@@ -226,6 +253,31 @@ class FeatureMatrixGenerationStep(Step):
         return generate_features
 
 
+class HeuristicWeightsComputation(Step):
+    """  """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def get_required_attributes(self):
+        return ["experiment_dir", "lp_max_weight"]
+
+    def process_config(self, config):
+        config["lp_filename"] = compute_info_filename(config, "problem.lp")
+        config["state_heuristic_filename"] = compute_info_filename(config, "state-heuristic-values.txt")
+
+        return config
+
+    def get_required_data(self):
+        return []
+
+    def description(self):
+        return "Computation of the weights of a desceding heuristic"
+
+    def get_step_runner(self):
+        from heuristics import runner
+        return runner.run
+
+
 class MaxsatProblemGenerationStep(Step):
     """ Generate the max-sat problem from a given set of generated features """
     def __init__(self, **kwargs):
@@ -237,10 +289,11 @@ class MaxsatProblemGenerationStep(Step):
     def process_config(self, config):
         config["cnf_filename"] = compute_maxsat_filename(config)
         config["maxsat_variables_file"] = compute_maxsat_variables_filename(config)
+        config["relax_numeric_increase"] = config.get("relax_numeric_increase", False)
         return config
 
     def get_required_data(self):
-        return ["features", "extensions", "states", "goal_states", "transitions", "state_ids", "feature_model"]
+        return ["goal_states", "transitions", "state_ids", "enforced_feature_idxs", "optimal_states"]
 
     def description(self):
         return "Generation of the max-sat problem"
@@ -331,7 +384,7 @@ class MaxsatProblemSolutionStep(Step):
         return []
 
     def get_required_data(self):
-        return ["cnf_translator"]
+        return []
 
     def description(self):
         return "Solution of the max-sat problem"
@@ -355,12 +408,11 @@ class ActionModelStep(Step):
         return []
 
     def process_config(self, config):
-        if "feature_namer" not in config:
-            config["feature_namer"] = default_feature_namer
+        config["feature_namer"] = config.get("feature_namer", default_feature_namer) or default_feature_namer
         return config
 
     def get_required_data(self):
-        return ["cnf_translator", "cnf_solution"]
+        return ["cnf_translator", "cnf_solution", "features"]
 
     def description(self):
         return "Computation of the action model"
@@ -391,7 +443,7 @@ PIPELINES = dict(
         PlannerStep,
         ConceptGenerationStep,
         FeatureMatrixGenerationStep,
-        # ...
+        HeuristicWeightsComputation,
     ],
 )
 
@@ -414,10 +466,10 @@ class Experiment(object):
     def print_step_description(self):
         return "\t\t" + "\n\t\t".join("{}. {}".format(i, s.description()) for i, s in enumerate(self.steps, 1))
 
-    def run(self):
+    def run(self, args=None):
         print_header("Generalized Action Model Learner, v.{}".format(VERSION))
         argparser = setup_global_parser(step_description=self.print_step_description())
-        self.args = argparser.parse_args()
+        self.args = argparser.parse_args(args)
         if not self.args.steps and not self.args.run_all_steps:
             argparser.print_help()
             sys.exit(0)
@@ -459,9 +511,10 @@ def load(basedir, items):
 
 
 class StepRunner(object):
-    def __init__(self, step_name, target):
+    def __init__(self, step_name, target, required_data):
         self.target = target
         self.step_name = step_name
+        self.required_data = required_data
 
     def run(self, **kwargs):
         pool = multiprocessing.Pool(processes=1)
@@ -471,17 +524,20 @@ class StepRunner(object):
         pool.join()
         return res
 
-    def _runner(self, config, data):
+    def _runner(self, config):
+        """ Entry point for the spawned subprocess """
         # import tracemalloc
         # tracemalloc.start()
         # memutils.display_top(tracemalloc.take_snapshot())
         from util import performance
 
         result = None
-        console.print_header("STARTING STEP: {}".format(self.step_name))
+        console.print_header("({}) STARTING STEP: {}".format(os.getpid(), self.step_name))
+        data = Bunch(load(config.experiment_dir, self.required_data)) if self.required_data else None
+        rng = np.random.RandomState(config.random_seed)  # ATM we simply create a RNG in each subprocess
         start = performance.timer()
         try:
-            output = self.target(config=config, data=data)
+            output = self.target(config=config, data=data, rng=rng)
         except CriticalPipelineError as exc:
             output = dict()
             result = exc

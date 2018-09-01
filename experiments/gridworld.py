@@ -1,55 +1,39 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-import os
+import sys
+
+from abstractions_defaults import generate_experiment
+from common import update_dict
 
 
-def main():
-    import sys
-    sys.path.insert(0, '..')
-    from driver import Experiment, generate_pipeline, BENCHMARK_DIR
-    from learn_actions import OptimizationPolicy
-
+def experiment(experiment_name=None):
     domain_dir = "gridworld"
-
-    # domain = "domain.pddl"
-    # instance = "instance_3.pddl"
+    # domain_dir = "gripper-m"
     domain = "domain_strips.pddl"
-    instance = "instance_strips_5.pddl"
 
-    parameter_generator = add_domain_parameters_strips if "strips" in domain else add_domain_parameters
+    # This one overfits: in a 3x3 grid, with 2 booleans per dimension you can represent
+    # the position
+    sample_3 = dict(
+        instance="instance_strips_3.pddl",
+        num_states=80, max_concept_size=10, max_concept_grammar_iterations=3,
+        distance_feature_max_complexity=8,
+        concept_generator=None, parameter_generator=add_domain_parameters_strips)
 
-    steps = generate_pipeline(pipeline="maxsat",
-                              domain=os.path.join(BENCHMARK_DIR, domain_dir, domain),
-                              instance=os.path.join(BENCHMARK_DIR, domain_dir, instance),
+    sample_5 = update_dict(sample_3, instance="instance_strips_5.pddl", num_states=100)
+    sample_5_not_corner = update_dict(sample_5, instance="instance_strips_5_not_corner.pddl")
+    sample_5_rnd = update_dict(sample_5, num_states=1000, num_sampled_states=80, random_seed=12)
+    sample_5_not_corner_rnd = update_dict(sample_5_not_corner, num_states=1000, num_sampled_states=80, random_seed=12)
 
-                              # Location of the FS planner, used to do the state space sampling
-                              planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
+    parameters = {
+        "sample_3": sample_3,
+        "sample_5": sample_5,
+        "sample_5_not_corner": sample_5_not_corner,
+        "sample_5_rnd": sample_5_rnd,
+        "sample_5_not_corner_rnd": sample_5_not_corner_rnd,
 
-                              # Type of sampling procedure. Only breadth-first search implemented ATM
-                              driver="bfs",
+    }.get(experiment_name or "test")
 
-                              # Number of states to be expanded in the sampling procedure
-                              num_states=60,
-
-                              max_concept_size=10,
-
-                              # Provide a special, handcrafted method to generate concepts, if desired.
-                              # This will override the standard concept generation procedure (default: None)
-                              # concept_generator=build_expected_concepts,
-
-                              # Whether to use distance features (default: False)
-                              use_distance_features=True,
-
-                              # Method to generate domain parameters (goal or otherwise). If None, goal predicates will
-                              # be used (default: None)
-                              parameter_generator=parameter_generator,
-
-                              # What optimization criteria to use in the max-sat problem
-                              optimization=OptimizationPolicy.TOTAL_FEATURE_COMPLEXITY,
-                              # optimization=OptimizationPolicy.NUM_FEATURES
-                              )
-    exp = Experiment(steps)
-    exp.run()
+    return generate_experiment(domain_dir, domain, **parameters)
 
 
 def add_domain_parameters(language):
@@ -65,4 +49,5 @@ def add_domain_parameters_strips(language):
 
 
 if __name__ == "__main__":
-    main()
+    exp = experiment(sys.argv[1])
+    exp.run(sys.argv[2:])

@@ -16,6 +16,7 @@
 #  Blai Bonet, bonet@ldc.usb.ve, bonetblai@gmail.com
 import logging
 import itertools
+import sys
 from signal import signal, SIGPIPE, SIG_DFL
 
 import os
@@ -33,7 +34,7 @@ from tarski.syntax.transform.errors import TransformationError
 from tarski.syntax.transform.simplifications import transform_to_ground_atoms
 
 from extensions import UniverseIndex, ExtensionCache
-from transitions import read_transitions
+from sampling import sample_generated_states
 
 signal(SIGPIPE, SIG_DFL)
 
@@ -113,15 +114,15 @@ class TerminologicalFactory(object):
 
         return generated
 
-    def derive_features(self, concepts, rest, max_distance_feature_depth, use_distance_features):
+    def derive_features(self, concepts, rest, distance_feature_max_complexity):
         # new_features = [NonEmptyConceptFeature(c) for c in concepts]
         feats = []
         feats.extend(ConceptCardinalityFeature(c) for c in concepts)
         k = len(feats)
         logging.info('{} concept cardinality features created'.format(k))
 
-        if use_distance_features:
-            feats.extend(self.create_distance_features(concepts, rest, max_distance_feature_depth))
+        if distance_feature_max_complexity:
+            feats.extend(self.create_distance_features(concepts, rest, distance_feature_max_complexity))
             logging.info('{} min-distance features created'.format(len(feats) - k))
 
         return feats
@@ -130,7 +131,6 @@ class TerminologicalFactory(object):
         card1_concepts = self.processor.singleton_extension_concepts
 
         for c1, r, c2 in itertools.product(card1_concepts, rest, concepts):
-        # for c1, r, c2 in itertools.product(card1_concepts, rest, card1_concepts):
             if c1.size + r.size + c2.size > k:
                 continue
             if c2 in (self.syntax.top, self.syntax.bot):
@@ -197,13 +197,14 @@ class SemanticProcessor(object):
         # CWA: those predicates not appearing on the state trace are assumed to have empty denotation
         def set_defaults_for_unprocessed_elements(cache_, unprocessed_, dl_mapping):
             for p in unprocessed_:
-                dl_element = dl_mapping[p.uniform_arity()](p)
-                if p.arity == 1:
+                ar = p.uniform_arity()
+                dl_element = dl_mapping[ar](p)
+                if ar == 1:
                     cache_[dl_element] = set()
-                elif p.arity == 2:
+                elif ar == 2:
                     cache_[dl_element] = set()
                 else:
-                    assert p.arity == 0
+                    assert ar == 0
                     cache_[dl_element] = False
 
         set_defaults_for_unprocessed_elements(cache, unprocessed, self.standard_dl_mapping)
@@ -310,6 +311,7 @@ def parse_pddl(domain_file, instance_file=None):
     reader = FstripsReader()
     reader.parse_domain(domain_file)
     problem = reader.problem
+    types = []
 
     # The generic constants are those which are parsed before parsing the instance file
     generic_constants = problem.language.constants()
@@ -317,7 +319,7 @@ def parse_pddl(domain_file, instance_file=None):
     if instance_file is not None:
         reader.parse_instance(instance_file)
 
-    return problem, problem.language, generic_constants
+    return problem, problem.language, generic_constants, types
 
 
 def create_nullary_features(atoms):
@@ -355,27 +357,26 @@ def collect_all_terms(processor, atoms, concepts, roles):
     return interesting, atoms, concepts, roles
 
 
-def run(config, data):
+def run(config, data, rng):
     assert not data
 
-    logging.info('Loading states and transitions...')
-    states, goal_states, transitions = read_transitions(config.sample_file)
+    states, goal_states, transitions, optimal = sample_generated_states(config, rng)
 
     goal_denotation = []
     goal_predicates = set()  # The predicates and functions that appear mentioned in the goal
 
     if config.parameter_generator is not None:
         logging.info('Using user-provided domain parameters and ignoring goal representation')
-        problem, language, generic_constants = parse_pddl(config.domain)
+        problem, language, generic_constants, types = parse_pddl(config.domain)
         generic_constants += config.parameter_generator(language)
     else:
         logging.info('Using goal representation and no domain parameters')
-        problem, language, generic_constants = parse_pddl(config.domain, config.instance)
+        problem, language, generic_constants, types = parse_pddl(config.domain, config.instance)
         try:
             goal_denotation = transform_to_ground_atoms(problem.goal)
             goal_predicates = {x[0] for x in goal_denotation}
         except TransformationError:
-            logging.critical("Cannot create goal concepts when problem goal is not a conjunction of ground atoms")
+            logging.error("Cannot create goal concepts when problem goal is not a conjunction of ground atoms")
             raise
 
     factory = TerminologicalFactory(language, states, goal_denotation)
@@ -383,14 +384,16 @@ def run(config, data):
     if config.concept_generator is not None:
         logging.info('Using set of concepts and roles provided by the user'.format())
         user_atoms, user_concepts, user_roles = config.concept_generator(language)
-        all_terms, atoms, concepts, roles = collect_all_terms(factory.processor, user_atoms, user_concepts, user_roles)
+        _ = collect_all_terms(factory.processor, user_atoms, user_concepts, user_roles)
         # i.e. stick with the user-provided concepts!
         atoms, concepts, roles = user_atoms, user_concepts, user_roles
-    else:
+    elif config.feature_generator is None:
         logging.info('Starting automatic generation of concepts'.format())
-        atoms, concepts, roles = generate_concepts(config, factory, generic_constants, goal_predicates)
+        atoms, concepts, roles = generate_concepts(config, factory, generic_constants, types, goal_predicates)
+    else:
+        atoms, concepts, roles = [], [], []
 
-    # profiling.print_snapshot()
+        # profiling.print_snapshot()
 
     # store_terms(concepts, roles, config)
     logging.info('Final output: {} concept(s) and {} role(s)'.format(len(concepts), len(roles)))
@@ -398,18 +401,21 @@ def run(config, data):
     logging.info('Number of concepts with singleton extensions over all states: {}'.format(
         len(factory.processor.singleton_extension_concepts)))
 
-    # Temporarily deactivated, role restrictions very expensive
-    if config.use_distance_features:
+    if config.distance_feature_max_complexity:  # If we use Use distance features, we'll want role restrictions
         rest = list(factory.create_role_restrictions(concepts, roles))
         # store_role_restrictions(rest, config)
-        max_distance_feature_depth = 10
     else:
         rest = roles
-        max_distance_feature_depth = 0
 
+    if config.feature_generator is not None and config.enforce_features:
+        raise RuntimeError("Cannot use at the same time options 'feature_generator' and 'enforce_features'")
+
+    enforced_feature_idxs = []
     if config.feature_generator is None:
-        features = factory.derive_features(concepts, rest, max_distance_feature_depth, config.use_distance_features)
+        features = config.enforce_features(language) if config.enforce_features else []
+        enforced_feature_idxs = list(range(0, len(features)))
         features += create_nullary_features(atoms)
+        features += factory.derive_features(concepts, rest, config.distance_feature_max_complexity)
     else:
         logging.info('Using user-provided set of features instead of computing them automatically')
         features = config.feature_generator(language)
@@ -420,14 +426,16 @@ def run(config, data):
         features=features,
         states=states,
         goal_states=goal_states,
+        optimal_states=optimal,
         transitions=transitions,
-        extensions=factory.processor.cache
+        extensions=factory.processor.cache,
+        enforced_feature_idxs=enforced_feature_idxs,
     )
 
 
-def generate_concepts(config, factory, generic_constants, goal_predicates):
+def generate_concepts(config, factory, generic_constants, types, goal_predicates):
     # Construct the primitive terms from the input language, and then add the atoms
-    concepts, roles, atoms = factory.syntax.generate_primitives_from_language(generic_constants, goal_predicates)
+    concepts, roles, atoms = factory.syntax.generate_primitives_from_language(generic_constants, types, goal_predicates)
     logging.info('Primitive (nullary) atoms : {}'.format(", ".join(map(str, atoms))))
     logging.info('Primitive (unary) concepts: {}'.format(", ".join(map(str, concepts))))
     logging.info('Primitive (binary) roles  : {}'.format(", ".join(map(str, roles))))
@@ -440,7 +448,8 @@ def generate_concepts(config, factory, generic_constants, goal_predicates):
                  format(config.max_concept_size, c_j, r_j))
 
     i = 1
-    while True:
+    max_iterations = config.max_concept_grammar_iterations or sys.maxsize
+    while i <= max_iterations:
         # Update indexes
         old_c, new_c = concepts[0:c_i], concepts[c_i:c_j]
         old_r, new_r = roles[0:r_i], roles[r_i:r_j]

@@ -7,7 +7,7 @@ from util.command import execute
 _CURRENT_DIR_ = os.path.dirname(os.path.abspath(__file__))
 
 
-def encode(config, data):
+def encode(config, data, rng):
     logging.info("Generating SAT encoding problem from {} concept-based features and {} states"
                  .format(len(data.features), len(data.state_ids)))
 
@@ -23,7 +23,7 @@ def encode(config, data):
     return dict()
 
 
-def decode(config, data):
+def decode(config, data, rng):
     logging.info("Decoding SAT solution with k={}, m={}".format(config.encoding_k, config.encoding_m))
 
     command = "{} {} {} {} {}".format(os.path.join(_CURRENT_DIR_, "encoder", "build_alt_theory"), "--decode",

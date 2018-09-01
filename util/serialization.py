@@ -1,5 +1,5 @@
 
-import jsonpickle
+
 import pickle
 
 
@@ -18,8 +18,10 @@ def deserialize(filename):
 
 
 def serialize_to_string(obj):
+    import jsonpickle
     return jsonpickle.dumps(obj)
 
 
 def deserialize_from_string(string):
+    import jsonpickle
     return jsonpickle.loads(string)

@@ -3,6 +3,7 @@ along with some other related output necessary for subsequent steps in the pipel
 import itertools
 import logging
 import math
+import numpy as np
 
 from tarski.dl import EmpiricalBinaryConcept, NullaryAtomFeature, ConceptCardinalityFeature, MinDistanceFeature
 
@@ -30,15 +31,15 @@ def print_transition_matrix(state_ids, transitions, transitions_filename):
 def print_sat_transition_matrix(state_ids, transitions, transitions_filename):
     num_transitions = sum(len(targets) for targets in transitions.values())
     num_states = len(state_ids)
-    num_expanded_states = len(transitions.keys())
+    num_states = len(transitions.keys())
     logging.info("Printing SAT transition matrix with {} states, {} expanded states and {} transitions to '{}'".
-                 format(len(state_ids), num_expanded_states, num_transitions, transitions_filename))
+                 format(len(state_ids), num_states, num_transitions, transitions_filename))
     with open(transitions_filename, 'w') as f:
         # first line: <#states> <#transitions>
         print("{} {}".format(num_states, num_transitions), file=f)
 
         # second line: <#expanded states>
-        print("{}".format(num_expanded_states), file=f)
+        print("{}".format(num_states), file=f)
 
         for s, succ in transitions.items():
             print("{} {} {}".format(s, len(succ), " ".join("{}".format(sprime) for sprime in sorted(succ))), file=f)
@@ -53,6 +54,25 @@ def print_feature_matrix(config, state_ids, features, model):
         for s in state_ids:
             line = "{} {}".format(s, " ".join(int_printer(model.compute_feature_value(feat, s)) for feat in features))
             print(line, file=f)
+
+    # Convert features to a numpy array with n rows and m columns, where n=num states, m=num features
+    matrix = np.empty(shape=(len(state_ids), len(features)), dtype=np.int8)
+    bin_matrix = np.empty(shape=(len(state_ids), len(features)), dtype=np.bool_)
+    for i, s in enumerate(state_ids, 0):
+        assert i == s
+        matrix[i] = [model.compute_feature_value(feat, s) for feat in features]
+        bin_matrix[i] = [feat.bool_value(model.compute_feature_value(feat, s)) for feat in features]
+
+    np.save(config.feature_matrix_filename, matrix)
+    np.save(config.bin_feature_matrix_filename, bin_matrix)
+
+    np.save(config.feature_complexity_filename,
+            np.array([f.complexity() for f in features], dtype=np.uint8))
+
+    np.save(config.feature_names_filename,
+            np.array([str(f) for f in features], dtype=np.unicode_))
+
+    # np.savez(config.feature_matrix_filename, matrix)
 
 
 def print_feature_info(config, features):
@@ -107,7 +127,7 @@ def print_goal_states(goal_states, filename):
         print(" ".join(str(s) for s in goal_states), file=f)
 
 
-def generate_features(config, data):
+def generate_features(config, data, rng):
     state_ids, features, model = compute_features(config, data)
     print_feature_info(config, features)
     print_feature_matrix(config, state_ids, features, model)
@@ -116,7 +136,7 @@ def generate_features(config, data):
     print_sat_transition_matrix(state_ids, data.transitions, config.sat_transitions_filename)
     print_goal_states(data.goal_states, config.goal_states_filename)
     log_features(features, config.feature_filename)
-    return dict(state_ids=state_ids, features=features, feature_model=model)
+    return dict(state_ids=state_ids, features=features)
 
 
 def compute_features(config, data):
@@ -130,8 +150,8 @@ def compute_features(config, data):
     # selected = [translator.features[i] for i in [8, 9, 25, 26, 2390]]
     # selected = [translator.features[i] for i in [1232]]
     # translator.features = selected
-    # selected = None
-    # log_feature_denotations(state_ids, features, model, config.feature_denotation_filename, selected)
+    selected = None
+    log_feature_denotations(state_ids, features, model, config.feature_denotation_filename, selected)
 
     return state_ids, features, model
 
@@ -211,3 +231,4 @@ def printer(feature, value):
 
 def int_printer(value):
     return str(int(value))
+

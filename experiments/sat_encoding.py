@@ -22,7 +22,8 @@ def main():
                               encoding_m=8,
                               concept_generator=build_ijcai_paper_bw_concepts,
                               parameter_generator=add_bw_domain_parameters,
-                              use_distance_features=False
+                              # Max. allowed complexity for distance features (default: 0)
+                              # distance_feature_max_complexity=10,
                               )
     exp = Experiment(steps)
     exp.run()

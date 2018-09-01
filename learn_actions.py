@@ -23,14 +23,15 @@ from enum import Enum
 from signal import signal, SIGPIPE, SIG_DFL
 import time
 
-from tarski.dl.features import relax_int_feature_diff
+import numpy as np
 
 from errors import CriticalPipelineError
-from tarski.dl import FeatureValueChange, MinDistanceFeature, NullaryAtomFeature, EmpiricalBinaryConcept, \
-    ConceptCardinalityFeature
+from tarski.dl import FeatureValueChange, MinDistanceFeature
 from util.console import print_header, print_lines
 from util.command import count_file_lines, remove_duplicate_lines, read_file
 from solvers import solve
+from util.performance import print_memory_usage
+from util.serialization import serialize_to_string
 
 signal(SIGPIPE, SIG_DFL)
 
@@ -51,117 +52,38 @@ def compute_d2_index(s0, s1, t0, t1):
         return t0, t1, s0, s1
 
 
-def compute_qualitative_changes(transitions, all_features, model, relax_numeric_increase):
-    # For each feature and each transition, precompute the qualitative change that the transition induces on the feature
-    qchanges = {}
-    for s0 in transitions:
-        for s1 in transitions[s0]:
-            for f in all_features:
-                x0 = model.compute_feature_value(f, s0)
-                x1 = model.compute_feature_value(f, s1)
-                diff = f.diff(x0, x1)
-
-                # If requested, we consider INCs and NILs as the same qualitative change.
-                if relax_numeric_increase and isinstance(f, (MinDistanceFeature, )):
-                    diff = relax_int_feature_diff(diff)
-                qchanges[(s0, s1, f)] = diff
-                # print("Denotation of feature \"{}\" along transition "
-                #       "({},{}) is: {}".format(f, s0, s1, qchanges[(s0, s1, f)]))
-
-    return qchanges
-
-
-def compute_d1_distinguishing_features(states, transitions, features, model):
-    ns, nf = len(states), len(features)
-    logging.info("Computing sets of distinguishing features for each state pair over a total of "
-                 "{} states and {} features ({:0.1f}K matrix entries)".format(ns, nf, nf*(ns*(ns-1))/(2*1000)))
-    # self.undistinguishable_state_pairs = []
-    d1_distinguishing_features = dict()
-
-    # representative[s] will hold a pointer to the lowest-id state s' such that it is not possible to distinguish
-    # s from s' with any of the full set of features
-    for s1, s2 in itertools.combinations(states, 2):
-        distinguishing = set()
-
-        for f in features:
-            x1 = model.compute_feature_value(f, s1)
-            x2 = model.compute_feature_value(f, s2)
-            if f.bool_value(x1) != f.bool_value(x2):  # f distinguishes s1 and s2
-                distinguishing.add(f)
-
-        d1_distinguishing_features[(s1, s2)] = distinguishing
-
-    return states, transitions, d1_distinguishing_features
-
-    # def transition_is_distinguishable(s1, t1, s2):
-    #     for t2 in self.transitions[s2]:
-    #         both_transitions_qualitatively_equal_over_all_features = True
-    #         for f in self.features:
-    #             change1 = self.qchanges[(s1, t1, f)]
-    #             change2 = self.qchanges[(s2, t2, f)]
-    #             if change1 != change2:
-    #                 both_transitions_qualitatively_equal_over_all_features = False
-    #                 break
-    #         if not both_transitions_qualitatively_equal_over_all_features:
-    #             # No feature in the global set of features is able to distinguish transition (s1,t1)
-    #             # from some transition starting in s2
-    #             can_ignore_s1 = False
-    #
-    #
-    # for s1, s2 in representative.items():
-    #     assert s1 > s2
-    #     can_ignore_s1 = True
-    #
-    #     # Is there any transition starting in s1 such that for some feature in the global feature set
-    #     # the transition can be qualitatively distinguished from all transitions starting in s2?
-    #     # If not, then we can ignore s1 to all effects
-    #
-    #
-    #
-    #     for t1 in self.transitions[s1]:
-    #         if transition_is_distinguishable(s1, t1, s2)
-    #
-    #         for t2 in self.transitions[s2]:
-    #             both_transitions_qualitatively_equal_over_all_features = True
-    #             for f in self.features:
-    #                 change1 = self.qchanges[(s1, t1, f)]
-    #                 change2 = self.qchanges[(s2, t2, f)]
-    #                 if change1 != change2:
-    #                     both_transitions_qualitatively_equal_over_all_features = False
-    #                     break
-    #             if not both_transitions_qualitatively_equal_over_all_features:
-    #                 # No feature in the global set of features is able to distinguish transition (s1,t1)
-    #                 # from some transition starting in s2
-    #                 can_ignore_s1 = False
-
-
-def generate_maxsat_problem(config, data):
-    logging.info("Generating MAXSAT problem from {} concept-based features".format(len(data.features)))
+def generate_maxsat_problem(config, data, rng):
     optimization = config.optimization if hasattr(config, "optimization") else OptimizationPolicy.NUM_FEATURES
 
     state_ids = data.state_ids
-    features = data.features
-    model = data.feature_model
+    optimal_state_ids = data.optimal_states
     transitions = data.transitions
     goal_states = data.goal_states
 
-    # Compute for each pair s and t of states which features distinguish s and t
-    state_ids, transitions, d1_distinguishing_features = \
-        compute_d1_distinguishing_features(state_ids, transitions, features, model)
+    feature_complexity = np.load(config.feature_complexity_filename + ".npy")
+    feature_names = np.load(config.feature_names_filename + ".npy")
+    feat_matrix = np.load(config.feature_matrix_filename + ".npy")
+    bin_feat_matrix = np.load(config.bin_feature_matrix_filename + ".npy")
+    feature_types = feat_matrix.max(0) <= 1  # i.e. feature_types[i] is True iff i is an (empirically) bool feature
+
+    logging.info("Generating MAXSAT problem from {} states and {} features"
+                 .format(feat_matrix.shape[0], feat_matrix.shape[1]))
 
     if not goal_states:
         raise CriticalPipelineError("No goal state identified in the sample, SAT theory will be trivially satisfiable")
 
-    translator = ModelTranslator(features, state_ids, goal_states, transitions, model,
-                                 config.cnf_filename, d1_distinguishing_features, optimization)
+    translator = ModelTranslator(feat_matrix, bin_feat_matrix, feature_complexity, feature_names, feature_types,
+                                 state_ids, goal_states, transitions, optimal_state_ids,
+                                 config.cnf_filename, optimization,
+                                 config.relax_numeric_increase, config.complete_only_wrt_optimal)
 
-    translator.run(config.relax_numeric_increase)
+    translator.run(data.enforced_feature_idxs)
     # translator.writer.print_variables(config.maxsat_variables_file)
 
     return dict(cnf_translator=translator)
 
 
-def run_solver(config, data):
+def run_solver(config, data, rng):
     # solution = solve(config.experiment_dir, config.cnf_filename, 'wpm3')
     # solution = solve(config.experiment_dir, config.cnf_filename, 'maxino')
     solution = solve(config.experiment_dir, config.cnf_filename, 'openwbo')
@@ -170,13 +92,13 @@ def run_solver(config, data):
     else:
         logging.info("MAXSAT solution with cost {} found".format(solution.cost))
 
-    return dict(cnf_translator=data.cnf_translator, cnf_solution=solution)
+    return dict(cnf_solution=solution)
 
 
 class AbstractAction(object):
-    def __init__(self, name, preconditions, effects):
+    def __init__(self, preconditions, effects, name=None):
         self.name = name
-        self.preconditions = frozenset(preconditions)
+        self.preconditions = preconditions
         self.effects = frozenset(effects)
         self.hash = hash((self.__class__, self.preconditions, self.effects))
 
@@ -188,12 +110,9 @@ class AbstractAction(object):
                 self.preconditions == other.preconditions and self.effects == other.effects)
 
     def __str__(self):
-        return self.print_named()
+        return "AbstractAction[]"
 
-    def print_named(self, namer=lambda s: s):
-        precs = ", ".join(sorted(prec.print_named(namer) for prec in self.preconditions))
-        effs = ", ".join(sorted(eff.print_named(namer) for eff in self.effects))
-        return "\tPRE: {}\n\tEFFS: {}".format(precs, effs)
+    __repr__ = __str__
 
 
 class ActionEffect(object):
@@ -212,11 +131,15 @@ class ActionEffect(object):
     def __str__(self):
         return self.print_named()
 
+    __repr__ = __str__
+
     def print_named(self, namer=lambda s: s):
         if self.change == FeatureValueChange.ADD:
             return namer(self.feature)
         if self.change == FeatureValueChange.DEL:
             return "NOT {}".format(namer(self.feature))
+        if self.change == FeatureValueChange.ADD_OR_NIL:
+            return "ADD* {}".format(namer(self.feature))
         if self.change == FeatureValueChange.INC:
             return "INC {}".format(namer(self.feature))
         if self.change == FeatureValueChange.DEC:
@@ -226,69 +149,39 @@ class ActionEffect(object):
         raise RuntimeError("Unexpected effect type")
 
 
-class AbstractPrecondition(Enum):
-    ADD = 1
-    DEL = 2
-    GT0 = 3
-    EQ0 = 4
-
-
-def create_precondition_atom(feature, value):
-    if value is True:
-        return Atom(feature, AbstractPrecondition.ADD)
-    if value is False:
-        return Atom(feature, AbstractPrecondition.DEL)
-
-    assert isinstance(value, int) and value >= 0
-
-    if value > 0:
-        return Atom(feature, AbstractPrecondition.GT0)
-
-    return Atom(feature, AbstractPrecondition.EQ0)
-
-
-class Atom(object):
-    def __init__(self, feature, ptype):
-        assert isinstance(ptype, AbstractPrecondition)
-        self.feature = feature
-        self.ptype = ptype
-        self.hash = hash((self.__class__, self.feature, self.ptype))
-
-    def __hash__(self):
-        return self.hash
-
-    def __eq__(self, other):
-        return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
-                self.feature == other.feature and self.ptype == other.ptype)
-
-    def __str__(self):
-        return self.print_named()
-
-    def print_named(self, namer=lambda s: s):
-        if self.ptype is AbstractPrecondition.ADD:
-            return namer(self.feature)
-        if self.ptype is AbstractPrecondition.DEL:
-            return "NOT {}".format(namer(self.feature))
-        if self.ptype is AbstractPrecondition.GT0:
-            return "{} > 0".format(namer(self.feature))
-        if self.ptype is AbstractPrecondition.EQ0:
-            return "{} = 0".format(namer(self.feature))
-        assert False, "Unknown precondition type"
-
-
 class ModelTranslator(object):
-    def __init__(self, features, state_ids, goal_states, transitions, model, cnf_filename, d1_distinguishing_features,
-                 optimization):
+    def __init__(self, feat_matrix, bin_feat_matrix, feature_complexity, feature_names, feature_types, state_ids,
+                 goal_states, transitions, optimal_state_ids, cnf_filename,
+                 optimization, relax_numeric_increase, complete_only_wrt_optimal):
+
+        self.feat_matrix = feat_matrix
+        self.bin_feat_matrix = bin_feat_matrix
+        self.feature_complexity = feature_complexity
+        self.feature_names = feature_names
+        self.feature_types = feature_types
         self.state_ids = state_ids
+        self.optimal_state_ids = optimal_state_ids
         self.transitions = transitions
-        self.model = model
-        self.features = features
         self.goal_states = goal_states
-        self.d1_distinguishing_features = d1_distinguishing_features
+        self.complete_only_wrt_optimal = complete_only_wrt_optimal
+
+        # We'll need this later if using relaxed inc semantics:
+        self.all_twos = 2*np.ones(self.feat_matrix.shape[1], dtype=np.int8)
+
+        # Compute for each pair s and t of states which features distinguish s and t
+        if complete_only_wrt_optimal:
+            self.optimal_states = optimal_state_ids
+            self.optimal_and_nonoptimal = set(state_ids).union(optimal_state_ids)
+        else:
+            assert False
+            # self.completeness_and_correctness_states = set(state_ids)
+            # self.correctness_only_states = set()
+
+        self.np_d1_distinguishing_features = self.compute_d1_distinguishing_features(bin_feat_matrix)
 
         self.writer = CNFWriter(cnf_filename)
 
-        self.var_selected = None
+        self.np_var_selected = None
         self.var_d1 = None
         self.var_d2 = None
 
@@ -297,17 +190,50 @@ class ModelTranslator(object):
         self.n_d2_clauses = 0
         self.n_bridge_clauses = 0
         self.n_goal_clauses = 0
-        self.qchanges = None
-
+        self.np_qchanges = dict()
+        self.compute_qchanges = self.relaxed_qchange if relax_numeric_increase else self.standard_qchange
         self.compute_feature_weight = self.setup_optimization_policy(optimization)
+
+    def iterate_over_d1_pairs(self):
+        for (x, y) in itertools.product(self.optimal_states, self.optimal_and_nonoptimal):
+            if y in self.optimal_states and y <= x:
+                continue
+            yield (x, y)
+
+    def compute_d1_distinguishing_features(self, bin_feat_matrix):
+        """ """
+        # assert len(set(self.optimal_states) & set(self.optimal_and_nonoptimal)) == 0
+        ns1, ns2, nf = len(self.optimal_states), len(self.optimal_and_nonoptimal), bin_feat_matrix.shape[1]
+
+        # How many feature denotations we'll have to compute
+        nentries = nf * ((ns1 * (ns1-1)) / 2 + ns1 * ns2)
+
+        logging.info("Computing sets of D1-distinguishing features for {} x {} state pairs "
+                     "and {} features ({:0.1f}M matrix entries)".format(ns1, ns2, nf, nentries / 1000000))
+        np_d1_distinguishing_features = dict()
+
+        for s1, s2 in self.iterate_over_d1_pairs():
+            xor = np.logical_xor(bin_feat_matrix[s1], bin_feat_matrix[s2])
+            # We extract the tuple and turn it into a set:
+            np_d1_distinguishing_features[(s1, s2)] = set(np.nonzero(xor)[0].flat)
+
+        return np_d1_distinguishing_features
 
     def create_bridge_clauses(self, d1_literal, s, t):
         # If there are no transitions (t, t') in the sample set, then we do not post the bridge constraint.
         # if t not in self.transitions or not self.transitions[t]:
-        if not self.transitions[t]:
+        # TODO WE MIGHT NEED A BETTER WAY OF IDENTIFYING NON-EXPANDED STATES AND DISTINGUISHING THEM FROM
+        # TODO STATES WHICH HAVE NO SUCCESSOR
+        if not self.transitions[s] or not self.transitions[t]:
             return
 
-        for s_prime in self.transitions[s]:  # will be empty set if not initialized, which is ok
+        assert s != t
+        assert s in self.optimal_states
+
+        for s_prime in self.transitions[s]:
+            if s_prime < s or s_prime not in self.optimal_states:  # We want only optimal transitions
+                continue
+
             forward_clause_literals = [d1_literal]
             for t_prime in self.transitions[t]:
                 idx = compute_d2_index(s, s_prime, t, t_prime)
@@ -315,34 +241,73 @@ class ModelTranslator(object):
             self.writer.clause(forward_clause_literals)
             self.n_bridge_clauses += 1
 
+    def retrieve_possibly_cached_qchanges(self, s0, s1):
+        try:
+            return self.np_qchanges[(s0, s1)]
+        except KeyError:
+            self.np_qchanges[(s0, s1)] = val = self.compute_qchanges(s0, s1)
+            return val
+
+    def iterate_over_optimal_transitions(self):
+        """ """
+        for s in self.optimal_states:
+            for sprime in self.transitions[s]:
+                if sprime < s or sprime not in self.optimal_states:
+                    continue
+                yield (s, sprime)
+
+    def iterate_over_all_transitions(self):
+        for s in self.transitions:
+            for s_prime in self.transitions[s]:
+                yield (s, s_prime)
+
+    def iterate_over_d2_transitions(self):
+        for s, s_prime in self.iterate_over_optimal_transitions():
+            for t, t_prime in self.iterate_over_all_transitions():
+                if s == t or (self.is_optimal_transition(t, t_prime) and t < s):
+                    continue
+                yield (s, s_prime, t, t_prime)
+
+    def is_optimal_transition(self, s, sprime):
+        return s in self.optimal_states and sprime in self.optimal_states and s < sprime
+
     def create_variables(self):
-        print("Creating model variables".format())
-        self.var_selected = {feat: self.writer.variable("selected({})".format(feat)) for feat in self.features}
+        # self.var_selected = {feat: self.writer.variable("selected({})".format(feat)) for feat in self.features}
+        self.np_var_selected = \
+            [self.writer.variable("selected(F{})".format(feat)) for feat in range(0, self.feat_matrix.shape[1])]
 
         self.var_d1 = {(s1, s2): self.writer.variable("D1[{}, {}]".format(s1, s2)) for s1, s2 in
-                       itertools.combinations(self.state_ids, 2)}
+                       self.iterate_over_d1_pairs()}
 
         self.var_d2 = dict()
 
-        for s, t in itertools.combinations(self.transitions, 2):
-            for s_prime, t_prime in itertools.product(self.transitions[s], self.transitions[t]):
-                idx = compute_d2_index(s, s_prime, t, t_prime)
-                varname = "D2[({},{}), ({},{})]".format(*idx)
-                self.var_d2[idx] = self.writer.variable(varname)
+        for s, s_prime, t, t_prime in self.iterate_over_d2_transitions():
+            # for s, t in itertools.combinations(self.transitions, 2):
+            #     for s_prime, t_prime in itertools.product(self.transitions[s], self.transitions[t]):
+            idx = compute_d2_index(s, s_prime, t, t_prime)
+            varname = "D2[({},{}), ({},{})]".format(*idx)
+            self.var_d2[idx] = self.writer.variable(varname)
 
         self.writer.close()
-        print("A total of {} variables were created".format(len(self.writer.variables)))
+        logging.info("A total of {} MAXSAT variables were created".format(len(self.writer.variables)))
 
-    def run(self, relax_numeric_increase):
-        self.qchanges = qchanges = compute_qualitative_changes(self.transitions, self.features, self.model,
-                                                               relax_numeric_increase)
+    def compute_d1_idx(self, s, t):
+        if s in self.optimal_states and t in self.optimal_states:
+            if s > t:
+                return t, s
+        return s, t
+
+    def run(self, enforced_feature_idxs):
 
         self.create_variables()
 
         print("Generating D1 + bridge constraints from {} D1 variables".format(len(self.var_d1)), flush=True)
-        for s1, s2 in itertools.combinations(self.state_ids, 2):
+
+        # for s1, s2 in itertools.combinations(self.state_ids, 2):
+        for s1, s2 in self.iterate_over_d1_pairs():
             d1_variable = self.var_d1[(s1, s2)]
-            d1_distinguishing_features = self.d1_distinguishing_features[(s1, s2)]
+            # d1_distinguishing_features = self.d1_distinguishing_features[(s1, s2)]
+            d1_distinguishing_features = self.np_d1_distinguishing_features[(s1, s2)]
 
             # Post the constraint: D1(si, sj) <=> OR active(f), where the OR ranges over all
             # those features f that tell apart si from sj
@@ -350,8 +315,8 @@ class ModelTranslator(object):
             forward_clause_literals = [self.writer.literal(d1_variable, False)]
 
             for f in d1_distinguishing_features:
-                forward_clause_literals.append(self.writer.literal(self.var_selected[f], True))
-                self.writer.clause([d1_lit, self.writer.literal(self.var_selected[f], False)])
+                forward_clause_literals.append(self.writer.literal(self.np_var_selected[f], True))
+                self.writer.clause([d1_lit, self.writer.literal(self.np_var_selected[f], False)])
                 self.n_d1_clauses += 1
 
             self.writer.clause(forward_clause_literals)
@@ -368,61 +333,104 @@ class ModelTranslator(object):
 
             # Else (i.e. D1(s1, s2) _might_ be false, create the bridge clauses between values of D1 and D2
             else:
+                assert s1 in self.optimal_states
                 self.create_bridge_clauses(d1_lit, s1, s2)
-                self.create_bridge_clauses(d1_lit, s2, s1)
-                pass
+                if s2 in self.optimal_states:
+                    self.create_bridge_clauses(d1_lit, s2, s1)
 
         print("Generating D2 constraints from {} D2 variables".format(len(self.var_d2)), flush=True)
         # self.d2_distinguished = set()
-        for (s0, s1, t0, t1), d2_var in self.var_d2.items():
-            d2_distinguishing_features = []  # all features that d2-distinguish the current pair of transitions
-            for f in self.features:
-                if qchanges[(s0, s1, f)] != qchanges[(t0, t1, f)]:
-                    d2_distinguishing_features.append(f)
+        # for (s0, s1, t0, t1), d2_var in self.var_d2.items():
+        for s0, s1, t0, t1 in self.iterate_over_d2_transitions():
+            d2_var = self.var_d2[compute_d2_index(s0, s1, t0, t1)]
 
-            # if len(d2_distinguishing_features) != 0:
-            #     self.d2_distinguished.add((s0, s1, t0, t1))
+            qchanges_s0s1 = self.retrieve_possibly_cached_qchanges(s0, s1)
+            qchanges_t0t1 = self.retrieve_possibly_cached_qchanges(t0, t1)
+            equal_idxs = np.equal(qchanges_s0s1, qchanges_t0t1)
+            np_d2_distinguishing_features = np.where(equal_idxs==False)[0]
 
+            np_d1_dist = self.np_d1_distinguishing_features[self.compute_d1_idx(s0, t0)]
+            # if s0 == 440:
+            #     print(np_d1_dist)
             # D2(s0,s1,t0,t2) iff OR_f selected(f), where f ranges over features that d2-distinguish the transition
             # but do _not_ d1-distinguish the two states at the origin of each transition.
             d2_lit = self.writer.literal(d2_var, True)
             forward_clause_literals = [self.writer.literal(d2_var, False)]
-            # for f in (x for x in d2_distinguishing_features):
-            for f in (x for x in d2_distinguishing_features if x not in self.d1_distinguishing_features[(s0, t0)]):
-                forward_clause_literals.append(self.writer.literal(self.var_selected[f], True))
-                self.writer.clause([d2_lit, self.writer.literal(self.var_selected[f], False)])
-                self.n_d2_clauses += 1
+            for f in np_d2_distinguishing_features.flat:
+                if f not in np_d1_dist:
+                    forward_clause_literals.append(self.writer.literal(self.np_var_selected[f], True))
+                    self.writer.clause([d2_lit, self.writer.literal(self.np_var_selected[f], False)])
+                    self.n_d2_clauses += 1
 
             self.writer.clause(forward_clause_literals)
             self.n_d2_clauses += 1
 
         # Add the weighted clauses to minimize the number of selected features
-        for feature, feat_var in self.var_selected.items():
+        for feature, var in enumerate(self.np_var_selected):
             d = self.compute_feature_weight(feature)
-            self.writer.clause([self.writer.literal(feat_var, False)], weight=d)
+            self.writer.clause([self.writer.literal(var, False)], weight=d)
             self.n_selected_clauses += 1
+
+        # Make sure those features we want to enforce in the solution, if any, are posted as necessarily selected
+        for enforced in enforced_feature_idxs:
+            self.writer.clause([self.writer.literal(self.np_var_selected[enforced], True)])
+
+        # from pympler.asizeof import asizeof
+        # print(f"asizeof(self.writer): {asizeof(self.writer)/(1024*1024)}MB")
+        # print(f"asizeof(self): {asizeof(self)/(1024*1024)}MB")
+        # print(f"asizeof(self.np_d1_distinguishing_features): {asizeof(self.np_d1_distinguishing_features)/(1024*1024)}MB")
+        # print(f"np_d2_distinguishing_features.nbytes: {np_d2_distinguishing_features.nbytes/(1024*1024)}MB")
+        print_memory_usage()
 
         self.report_stats()
 
         # self.debug_tests()
-
+        self.np_d1_distinguishing_features = None  # We won't need this anymore
         self.writer.save()
 
         return self.writer.mapping
 
-    def decode_solution(self, assignment, namer):
+    def standard_qchange(self, s0, s1):
+        return np.sign(self.feat_matrix[s1] - self.feat_matrix[s0])
+
+    def relaxed_qchange(self, s0, s1):
+        std = self.standard_qchange(s0, s1)
+        # For each feature, return the standard qchange value if the feature is boolean, or the qchange is -1 (DEC),
+        # but otherwise turn 0's (NO-CHANGE) and 1's (INCREASES) into value 2, denoted to mean "relaxed increase" (INC*)
+        relaxed = np.where(np.logical_or(std == -1, self.feature_types == True), std, self.all_twos)
+        return relaxed
+
+    def ftype(self, f):
+        return bool if self.feature_types[f] else int
+
+    def generate_eff_change(self, feat, qchange):
+
+        if self.ftype(feat) == bool:
+            assert qchange in (-1, 1)
+            return {-1: FeatureValueChange.DEL, 1: FeatureValueChange.ADD, 2: FeatureValueChange.ADD_OR_NIL}[qchange]
+
+        # else type must be int
+        assert qchange in (-1, 1, 2)
+        return {-1: FeatureValueChange.DEC, 1: FeatureValueChange.INC, 2: FeatureValueChange.INC_OR_NIL}[qchange]
+
+    def decode_solution(self, assignment, features, namer):
         varmapping = self.writer.mapping
         true_variables = set(varmapping[idx] for idx, value in assignment.items() if value is True)
-        feature_mapping = {variable: feature for feature, variable in self.var_selected.items()}
-        assert len(feature_mapping) == len(self.var_selected)
-        selected_features = [feature_mapping[v] for v in true_variables if v in feature_mapping]
+        # feature_mapping = {variable: feature for feature, variable in self.var_selected.items()}
+        np_feature_mapping = {variable: feature for feature, variable in enumerate(self.np_var_selected)}
+        assert len(np_feature_mapping) == len(self.np_var_selected)
+        selected_features = sorted(np_feature_mapping[v] for v in true_variables if v in np_feature_mapping)
 
         if not selected_features:
             raise CriticalPipelineError("Zero-cost maxsat solution - "
                                         "no action model possible, the encoding has likely some error")
 
-        logging.info("Selected features: ")
-        print('\n'.join("F{}. {} [{}]".format(i, namer(f), f.complexity()) for i, f in enumerate(selected_features, 1)))
+        logging.info("Features (total complexity: {}): ".format(sum(self.feature_complexity[f] for f in selected_features)))
+        print('\t' + '\n\t'.join("{}. {} [k={}, id={}]".format(i, namer(self.feature_names[f]), self.feature_complexity[f], f)
+                        for i, f in enumerate(selected_features, 1)))
+
+        print("Only for machine eyes: ")
+        print(serialize_to_string([features[i] for i in selected_features]))
 
         # selected_features = [f for f in selected_features if str(f) == "bool[And(clear,{a})]"]
 
@@ -440,21 +448,18 @@ class ModelTranslator(object):
                 abstract_s = state_abstraction[s]
                 abstract_sprime = state_abstraction[sprime]
 
-                if (abstract_s, abstract_sprime) in already_computed:
-                    continue
+                qchanges = self.retrieve_possibly_cached_qchanges(s, sprime)
+                selected_qchanges = qchanges[selected_features]
+                abstract_effects = [ActionEffect(self.feature_names[f], self.generate_eff_change(f, c))
+                                    for f, c in zip(selected_features, selected_qchanges) if c != 0]
 
-                abstract_effects = []
-                for f in selected_features:
-                    concrete_qchange = self.qchanges[(s, sprime, f)]
-                    if concrete_qchange != FeatureValueChange.NIL:
-                        abstract_effects.append(ActionEffect(f, concrete_qchange))
-
-                preconditions = [create_precondition_atom(f, val) for f, val in zip(selected_features, abstract_s)]
-                # preconditions = [Atom(f, val) for f, val in zip(selected_features, abstract_s)]
-                abstract_actions.add(AbstractAction("anonymous", preconditions,
-                                                    abstract_effects))
+                precondition_bitmap = frozenset(zip(selected_features, abstract_s))
+                abstract_actions.add(AbstractAction(precondition_bitmap, abstract_effects))
                 if len(abstract_effects) == 0:
-                    raise RuntimeError("Unsound state model abstraction!")
+                    msg = "Abstract no-op necessary [concrete: ({}, {}), abstract: ({}, {})]"\
+                        .format(s, sprime, abstract_s, abstract_sprime)
+                    logging.warning(msg)
+                    # raise RuntimeError(msg)
 
                 already_computed.add((abstract_s, abstract_sprime))
 
@@ -464,7 +469,7 @@ class ModelTranslator(object):
 
     def report_stats(self):
 
-        d1_distinguishing = self.d1_distinguishing_features.values()
+        d1_distinguishing = self.np_d1_distinguishing_features.values()
         avg_num_d1_dist_features = sum(len(feats) for feats in d1_distinguishing) / len(d1_distinguishing)
         n_undistinguishable_state_pairs = sum(1 for x in d1_distinguishing if len(x) == 0)
         print_header("Max-sat encoding stats", 1)
@@ -504,7 +509,8 @@ class ModelTranslator(object):
         return 1
 
     def opt_policy_total_feature_depth(self, feature):
-        return feature.complexity()
+        # return feature.complexity()
+        return self.feature_complexity[feature]
 
     def setup_optimization_policy(self, optimization):
         if optimization == OptimizationPolicy.NUM_FEATURES:
@@ -516,14 +522,40 @@ class ModelTranslator(object):
         raise RuntimeError("Unknown optimization policy")
 
     def compute_abstract_state(self, features, state_id):
-        state_values = []
-        for f in features:
-            x = self.model.compute_feature_value(f, state_id)
-            state_values.append(x)
+        # state_values = []
+        # for f in features:
+        #     x = self.model.compute_feature_value(f, state_id)
+        #     state_values.append(x)
 
-        # if f.bool_value(x1) != f.bool_value(x2):  # f distinguishes s1 and s2
+        bin_values = self.bin_feat_matrix[state_id, features]
+        return tuple(map(bool, bin_values))
 
-        return tuple(state_values)
+    def compute_action_model(self, assignment, features, config):
+        states, actions = self.decode_solution(assignment, features, config.feature_namer)
+        self.print_actions(actions, os.path.join(config.experiment_dir, 'actions.txt'), config.feature_namer)
+        states, actions = optimize_abstract_action_model(states, actions)
+        self.print_actions(actions, os.path.join(config.experiment_dir, 'actions-optimized.txt'), config.feature_namer)
+        return dict(abstract_states=states, abstract_actions=actions)
+
+    def print_actions(self, actions, filename, namer):
+        with open(filename, 'w') as f:
+            for i, action in enumerate(actions, 1):
+                action_str = self.print_abstract_action(action, namer)
+                print("\nAction {}:\n{}".format(i, action_str), file=f)
+
+    def print_abstract_action(self, action, namer=lambda s: s):
+        precs = ", ".join(sorted(self.print_precondition_atom(f, v, namer) for f, v in action.preconditions))
+        effs = ", ".join(sorted(eff.print_named(namer) for eff in action.effects))
+        return "\tPRE: {}\n\tEFFS: {}".format(precs, effs)
+
+    def print_precondition_atom(self, feature, value, namer):
+        assert value in (True, False)
+        type_ = self.ftype(feature)
+        fstr = namer(self.feature_names[feature])
+        if type_ == bool:
+            return fstr if value else "NOT {}".format(fstr)
+        assert type_ == int
+        return "{} > 0".format(fstr) if value else "{} = 0".format(fstr)
 
 
 class Variable(object):
@@ -699,11 +731,47 @@ class CNFWriter(object):
             print("\n".join("{}: {}".format(i, v) for v, i in variables), file=f)
 
 
-def compute_action_model(config, data):
-    assert data.cnf_solution.solved
+def attempt_single_merge(action_precs):
+    for p1, p2 in itertools.combinations(action_precs, 2):
+        diff = p1.symmetric_difference(p2)
+        diffl = list(diff)
+        if len(diffl) == 2 and diffl[0][0] == diffl[1][0]:
+            assert diffl[0][1] != diffl[1][1]
+            p_merged = p1.difference(diff)
+            return p1, p2, p_merged  # Meaning p1 and p2 should be merged into p_merged
+    return None
 
-    states, actions = data.cnf_translator.decode_solution(data.cnf_solution.assignment, config.feature_namer)
-    with open(os.path.join(config.experiment_dir, 'actions.txt'), 'w') as f:
-        f.write("\n\n".join("Action {}:\n{}".format(i, action.print_named(config.feature_namer))
-                            for i, action in enumerate(actions, 1)))
-    return dict(abstract_states=states, abstract_actions=actions)
+
+def merge_precondition_sets(action_precs):
+    while True:
+        res = attempt_single_merge(action_precs)
+        if res is None:
+            break
+
+        # else do the actual merge
+        p1, p2, new = res
+        action_precs.remove(p1)
+        action_precs.remove(p2)
+        action_precs.add(new)
+    return action_precs
+
+
+def optimize_abstract_action_model(states, actions):
+    logging.info("Optimizing abstract action model with {} abstract actions".format(len(actions)))
+    actions_grouped_by_effects = defaultdict(set)
+    for a in actions:
+        actions_grouped_by_effects[a.effects].add(a.preconditions)
+    logging.info("There are {} effect groups".format(len(actions_grouped_by_effects)))
+
+    merged = []
+    for effs, action_precs in actions_grouped_by_effects.items():
+        for prec in merge_precondition_sets(action_precs):
+            merged.append(AbstractAction(prec, effs))
+
+    logging.info("Optimized abstract action model has {} actions".format(len(merged)))
+    return states, merged
+
+
+def compute_action_model(config, data, rng):
+    assert data.cnf_solution.solved
+    return data.cnf_translator.compute_action_model(data.cnf_solution.assignment, data.features, config)
