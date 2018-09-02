@@ -19,6 +19,8 @@ def generate_domain(gridsize):
     coord_t = lang.interval('coordinate', lang.Integer, lower_bound=1, upper_bound=gridsize)
     xpos = lang.function('xpos', coord_t)
     ypos = lang.function('ypos', coord_t)
+    goal_xpos = lang.function('goal_xpos', coord_t)
+    goal_ypos = lang.function('goal_ypos', coord_t)
     maxx = lang.function('maxpos', coord_t)
 
     # Create the actions
@@ -38,11 +40,14 @@ def generate_domain(gridsize):
                    precondition=xpos() > coord_t.lower_bound,
                    effects=[xpos() << xpos() - 1])
 
-    problem.init.set(xpos, (), 1)
-    problem.init.set(ypos, (), 1)
-    problem.init.set(maxx, (), gridsize)
+    problem.init.set(xpos, 1)
+    problem.init.set(ypos, 1)
+    problem.init.set(maxx, gridsize)
 
-    problem.goal = land(xpos() == gridsize, ypos() == gridsize)
+    problem.init.set(goal_xpos, gridsize)
+    problem.init.set(goal_ypos, gridsize)
+
+    problem.goal = land(xpos() == goal_xpos(), ypos() == goal_ypos())
 
     return problem
 
@@ -57,6 +62,8 @@ def generate_propositional_domain(gridsize):
     xpos = lang.function('xpos', coord_t)
     ypos = lang.function('ypos', coord_t)
     maxx = lang.function('maxpos', coord_t)
+    goal_xpos = lang.function('goal_xpos', coord_t)
+    goal_ypos = lang.function('goal_ypos', coord_t)
     succ = lang.predicate("succ", coord_t, coord_t)
 
     coordinates = ["c{}".format(i) for i in range(1, gridsize+1)]
@@ -74,13 +81,15 @@ def generate_propositional_domain(gridsize):
                    effects=[ypos() << x1])
 
     last = coordinates[-1]
-    problem.init.set(xpos, (), coordinates[0])
-    problem.init.set(ypos, (), coordinates[0])
-    problem.init.set(maxx, (), last)
+    problem.init.set(xpos, coordinates[0])
+    problem.init.set(ypos, coordinates[0])
+    problem.init.set(maxx, last)
+    problem.init.set(goal_xpos, last)
+    problem.init.set(goal_ypos, last)
 
     _ = [problem.init.add(succ, x, y) for x, y in zip(coordinates, coordinates[1:])]
 
-    problem.goal = land(xpos() == last, ypos() == last)
+    problem.goal = land(xpos() == goal_xpos(), ypos() == goal_ypos())
 
     return problem
 

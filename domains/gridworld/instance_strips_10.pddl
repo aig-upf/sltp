@@ -12,22 +12,24 @@
     )
 
     (:init
-        (= (maxpos ) c10)
-        (= (ypos ) c1)
         (= (xpos ) c1)
-        (succ c6 c7)
-        (succ c9 c10)
-        (succ c5 c6)
-        (succ c3 c4)
-        (succ c1 c2)
-        (succ c7 c8)
-        (succ c4 c5)
-        (succ c2 c3)
+        (= (ypos ) c1)
+        (= (maxpos ) c10)
+        (= (goal_xpos ) c10)
+        (= (goal_ypos ) c10)
         (succ c8 c9)
+        (succ c7 c8)
+        (succ c9 c10)
+        (succ c4 c5)
+        (succ c6 c7)
+        (succ c1 c2)
+        (succ c3 c4)
+        (succ c2 c3)
+        (succ c5 c6)
     )
 
     (:goal
-        (and (= (xpos ) c10) (= (ypos ) c10))
+        (and (= (xpos ) (goal_xpos )) (= (ypos ) (goal_ypos )))
     )
 
     

@@ -13,8 +13,10 @@
 
     (:init
         (= (maxpos ) c5)
-        (= (ypos ) c1)
-        (= (xpos ) c1)
+        (= (ypos ) c2)
+        (= (xpos ) c2)
+        (= (goal_xpos ) c4)
+        (= (goal_ypos ) c3)
         (succ c3 c4)
         (succ c1 c2)
         (succ c4 c5)
@@ -22,7 +24,7 @@
     )
 
     (:goal
-        (and (= (xpos ) c3) (= (ypos ) c4))
+        (and (= (xpos ) (goal_xpos )) (= (ypos ) (goal_ypos )))
     )
 
     

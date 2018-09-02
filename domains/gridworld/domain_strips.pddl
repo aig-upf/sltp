@@ -10,6 +10,10 @@
         coordinate - object
     )
 
+    (:constants
+        
+    )
+
     (:predicates
         (succ ?x1 - coordinate ?x2 - coordinate)
     )
@@ -18,6 +22,8 @@
         (xpos ) - coordinate
         (ypos ) - coordinate
         (maxpos ) - coordinate
+        (goal_xpos ) - coordinate
+        (goal_ypos ) - coordinate
     )
 
     

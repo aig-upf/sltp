@@ -10,14 +10,20 @@
         coordinate - int
     )
 
+    (:constants
+        
+    )
+
     (:predicates
         
     )
 
     (:functions
-        (maxpos ) - coordinate
-        (ypos ) - coordinate
         (xpos ) - coordinate
+        (ypos ) - coordinate
+        (goal_xpos ) - coordinate
+        (goal_ypos ) - coordinate
+        (maxpos ) - coordinate
     )
 
     

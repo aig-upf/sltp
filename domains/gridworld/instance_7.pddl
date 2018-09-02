@@ -12,13 +12,15 @@
     )
 
     (:init
-        (= (maxpos ) 7)
-        (= (ypos ) 1)
         (= (xpos ) 1)
+        (= (ypos ) 1)
+        (= (maxpos ) 7)
+        (= (goal_xpos ) 7)
+        (= (goal_ypos ) 7)
     )
 
     (:goal
-        (and (= (xpos ) 7) (= (ypos ) 7))
+        (and (= (xpos ) (goal_xpos )) (= (ypos ) (goal_ypos )))
     )
 
     
