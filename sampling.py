@@ -29,7 +29,7 @@ def print_atom(atom):
     return "{}({})".format(atom[0], ", ".join(atom[1:]))
 
 
-def log_sampled_states(states, goals, transitions, expanded, optimal, resampled_states_filename):
+def log_sampled_states(states, goals, transitions, expanded, optimal, root_states, resampled_states_filename):
     # We need to recompute the parenthood relation with the remapped states to log it!
     parents = compute_parents(transitions)
 
@@ -40,9 +40,10 @@ def log_sampled_states(states, goals, transitions, expanded, optimal, resampled_
             atoms = ", ".join(print_atom(atom) for atom in state)
             is_goal = "*" if id_ in goals else ""
             is_expanded = "^" if expanded(id_) else ""
-            is_optimal = "+" if id_ in optimal and not is_goal else ""
-            print("#{}{}{}{} (parents: {}, children: {}):\n\t{}".
-                  format(id_, is_goal, is_optimal, is_expanded, state_parents, state_children, atoms), file=f)
+            is_root = "=" if id_ in root_states else ""
+            is_optimal = "+" if id_ in optimal else ""
+            print("#{}{}{}{}{} (parents: {}, children: {}):\n\t{}".
+                  format(id_, is_root, is_goal, is_optimal, is_expanded, state_parents, state_children, atoms), file=f)
     logging.info('Resampled states logged at "{}"'.format(resampled_states_filename))
 
 
@@ -95,7 +96,7 @@ def sample_generated_states(config, rng):
 
     expanded = lambda s: len(transitions[s]) > 0
     logging.info("Selected (states / goals / optimal): {} / {} / {}".format(len(states), len(goals), len(optimal)))
-    log_sampled_states(states, goals, transitions, expanded, optimal, config.resampled_states_filename)
+    log_sampled_states(states, goals, transitions, expanded, optimal, root_states, config.resampled_states_filename)
     return states, goals, transitions, optimal, root_states
 
 

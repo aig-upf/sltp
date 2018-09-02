@@ -1,40 +1,16 @@
 
 Action 1:
-	PRE: ncarried = 0, nfree-grippers > 0, robot-at-B
-	EFFS: NOT robot-at-B
-
-Action 2:
-	PRE: ncarried > 0, robot-at-B
-	EFFS: NOT robot-at-B
-
-Action 3:
-	PRE: nfree-grippers > 0, robot-at-B
-	EFFS: DEC nfree-grippers, INC ncarried
-
-Action 4:
-	PRE: NOT robot-at-B, ncarried = 0, nfree-grippers > 0
-	EFFS: robot-at-B
-
-Action 5:
 	PRE: NOT robot-at-B, ncarried > 0, nfree-grippers = 0
 	EFFS: robot-at-B
 
-Action 6:
-	PRE: NOT robot-at-B, nballs-A > 0, ncarried > 0, nfree-grippers > 0
-	EFFS: robot-at-B
+Action 2:
+	PRE: ncarried = 0, nfree-grippers > 0, robot-at-B
+	EFFS: NOT robot-at-B
 
-Action 7:
-	PRE: NOT robot-at-B, nballs-A > 0, nfree-grippers > 0
-	EFFS: DEC nballs-A, DEC nfree-grippers, INC ncarried
-
-Action 8:
+Action 3:
 	PRE: ncarried > 0, robot-at-B
 	EFFS: DEC ncarried, INC nfree-grippers
 
-Action 9:
-	PRE: NOT robot-at-B, nballs-A > 0, ncarried > 0
-	EFFS: DEC ncarried, INC nballs-A, INC nfree-grippers
-
-Action 10:
-	PRE: NOT robot-at-B, nballs-A = 0, ncarried > 0, nfree-grippers = 0
-	EFFS: DEC ncarried, INC nballs-A, INC nfree-grippers
+Action 4:
+	PRE: NOT robot-at-B, nballs-A > 0, nfree-grippers > 0
+	EFFS: DEC nballs-A, DEC nfree-grippers, INC ncarried

@@ -1,112 +1,48 @@
 
 Action 1:
-	PRE: NOT holding(a), a_on_b_ontable_or_held, bool[handempty], ontable(a)
-	EFFS: NOT bool[handempty]
+	PRE: NOT bool[holding], NOT holding(a), a_on_b_ontable_or_held, n(a) = 0, n(b) > 0, ontable(a)
+	EFFS: DEC n(b), bool[holding]
 
 Action 2:
-	PRE: NOT a_on_b_ontable_or_held, NOT holding(a), NOT ontable(a), bool[handempty], n(a) = 0, n(b) > 0
-	EFFS: NOT bool[handempty]
+	PRE: NOT bool[holding], NOT holding(a), a_on_b_ontable_or_held, n(b) = 0, ontable(a)
+	EFFS: bool[holding]
 
 Action 3:
-	PRE: NOT holding(a), NOT ontable(a), a_on_b_ontable_or_held, bool[handempty], n(b) > 0
-	EFFS: NOT bool[handempty]
+	PRE: NOT bool[holding], NOT holding(a), NOT ontable(a), a_on_b_ontable_or_held, n(a) = 0, n(b) > 0
+	EFFS: bool[holding]
 
 Action 4:
-	PRE: NOT a_on_b_ontable_or_held, NOT holding(a), NOT ontable(a), bool[handempty], n(b) = 0
-	EFFS: NOT bool[handempty]
+	PRE: NOT holding(a), NOT ontable(a), a_on_b_ontable_or_held, bool[holding], n(a) = 0, n(b) > 0
+	EFFS: INC n(a), INC n(b), NOT bool[holding]
 
 Action 5:
-	PRE: NOT a_on_b_ontable_or_held, NOT bool[handempty], NOT holding(a), NOT ontable(a), n(a) = 0, n(b) = 0
-	EFFS: INC n(a), bool[handempty]
+	PRE: NOT bool[holding], NOT holding(a), a_on_b_ontable_or_held, n(a) = 0, n(b) = 0, ontable(a)
+	EFFS: NOT ontable(a), bool[holding], holding(a)
 
 Action 6:
-	PRE: NOT bool[handempty], NOT holding(a), a_on_b_ontable_or_held, ontable(a)
-	EFFS: INC n(a), bool[handempty]
+	PRE: NOT bool[holding], NOT holding(a), a_on_b_ontable_or_held, n(a) > 0, n(b) = 0, ontable(a)
+	EFFS: DEC n(a), bool[holding]
 
 Action 7:
-	PRE: NOT holding(a), a_on_b_ontable_or_held, bool[handempty], n(a) = 0, ontable(a)
-	EFFS: NOT bool[handempty], NOT ontable(a), holding(a)
+	PRE: NOT holding(a), NOT ontable(a), a_on_b_ontable_or_held, bool[holding], n(a) = 0, n(b) > 0
+	EFFS: NOT bool[holding]
 
 Action 8:
-	PRE: NOT bool[handempty], NOT ontable(a), a_on_b_ontable_or_held, holding(a), n(a) = 0
-	EFFS: NOT holding(a), bool[handempty], ontable(a)
+	PRE: NOT holding(a), a_on_b_ontable_or_held, bool[holding], n(a) = 0, ontable(a)
+	EFFS: NOT bool[holding]
 
 Action 9:
-	PRE: NOT a_on_b_ontable_or_held, NOT holding(a), NOT ontable(a), bool[handempty], n(a) = 0
-	EFFS: NOT bool[handempty], a_on_b_ontable_or_held, holding(a)
+	PRE: NOT holding(a), a_on_b_ontable_or_held, bool[holding], n(a) > 0, n(b) = 0, ontable(a)
+	EFFS: NOT bool[holding]
 
 Action 10:
-	PRE: NOT bool[handempty], NOT holding(a), a_on_b_ontable_or_held, n(a) > 0, ontable(a)
-	EFFS: bool[handempty]
+	PRE: NOT ontable(a), a_on_b_ontable_or_held, bool[holding], holding(a), n(a) = 0, n(b) > 0
+	EFFS: NOT bool[holding], NOT holding(a), ontable(a)
 
 Action 11:
-	PRE: NOT a_on_b_ontable_or_held, NOT bool[handempty], NOT holding(a), NOT ontable(a), n(a) = 0
-	EFFS: bool[handempty]
+	PRE: NOT a_on_b_ontable_or_held, NOT bool[holding], NOT holding(a), NOT ontable(a), n(a) = 0, n(b) = 0
+	EFFS: a_on_b_ontable_or_held, bool[holding], holding(a)
 
 Action 12:
-	PRE: NOT bool[handempty], NOT holding(a), a_on_b_ontable_or_held, n(a) = 0, n(b) > 0
-	EFFS: bool[handempty]
-
-Action 13:
-	PRE: NOT bool[handempty], NOT holding(a), a_on_b_ontable_or_held, n(a) = 0, n(b) = 0, ontable(a)
-	EFFS: bool[handempty]
-
-Action 14:
-	PRE: NOT bool[handempty], NOT ontable(a), a_on_b_ontable_or_held, holding(a), n(a) = 0
-	EFFS: NOT a_on_b_ontable_or_held, NOT holding(a), bool[handempty]
-
-Action 15:
-	PRE: NOT a_on_b_ontable_or_held, NOT holding(a), NOT ontable(a), bool[handempty], n(a) > 0, n(b) = 0
-	EFFS: DEC n(a), NOT bool[handempty]
-
-Action 16:
-	PRE: NOT holding(a), a_on_b_ontable_or_held, bool[handempty], n(a) > 0, ontable(a)
-	EFFS: DEC n(a), NOT bool[handempty]
-
-Action 17:
-	PRE: NOT bool[handempty], NOT holding(a), NOT ontable(a), n(a) = 0, n(b) > 0
-	EFFS: INC n(a), INC n(b), bool[handempty]
-
-Action 18:
-	PRE: NOT bool[handempty], NOT holding(a), a_on_b_ontable_or_held, n(a) > 0, n(b) = 0, ontable(a)
-	EFFS: INC n(a), INC n(b), bool[handempty]
-
-Action 19:
-	PRE: NOT holding(a), NOT ontable(a), a_on_b_ontable_or_held, bool[handempty], n(a) = 0, n(b) > 0
-	EFFS: DEC n(b), NOT bool[handempty], holding(a)
-
-Action 20:
-	PRE: NOT holding(a), NOT ontable(a), bool[handempty], n(a) > 0, n(b) > 0
-	EFFS: DEC n(a), DEC n(b), NOT bool[handempty]
-
-Action 21:
-	PRE: NOT holding(a), a_on_b_ontable_or_held, bool[handempty], n(a) > 0, n(b) > 0, ontable(a)
-	EFFS: DEC n(a), DEC n(b), NOT bool[handempty]
-
-Action 22:
-	PRE: NOT a_on_b_ontable_or_held, NOT holding(a), NOT ontable(a), bool[handempty], n(a) = 0, n(b) > 0
-	EFFS: DEC n(b), NOT bool[handempty], a_on_b_ontable_or_held, holding(a)
-
-Action 23:
-	PRE: NOT a_on_b_ontable_or_held, NOT bool[handempty], NOT holding(a), NOT ontable(a), n(a) = 0, n(b) = 0
-	EFFS: INC n(b), bool[handempty]
-
-Action 24:
-	PRE: NOT bool[handempty], NOT holding(a), a_on_b_ontable_or_held, ontable(a)
-	EFFS: INC n(b), bool[handempty]
-
-Action 25:
-	PRE: NOT a_on_b_ontable_or_held, NOT holding(a), NOT ontable(a), bool[handempty], n(a) = 0, n(b) > 0
-	EFFS: DEC n(b), NOT bool[handempty]
-
-Action 26:
-	PRE: NOT holding(a), a_on_b_ontable_or_held, bool[handempty], n(b) > 0, ontable(a)
-	EFFS: DEC n(b), NOT bool[handempty]
-
-Action 27:
-	PRE: NOT bool[handempty], NOT ontable(a), a_on_b_ontable_or_held, holding(a), n(a) = 0, n(b) > 0
-	EFFS: INC n(b), NOT a_on_b_ontable_or_held, NOT holding(a), bool[handempty]
-
-Action 28:
-	PRE: NOT bool[handempty], NOT ontable(a), a_on_b_ontable_or_held, holding(a), n(a) = 0, n(b) = 0
-	EFFS: INC n(b), NOT holding(a), bool[handempty]
+	PRE: NOT ontable(a), a_on_b_ontable_or_held, bool[holding], holding(a), n(a) = 0, n(b) = 0
+	EFFS: INC n(b), NOT bool[holding], NOT holding(a)

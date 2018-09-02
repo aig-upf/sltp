@@ -585,6 +585,9 @@ class ModelTranslator(object):
         init, goal = self.compute_init_goals(data, features)
 
         init = next(iter(init))  # TODO ATM we just pick the first initial state, without minimization
+
+        if len(goal) > 1:
+            raise RuntimeError("Goal could not be reduced to simple conjunction!!!")
         goal = next(iter(goal))  # TODO ATM we just pick the first goal state, without minimization
 
         with open(config.qnp_abstraction_filename, "w") as f:
