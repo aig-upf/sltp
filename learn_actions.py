@@ -459,25 +459,24 @@ class ModelTranslator(object):
 
         abstract_actions = set()
         already_computed = set()
-        for s, children in self.transitions.items():
-            for sprime in children:
-                abstract_s = state_abstraction[s]
-                abstract_sprime = state_abstraction[sprime]
+        for s, sprime in self.iterate_over_optimal_transitions():
+            abstract_s = state_abstraction[s]
+            abstract_sprime = state_abstraction[sprime]
 
-                qchanges = self.retrieve_possibly_cached_qchanges(s, sprime)
-                selected_qchanges = qchanges[selected_features]
-                abstract_effects = [ActionEffect(self.feature_names[f], self.generate_eff_change(f, c))
-                                    for f, c in zip(selected_features, selected_qchanges) if c != 0]
+            qchanges = self.retrieve_possibly_cached_qchanges(s, sprime)
+            selected_qchanges = qchanges[selected_features]
+            abstract_effects = [ActionEffect(self.feature_names[f], self.generate_eff_change(f, c))
+                                for f, c in zip(selected_features, selected_qchanges) if c != 0]
 
-                precondition_bitmap = frozenset(zip(selected_features, abstract_s))
-                abstract_actions.add(AbstractAction(precondition_bitmap, abstract_effects))
-                if len(abstract_effects) == 0:
-                    msg = "Abstract no-op necessary [concrete: ({}, {}), abstract: ({}, {})]"\
-                        .format(s, sprime, abstract_s, abstract_sprime)
-                    logging.warning(msg)
-                    # raise RuntimeError(msg)
+            precondition_bitmap = frozenset(zip(selected_features, abstract_s))
+            abstract_actions.add(AbstractAction(precondition_bitmap, abstract_effects))
+            if len(abstract_effects) == 0:
+                msg = "Abstract no-op necessary [concrete: ({}, {}), abstract: ({}, {})]"\
+                    .format(s, sprime, abstract_s, abstract_sprime)
+                logging.warning(msg)
+                # raise RuntimeError(msg)
 
-                already_computed.add((abstract_s, abstract_sprime))
+            already_computed.add((abstract_s, abstract_sprime))
 
         logging.info("Abstract state space: {} states and {} actions".
                      format(len(abstract_states), len(abstract_actions)))
