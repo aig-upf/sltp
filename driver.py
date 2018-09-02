@@ -423,6 +423,30 @@ class ActionModelStep(Step):
         return learn_actions.compute_action_model
 
 
+class QNPGenerationStep(Step):
+    """ Generate a QNP encoding from the computed abstract action model """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def get_required_attributes(self):
+        return ["qnp_abstraction_filename"]
+
+    def process_config(self, config):
+        config["qnp_prefix"] = "encoding"
+        return config
+
+    def get_required_data(self):
+        return []
+
+    def description(self):
+        return "Generation of the QNP encoding"
+
+    def get_step_runner(self):
+        import qnp
+        return qnp.generate_encoding
+
+
 PIPELINES = dict(
     maxsat=[
         PlannerStep,
@@ -431,6 +455,7 @@ PIPELINES = dict(
         MaxsatProblemGenerationStep,
         MaxsatProblemSolutionStep,
         ActionModelStep,
+        # QNPGenerationStep,
     ],
     sat=[
         PlannerStep,
