@@ -33,7 +33,7 @@ def experiment(experiment_name=None):
 
     #
     aaai_prob01 = dict(
-        instances=["prob01.pddl"],
+        instances=["prob01.pddl", "prob02.pddl"],
         num_states=2000, max_width=[-1],
         num_sampled_states=100,
         complete_only_wrt_optimal=True,
