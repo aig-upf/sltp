@@ -12,6 +12,7 @@ from tarski.dl import EmpiricalBinaryConcept, NullaryAtomFeature, ConceptCardina
 from features import Model
 
 PRUNE_DUPLICATE_FEATURES = True
+NP_FEAT_VALUE_TYPE = np.int8  # Keep it allowing negative values, so that we can subtract without overflow!
 
 
 def next_power_of_two(x):
@@ -50,12 +51,12 @@ def print_sat_transition_matrix(state_ids, transitions, transitions_filename):
 def cast_feature_value_to_numpy_value(value):
     """ Cast a given feature value into a suitable numpy value, if possible, or raise error if not """
     assert value >= 0
-    max_ = np.iinfo(np.uint8).max
+    max_ = np.iinfo(NP_FEAT_VALUE_TYPE).max
     if value == sys.maxsize:
         return max_
 
     if value >= max_:  # Max value reserved to denote infty.
-        raise RuntimeError("Cannot cast feature value {} into numpy np.uint8 value".format(value))
+        raise RuntimeError("Cannot cast feature value {} into numpy value".format(value))
 
     return value
 
@@ -71,7 +72,7 @@ def print_feature_matrix(config, state_ids, features, model):
             print(line, file=f)
 
     # Convert features to a numpy array with n rows and m columns, where n=num states, m=num features
-    matrix = np.empty(shape=(len(state_ids), len(features)), dtype=np.uint8)
+    matrix = np.empty(shape=(len(state_ids), len(features)), dtype=NP_FEAT_VALUE_TYPE)
     for i, s in enumerate(state_ids, 0):
         assert i == s
         matrix[i] = [cast_feature_value_to_numpy_value(model.compute_feature_value(feat, s)) for feat in features]
@@ -82,7 +83,7 @@ def print_feature_matrix(config, state_ids, features, model):
     np.save(config.bin_feature_matrix_filename, bin_matrix)
 
     np.save(config.feature_complexity_filename,
-            np.array([f.complexity() for f in features], dtype=np.uint8))
+            np.array([f.complexity() for f in features], dtype=NP_FEAT_VALUE_TYPE))
 
     np.save(config.feature_names_filename,
             np.array([str(f) for f in features], dtype=np.unicode_))
