@@ -93,7 +93,7 @@ def build_expected_features(lang):
 def feature_namer(feature):
     s = str(feature)
     return {
-        "card[reward]": "num-uncollected-rewards",
+        "card[reward]": "num-rewards",
     }.get(s, s)
 
 
