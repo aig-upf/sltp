@@ -10,20 +10,18 @@ from util.naming import filename_core
 
 def mark_optimal(goal_states, root_states, parents):
     """ Collect all those states that lie on one arbitrary optimal path to the goal """
-    optimal_states, optimal_transitions = set(), set()
+    optimal_transitions = set()
     for goal in goal_states:
-        optimal_states.add(goal)
         previous = current = goal
 
         while current not in root_states:
             # A small trick: node IDs are ordered by depth, so we can pick the min parent ID and know the resulting path
             # will be optimal
             current = min(parents[current])
-            optimal_states.add(current)
             optimal_transitions.add((current, previous))  # We're traversing backwards
             previous = current
 
-    return optimal_states, optimal_transitions
+    return optimal_transitions
 
 
 def print_atom(atom):
@@ -33,9 +31,10 @@ def print_atom(atom):
     return "{}({})".format(atom[0], ", ".join(atom[1:]))
 
 
-def log_sampled_states(states, goals, transitions, expanded, optimal, root_states, resampled_states_filename):
+def log_sampled_states(states, goals, transitions, expanded, optimal_transitions, root_states, resampled_states_filename):
     # We need to recompute the parenthood relation with the remapped states to log it!
     parents = compute_parents(transitions)
+    optimal_s = set(x for x, _ in optimal_transitions)
 
     with open(resampled_states_filename, 'w') as f:
         for id_, state in states.values():
@@ -45,7 +44,7 @@ def log_sampled_states(states, goals, transitions, expanded, optimal, root_state
             is_goal = "*" if id_ in goals else ""
             is_expanded = "^" if expanded(id_) else ""
             is_root = "=" if id_ in root_states else ""
-            is_optimal = "+" if id_ in optimal else ""
+            is_optimal = "+" if id_ in optimal_s else ""
             print("#{}{}{}{}{} (parents: {}, children: {}):\n\t{}".
                   format(id_, is_root, is_goal, is_optimal, is_expanded, state_parents, state_children, atoms), file=f)
     logging.info('Resampled states logged at "{}"'.format(resampled_states_filename))
@@ -69,11 +68,12 @@ def sample_generated_states(config, rng):
 
     parents = compute_parents(transitions)
 
+    optimal, optimal_transitions = set(), set()
+
     if config.sampling == "random":
         assert config.num_sampled_states is not None
         assert not config.complete_only_wrt_optimal
         selected = random_sample(config, goal_states, rng, states, transitions, parents)
-        optimal = set()
 
     else:
         assert config.sampling in ("all", "optimal")
@@ -81,25 +81,28 @@ def sample_generated_states(config, rng):
         # For each instance, we keep the first-reached goal, as a way of selecting an arbitrary optimal path.
         goal_selection = set(min(x) for x in goals_by_instance)
 
-        optimal, optimal_transitions = mark_optimal(goal_selection, root_states, parents)
-        logging.info("Resampling: states/goals/optimal: {} / {} / {}".format(len(states), len(goal_states), len(optimal)))
+        optimal_transitions = mark_optimal(goal_selection, root_states, parents)
+        states_in_some_optimal_transition = set(itertools.chain.from_iterable(optimal_transitions))
+        logging.info("Resampling: states/goals/optimal tx: {} / {} / {}".format(len(states), len(goal_states), len(optimal_transitions)))
 
         if config.sampling == "optimal":  # Select only the optimal states
-            selected = set(optimal)
+            assert False, "not sure this makes too much sense!"
+            # selected = set(optimal)
 
         else:  # sampling = "all"
             if config.num_sampled_states is not None:
                 selected = sample_first_x_states(root_states, config.num_sampled_states)
-                selected.update(optimal)
+                selected.update(states_in_some_optimal_transition)
             else:
                 selected = set(states)
 
-    states, goals, transitions, optimal, root_states = remap_sample_expanded_states(set(selected), states, goal_states, transitions, optimal, root_states)
+    states, goals, transitions, optimal_transitions, root_states = \
+        remap_sample_expanded_states(set(selected), states, goal_states, transitions, optimal_transitions, root_states)
 
     expanded = lambda s: len(transitions[s]) > 0
-    logging.info("Selected (states / goals / optimal): {} / {} / {}".format(len(states), len(goals), len(optimal)))
-    log_sampled_states(states, goals, transitions, expanded, optimal, root_states, config.resampled_states_filename)
-    return states, goals, transitions, optimal, root_states
+    logging.info("Selected (states / goals / optimal tx): {} / {} / {}".format(len(states), len(goals), len(optimal_transitions)))
+    log_sampled_states(states, goals, transitions, expanded, optimal_transitions, root_states, config.resampled_states_filename)
+    return states, goals, transitions, optimal_transitions, root_states
 
 
 def random_sample(config, goal_states, rng, states, transitions, parents):
@@ -142,7 +145,7 @@ def compute_parents(transitions):
     return parents
 
 
-def remap_sample_expanded_states(sampled_expanded, states, goal_states, transitions, optimal, root_states):
+def remap_sample_expanded_states(sampled_expanded, states, goal_states, transitions, optimal_transitions, root_states):
     # all_in_sample will contain all states we want to sample plus their children state IDs
     all_in_sample = set(sampled_expanded)
     for s in sampled_expanded:
@@ -153,8 +156,8 @@ def remap_sample_expanded_states(sampled_expanded, states, goal_states, transiti
 
     # Pick the selected elements from the data structures
     new_goal_states = {idx[x] for x in ordered_sample if x in goal_states}
-    new_optimal = {idx[x] for x in ordered_sample if x in optimal}
     new_root = {idx[x] for x in ordered_sample if x in root_states}
+    new_optimal_transitions = {(idx[x], idx[y]) for x, y in optimal_transitions}
 
     new_states = OrderedDict()
     for i, s in states.items():
@@ -167,7 +170,7 @@ def remap_sample_expanded_states(sampled_expanded, states, goal_states, transiti
         if source in sampled_expanded:
             new_transitions[idx[source]] = {idx[t] for t in targets}
 
-    return new_states, new_goal_states, new_transitions, new_optimal, new_root
+    return new_states, new_goal_states, new_transitions, new_optimal_transitions, new_root
 
 
 def normalize_atom_name(name):

@@ -56,7 +56,7 @@ def generate_maxsat_problem(config, data, rng):
     optimization = config.optimization if hasattr(config, "optimization") else OptimizationPolicy.NUM_FEATURES
 
     state_ids = data.state_ids
-    optimal_state_ids = data.optimal_states
+    optimal_transitions = data.optimal_transitions
     transitions = data.transitions
     goal_states = data.goal_states
 
@@ -73,7 +73,7 @@ def generate_maxsat_problem(config, data, rng):
         raise CriticalPipelineError("No goal state identified in the sample, SAT theory will be trivially satisfiable")
 
     translator = ModelTranslator(feat_matrix, bin_feat_matrix, feature_complexity, feature_names, feature_types,
-                                 state_ids, goal_states, transitions, optimal_state_ids,
+                                 state_ids, goal_states, transitions, optimal_transitions,
                                  config.cnf_filename, optimization,
                                  config.relax_numeric_increase, config.complete_only_wrt_optimal)
 
@@ -163,7 +163,7 @@ class ActionEffect(object):
 
 class ModelTranslator(object):
     def __init__(self, feat_matrix, bin_feat_matrix, feature_complexity, feature_names, feature_types, state_ids,
-                 goal_states, transitions, optimal_state_ids, cnf_filename,
+                 goal_states, transitions, optimal_transitions, cnf_filename,
                  optimization, relax_numeric_increase, complete_only_wrt_optimal):
 
         self.feat_matrix = feat_matrix
@@ -179,14 +179,18 @@ class ModelTranslator(object):
         # We'll need this later if using relaxed inc semantics:
         self.all_twos = 2*np.ones(self.feat_matrix.shape[1], dtype=np.int8)
 
-        # Compute for each pair s and t of states which features distinguish s and t
-        self.optimal_and_nonoptimal = set(state_ids).union(optimal_state_ids)
+        self.optimal_transitions = optimal_transitions
+        # self.optimal_and_nonoptimal = set(state_ids).union(optimal_state_ids)
+        self.optimal_and_nonoptimal = set(state_ids)
 
         if complete_only_wrt_optimal:
-            self.optimal_states = optimal_state_ids
+            self.optimal_states = set(x for x, _ in optimal_transitions)  # i.e. heads of optimal transitions only
         else:
             self.optimal_states = self.optimal_and_nonoptimal.copy()
+            # Consider all transitions as optimal
+            self.optimal_transitions = set((x, y) for x, y in self.iterate_over_all_transitions())
 
+        # Compute for each pair s and t of states which features distinguish s and t
         self.np_d1_distinguishing_features = self.compute_d1_distinguishing_features(bin_feat_matrix)
 
         self.writer = CNFWriter(cnf_filename)
@@ -213,7 +217,6 @@ class ModelTranslator(object):
 
     def compute_d1_distinguishing_features(self, bin_feat_matrix):
         """ """
-        # assert len(set(self.optimal_states) & set(self.optimal_and_nonoptimal)) == 0
         ns1, ns2, nf = len(self.optimal_states), len(self.optimal_and_nonoptimal), bin_feat_matrix.shape[1]
 
         # How many feature denotations we'll have to compute
@@ -260,19 +263,11 @@ class ModelTranslator(object):
             return val
 
     def is_optimal_transition(self, s, sprime):
-        """ Return whether the give transition is optimal.
-        To compute so, we make use of the fact that states are generated breadth-first, and thus given two
-        "optimal" states, only one of the transitions is truly optimal. We might want to improve this in the sampling
-        so thas this looks less hacky and is more robust to other generation strategies.
-        """
-        return sprime > s and sprime in self.optimal_states
+        return (s, sprime) in self.optimal_transitions
 
     def iterate_over_optimal_transitions(self):
         """ """
-        for s in self.optimal_states:
-            for sprime in self.transitions[s]:
-                if self.is_optimal_transition(s, sprime):
-                    yield (s, sprime)
+        return self.optimal_transitions
 
     def iterate_over_all_transitions(self):
         for s in self.transitions:
@@ -282,12 +277,9 @@ class ModelTranslator(object):
     def iterate_over_d2_transitions(self):
         for s, s_prime in self.iterate_over_optimal_transitions():
             for t, t_prime in self.iterate_over_all_transitions():
-                if s == t or (self.is_optimal_transition(t, t_prime) and t < s):
+                if s == t or (self.is_optimal_transition(t, t_prime) and t < s):  # Symmetry-breaking
                     continue
                 yield (s, s_prime, t, t_prime)
-
-    def is_optimal_transition(self, s, sprime):
-        return s in self.optimal_states and sprime in self.optimal_states and s < sprime
 
     def create_variables(self):
         # self.var_selected = {feat: self.writer.variable("selected({})".format(feat)) for feat in self.features}
@@ -300,8 +292,6 @@ class ModelTranslator(object):
         self.var_d2 = dict()
 
         for s, s_prime, t, t_prime in self.iterate_over_d2_transitions():
-            # for s, t in itertools.combinations(self.transitions, 2):
-            #     for s_prime, t_prime in itertools.product(self.transitions[s], self.transitions[t]):
             idx = compute_d2_index(s, s_prime, t, t_prime)
             varname = "D2[({},{}), ({},{})]".format(*idx)
             self.var_d2[idx] = self.writer.variable(varname)
@@ -310,9 +300,10 @@ class ModelTranslator(object):
         logging.info("A total of {} MAXSAT variables were created".format(len(self.writer.variables)))
 
     def compute_d1_idx(self, s, t):
-        if s in self.optimal_states and t in self.optimal_states:
-            if s > t:
-                return t, s
+        assert s in self.optimal_states
+
+        if t in self.optimal_states:  # Break symmetries when both states are optimal
+            return min(s, t), max(s, t)
         return s, t
 
     def run(self, enforced_feature_idxs):

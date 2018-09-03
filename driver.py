@@ -293,7 +293,7 @@ class MaxsatProblemGenerationStep(Step):
         return config
 
     def get_required_data(self):
-        return ["goal_states", "transitions", "state_ids", "enforced_feature_idxs", "optimal_states"]
+        return ["goal_states", "transitions", "state_ids", "enforced_feature_idxs", "optimal_transitions"]
 
     def description(self):
         return "Generation of the max-sat problem"
