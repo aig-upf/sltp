@@ -39,11 +39,4 @@
     ) 
 
 
-    (:action noop
-     :parameters (?x - cell)
-     :precondition (at ?x)
-     :effect (and
-        (at ?x))
-    ) 
-
 )

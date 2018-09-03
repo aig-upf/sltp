@@ -1,0 +1,11 @@
+grid-circles
+2 num-uncollected-rewards 1 min-dist[at,Restrict(adjacent,Not(blocked)),reward] 1
+2 num-uncollected-rewards 1 min-dist[at,Restrict(adjacent,Not(blocked)),reward] 1
+2 min-dist[at,Restrict(adjacent,Not(blocked)),reward] 1 num-uncollected-rewards 0
+2
+action_1
+2 min-dist[at,Restrict(adjacent,Not(blocked)),reward] 0 num-uncollected-rewards 1
+2 min-dist[at,Restrict(adjacent,Not(blocked)),reward] 1 num-uncollected-rewards 1
+action_2
+2 min-dist[at,Restrict(adjacent,Not(blocked)),reward] 1 num-uncollected-rewards 1
+1 min-dist[at,Restrict(adjacent,Not(blocked)),reward] 1
