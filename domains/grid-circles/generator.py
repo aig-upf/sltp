@@ -127,7 +127,7 @@ def generate_propositional_domain(gridsize, num_rewards, num_blocks, add_noop=Fa
 
 def main():
 
-    add_noop = True
+    add_noop = False
     for gridsize in [3, 5, 7, 10]:
         num_blocks_and_rewards = gridsize
         problem = generate_propositional_domain(gridsize, num_blocks_and_rewards-2, num_blocks_and_rewards-2, add_noop)

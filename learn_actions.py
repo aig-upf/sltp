@@ -243,7 +243,7 @@ class ModelTranslator(object):
         assert s in self.optimal_states
 
         for s_prime in self.transitions[s]:
-            if s_prime < s or s_prime not in self.optimal_states:  # We want only optimal transitions
+            if not self.is_optimal_transition(s, s_prime):
                 continue
 
             forward_clause_literals = [d1_literal]
@@ -260,13 +260,20 @@ class ModelTranslator(object):
             self.np_qchanges[(s0, s1)] = val = self.compute_qchanges(s0, s1)
             return val
 
+    def is_optimal_transition(self, s, sprime):
+        """ Return whether the give transition is optimal.
+        To compute so, we make use of the fact that states are generated breadth-first, and thus given two
+        "optimal" states, only one of the transitions is truly optimal. We might want to improve this in the sampling
+        so thas this looks less hacky and is more robust to other generation strategies.
+        """
+        return sprime > s and sprime in self.optimal_states
+
     def iterate_over_optimal_transitions(self):
         """ """
         for s in self.optimal_states:
             for sprime in self.transitions[s]:
-                if sprime < s or sprime not in self.optimal_states:
-                    continue
-                yield (s, sprime)
+                if self.is_optimal_transition(s, sprime):
+                    yield (s, sprime)
 
     def iterate_over_all_transitions(self):
         for s in self.transitions:

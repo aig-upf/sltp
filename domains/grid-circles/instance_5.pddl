@@ -14,7 +14,7 @@
     (:init
         (reward c_1_1)
         (reward c_3_2)
-        (reward c_0_4)
+        (reward c_3_1)
         (at c_0_0)
         (adjacent c_2_1 c_3_1)
         (adjacent c_1_4 c_1_3)
@@ -97,8 +97,9 @@
         (adjacent c_3_3 c_3_4)
         (adjacent c_3_1 c_4_1)
         (blocked c_3_3)
-        (blocked c_4_4)
-        (blocked c_4_0)
+        (blocked c_2_1)
+        (blocked c_2_2)
+        (blocked c_2_3)
     )
 
     (:goal
