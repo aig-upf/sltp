@@ -64,7 +64,7 @@ def experiment(experiment_name=None):
 
     aaai_clear_x_no_marking = update_dict(aaai_clear_x_simple_hybrid, complete_only_wrt_optimal=False,
                                           num_states=2000, max_width=[-1],
-                                          num_sampled_states=300,
+                                          num_sampled_states=200,
                                           )
 
     #
