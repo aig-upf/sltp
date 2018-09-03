@@ -67,6 +67,13 @@ def experiment(experiment_name=None):
                                           num_sampled_states=200,
                                           )
 
+    aaai_clear_x_no_marking_2 = update_dict(aaai_clear_x_no_marking,
+                                            instances=["instance_5_clear_x_1.pddl","instance_5_clear_x_2.pddl",],
+                                            num_states=2000, max_width=[2],
+                                            num_sampled_states=100,
+                                            )
+
+
     #
     ijcai_features_on_clear_5 = update_dict(aaai_ijcai_features_on_clear_5_rnd, num_sampled_states=None)
 
@@ -192,6 +199,7 @@ def experiment(experiment_name=None):
 
         "aaai_bw_on_x_y_completeness_opt": aaai_bw_on_x_y_completeness_opt,
         "aaai_clear_x_no_marking": aaai_clear_x_no_marking,
+        "aaai_clear_x_no_marking_2": aaai_clear_x_no_marking_2,
 
         "aaai_ijcai_features_on_clear_5_rnd": aaai_ijcai_features_on_clear_5_rnd,
         "aaai_clear_x_simple_hybrid": aaai_clear_x_simple_hybrid,
