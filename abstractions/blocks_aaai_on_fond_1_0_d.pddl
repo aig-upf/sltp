@@ -1,7 +1,7 @@
-(define (domain FOND_blocks_3_0)
+(define (domain FOND_blocks_1_0)
     (:requirements :non-deterministic)
     (:types counter bit)
-    (:constants n_a n_b - counter b0 b1 b2 b3 - bit)
+    (:constants n_a n_b - counter b0 b1 - bit)
     (:predicates
         (zero ?c - counter)
         (q ?c - counter)
@@ -20,14 +20,6 @@
         :precondition (and (not (q n_a)) (not (q n_b)) (bitvalue b1) (not (bitvalue b0)))
         :effect (and (q n_a) (not (bitvalue b1)) (bitvalue b0))
     )
-    (:action Set_n_a_b2
-        :precondition (and (not (q n_a)) (not (q n_b)) (bitvalue b2) (not (bitvalue b1)) (not (bitvalue b0)))
-        :effect (and (q n_a) (not (bitvalue b2)) (bitvalue b1) (bitvalue b0))
-    )
-    (:action Set_n_a_b3
-        :precondition (and (not (q n_a)) (not (q n_b)) (bitvalue b3) (not (bitvalue b2)) (not (bitvalue b1)) (not (bitvalue b0)))
-        :effect (and (q n_a) (not (bitvalue b3)) (bitvalue b2) (bitvalue b1) (bitvalue b0))
-    )
     (:action Set_n_b_b0
         :precondition (and (not (q n_a)) (not (q n_b)) (bitvalue b0))
         :effect (and (q n_b) (not (bitvalue b0)))
@@ -35,14 +27,6 @@
     (:action Set_n_b_b1
         :precondition (and (not (q n_a)) (not (q n_b)) (bitvalue b1) (not (bitvalue b0)))
         :effect (and (q n_b) (not (bitvalue b1)) (bitvalue b0))
-    )
-    (:action Set_n_b_b2
-        :precondition (and (not (q n_a)) (not (q n_b)) (bitvalue b2) (not (bitvalue b1)) (not (bitvalue b0)))
-        :effect (and (q n_b) (not (bitvalue b2)) (bitvalue b1) (bitvalue b0))
-    )
-    (:action Set_n_b_b3
-        :precondition (and (not (q n_a)) (not (q n_b)) (bitvalue b3) (not (bitvalue b2)) (not (bitvalue b1)) (not (bitvalue b0)))
-        :effect (and (q n_b) (not (bitvalue b3)) (bitvalue b2) (bitvalue b1) (bitvalue b0))
     )
     (:action Unset_n_a
         :precondition (and (q n_a))
