@@ -3,6 +3,7 @@
 import sys
 
 from abstractions_defaults import generate_experiment
+from common import update_dict
 
 
 def experiment(experiment_name=None):
@@ -41,11 +42,14 @@ def experiment(experiment_name=None):
         concept_generator=None, parameter_generator=add_domain_parameters,
         feature_namer=feature_namer,)
 
+    aaai_prob01_no_marking = update_dict(aaai_prob01, complete_only_wrt_optimal=False)
+
     parameters = {
         "sample_small": sample_small,
         "prob01": prob01,
         "prob01_rnd": prob01_rnd,
         "aaai_prob01": aaai_prob01,
+        "aaai_prob01_no_marking": aaai_prob01_no_marking
 
     }.get(experiment_name or "test")
 

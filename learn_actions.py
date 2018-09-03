@@ -172,7 +172,6 @@ class ModelTranslator(object):
         self.feature_names = feature_names
         self.feature_types = feature_types
         self.state_ids = state_ids
-        self.optimal_state_ids = optimal_state_ids
         self.transitions = transitions
         self.goal_states = goal_states
         self.complete_only_wrt_optimal = complete_only_wrt_optimal
@@ -181,13 +180,12 @@ class ModelTranslator(object):
         self.all_twos = 2*np.ones(self.feat_matrix.shape[1], dtype=np.int8)
 
         # Compute for each pair s and t of states which features distinguish s and t
+        self.optimal_and_nonoptimal = set(state_ids).union(optimal_state_ids)
+
         if complete_only_wrt_optimal:
             self.optimal_states = optimal_state_ids
-            self.optimal_and_nonoptimal = set(state_ids).union(optimal_state_ids)
         else:
-            assert False
-            # self.completeness_and_correctness_states = set(state_ids)
-            # self.correctness_only_states = set()
+            self.optimal_states = self.optimal_and_nonoptimal.copy()
 
         self.np_d1_distinguishing_features = self.compute_d1_distinguishing_features(bin_feat_matrix)
 
@@ -209,6 +207,7 @@ class ModelTranslator(object):
     def iterate_over_d1_pairs(self):
         for (x, y) in itertools.product(self.optimal_states, self.optimal_and_nonoptimal):
             if y in self.optimal_states and y <= x:
+                # Break symmetries: if both x and y optimal, only need to take into account 1 of the 2 permutations
                 continue
             yield (x, y)
 

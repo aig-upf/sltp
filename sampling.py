@@ -90,7 +90,6 @@ def sample_generated_states(config, rng):
         else:  # sampling = "all"
             if config.num_sampled_states is not None:
                 selected = sample_first_x_states(root_states, config.num_sampled_states)
-                # selected.update(list(optimal)[0:9])
                 selected.update(optimal)
             else:
                 selected = set(states)
