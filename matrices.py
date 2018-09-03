@@ -3,6 +3,8 @@ along with some other related output necessary for subsequent steps in the pipel
 import itertools
 import logging
 import math
+import sys
+
 import numpy as np
 
 from tarski.dl import EmpiricalBinaryConcept, NullaryAtomFeature, ConceptCardinalityFeature, MinDistanceFeature
@@ -45,6 +47,19 @@ def print_sat_transition_matrix(state_ids, transitions, transitions_filename):
             print("{} {} {}".format(s, len(succ), " ".join("{}".format(sprime) for sprime in sorted(succ))), file=f)
 
 
+def cast_feature_value_to_numpy_value(value):
+    """ Cast a given feature value into a suitable numpy value, if possible, or raise error if not """
+    assert value >= 0
+    max_ = np.iinfo(np.uint8).max
+    if value == sys.maxsize:
+        return max_
+
+    if value >= max_:  # Max value reserved to denote infty.
+        raise RuntimeError("Cannot cast feature value {} into numpy np.uint8 value".format(value))
+
+    return value
+
+
 def print_feature_matrix(config, state_ids, features, model):
     filename = config.feature_matrix_filename
     logging.info("Printing feature matrix of {} features x {} states to '{}'".
@@ -56,12 +71,12 @@ def print_feature_matrix(config, state_ids, features, model):
             print(line, file=f)
 
     # Convert features to a numpy array with n rows and m columns, where n=num states, m=num features
-    matrix = np.empty(shape=(len(state_ids), len(features)), dtype=np.int8)
-    bin_matrix = np.empty(shape=(len(state_ids), len(features)), dtype=np.bool_)
+    matrix = np.empty(shape=(len(state_ids), len(features)), dtype=np.uint8)
     for i, s in enumerate(state_ids, 0):
         assert i == s
-        matrix[i] = [model.compute_feature_value(feat, s) for feat in features]
-        bin_matrix[i] = [feat.bool_value(model.compute_feature_value(feat, s)) for feat in features]
+        matrix[i] = [cast_feature_value_to_numpy_value(model.compute_feature_value(feat, s)) for feat in features]
+
+    bin_matrix = np.array(matrix, dtype=np.bool)
 
     np.save(config.feature_matrix_filename, matrix)
     np.save(config.bin_feature_matrix_filename, bin_matrix)
