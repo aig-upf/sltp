@@ -10,16 +10,20 @@ from util.naming import filename_core
 
 def mark_optimal(goal_states, root_states, parents):
     """ Collect all those states that lie on one arbitrary optimal path to the goal """
-    optimal = set()
+    optimal_states, optimal_transitions = set(), set()
     for goal in goal_states:
-        optimal.add(goal)
-        current = goal
+        optimal_states.add(goal)
+        previous = current = goal
+
         while current not in root_states:
             # A small trick: node IDs are ordered by depth, so we can pick the min parent ID and know the resulting path
             # will be optimal
             current = min(parents[current])
-            optimal.add(current)
-    return optimal
+            optimal_states.add(current)
+            optimal_transitions.add((current, previous))  # We're traversing backwards
+            previous = current
+
+    return optimal_states, optimal_transitions
 
 
 def print_atom(atom):
@@ -74,12 +78,11 @@ def sample_generated_states(config, rng):
     else:
         assert config.sampling in ("all", "optimal")
 
-        optimal = mark_optimal(goal_states, root_states, parents)
-        logging.info("Total: states/goals/optimal: {} / {} / {}".format(len(states), len(goal_states), len(optimal)))
+        # For each instance, we keep the first-reached goal, as a way of selecting an arbitrary optimal path.
+        goal_selection = set(min(x) for x in goals_by_instance)
 
-        goal_selection = set(itertools.chain.from_iterable(list(x)[0:4] for x in goals_by_instance))
-        optimal = mark_optimal(goal_selection, root_states, parents)
-        logging.info("After goal selection: states/goals/optimal: {} / {} / {}".format(len(states), len(goal_states), len(optimal)))
+        optimal, optimal_transitions = mark_optimal(goal_selection, root_states, parents)
+        logging.info("Resampling: states/goals/optimal: {} / {} / {}".format(len(states), len(goal_states), len(optimal)))
 
         if config.sampling == "optimal":  # Select only the optimal states
             selected = set(optimal)
