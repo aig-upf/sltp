@@ -191,24 +191,22 @@
         :precondition (and (stack-depth d3) (in-stack nballs-A) (stack-idx nballs-A d3))
         :effect (and (stack-depth d2) (not (stack-depth d3)) (not (in-stack nballs-A)) (not (stack-idx nballs-A d3)))
     )
-    (:action action_1
-        :precondition (and (not (zero ncarried)) (zero nfree-grippers) (not (robot-at-B)))
-        :effect (and (robot-at-B))
-    )
-    (:action action_2
-        :precondition (and (zero ncarried) (not (zero nfree-grippers)) (robot-at-B))
-        :effect (and (not (robot-at-B)))
-    )
-    (:action action_3_d1
+    (:action action_1_d1
         :precondition (and (not (zero ncarried)) (robot-at-B) (in-stack ncarried) (not (in-stack nfree-grippers)) (stack-idx ncarried d1))
         :effect (and (oneof (zero ncarried) (not (zero ncarried))) (not (zero nfree-grippers)) (bitvalue d1 b0) (bitvalue d1 b1) (bitvalue d1 b2) (bitvalue d1 b3) (bitvalue d2 b0) (bitvalue d2 b1) (bitvalue d2 b2) (bitvalue d2 b3) (bitvalue d3 b0) (bitvalue d3 b1) (bitvalue d3 b2) (bitvalue d3 b3))
     )
-    (:action action_3_d2
+    (:action action_1_d2
         :precondition (and (not (zero ncarried)) (robot-at-B) (in-stack ncarried) (not (in-stack nfree-grippers)) (stack-idx ncarried d2))
         :effect (and (oneof (zero ncarried) (not (zero ncarried))) (not (zero nfree-grippers)) (bitvalue d2 b0) (bitvalue d2 b1) (bitvalue d2 b2) (bitvalue d2 b3) (bitvalue d3 b0) (bitvalue d3 b1) (bitvalue d3 b2) (bitvalue d3 b3))
     )
-
-
+    (:action action_2
+        :precondition (and (zero nballs-A) (not (zero ncarried)) (not (zero nfree-grippers)) (not (robot-at-B)))
+        :effect (and (robot-at-B))
+    )
+    (:action action_3
+        :precondition (and (not (zero ncarried)) (zero nfree-grippers) (not (robot-at-B)))
+        :effect (and (robot-at-B))
+    )
     (:action action_4_0_d1
         :precondition (and (not (zero nballs-A)) (not (zero nfree-grippers)) (not (robot-at-B)) (in-stack nballs-A) (not (in-stack ncarried)) (stack-idx nballs-A d1))
         :effect (and (oneof (zero nballs-A) (not (zero nballs-A))) (not (zero ncarried)) (oneof (zero nfree-grippers) (not (zero nfree-grippers))) (bitvalue d1 b0) (bitvalue d1 b1) (bitvalue d1 b2) (bitvalue d1 b3) (bitvalue d2 b0) (bitvalue d2 b1) (bitvalue d2 b2) (bitvalue d2 b3) (bitvalue d3 b0) (bitvalue d3 b1) (bitvalue d3 b2) (bitvalue d3 b3))
@@ -225,17 +223,9 @@
         :precondition (and (not (zero nballs-A)) (not (zero nfree-grippers)) (not (robot-at-B)) (in-stack nfree-grippers) (not (in-stack ncarried)) (stack-idx nfree-grippers d2))
         :effect (and (oneof (zero nballs-A) (not (zero nballs-A))) (not (zero ncarried)) (oneof (zero nfree-grippers) (not (zero nfree-grippers))) (bitvalue d2 b0) (bitvalue d2 b1) (bitvalue d2 b2) (bitvalue d2 b3) (bitvalue d3 b0) (bitvalue d3 b1) (bitvalue d3 b2) (bitvalue d3 b3))
     )
-
-
-;   (:action action_4_X_d1
-;       :precondition (and (not (zero nballs-A)) (not (zero nfree-grippers)) (not (robot-at-B)) (in-stack nballs-A) (not (in-stack ncarried)) (stack-idx nballs-A d1))
-;       :effect (and (oneof (zero nballs-A) (not (zero nballs-A))) (not (zero ncarried)) (zero nfree-grippers) (bitvalue d1 b0) (bitvalue d1 b1) (bitvalue d1 b2) (bitvalue d1 b3) (bitvalue d2 b0) (bitvalue d2 b1) (bitvalue d2 b2) (bitvalue d2 b3) (bitvalue d3 b0) (bitvalue d3 b1) (bitvalue d3 b2) (bitvalue d3 b3))
-;   )
-;   (:action action_4_X_d2
-;       :precondition (and (not (zero nballs-A)) (not (zero nfree-grippers)) (not (robot-at-B)) (in-stack nballs-A) (not (in-stack ncarried)) (stack-idx nballs-A d2))
-;       :effect (and (oneof (zero nballs-A) (not (zero nballs-A))) (not (zero ncarried)) (zero nfree-grippers) (bitvalue d2 b0) (bitvalue d2 b1) (bitvalue d2 b2) (bitvalue d2 b3) (bitvalue d3 b0) (bitvalue d3 b1) (bitvalue d3 b2) (bitvalue d3 b3))
-;   )
-
-
+    (:action action_5
+        :precondition (and (zero ncarried) (not (zero nfree-grippers)) (robot-at-B))
+        :effect (and (not (robot-at-B)))
+    )
 )
 
