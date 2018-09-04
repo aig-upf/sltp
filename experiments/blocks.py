@@ -114,9 +114,11 @@ def experiment(experiment_name=None):
                                                       # "inst_on_x_y_15.pddl",
                                                       "inst_on_x_y_16.pddl",
                                                       "inst_on_x_y_14.pddl",
+                                                      "holding_a_b_unclear.pddl",
+
                                                   ],
                                                   num_states=2000, max_width=[-1],
-                                                  num_sampled_states=51,
+                                                  num_sampled_states=[50, 50, 1],
                                                   complete_only_wrt_optimal=True,
                                                   sampling="all",
                                                   # enforce_features=get_on_x_y_feature,

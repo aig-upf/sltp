@@ -204,6 +204,18 @@ class ConceptGenerationStep(Step):
         config["complete_only_wrt_optimal"] = config.get("complete_only_wrt_optimal", False)
         config["sampling"] = config.get("sampling", "all")
 
+        ns = config["num_sampled_states"]
+        if ns is not None:
+            if isinstance(ns, int):
+                ns = [ns]
+
+            if len(config["instances"]) != len(ns):
+                if len(ns) == 1:
+                    ns = ns * len(config["instances"])
+                else:
+                    raise InvalidConfigParameter('"num_sampled_states" should have same length as "instances"')
+            config["num_sampled_states"] = ns
+
         if config["sampling"] == "random" and config["num_sampled_states"] is None:
             raise InvalidConfigParameter('sampling="random" requires that option "num_sampled_states" is set')
 
