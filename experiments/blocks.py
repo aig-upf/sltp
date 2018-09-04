@@ -39,8 +39,11 @@ def experiment(experiment_name=None):
     # card[And(And(Forall(Star(on),Not({a})), Forall(Star(Inverse(on)),Not({a}))), And(Not(holding), Not({a})))] 18
     # And indeed learnt the correct state space!!!
     aaai_ijcai_features_on_clear_5_rnd = dict(
-        instances="instance_5_clear_x_1.pddl",
-        num_states=2000, num_sampled_states=40, random_seed=12,
+        instances=[
+            "inst_clear_x_1.pddl",
+            # "inst_clear_x_2.pddl",
+        ],
+        num_states=1000, num_sampled_states=80, random_seed=10,
         max_concept_size=18, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=add_bw_domain_parameters,
         feature_namer=ijcai_paper_bw_feature_namer,)
@@ -73,7 +76,6 @@ def experiment(experiment_name=None):
                                             num_states=2000, max_width=[2],
                                             num_sampled_states=100,
                                             )
-
 
     #
     ijcai_features_on_clear_5 = update_dict(aaai_ijcai_features_on_clear_5_rnd, num_sampled_states=None)
