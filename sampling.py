@@ -10,11 +10,12 @@ from util.naming import filename_core
 
 def mark_optimal(goal_states, root_states, parents):
     """ Collect all those states that lie on one arbitrary optimal path to the goal """
+    roots = set(root_states)
     optimal_transitions = set()
     for goal in goal_states:
         previous = current = goal
 
-        while current not in root_states:
+        while current not in roots:
             # A small trick: node IDs are ordered by depth, so we can pick the min parent ID and know the resulting path
             # will be optimal
             current = min(parents[current])
@@ -50,10 +51,11 @@ def log_sampled_states(states, goals, transitions, expanded, optimal_transitions
     logging.info('Resampled states logged at "{}"'.format(resampled_states_filename))
 
 
-def sample_first_x_states(root_states, num_states):
+def sample_first_x_states(root_states, sample_sizes):
     sampled = set()
-    for root in root_states:
-        sampled.update(range(root, root+num_states))
+    assert len(root_states) == len(sample_sizes)
+    for root, size in zip(root_states, sample_sizes):
+        sampled.update(range(root, root+size))
     return sampled
 
 
@@ -97,7 +99,7 @@ def sample_generated_states(config, rng):
                 selected = set(states)
 
     states, goals, transitions, optimal_transitions, root_states = \
-        remap_sample_expanded_states(set(selected), states, goal_states, transitions, optimal_transitions, root_states)
+        remap_sample_expanded_states(set(selected), states, goal_states, transitions, optimal_transitions, set(root_states))
 
     expanded = lambda s: len(transitions[s]) > 0
     logging.info("Selected (states / goals / optimal tx): {} / {} / {}".format(len(states), len(goals), len(optimal_transitions)))
@@ -107,17 +109,19 @@ def sample_generated_states(config, rng):
 
 def random_sample(config, goal_states, rng, states, transitions, parents):
     num_states = min(len(states), config.num_states)
-    if config.num_sampled_states > num_states:
+    assert len(set(config.num_sampled_states)) == 1, "ATM only random sample with fixed sample size"
+    sample_size = config.num_sampled_states[0]
+    if sample_size > num_states:
         raise RuntimeError(
-            "Only {} expanded statesm cannot sample {}".format(num_states, config.num_sampled_states))
+            "Only {} expanded statesm cannot sample {}".format(num_states, sample_size))
     # Although this might fail is some state was a dead-end? In that case we should perhaps revise the code below
     assert num_states == len(transitions)
 
-    selected = sample_expanded_and_goal_states(config, goal_states, num_states, parents, rng)
+    selected = sample_expanded_and_goal_states(config.num_sampled_states, goal_states, num_states, parents, rng)
     return selected
 
 
-def sample_expanded_and_goal_states(config, goal_states, num_states, parents, rng):
+def sample_expanded_and_goal_states(sample_size, goal_states, num_states, parents, rng):
     expanded_states = list(range(0, num_states))
     # We will at least select all of those goal states that have been expanded plus one parent of those that not,
     # so that we maximize the number of goal states in the sample.
@@ -134,7 +138,7 @@ def sample_expanded_and_goal_states(config, goal_states, num_states, parents, rn
     non_enforced = [i for i in expanded_states if i not in enforced]
     rng.shuffle(non_enforced)
     all_shuffled = list(enforced) + non_enforced
-    return all_shuffled[:config.num_sampled_states]
+    return all_shuffled[:sample_size]
 
 
 def compute_parents(transitions):
@@ -201,13 +205,13 @@ def read_transitions(filenames):
     assert len(all_samples) > 0
     states, goals, transitions = all_samples[0]
     assert states[0][0] == 0
-    root_states = {0}
+    root_states = [0]
     goals_by_instance = [set(goals)]
     for s, g, tx in all_samples[1:]:
         starting_state_id = len(states)
         s, g, tx = remap_state_ids(s, g, tx, remap=lambda state: state + starting_state_id)
         assert next(iter(s)) == starting_state_id
-        root_states.add(starting_state_id)
+        root_states.append(starting_state_id)
         states.update(s)
         transitions.update(tx)
         goals.update(g)

@@ -149,6 +149,7 @@ def ijcai_paper_bw_feature_namer(feature):
     s = str(feature)
     return {
         "bool[And(Exists(on,{b}), {a})]": "on(a, b)",
+        "bool[And(Exists(Inverse(on),{a}), {b})]": "on(a, b)_2",
         "bool[And({a}, holding)]": "holding(a)",
         "bool[And(holding, {a})]": "holding(a)",
         "bool[And(holding, {b})]": "holding(b)",
