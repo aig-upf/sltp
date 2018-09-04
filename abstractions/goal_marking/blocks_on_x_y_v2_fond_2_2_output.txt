@@ -1,0 +1,1401 @@
+============================[ Problem Statistics ]=============================
+|                                                                             |
+|  Number of variables:           330                                         |
+|  Number of clauses:            2462                                         |
+|  Parse time:                   0.00 s                                       |
+|  Simplification time:          0.00 s                                       |
+|                                                                             |
+===============================================================================
+Solved by simplification
+restarts              : 0
+conflicts             : 0              (0 /sec)
+decisions             : 0              ( nan % random) (0 /sec)
+propagations          : 145            (29017 /sec)
+conflict literals     : 0              ( nan % deleted)
+Memory used           : 4.67 MB
+CPU time              : 0.004997 s
+
+UNSATISFIABLE
+============================[ Problem Statistics ]=============================
+|                                                                             |
+|  Number of variables:           597                                         |
+|  Number of clauses:            4968                                         |
+|  Parse time:                   0.00 s                                       |
+|  Simplification time:          0.00 s                                       |
+|                                                                             |
+===============================================================================
+Solved by simplification
+restarts              : 0
+conflicts             : 0              (0 /sec)
+decisions             : 0              ( nan % random) (0 /sec)
+propagations          : 291            (56026 /sec)
+conflict literals     : 0              ( nan % deleted)
+Memory used           : 4.82 MB
+CPU time              : 0.005194 s
+
+UNSATISFIABLE
+============================[ Problem Statistics ]=============================
+|                                                                             |
+|  Number of variables:           952                                         |
+|  Number of clauses:            8590                                         |
+|  Parse time:                   0.00 s                                       |
+|  Eliminated clauses:           0.00 Mb                                      |
+|  Simplification time:          0.00 s                                       |
+|                                                                             |
+============================[ Search Statistics ]==============================
+| Conflicts |          ORIGINAL         |          LEARNT          | Progress |
+|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |
+===============================================================================
+===============================================================================
+restarts              : 1
+conflicts             : 6              (547 /sec)
+decisions             : 6              (0.00 % random) (547 /sec)
+propagations          : 704            (64228 /sec)
+conflict literals     : 9              (0.00 % deleted)
+Memory used           : 1.05 MB
+CPU time              : 0.010961 s
+
+UNSATISFIABLE
+============================[ Problem Statistics ]=============================
+|                                                                             |
+|  Number of variables:          1385                                         |
+|  Number of clauses:           13491                                         |
+|  Parse time:                   0.01 s                                       |
+|  Eliminated clauses:           0.00 Mb                                      |
+|  Simplification time:          0.01 s                                       |
+|                                                                             |
+============================[ Search Statistics ]==============================
+| Conflicts |          ORIGINAL         |          LEARNT          | Progress |
+|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |
+===============================================================================
+===============================================================================
+restarts              : 1
+conflicts             : 52             (2904 /sec)
+decisions             : 86             (0.00 % random) (4803 /sec)
+propagations          : 5496           (306919 /sec)
+conflict literals     : 285            (21.27 % deleted)
+Memory used           : 1.64 MB
+CPU time              : 0.017907 s
+
+UNSATISFIABLE
+============================[ Problem Statistics ]=============================
+|                                                                             |
+|  Number of variables:          1908                                         |
+|  Number of clauses:           19916                                         |
+|  Parse time:                   0.01 s                                       |
+|  Eliminated clauses:           0.01 Mb                                      |
+|  Simplification time:          0.01 s                                       |
+|                                                                             |
+============================[ Search Statistics ]==============================
+| Conflicts |          ORIGINAL         |          LEARNT          | Progress |
+|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |
+===============================================================================
+===============================================================================
+restarts              : 1
+conflicts             : 78             (3245 /sec)
+decisions             : 170            (0.00 % random) (7072 /sec)
+propagations          : 13464          (560113 /sec)
+conflict literals     : 576            (27.55 % deleted)
+Memory used           : 2.25 MB
+CPU time              : 0.024038 s
+
+UNSATISFIABLE
+============================[ Problem Statistics ]=============================
+|                                                                             |
+|  Number of variables:          2527                                         |
+|  Number of clauses:           28090                                         |
+|  Parse time:                   0.02 s                                       |
+|  Eliminated clauses:           0.01 Mb                                      |
+|  Simplification time:          0.02 s                                       |
+|                                                                             |
+============================[ Search Statistics ]==============================
+| Conflicts |          ORIGINAL         |          LEARNT          | Progress |
+|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |
+===============================================================================
+|       100 |    1956    17374    50681 |     6370       99     11 | 17.056 % |
+===============================================================================
+restarts              : 3
+conflicts             : 209            (5597 /sec)
+decisions             : 465            (0.00 % random) (12452 /sec)
+propagations          : 41733          (1117589 /sec)
+conflict literals     : 2188           (33.64 % deleted)
+Memory used           : 2.80 MB
+CPU time              : 0.037342 s
+
+UNSATISFIABLE
+============================[ Problem Statistics ]=============================
+|                                                                             |
+|  Number of variables:          3248                                         |
+|  Number of clauses:           38238                                         |
+|  Parse time:                   0.02 s                                       |
+|  Eliminated clauses:           0.01 Mb                                      |
+|  Simplification time:          0.03 s                                       |
+|                                                                             |
+============================[ Search Statistics ]==============================
+| Conflicts |          ORIGINAL         |          LEARNT          | Progress |
+|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |
+===============================================================================
+|       100 |    2553    23976    71558 |     8791      100     12 | 14.901 % |
+|       250 |    2553    23976    71558 |     9670      250     11 | 14.902 % |
+===============================================================================
+restarts              : 4
+conflicts             : 419            (7417 /sec)
+decisions             : 886            (0.00 % random) (15683 /sec)
+propagations          : 87098          (1541694 /sec)
+conflict literals     : 4623           (48.71 % deleted)
+Memory used           : 3.52 MB
+CPU time              : 0.056495 s
+
+UNSATISFIABLE
+============================[ Problem Statistics ]=============================
+|                                                                             |
+|  Number of variables:          4077                                         |
+|  Number of clauses:           50585                                         |
+|  Parse time:                   0.03 s                                       |
+|  Eliminated clauses:           0.02 Mb                                      |
+|  Simplification time:          0.03 s                                       |
+|                                                                             |
+============================[ Search Statistics ]==============================
+| Conflicts |          ORIGINAL         |          LEARNT          | Progress |
+|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |
+===============================================================================
+|       100 |    3267    32207    98505 |    11809      100     21 | 13.245 % |
+|       250 |    3037    32207    98505 |    12990      244     17 | 18.887 % |
+|       475 |    3037    32207    98505 |    14289      469     21 | 18.887 % |
+===============================================================================
+restarts              : 6
+conflicts             : 747            (8740 /sec)
+decisions             : 1979           (0.00 % random) (23154 /sec)
+propagations          : 191278         (2237955 /sec)
+conflict literals     : 13575          (41.76 % deleted)
+Memory used           : 4.52 MB
+CPU time              : 0.08547 s
+
+UNSATISFIABLE
+============================[ Problem Statistics ]=============================
+|                                                                             |
+|  Number of variables:          5020                                         |
+|  Number of clauses:           65356                                         |
+|  Parse time:                   0.04 s                                       |
+|  Eliminated clauses:           0.02 Mb                                      |
+|  Simplification time:          0.05 s                                       |
+|                                                                             |
+============================[ Search Statistics ]==============================
+| Conflicts |          ORIGINAL         |          LEARNT          | Progress |
+|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |
+===============================================================================
+|       100 |    4087    42017   131722 |    15406      100     29 | 11.912 % |
+|       250 |    4022    42017   131722 |    16946      249     23 | 13.207 % |
+|       475 |    3795    42017   131722 |    18641      473     23 | 17.729 % |
+|       812 |    3795    38220   117785 |    20505      774     24 | 17.729 % |
+|      1318 |    3752    37689   116413 |    22556     1274     25 | 18.586 % |
+===============================================================================
+restarts              : 12
+conflicts             : 1708           (11709 /sec)
+decisions             : 4529           (0.00 % random) (31048 /sec)
+propagations          : 553400         (3793711 /sec)
+conflict literals     : 39112          (46.00 % deleted)
+Memory used           : 5.71 MB
+CPU time              : 0.145873 s
+
+UNSATISFIABLE
+============================[ Problem Statistics ]=============================
+|                                                                             |
+|  Number of variables:          6083                                         |
+|  Number of clauses:           82776                                         |
+|  Parse time:                   0.04 s                                       |
+|  Eliminated clauses:           0.03 Mb                                      |
+|  Simplification time:          0.07 s                                       |
+|                                                                             |
+============================[ Search Statistics ]==============================
+| Conflicts |          ORIGINAL         |          LEARNT          | Progress |
+|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |
+===============================================================================
+|       100 |    5021    53639   169746 |    19667      100     49 | 10.817 % |
+|       250 |    5021    53639   169746 |    21634      250     30 | 10.817 % |
+|       475 |    5021    53639   169746 |    23797      475     29 | 10.817 % |
+|       812 |    5021    53639   169746 |    26177      812     36 | 10.817 % |
+|      1318 |    5021    53639   169746 |    28795     1318     35 | 10.818 % |
+|      2077 |    4557    49234   152871 |    31674     2043     33 | 18.445 % |
+|      3216 |    4395    46026   141768 |    34842     3054     30 | 21.108 % |
+===============================================================================
+restarts              : 16
+conflicts             : 3297           (13345 /sec)
+decisions             : 8847           (0.00 % random) (35810 /sec)
+propagations          : 1229455        (4976523 /sec)
+conflict literals     : 97430          (43.25 % deleted)
+Memory used           : 7.14 MB
+CPU time              : 0.247051 s
+
+UNSATISFIABLE
+============================[ Problem Statistics ]=============================
+|                                                                             |
+|  Number of variables:          7272                                         |
+|  Number of clauses:          103070                                         |
+|  Parse time:                   0.05 s                                       |
+|  Eliminated clauses:           0.04 Mb                                      |
+|  Simplification time:          0.08 s                                       |
+|                                                                             |
+============================[ Search Statistics ]==============================
+| Conflicts |          ORIGINAL         |          LEARNT          | Progress |
+|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |
+===============================================================================
+|       100 |    6073    67143   213726 |    24619      100     39 |  9.901 % |
+|       250 |    5546    67143   213726 |    27081      246     32 | 17.148 % |
+|       475 |    5447    67143   213726 |    29789      469     42 | 18.509 % |
+|       812 |    5447    58128   178499 |    32768      770     40 | 18.509 % |
+|      1318 |    5447    58128   178499 |    36044     1276     40 | 18.509 % |
+|      2077 |    5445    58114   178471 |    39649     2033     38 | 18.537 % |
+|      3216 |    5338    56633   174529 |    43614     3156     40 | 20.008 % |
+===============================================================================
+restarts              : 21
+conflicts             : 3945           (12327 /sec)
+decisions             : 12492          (0.00 % random) (39033 /sec)
+propagations          : 1527423        (4772705 /sec)
+conflict literals     : 150202         (42.42 % deleted)
+Memory used           : 8.84 MB
+CPU time              : 0.320033 s
+
+SATISFIABLE
+Setting atoms
+# Atoms: 43
+Setting initial
+Setting goal
+Setting actions
+# Actions: 29
+	Setting other actions
+0 / 29
+	Setting action card
+Setting mutexes
+Setting h values
+Setting max card
+Setting relevant actions
+Setting splitting
+Setting compatible actions
+0 / 29
+0.000168085098267
+0
+var0
+0 --> Atom bitvalue(d0, b0)
+1 --> -NegatedAtom bitvalue(d0, b0)
+-----------------------
+1
+var1
+0 --> Atom bitvalue(d0, b1)
+1 --> -NegatedAtom bitvalue(d0, b1)
+-----------------------
+2
+var2
+0 --> Atom bitvalue(d0, b2)
+1 --> -NegatedAtom bitvalue(d0, b2)
+-----------------------
+3
+var3
+0 --> Atom bitvalue(d1, b0)
+1 --> -NegatedAtom bitvalue(d1, b0)
+-----------------------
+4
+var4
+0 --> Atom bitvalue(d1, b1)
+1 --> -NegatedAtom bitvalue(d1, b1)
+-----------------------
+5
+var5
+0 --> Atom bitvalue(d1, b2)
+1 --> -NegatedAtom bitvalue(d1, b2)
+-----------------------
+6
+var6
+0 --> Atom bitvalue(d2, b0)
+1 --> -NegatedAtom bitvalue(d2, b0)
+-----------------------
+7
+var7
+0 --> Atom bitvalue(d2, b1)
+1 --> -NegatedAtom bitvalue(d2, b1)
+-----------------------
+8
+var8
+0 --> Atom bitvalue(d2, b2)
+1 --> -NegatedAtom bitvalue(d2, b2)
+-----------------------
+9
+var9
+0 --> Atom bool[handempty]()
+1 --> -NegatedAtom bool[handempty]()
+-----------------------
+10
+var10
+0 --> Atom holding_a()
+1 --> -NegatedAtom holding_a()
+-----------------------
+11
+var11
+0 --> Atom in-stack(n_a)
+1 --> -NegatedAtom in-stack(n_a)
+-----------------------
+12
+var12
+0 --> Atom in-stack(n_b)
+1 --> -NegatedAtom in-stack(n_b)
+-----------------------
+13
+var13
+0 --> Atom on_a_b_2()
+1 --> -NegatedAtom on_a_b_2()
+-----------------------
+14
+var14
+0 --> Atom stack-depth(d0)
+1 --> Atom stack-depth(d1)
+2 --> Atom stack-depth(d2)
+-----------------------
+15
+var15
+0 --> Atom stack-idx(n_a, d1)
+1 --> -NegatedAtom stack-idx(n_a, d1)
+-----------------------
+16
+var16
+0 --> Atom stack-idx(n_a, d2)
+1 --> -NegatedAtom stack-idx(n_a, d2)
+-----------------------
+17
+var17
+0 --> Atom stack-idx(n_b, d1)
+1 --> -NegatedAtom stack-idx(n_b, d1)
+-----------------------
+18
+var18
+0 --> Atom stack-idx(n_b, d2)
+1 --> -NegatedAtom stack-idx(n_b, d2)
+-----------------------
+19
+var19
+0 --> Atom zero(n_a)
+1 --> -NegatedAtom zero(n_a)
+-----------------------
+20
+var20
+0 --> Atom zero(n_b)
+1 --> -NegatedAtom zero(n_b)
+-----------------------
+==============================
+Atom bitvalue(d0, b0)
+Atom bitvalue(d0, b1)
+Atom bitvalue(d0, b2)
+-NegatedAtom bitvalue(d1, b0)
+-NegatedAtom bitvalue(d1, b1)
+-NegatedAtom bitvalue(d1, b2)
+-NegatedAtom bitvalue(d2, b0)
+-NegatedAtom bitvalue(d2, b1)
+-NegatedAtom bitvalue(d2, b2)
+Atom bool[handempty]()
+-NegatedAtom holding_a()
+-NegatedAtom in-stack(n_a)
+-NegatedAtom in-stack(n_b)
+-NegatedAtom on_a_b_2()
+Atom stack-depth(d0)
+-NegatedAtom stack-idx(n_a, d1)
+-NegatedAtom stack-idx(n_a, d2)
+-NegatedAtom stack-idx(n_b, d1)
+-NegatedAtom stack-idx(n_b, d2)
+-NegatedAtom zero(n_a)
+-NegatedAtom zero(n_b)
+==============================
+-NegatedAtom holding_a()
+Atom zero(n_a)
+-NegatedAtom zero(n_b)
+Atom on_a_b_2()
+Atom stack-depth(d0)
+==============================
+push_n_b_d0_b1()
+PRE
+-NegatedAtom bitvalue(d0, b0)
+Atom bitvalue(d0, b1)
+-NegatedAtom in-stack(n_b)
+Atom stack-depth(d0)
+EFFECTS
+-NegatedAtom bitvalue(d0, b0) Atom bitvalue(d0, b0)
+Atom bitvalue(d0, b1) -NegatedAtom bitvalue(d0, b1)
+--------- Atom bitvalue(d1, b0)
+--------- Atom bitvalue(d1, b1)
+--------- Atom bitvalue(d1, b2)
+-NegatedAtom in-stack(n_b) Atom in-stack(n_b)
+Atom stack-depth(d0) Atom stack-depth(d1)
+--------- Atom stack-idx(n_b, d1)
+-----------------------
+push_n_a_d1_b1()
+PRE
+-NegatedAtom bitvalue(d1, b0)
+Atom bitvalue(d1, b1)
+Atom stack-depth(d1)
+EFFECTS
+-NegatedAtom bitvalue(d1, b0) Atom bitvalue(d1, b0)
+Atom bitvalue(d1, b1) -NegatedAtom bitvalue(d1, b1)
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+--------- Atom in-stack(n_a)
+Atom stack-depth(d1) Atom stack-depth(d2)
+--------- Atom stack-idx(n_a, d2)
+-----------------------
+push_n_a_d0_b2()
+PRE
+-NegatedAtom bitvalue(d0, b0)
+-NegatedAtom bitvalue(d0, b1)
+Atom bitvalue(d0, b2)
+Atom stack-depth(d0)
+EFFECTS
+-NegatedAtom bitvalue(d0, b0) Atom bitvalue(d0, b0)
+-NegatedAtom bitvalue(d0, b1) Atom bitvalue(d0, b1)
+Atom bitvalue(d0, b2) -NegatedAtom bitvalue(d0, b2)
+--------- Atom bitvalue(d1, b0)
+--------- Atom bitvalue(d1, b1)
+--------- Atom bitvalue(d1, b2)
+--------- Atom in-stack(n_a)
+Atom stack-depth(d0) Atom stack-depth(d1)
+--------- Atom stack-idx(n_a, d1)
+-----------------------
+action_6_d1_DETDUP_0()
+PRE
+-NegatedAtom holding_a()
+Atom in-stack(n_b)
+-NegatedAtom on_a_b_2()
+Atom stack-idx(n_b, d1)
+Atom zero(n_a)
+Atom bool[handempty]()
+-NegatedAtom zero(n_b)
+EFFECTS
+--------- Atom bitvalue(d1, b0)
+--------- Atom bitvalue(d1, b1)
+--------- Atom bitvalue(d1, b2)
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+Atom bool[handempty]() -NegatedAtom bool[handempty]()
+-NegatedAtom zero(n_b) Atom zero(n_b)
+-----------------------
+action_3()
+PRE
+-NegatedAtom on_a_b_2()
+Atom zero(n_a)
+Atom zero(n_b)
+Atom bool[handempty]()
+-NegatedAtom holding_a()
+EFFECTS
+Atom bool[handempty]() -NegatedAtom bool[handempty]()
+-NegatedAtom holding_a() Atom holding_a()
+-----------------------
+push_n_a_d0_b0()
+PRE
+Atom bitvalue(d0, b0)
+Atom stack-depth(d0)
+EFFECTS
+Atom bitvalue(d0, b0) -NegatedAtom bitvalue(d0, b0)
+--------- Atom bitvalue(d1, b0)
+--------- Atom bitvalue(d1, b1)
+--------- Atom bitvalue(d1, b2)
+--------- Atom in-stack(n_a)
+Atom stack-depth(d0) Atom stack-depth(d1)
+--------- Atom stack-idx(n_a, d1)
+-----------------------
+push_n_b_d0_b0()
+PRE
+Atom bitvalue(d0, b0)
+-NegatedAtom in-stack(n_b)
+Atom stack-depth(d0)
+EFFECTS
+Atom bitvalue(d0, b0) -NegatedAtom bitvalue(d0, b0)
+--------- Atom bitvalue(d1, b0)
+--------- Atom bitvalue(d1, b1)
+--------- Atom bitvalue(d1, b2)
+-NegatedAtom in-stack(n_b) Atom in-stack(n_b)
+Atom stack-depth(d0) Atom stack-depth(d1)
+--------- Atom stack-idx(n_b, d1)
+-----------------------
+pop_n_a_d2()
+PRE
+Atom in-stack(n_a)
+Atom stack-depth(d2)
+Atom stack-idx(n_a, d2)
+EFFECTS
+Atom in-stack(n_a) -NegatedAtom in-stack(n_a)
+Atom stack-depth(d2) Atom stack-depth(d1)
+Atom stack-idx(n_a, d2) -NegatedAtom stack-idx(n_a, d2)
+-----------------------
+push_n_b_d1_b1()
+PRE
+-NegatedAtom bitvalue(d1, b0)
+Atom bitvalue(d1, b1)
+-NegatedAtom in-stack(n_b)
+Atom stack-depth(d1)
+EFFECTS
+-NegatedAtom bitvalue(d1, b0) Atom bitvalue(d1, b0)
+Atom bitvalue(d1, b1) -NegatedAtom bitvalue(d1, b1)
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+-NegatedAtom in-stack(n_b) Atom in-stack(n_b)
+Atom stack-depth(d1) Atom stack-depth(d2)
+--------- Atom stack-idx(n_b, d2)
+-----------------------
+action_5_d1_DETDUP_0()
+PRE
+-NegatedAtom holding_a()
+Atom in-stack(n_a)
+-NegatedAtom on_a_b_2()
+Atom stack-idx(n_a, d1)
+-NegatedAtom zero(n_b)
+Atom bool[handempty]()
+-NegatedAtom zero(n_a)
+EFFECTS
+--------- Atom bitvalue(d1, b0)
+--------- Atom bitvalue(d1, b1)
+--------- Atom bitvalue(d1, b2)
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+Atom bool[handempty]() -NegatedAtom bool[handempty]()
+-NegatedAtom zero(n_a) Atom zero(n_a)
+-----------------------
+action_6_d2_DETDUP_0()
+PRE
+-NegatedAtom holding_a()
+Atom in-stack(n_b)
+-NegatedAtom on_a_b_2()
+Atom stack-idx(n_b, d2)
+Atom zero(n_a)
+Atom bool[handempty]()
+-NegatedAtom zero(n_b)
+EFFECTS
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+Atom bool[handempty]() -NegatedAtom bool[handempty]()
+-NegatedAtom zero(n_b) Atom zero(n_b)
+-----------------------
+action_7()
+PRE
+-NegatedAtom in-stack(n_b)
+Atom zero(n_a)
+-NegatedAtom bool[handempty]()
+Atom holding_a()
+-NegatedAtom on_a_b_2()
+Atom zero(n_b)
+EFFECTS
+-NegatedAtom bool[handempty]() Atom bool[handempty]()
+Atom holding_a() -NegatedAtom holding_a()
+-NegatedAtom on_a_b_2() Atom on_a_b_2()
+Atom zero(n_b) -NegatedAtom zero(n_b)
+-----------------------
+action_5_d1_DETDUP_1()
+PRE
+-NegatedAtom holding_a()
+Atom in-stack(n_a)
+-NegatedAtom on_a_b_2()
+Atom stack-idx(n_a, d1)
+-NegatedAtom zero(n_a)
+-NegatedAtom zero(n_b)
+Atom bool[handempty]()
+EFFECTS
+--------- Atom bitvalue(d1, b0)
+--------- Atom bitvalue(d1, b1)
+--------- Atom bitvalue(d1, b2)
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+Atom bool[handempty]() -NegatedAtom bool[handempty]()
+-----------------------
+action_4()
+PRE
+-NegatedAtom on_a_b_2()
+Atom zero(n_a)
+-NegatedAtom zero(n_b)
+-NegatedAtom bool[handempty]()
+Atom holding_a()
+EFFECTS
+-NegatedAtom bool[handempty]() Atom bool[handempty]()
+Atom holding_a() -NegatedAtom holding_a()
+-----------------------
+action_1()
+PRE
+-NegatedAtom holding_a()
+-NegatedAtom on_a_b_2()
+Atom zero(n_a)
+-NegatedAtom bool[handempty]()
+EFFECTS
+-NegatedAtom bool[handempty]() Atom bool[handempty]()
+-----------------------
+pop_n_b_d1()
+PRE
+Atom in-stack(n_b)
+Atom stack-depth(d1)
+Atom stack-idx(n_b, d1)
+EFFECTS
+Atom in-stack(n_b) -NegatedAtom in-stack(n_b)
+Atom stack-depth(d1) Atom stack-depth(d0)
+Atom stack-idx(n_b, d1) -NegatedAtom stack-idx(n_b, d1)
+-----------------------
+push_n_a_d0_b1()
+PRE
+-NegatedAtom bitvalue(d0, b0)
+Atom bitvalue(d0, b1)
+Atom stack-depth(d0)
+EFFECTS
+-NegatedAtom bitvalue(d0, b0) Atom bitvalue(d0, b0)
+Atom bitvalue(d0, b1) -NegatedAtom bitvalue(d0, b1)
+--------- Atom bitvalue(d1, b0)
+--------- Atom bitvalue(d1, b1)
+--------- Atom bitvalue(d1, b2)
+--------- Atom in-stack(n_a)
+Atom stack-depth(d0) Atom stack-depth(d1)
+--------- Atom stack-idx(n_a, d1)
+-----------------------
+action_5_d2_DETDUP_1()
+PRE
+-NegatedAtom holding_a()
+Atom in-stack(n_a)
+-NegatedAtom on_a_b_2()
+Atom stack-idx(n_a, d2)
+-NegatedAtom zero(n_a)
+-NegatedAtom zero(n_b)
+Atom bool[handempty]()
+EFFECTS
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+Atom bool[handempty]() -NegatedAtom bool[handempty]()
+-----------------------
+push_n_a_d1_b0()
+PRE
+Atom bitvalue(d1, b0)
+Atom stack-depth(d1)
+EFFECTS
+Atom bitvalue(d1, b0) -NegatedAtom bitvalue(d1, b0)
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+--------- Atom in-stack(n_a)
+Atom stack-depth(d1) Atom stack-depth(d2)
+--------- Atom stack-idx(n_a, d2)
+-----------------------
+push_n_a_d1_b2()
+PRE
+-NegatedAtom bitvalue(d1, b0)
+-NegatedAtom bitvalue(d1, b1)
+Atom bitvalue(d1, b2)
+Atom stack-depth(d1)
+EFFECTS
+-NegatedAtom bitvalue(d1, b0) Atom bitvalue(d1, b0)
+-NegatedAtom bitvalue(d1, b1) Atom bitvalue(d1, b1)
+Atom bitvalue(d1, b2) -NegatedAtom bitvalue(d1, b2)
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+--------- Atom in-stack(n_a)
+Atom stack-depth(d1) Atom stack-depth(d2)
+--------- Atom stack-idx(n_a, d2)
+-----------------------
+push_n_b_d1_b0()
+PRE
+Atom bitvalue(d1, b0)
+-NegatedAtom in-stack(n_b)
+Atom stack-depth(d1)
+EFFECTS
+Atom bitvalue(d1, b0) -NegatedAtom bitvalue(d1, b0)
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+-NegatedAtom in-stack(n_b) Atom in-stack(n_b)
+Atom stack-depth(d1) Atom stack-depth(d2)
+--------- Atom stack-idx(n_b, d2)
+-----------------------
+action_6_d1_DETDUP_1()
+PRE
+-NegatedAtom holding_a()
+Atom in-stack(n_b)
+-NegatedAtom on_a_b_2()
+Atom stack-idx(n_b, d1)
+Atom zero(n_a)
+-NegatedAtom zero(n_b)
+Atom bool[handempty]()
+EFFECTS
+--------- Atom bitvalue(d1, b0)
+--------- Atom bitvalue(d1, b1)
+--------- Atom bitvalue(d1, b2)
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+Atom bool[handempty]() -NegatedAtom bool[handempty]()
+-----------------------
+push_n_b_d1_b2()
+PRE
+-NegatedAtom bitvalue(d1, b0)
+-NegatedAtom bitvalue(d1, b1)
+Atom bitvalue(d1, b2)
+-NegatedAtom in-stack(n_b)
+Atom stack-depth(d1)
+EFFECTS
+-NegatedAtom bitvalue(d1, b0) Atom bitvalue(d1, b0)
+-NegatedAtom bitvalue(d1, b1) Atom bitvalue(d1, b1)
+Atom bitvalue(d1, b2) -NegatedAtom bitvalue(d1, b2)
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+-NegatedAtom in-stack(n_b) Atom in-stack(n_b)
+Atom stack-depth(d1) Atom stack-depth(d2)
+--------- Atom stack-idx(n_b, d2)
+-----------------------
+action_2()
+PRE
+-NegatedAtom holding_a()
+-NegatedAtom on_a_b_2()
+-NegatedAtom zero(n_a)
+-NegatedAtom zero(n_b)
+-NegatedAtom bool[handempty]()
+EFFECTS
+-NegatedAtom bool[handempty]() Atom bool[handempty]()
+-----------------------
+action_5_d2_DETDUP_0()
+PRE
+-NegatedAtom holding_a()
+Atom in-stack(n_a)
+-NegatedAtom on_a_b_2()
+Atom stack-idx(n_a, d2)
+-NegatedAtom zero(n_b)
+Atom bool[handempty]()
+-NegatedAtom zero(n_a)
+EFFECTS
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+Atom bool[handempty]() -NegatedAtom bool[handempty]()
+-NegatedAtom zero(n_a) Atom zero(n_a)
+-----------------------
+push_n_b_d0_b2()
+PRE
+-NegatedAtom bitvalue(d0, b0)
+-NegatedAtom bitvalue(d0, b1)
+Atom bitvalue(d0, b2)
+-NegatedAtom in-stack(n_b)
+Atom stack-depth(d0)
+EFFECTS
+-NegatedAtom bitvalue(d0, b0) Atom bitvalue(d0, b0)
+-NegatedAtom bitvalue(d0, b1) Atom bitvalue(d0, b1)
+Atom bitvalue(d0, b2) -NegatedAtom bitvalue(d0, b2)
+--------- Atom bitvalue(d1, b0)
+--------- Atom bitvalue(d1, b1)
+--------- Atom bitvalue(d1, b2)
+-NegatedAtom in-stack(n_b) Atom in-stack(n_b)
+Atom stack-depth(d0) Atom stack-depth(d1)
+--------- Atom stack-idx(n_b, d1)
+-----------------------
+pop_n_b_d2()
+PRE
+Atom in-stack(n_b)
+Atom stack-depth(d2)
+Atom stack-idx(n_b, d2)
+EFFECTS
+Atom in-stack(n_b) -NegatedAtom in-stack(n_b)
+Atom stack-depth(d2) Atom stack-depth(d1)
+Atom stack-idx(n_b, d2) -NegatedAtom stack-idx(n_b, d2)
+-----------------------
+pop_n_a_d1()
+PRE
+Atom in-stack(n_a)
+Atom stack-depth(d1)
+Atom stack-idx(n_a, d1)
+EFFECTS
+Atom in-stack(n_a) -NegatedAtom in-stack(n_a)
+Atom stack-depth(d1) Atom stack-depth(d0)
+Atom stack-idx(n_a, d1) -NegatedAtom stack-idx(n_a, d1)
+-----------------------
+action_6_d2_DETDUP_1()
+PRE
+-NegatedAtom holding_a()
+Atom in-stack(n_b)
+-NegatedAtom on_a_b_2()
+Atom stack-idx(n_b, d2)
+Atom zero(n_a)
+-NegatedAtom zero(n_b)
+Atom bool[handempty]()
+EFFECTS
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+Atom bool[handempty]() -NegatedAtom bool[handempty]()
+-----------------------
+action_4()
+action_7()
+push_n_a_d0_b1()
+push_n_a_d0_b2()
+pop_n_a_d1()
+push_n_b_d1_b1()
+action_6_d1_DETDUP_0()
+action_6_d2_DETDUP_1()
+action_6_d1_DETDUP_1()
+action_5_d1_DETDUP_1()
+push_n_a_d1_b1()
+action_5_d2_DETDUP_0()
+action_6_d2_DETDUP_0()
+action_5_d1_DETDUP_0()
+push_n_a_d1_b0()
+pop_n_b_d1()
+push_n_a_d0_b0()
+push_n_b_d1_b2()
+push_n_b_d1_b0()
+action_3()
+push_n_b_d0_b1()
+action_2()
+push_n_a_d1_b2()
+pop_n_b_d2()
+push_n_b_d0_b0()
+action_5_d2_DETDUP_1()
+push_n_b_d0_b2()
+pop_n_a_d2()
+action_1()
+Looking for strong plans:  False 
+Fair actions:  True
+=================================================
+Trying with 2 states
+Number of atoms:  43
+Number of actions:  29
+Generation: Initial		 v :  22 		 c :  22 	0.000156879425049
+Generation: Goal		 v :  5 		 c :  5 	3.40938568115e-05
+Generation: Precs		 v :  95 		 c :  270 	0.00159978866577
+Generation: NonDet		 v :  58 		 c :  1640 	0.00967502593994
+Generation: One succ		 v :  116 		 c :  290 	0.0024049282074
+Generation: Trip bin		 v :  0 		 c :  116 	0.000770092010498
+Generation: One act		 v :  0 		 c :  1 	7.79628753662e-05
+Generation: Neg Prop		 v :  26 		 c :  852 	0.0159840583801
+Generation: Gen conn		 v :  0 		 c :  120 	0.00115203857422
+Generation: RI init		 v :  1 		 c :  1 	1.09672546387e-05
+Generation: RI prop		 v :  1 		 c :  4 	4.10079956055e-05
+Generation: IG prop		 v :  2 		 c :  2 	2.19345092773e-05
+Generation: RG init		 v :  2 		 c :  3 	2.50339508057e-05
+Generation: RG compl		 v :  0 		 c :  2 	2.09808349609e-05
+Generation: RG prop		 v :  2 		 c :  9 	7.39097595215e-05
+Generation: Sym Brk		 v :  0 		 c :  0 	5.00679016113e-06
+Generation: Mutex		 v :  0 		 c :  6 	5.19752502441e-05
+Generation time =  0.0322260856628
+Done generation...
+# Clauses = 3343
+# Variables = 330
+Creating formula...
+Done creating formula. Calling solver...
+Done solver. Round time:  0.0157709121704
+Cumulated solver time:  0.0157709121704
+UNSAT
+=================================================
+Trying with 3 states
+Number of atoms:  43
+Number of actions:  29
+Generation: Initial		 v :  22 		 c :  22 	0.000344038009644
+Generation: Goal		 v :  5 		 c :  5 	7.60555267334e-05
+Generation: Precs		 v :  153 		 c :  405 	0.00425291061401
+Generation: NonDet		 v :  87 		 c :  2460 	0.0144209861755
+Generation: One succ		 v :  261 		 c :  783 	0.00630307197571
+Generation: Trip bin		 v :  0 		 c :  261 	0.00349092483521
+Generation: One act		 v :  0 		 c :  2 	0.000234127044678
+Generation: Neg Prop		 v :  45 		 c :  1917 	0.0431461334229
+Generation: Gen conn		 v :  0 		 c :  270 	0.00175786018372
+Generation: RI init		 v :  1 		 c :  1 	1.21593475342e-05
+Generation: RI prop		 v :  2 		 c :  9 	8.39233398438e-05
+Generation: IG prop		 v :  3 		 c :  3 	2.90870666504e-05
+Generation: RG init		 v :  4 		 c :  5 	3.38554382324e-05
+Generation: RG compl		 v :  2 		 c :  6 	5.10215759277e-05
+Generation: RG prop		 v :  12 		 c :  52 	0.000357151031494
+Generation: Sym Brk		 v :  0 		 c :  0 	5.00679016113e-06
+Generation: Mutex		 v :  0 		 c :  9 	7.29560852051e-05
+Generation time =  0.0747950077057
+Done generation...
+# Clauses = 6210
+# Variables = 597
+Creating formula...
+Done creating formula. Calling solver...
+Done solver. Round time:  0.010449886322
+Cumulated solver time:  0.0262207984924
+UNSAT
+=================================================
+Trying with 4 states
+Number of atoms:  43
+Number of actions:  29
+Generation: Initial		 v :  22 		 c :  22 	0.00015115737915
+Generation: Goal		 v :  5 		 c :  5 	3.48091125488e-05
+Generation: Precs		 v :  211 		 c :  540 	0.00324892997742
+Generation: NonDet		 v :  116 		 c :  3280 	0.0223019123077
+Generation: One succ		 v :  464 		 c :  1740 	0.0134100914001
+Generation: Trip bin		 v :  0 		 c :  464 	0.00524711608887
+Generation: One act		 v :  0 		 c :  3 	0.000200986862183
+Generation: Neg Prop		 v :  66 		 c :  3408 	0.0597560405731
+Generation: Gen conn		 v :  0 		 c :  480 	0.00361680984497
+Generation: RI init		 v :  1 		 c :  1 	1.19209289551e-05
+Generation: RI prop		 v :  3 		 c :  16 	0.00015115737915
+Generation: IG prop		 v :  4 		 c :  4 	3.60012054443e-05
+Generation: RG init		 v :  6 		 c :  7 	4.41074371338e-05
+Generation: RG compl		 v :  6 		 c :  12 	9.58442687988e-05
+Generation: RG prop		 v :  36 		 c :  153 	0.00105714797974
+Generation: Sym Brk		 v :  12 		 c :  39 	0.000324964523315
+Generation: Mutex		 v :  0 		 c :  12 	9.01222229004e-05
+Generation time =  0.109888076782
+Done generation...
+# Clauses = 10186
+# Variables = 952
+Creating formula...
+Done creating formula. Calling solver...
+Done solver. Round time:  0.0167651176453
+Cumulated solver time:  0.0429859161377
+UNSAT
+=================================================
+Trying with 5 states
+Number of atoms:  43
+Number of actions:  29
+Generation: Initial		 v :  22 		 c :  22 	0.000140190124512
+Generation: Goal		 v :  5 		 c :  5 	3.50475311279e-05
+Generation: Precs		 v :  269 		 c :  675 	0.00392007827759
+Generation: NonDet		 v :  145 		 c :  4100 	0.0263710021973
+Generation: One succ		 v :  725 		 c :  3335 	0.0311160087585
+Generation: Trip bin		 v :  0 		 c :  725 	0.00612616539001
+Generation: One act		 v :  0 		 c :  4 	0.000286817550659
+Generation: Neg Prop		 v :  89 		 c :  5325 	0.0976040363312
+Generation: Gen conn		 v :  0 		 c :  750 	0.00488185882568
+Generation: RI init		 v :  1 		 c :  1 	1.09672546387e-05
+Generation: RI prop		 v :  4 		 c :  25 	0.000219821929932
+Generation: IG prop		 v :  5 		 c :  5 	4.41074371338e-05
+Generation: RG init		 v :  8 		 c :  9 	5.3882598877e-05
+Generation: RG compl		 v :  12 		 c :  20 	0.000158071517944
+Generation: RG prop		 v :  80 		 c :  336 	0.0034339427948
+Generation: Sym Brk		 v :  20 		 c :  102 	0.00258898735046
+Generation: Mutex		 v :  0 		 c :  15 	0.000185012817383
+Generation time =  0.177299022675
+Done generation...
+# Clauses = 15454
+# Variables = 1385
+Creating formula...
+Done creating formula. Calling solver...
+Done solver. Round time:  0.0249428749084
+Cumulated solver time:  0.0679287910461
+UNSAT
+=================================================
+Trying with 6 states
+Number of atoms:  43
+Number of actions:  29
+Generation: Initial		 v :  22 		 c :  22 	0.000150918960571
+Generation: Goal		 v :  5 		 c :  5 	3.50475311279e-05
+Generation: Precs		 v :  327 		 c :  810 	0.00555300712585
+Generation: NonDet		 v :  174 		 c :  4920 	0.0305621623993
+Generation: One succ		 v :  1044 		 c :  5742 	0.049998998642
+Generation: Trip bin		 v :  0 		 c :  1044 	0.0072169303894
+Generation: One act		 v :  0 		 c :  5 	0.00032901763916
+Generation: Neg Prop		 v :  114 		 c :  7668 	0.14522600174
+Generation: Gen conn		 v :  0 		 c :  1080 	0.00788497924805
+Generation: RI init		 v :  1 		 c :  1 	1.19209289551e-05
+Generation: RI prop		 v :  5 		 c :  36 	0.000310182571411
+Generation: IG prop		 v :  6 		 c :  6 	5.19752502441e-05
+Generation: RG init		 v :  10 		 c :  11 	6.41345977783e-05
+Generation: RG compl		 v :  20 		 c :  30 	0.000231027603149
+Generation: RG prop		 v :  150 		 c :  625 	0.00413012504578
+Generation: Sym Brk		 v :  30 		 c :  231 	0.00235390663147
+Generation: Mutex		 v :  0 		 c :  18 	0.000128030776978
+Generation time =  0.254346132278
+Done generation...
+# Clauses = 22254
+# Variables = 1908
+Creating formula...
+Done creating formula. Calling solver...
+Done solver. Round time:  0.0320091247559
+Cumulated solver time:  0.099937915802
+UNSAT
+=================================================
+Trying with 7 states
+Number of atoms:  43
+Number of actions:  29
+Generation: Initial		 v :  22 		 c :  22 	0.000256061553955
+Generation: Goal		 v :  5 		 c :  5 	6.07967376709e-05
+Generation: Precs		 v :  385 		 c :  945 	0.00628709793091
+Generation: NonDet		 v :  203 		 c :  5740 	0.0352728366852
+Generation: One succ		 v :  1421 		 c :  9135 	0.0747680664062
+Generation: Trip bin		 v :  0 		 c :  1421 	0.0107841491699
+Generation: One act		 v :  0 		 c :  6 	0.000385999679565
+Generation: Neg Prop		 v :  141 		 c :  10437 	0.202641010284
+Generation: Gen conn		 v :  0 		 c :  1470 	0.00949597358704
+Generation: RI init		 v :  1 		 c :  1 	1.09672546387e-05
+Generation: RI prop		 v :  6 		 c :  49 	0.000426054000854
+Generation: IG prop		 v :  7 		 c :  7 	5.88893890381e-05
+Generation: RG init		 v :  12 		 c :  13 	8.70227813721e-05
+Generation: RG compl		 v :  30 		 c :  42 	0.000321865081787
+Generation: RG prop		 v :  252 		 c :  1044 	0.00687003135681
+Generation: Sym Brk		 v :  42 		 c :  453 	0.00517010688782
+Generation: Mutex		 v :  0 		 c :  21 	0.000146150588989
+Generation time =  0.353170871735
+Done generation...
+# Clauses = 30811
+# Variables = 2527
+Creating formula...
+Done creating formula. Calling solver...
+Done solver. Round time:  0.0453698635101
+Cumulated solver time:  0.145307779312
+UNSAT
+=================================================
+Trying with 8 states
+Number of atoms:  43
+Number of actions:  29
+Generation: Initial		 v :  22 		 c :  22 	0.000296115875244
+Generation: Goal		 v :  5 		 c :  5 	7.48634338379e-05
+Generation: Precs		 v :  443 		 c :  1080 	0.00767207145691
+Generation: NonDet		 v :  232 		 c :  6560 	0.0454759597778
+Generation: One succ		 v :  1856 		 c :  13688 	0.113685846329
+Generation: Trip bin		 v :  0 		 c :  1856 	0.0156810283661
+Generation: One act		 v :  0 		 c :  7 	0.000504016876221
+Generation: Neg Prop		 v :  170 		 c :  13632 	0.251063108444
+Generation: Gen conn		 v :  0 		 c :  1920 	0.0150289535522
+Generation: RI init		 v :  1 		 c :  1 	1.19209289551e-05
+Generation: RI prop		 v :  7 		 c :  64 	0.000552892684937
+Generation: IG prop		 v :  8 		 c :  8 	6.60419464111e-05
+Generation: RG init		 v :  14 		 c :  15 	9.51290130615e-05
+Generation: RG compl		 v :  42 		 c :  56 	0.000510931015015
+Generation: RG prop		 v :  392 		 c :  1617 	0.0106949806213
+Generation: Sym Brk		 v :  56 		 c :  795 	0.0088849067688
+Generation: Mutex		 v :  0 		 c :  24 	0.000164985656738
+Generation time =  0.470654010773
+Done generation...
+# Clauses = 41350
+# Variables = 3248
+Creating formula...
+Done creating formula. Calling solver...
+Done solver. Round time:  0.0676391124725
+Cumulated solver time:  0.212946891785
+UNSAT
+=================================================
+Trying with 9 states
+Number of atoms:  43
+Number of actions:  29
+Generation: Initial		 v :  22 		 c :  22 	0.000186920166016
+Generation: Goal		 v :  5 		 c :  5 	3.48091125488e-05
+Generation: Precs		 v :  501 		 c :  1215 	0.0084547996521
+Generation: NonDet		 v :  261 		 c :  7380 	0.0497238636017
+Generation: One succ		 v :  2349 		 c :  19575 	0.153970003128
+Generation: Trip bin		 v :  0 		 c :  2349 	0.0178668498993
+Generation: One act		 v :  0 		 c :  8 	0.000895023345947
+Generation: Neg Prop		 v :  201 		 c :  17253 	0.322978019714
+Generation: Gen conn		 v :  0 		 c :  2430 	0.017205953598
+Generation: RI init		 v :  1 		 c :  1 	1.21593475342e-05
+Generation: RI prop		 v :  8 		 c :  81 	0.000710010528564
+Generation: IG prop		 v :  9 		 c :  9 	9.3936920166e-05
+Generation: RG init		 v :  16 		 c :  17 	0.000102043151855
+Generation: RG compl		 v :  56 		 c :  72 	0.000724077224731
+Generation: RG prop		 v :  576 		 c :  2368 	0.0178020000458
+Generation: Sym Brk		 v :  72 		 c :  1284 	0.0169961452484
+Generation: Mutex		 v :  0 		 c :  27 	0.000202894210815
+Generation time =  0.608099937439
+Done generation...
+# Clauses = 54096
+# Variables = 4077
+Creating formula...
+Done creating formula. Calling solver...
+Done solver. Round time:  0.0960052013397
+Cumulated solver time:  0.308952093124
+UNSAT
+=================================================
+Trying with 10 states
+Number of atoms:  43
+Number of actions:  29
+Generation: Initial		 v :  22 		 c :  22 	0.000164031982422
+Generation: Goal		 v :  5 		 c :  5 	3.69548797607e-05
+Generation: Precs		 v :  559 		 c :  1350 	0.00961208343506
+Generation: NonDet		 v :  290 		 c :  8200 	0.0541529655457
+Generation: One succ		 v :  2900 		 c :  26970 	0.213876008987
+Generation: Trip bin		 v :  0 		 c :  2900 	0.0202541351318
+Generation: One act		 v :  0 		 c :  9 	0.000936031341553
+Generation: Neg Prop		 v :  234 		 c :  21300 	0.400886058807
+Generation: Gen conn		 v :  0 		 c :  3000 	0.0219538211823
+Generation: RI init		 v :  1 		 c :  1 	1.4066696167e-05
+Generation: RI prop		 v :  9 		 c :  100 	0.00107407569885
+Generation: IG prop		 v :  10 		 c :  10 	9.10758972168e-05
+Generation: RG init		 v :  18 		 c :  19 	0.000143051147461
+Generation: RG compl		 v :  72 		 c :  90 	0.00108695030212
+Generation: RG prop		 v :  810 		 c :  3321 	0.02601313591
+Generation: Sym Brk		 v :  90 		 c :  1947 	0.0255281925201
+Generation: Mutex		 v :  0 		 c :  30 	0.00020694732666
+Generation time =  0.776167869568
+Done generation...
+# Clauses = 69274
+# Variables = 5020
+Creating formula...
+Done creating formula. Calling solver...
+Done solver. Round time:  0.162392139435
+Cumulated solver time:  0.471344232559
+UNSAT
+=================================================
+Trying with 11 states
+Number of atoms:  43
+Number of actions:  29
+Generation: Initial		 v :  22 		 c :  22 	0.000339031219482
+Generation: Goal		 v :  5 		 c :  5 	7.00950622559e-05
+Generation: Precs		 v :  617 		 c :  1485 	0.0115580558777
+Generation: NonDet		 v :  319 		 c :  9020 	0.0626320838928
+Generation: One succ		 v :  3509 		 c :  36047 	0.294675111771
+Generation: Trip bin		 v :  0 		 c :  3509 	0.0257179737091
+Generation: One act		 v :  0 		 c :  10 	0.000698089599609
+Generation: Neg Prop		 v :  269 		 c :  25773 	0.485131025314
+Generation: Gen conn		 v :  0 		 c :  3630 	0.031644821167
+Generation: RI init		 v :  1 		 c :  1 	1.21593475342e-05
+Generation: RI prop		 v :  10 		 c :  121 	0.00102281570435
+Generation: IG prop		 v :  11 		 c :  11 	9.01222229004e-05
+Generation: RG init		 v :  20 		 c :  21 	0.000114917755127
+Generation: RG compl		 v :  90 		 c :  110 	0.000900983810425
+Generation: RG prop		 v :  1100 		 c :  4500 	0.0365109443665
+Generation: Sym Brk		 v :  110 		 c :  2811 	0.0346078872681
+Generation: Mutex		 v :  0 		 c :  33 	0.000224113464355
+Generation time =  0.986097812653
+Done generation...
+# Clauses = 87109
+# Variables = 6083
+Creating formula...
+Done creating formula. Calling solver...
+Done solver. Round time:  0.266805887222
+Cumulated solver time:  0.738150119781
+UNSAT
+=================================================
+Trying with 12 states
+Number of atoms:  43
+Number of actions:  29
+Generation: Initial		 v :  22 		 c :  22 	0.000264167785645
+Generation: Goal		 v :  5 		 c :  5 	6.00814819336e-05
+Generation: Precs		 v :  675 		 c :  1620 	0.0116219520569
+Generation: NonDet		 v :  348 		 c :  9840 	0.0681009292603
+Generation: One succ		 v :  4176 		 c :  46980 	0.36064696312
+Generation: Trip bin		 v :  0 		 c :  4176 	0.0285778045654
+Generation: One act		 v :  0 		 c :  11 	0.000706911087036
+Generation: Neg Prop		 v :  306 		 c :  30672 	0.562330961227
+Generation: Gen conn		 v :  0 		 c :  4320 	0.0278170108795
+Generation: RI init		 v :  1 		 c :  1 	1.21593475342e-05
+Generation: RI prop		 v :  11 		 c :  144 	0.00119304656982
+Generation: IG prop		 v :  12 		 c :  12 	9.60826873779e-05
+Generation: RG init		 v :  22 		 c :  23 	0.000123977661133
+Generation: RG compl		 v :  110 		 c :  132 	0.00102496147156
+Generation: RG prop		 v :  1452 		 c :  5929 	0.0448980331421
+Generation: Sym Brk		 v :  132 		 c :  3903 	0.0494530200958
+Generation: Mutex		 v :  0 		 c :  36 	0.000243902206421
+Generation time =  1.15731287003
+Done generation...
+# Clauses = 107826
+# Variables = 7272
+Creating formula...
+Done creating formula. Calling solver...
+Done solver. Round time:  0.356241226196
+Cumulated solver time:  1.09439134598
+==========================
+----------
+Atom bitvalue(d0, b1) (n0)
+-NegatedAtom zero(n_b) (n0)
+Atom stack-depth(d0) (n0)
+Atom bitvalue(d0, b0) (n0)
+-NegatedAtom holding_a() (n0)
+-NegatedAtom zero(n_a) (n0)
+-NegatedAtom bitvalue(d1, b1) (n0)
+-NegatedAtom on_a_b_2() (n0)
+-NegatedAtom bitvalue(d1, b0) (n0)
+Atom bitvalue(d0, b2) (n0)
+-NegatedAtom in-stack(n_b) (n0)
+Atom bool[handempty]() (n0)
+----------
+Atom bool[handempty]() (n1)
+Atom bitvalue(d1, b2) (n1)
+Atom bitvalue(d0, b1) (n1)
+-NegatedAtom zero(n_b) (n1)
+-NegatedAtom holding_a() (n1)
+-NegatedAtom bitvalue(d0, b0) (n1)
+Atom bitvalue(d1, b0) (n1)
+Atom stack-depth(d1) (n1)
+Atom bitvalue(d1, b1) (n1)
+Atom bitvalue(d0, b2) (n1)
+Atom stack-idx(n_b, d1) (n1)
+-NegatedAtom zero(n_a) (n1)
+-NegatedAtom on_a_b_2() (n1)
+Atom in-stack(n_b) (n1)
+----------
+-NegatedAtom on_a_b_2() (n2)
+Atom in-stack(n_b) (n2)
+-NegatedAtom holding_a() (n2)
+Atom bitvalue(d0, b2) (n2)
+Atom stack-idx(n_a, d2) (n2)
+Atom stack-idx(n_b, d1) (n2)
+Atom bitvalue(d1, b1) (n2)
+Atom stack-depth(d2) (n2)
+Atom in-stack(n_a) (n2)
+Atom bool[handempty]() (n2)
+Atom bitvalue(d0, b1) (n2)
+-NegatedAtom zero(n_a) (n2)
+-NegatedAtom zero(n_b) (n2)
+-NegatedAtom bitvalue(d0, b0) (n2)
+Atom bitvalue(d1, b2) (n2)
+----------
+Atom bitvalue(d0, b2) (n3)
+-NegatedAtom holding_a() (n3)
+-NegatedAtom zero(n_b) (n3)
+-NegatedAtom bitvalue(d0, b0) (n3)
+Atom bitvalue(d1, b2) (n3)
+-NegatedAtom on_a_b_2() (n3)
+Atom stack-idx(n_b, d1) (n3)
+Atom in-stack(n_b) (n3)
+Atom stack-idx(n_a, d2) (n3)
+Atom in-stack(n_a) (n3)
+Atom stack-depth(d2) (n3)
+Atom bitvalue(d1, b1) (n3)
+Atom zero(n_a) (n3)
+-NegatedAtom bool[handempty]() (n3)
+Atom bitvalue(d0, b1) (n3)
+----------
+-NegatedAtom zero(n_a) (n4)
+-NegatedAtom on_a_b_2() (n4)
+Atom in-stack(n_b) (n4)
+Atom bitvalue(d0, b2) (n4)
+Atom stack-idx(n_b, d1) (n4)
+Atom stack-idx(n_a, d2) (n4)
+Atom stack-depth(d2) (n4)
+Atom bitvalue(d0, b1) (n4)
+Atom in-stack(n_a) (n4)
+-NegatedAtom zero(n_b) (n4)
+-NegatedAtom bool[handempty]() (n4)
+Atom bitvalue(d1, b2) (n4)
+-NegatedAtom bitvalue(d0, b0) (n4)
+Atom bitvalue(d1, b1) (n4)
+-NegatedAtom holding_a() (n4)
+----------
+Atom bitvalue(d1, b1) (n5)
+Atom bitvalue(d0, b2) (n5)
+Atom zero(n_a) (n5)
+Atom stack-idx(n_b, d1) (n5)
+-NegatedAtom on_a_b_2() (n5)
+Atom in-stack(n_a) (n5)
+Atom in-stack(n_b) (n5)
+Atom stack-idx(n_a, d2) (n5)
+Atom bool[handempty]() (n5)
+Atom bitvalue(d0, b1) (n5)
+-NegatedAtom holding_a() (n5)
+Atom stack-depth(d2) (n5)
+-NegatedAtom zero(n_b) (n5)
+Atom bitvalue(d1, b2) (n5)
+-NegatedAtom bitvalue(d0, b0) (n5)
+----------
+Atom zero(n_a) (n6)
+Atom in-stack(n_a) (n6)
+Atom zero(n_b) (n6)
+-NegatedAtom bool[handempty]() (n6)
+Atom in-stack(n_b) (n6)
+-NegatedAtom holding_a() (n6)
+Atom stack-idx(n_b, d1) (n6)
+-NegatedAtom on_a_b_2() (n6)
+Atom stack-idx(n_a, d2) (n6)
+Atom stack-depth(d2) (n6)
+----------
+Atom zero(n_a) (n7)
+Atom stack-depth(d2) (n7)
+Atom in-stack(n_a) (n7)
+Atom stack-idx(n_a, d2) (n7)
+Atom zero(n_b) (n7)
+Atom bool[handempty]() (n7)
+-NegatedAtom holding_a() (n7)
+Atom stack-idx(n_b, d1) (n7)
+Atom in-stack(n_b) (n7)
+-NegatedAtom on_a_b_2() (n7)
+----------
+Atom stack-idx(n_b, d1) (n8)
+Atom in-stack(n_a) (n8)
+Atom zero(n_a) (n8)
+-NegatedAtom bool[handempty]() (n8)
+Atom stack-depth(d2) (n8)
+Atom holding_a() (n8)
+Atom in-stack(n_b) (n8)
+Atom zero(n_b) (n8)
+-NegatedAtom on_a_b_2() (n8)
+Atom stack-idx(n_a, d2) (n8)
+----------
+-NegatedAtom on_a_b_2() (n9)
+Atom stack-depth(d1) (n9)
+Atom holding_a() (n9)
+-NegatedAtom bool[handempty]() (n9)
+Atom zero(n_b) (n9)
+Atom in-stack(n_b) (n9)
+Atom zero(n_a) (n9)
+Atom stack-idx(n_b, d1) (n9)
+----------
+Atom zero(n_b) (n10)
+Atom stack-depth(d0) (n10)
+-NegatedAtom bool[handempty]() (n10)
+-NegatedAtom on_a_b_2() (n10)
+Atom zero(n_a) (n10)
+-NegatedAtom in-stack(n_b) (n10)
+Atom holding_a() (n10)
+----------
+Atom stack-depth(d0) (ng)
+-NegatedAtom zero(n_b) (ng)
+-NegatedAtom holding_a() (ng)
+Atom on_a_b_2() (ng)
+Atom zero(n_a) (ng)
+==========================
+(n0,push_n_b_d0_b0)
+(n0,push_n_b_d0_b0())
+(n1,push_n_a_d1_b0)
+(n1,push_n_a_d1_b0())
+(n2,action_5_d2_DETDUP_1())
+(n2,action_5_d2_DETDUP_0)
+(n2,action_5_d2_DETDUP_1)
+(n2,action_5_d2_DETDUP_0())
+(n3,action_1())
+(n3,action_1)
+(n4,action_2)
+(n4,action_2())
+(n5,action_6_d1_DETDUP_1)
+(n5,action_6_d1_DETDUP_1())
+(n5,action_6_d1_DETDUP_0)
+(n5,action_6_d1_DETDUP_0())
+(n6,action_1())
+(n6,action_1)
+(n7,action_3())
+(n7,action_3)
+(n8,pop_n_a_d2())
+(n8,pop_n_a_d2)
+(n9,pop_n_b_d1)
+(n9,pop_n_b_d1())
+(n10,action_7())
+(n10,action_7)
+==========================
+(n0,push_n_b_d0_b0,n1)
+(n1,push_n_a_d1_b0,n2)
+(n2,action_5_d2_DETDUP_0,n3)
+(n2,action_5_d2_DETDUP_1,n4)
+(n3,action_1,n5)
+(n4,action_2,n2)
+(n5,action_6_d1_DETDUP_1,n3)
+(n5,action_6_d1_DETDUP_0,n6)
+(n6,action_1,n7)
+(n7,action_3,n8)
+(n8,pop_n_a_d2,n9)
+(n9,pop_n_b_d1,n10)
+(n10,action_7,ng)
+==========================
+(n2,n4)
+(n5,n3)
+(n6,n7)
+(n3,n5)
+(n1,n2)
+(n8,n9)
+(n10,ng)
+(n4,n2)
+(n5,n6)
+(n7,n8)
+(n2,n3)
+(n9,n10)
+(n0,n1)
+==========================
+Solved with 12 states
+===========
+SAS!!!
+Elapsed total time (s): 7.56853699684
+Elapsed solver time (s): 1.09439134598
+Elapsed solver time (s): [0.015770912170410156, 0.010449886322021484, 0.016765117645263672, 0.024942874908447266, 0.032009124755859375, 0.045369863510131836, 0.06763911247253418, 0.09600520133972168, 0.16239213943481445, 0.26680588722229004, 0.35624122619628906]
+Looking for strong plans:  False 
+Fair actions:  True

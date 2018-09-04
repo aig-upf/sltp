@@ -1,0 +1,913 @@
+============================[ Problem Statistics ]=============================
+|                                                                             |
+|  Number of variables:           278                                         |
+|  Number of clauses:            1818                                         |
+|  Parse time:                   0.00 s                                       |
+|  Simplification time:          0.00 s                                       |
+|                                                                             |
+===============================================================================
+Solved by simplification
+restarts              : 0
+conflicts             : 0              (0 /sec)
+decisions             : 0              ( nan % random) (0 /sec)
+propagations          : 120            (33204 /sec)
+conflict literals     : 0              ( nan % deleted)
+Memory used           : 4.59 MB
+CPU time              : 0.003614 s
+
+UNSATISFIABLE
+============================[ Problem Statistics ]=============================
+|                                                                             |
+|  Number of variables:           504                                         |
+|  Number of clauses:            3822                                         |
+|  Parse time:                   0.00 s                                       |
+|  Simplification time:          0.00 s                                       |
+|                                                                             |
+===============================================================================
+Solved by simplification
+restarts              : 0
+conflicts             : 0              (0 /sec)
+decisions             : 0              ( nan % random) (0 /sec)
+propagations          : 233            (41637 /sec)
+conflict literals     : 0              ( nan % deleted)
+Memory used           : 4.91 MB
+CPU time              : 0.005596 s
+
+UNSATISFIABLE
+============================[ Problem Statistics ]=============================
+|                                                                             |
+|  Number of variables:           808                                         |
+|  Number of clauses:            6802                                         |
+|  Parse time:                   0.00 s                                       |
+|  Eliminated clauses:           0.00 Mb                                      |
+|  Simplification time:          0.00 s                                       |
+|                                                                             |
+============================[ Search Statistics ]==============================
+| Conflicts |          ORIGINAL         |          LEARNT          | Progress |
+|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |
+===============================================================================
+===============================================================================
+restarts              : 1
+conflicts             : 10             (983 /sec)
+decisions             : 54             (0.00 % random) (5307 /sec)
+propagations          : 1372           (134827 /sec)
+conflict literals     : 36             (23.40 % deleted)
+Memory used           : 0.89 MB
+CPU time              : 0.010176 s
+
+UNSATISFIABLE
+============================[ Problem Statistics ]=============================
+|                                                                             |
+|  Number of variables:          1180                                         |
+|  Number of clauses:           10891                                         |
+|  Parse time:                   0.01 s                                       |
+|  Eliminated clauses:           0.00 Mb                                      |
+|  Simplification time:          0.01 s                                       |
+|                                                                             |
+============================[ Search Statistics ]==============================
+| Conflicts |          ORIGINAL         |          LEARNT          | Progress |
+|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |
+===============================================================================
+===============================================================================
+restarts              : 1
+conflicts             : 57             (3823 /sec)
+decisions             : 96             (0.00 % random) (6438 /sec)
+propagations          : 8577           (575213 /sec)
+conflict literals     : 367            (23.70 % deleted)
+Memory used           : 1.24 MB
+CPU time              : 0.014911 s
+
+UNSATISFIABLE
+============================[ Problem Statistics ]=============================
+|                                                                             |
+|  Number of variables:          1632                                         |
+|  Number of clauses:           16304                                         |
+|  Parse time:                   0.01 s                                       |
+|  Eliminated clauses:           0.01 Mb                                      |
+|  Simplification time:          0.01 s                                       |
+|                                                                             |
+============================[ Search Statistics ]==============================
+| Conflicts |          ORIGINAL         |          LEARNT          | Progress |
+|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |
+===============================================================================
+|       100 |    1174     9780    28523 |     3586       99     12 | 21.386 % |
+===============================================================================
+restarts              : 2
+conflicts             : 159            (6242 /sec)
+decisions             : 419            (0.00 % random) (16449 /sec)
+propagations          : 29319          (1151029 /sec)
+conflict literals     : 2040           (34.51 % deleted)
+Memory used           : 1.85 MB
+CPU time              : 0.025472 s
+
+UNSATISFIABLE
+============================[ Problem Statistics ]=============================
+|                                                                             |
+|  Number of variables:          2170                                         |
+|  Number of clauses:           23236                                         |
+|  Parse time:                   0.02 s                                       |
+|  Eliminated clauses:           0.01 Mb                                      |
+|  Simplification time:          0.01 s                                       |
+|                                                                             |
+============================[ Search Statistics ]==============================
+| Conflicts |          ORIGINAL         |          LEARNT          | Progress |
+|           |    Vars  Clauses Literals |    Limit  Clauses Lit/Cl |          |
+===============================================================================
+|       100 |    1636    14458    43235 |     5301      100     15 | 17.512 % |
+===============================================================================
+restarts              : 3
+conflicts             : 204            (5226 /sec)
+decisions             : 3237           (0.00 % random) (82932 /sec)
+propagations          : 42247          (1082368 /sec)
+conflict literals     : 3691           (32.03 % deleted)
+Memory used           : 2.54 MB
+CPU time              : 0.039032 s
+
+SATISFIABLE
+Setting atoms
+# Atoms: 37
+Setting initial
+Setting goal
+Setting actions
+# Actions: 24
+	Setting other actions
+0 / 24
+	Setting action card
+Setting mutexes
+Setting h values
+Setting max card
+Setting relevant actions
+Setting splitting
+Setting compatible actions
+0 / 24
+9.70363616943e-05
+0
+var0
+0 --> Atom bitvalue(d0, b0)
+1 --> -NegatedAtom bitvalue(d0, b0)
+-----------------------
+1
+var1
+0 --> Atom bitvalue(d0, b1)
+1 --> -NegatedAtom bitvalue(d0, b1)
+-----------------------
+2
+var2
+0 --> Atom bitvalue(d0, b2)
+1 --> -NegatedAtom bitvalue(d0, b2)
+-----------------------
+3
+var3
+0 --> Atom bitvalue(d1, b0)
+1 --> -NegatedAtom bitvalue(d1, b0)
+-----------------------
+4
+var4
+0 --> Atom bitvalue(d1, b1)
+1 --> -NegatedAtom bitvalue(d1, b1)
+-----------------------
+5
+var5
+0 --> Atom bitvalue(d1, b2)
+1 --> -NegatedAtom bitvalue(d1, b2)
+-----------------------
+6
+var6
+0 --> Atom bitvalue(d2, b0)
+1 --> -NegatedAtom bitvalue(d2, b0)
+-----------------------
+7
+var7
+0 --> Atom bitvalue(d2, b1)
+1 --> -NegatedAtom bitvalue(d2, b1)
+-----------------------
+8
+var8
+0 --> Atom bitvalue(d2, b2)
+1 --> -NegatedAtom bitvalue(d2, b2)
+-----------------------
+9
+var9
+0 --> Atom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+1 --> -NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+-----------------------
+10
+var10
+0 --> Atom in-stack(num-rewards)
+1 --> -NegatedAtom in-stack(num-rewards)
+-----------------------
+11
+var11
+0 --> Atom stack-depth(d0)
+1 --> Atom stack-depth(d1)
+2 --> Atom stack-depth(d2)
+-----------------------
+12
+var12
+0 --> Atom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d1)
+1 --> -NegatedAtom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d1)
+-----------------------
+13
+var13
+0 --> Atom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d2)
+1 --> -NegatedAtom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d2)
+-----------------------
+14
+var14
+0 --> Atom stack-idx(num-rewards, d1)
+1 --> -NegatedAtom stack-idx(num-rewards, d1)
+-----------------------
+15
+var15
+0 --> Atom stack-idx(num-rewards, d2)
+1 --> -NegatedAtom stack-idx(num-rewards, d2)
+-----------------------
+16
+var16
+0 --> Atom zero(min-dist[at_restrict_adjacent_not_blocked_reward])
+1 --> -NegatedAtom zero(min-dist[at_restrict_adjacent_not_blocked_reward])
+-----------------------
+17
+var17
+0 --> Atom zero(num-rewards)
+1 --> -NegatedAtom zero(num-rewards)
+-----------------------
+==============================
+Atom bitvalue(d0, b0)
+Atom bitvalue(d0, b1)
+Atom bitvalue(d0, b2)
+-NegatedAtom bitvalue(d1, b0)
+-NegatedAtom bitvalue(d1, b1)
+-NegatedAtom bitvalue(d1, b2)
+-NegatedAtom bitvalue(d2, b0)
+-NegatedAtom bitvalue(d2, b1)
+-NegatedAtom bitvalue(d2, b2)
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+-NegatedAtom in-stack(num-rewards)
+Atom stack-depth(d0)
+-NegatedAtom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d1)
+-NegatedAtom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d2)
+-NegatedAtom stack-idx(num-rewards, d1)
+-NegatedAtom stack-idx(num-rewards, d2)
+-NegatedAtom zero(min-dist[at_restrict_adjacent_not_blocked_reward])
+-NegatedAtom zero(num-rewards)
+==============================
+-NegatedAtom zero(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom zero(num-rewards)
+Atom stack-depth(d0)
+==============================
+action_1_d1_DETDUP_0()
+PRE
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom in-stack(num-rewards)
+Atom stack-idx(num-rewards, d1)
+Atom zero(min-dist[at_restrict_adjacent_not_blocked_reward])
+-NegatedAtom zero(num-rewards)
+EFFECTS
+--------- Atom bitvalue(d1, b0)
+--------- Atom bitvalue(d1, b1)
+--------- Atom bitvalue(d1, b2)
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+Atom zero(min-dist[at_restrict_adjacent_not_blocked_reward]) -NegatedAtom zero(min-dist[at_restrict_adjacent_not_blocked_reward])
+-NegatedAtom zero(num-rewards) Atom zero(num-rewards)
+-----------------------
+action_2_d2_DETDUP_0()
+PRE
+Atom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d2)
+-NegatedAtom zero(num-rewards)
+-NegatedAtom zero(min-dist[at_restrict_adjacent_not_blocked_reward])
+EFFECTS
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+-NegatedAtom zero(min-dist[at_restrict_adjacent_not_blocked_reward]) Atom zero(min-dist[at_restrict_adjacent_not_blocked_reward])
+-----------------------
+push_min-dist[at_restrict_adjacent_not_blocked_reward]_d0_b2()
+PRE
+-NegatedAtom bitvalue(d0, b0)
+-NegatedAtom bitvalue(d0, b1)
+Atom bitvalue(d0, b2)
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom stack-depth(d0)
+EFFECTS
+-NegatedAtom bitvalue(d0, b0) Atom bitvalue(d0, b0)
+-NegatedAtom bitvalue(d0, b1) Atom bitvalue(d0, b1)
+Atom bitvalue(d0, b2) -NegatedAtom bitvalue(d0, b2)
+--------- Atom bitvalue(d1, b0)
+--------- Atom bitvalue(d1, b1)
+--------- Atom bitvalue(d1, b2)
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward]) Atom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom stack-depth(d0) Atom stack-depth(d1)
+--------- Atom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d1)
+-----------------------
+push_min-dist[at_restrict_adjacent_not_blocked_reward]_d0_b0()
+PRE
+Atom bitvalue(d0, b0)
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom stack-depth(d0)
+EFFECTS
+Atom bitvalue(d0, b0) -NegatedAtom bitvalue(d0, b0)
+--------- Atom bitvalue(d1, b0)
+--------- Atom bitvalue(d1, b1)
+--------- Atom bitvalue(d1, b2)
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward]) Atom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom stack-depth(d0) Atom stack-depth(d1)
+--------- Atom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d1)
+-----------------------
+pop_min-dist[at_restrict_adjacent_not_blocked_reward]_d2()
+PRE
+Atom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom stack-depth(d2)
+Atom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d2)
+EFFECTS
+Atom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward]) -NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom stack-depth(d2) Atom stack-depth(d1)
+Atom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d2) -NegatedAtom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d2)
+-----------------------
+action_2_d1_DETDUP_0()
+PRE
+Atom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d1)
+-NegatedAtom zero(num-rewards)
+-NegatedAtom zero(min-dist[at_restrict_adjacent_not_blocked_reward])
+EFFECTS
+--------- Atom bitvalue(d1, b0)
+--------- Atom bitvalue(d1, b1)
+--------- Atom bitvalue(d1, b2)
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+-NegatedAtom zero(min-dist[at_restrict_adjacent_not_blocked_reward]) Atom zero(min-dist[at_restrict_adjacent_not_blocked_reward])
+-----------------------
+push_min-dist[at_restrict_adjacent_not_blocked_reward]_d1_b1()
+PRE
+-NegatedAtom bitvalue(d1, b0)
+Atom bitvalue(d1, b1)
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom stack-depth(d1)
+EFFECTS
+-NegatedAtom bitvalue(d1, b0) Atom bitvalue(d1, b0)
+Atom bitvalue(d1, b1) -NegatedAtom bitvalue(d1, b1)
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward]) Atom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom stack-depth(d1) Atom stack-depth(d2)
+--------- Atom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d2)
+-----------------------
+action_1_d2_DETDUP_0()
+PRE
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom in-stack(num-rewards)
+Atom stack-idx(num-rewards, d2)
+Atom zero(min-dist[at_restrict_adjacent_not_blocked_reward])
+-NegatedAtom zero(num-rewards)
+EFFECTS
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+Atom zero(min-dist[at_restrict_adjacent_not_blocked_reward]) -NegatedAtom zero(min-dist[at_restrict_adjacent_not_blocked_reward])
+-NegatedAtom zero(num-rewards) Atom zero(num-rewards)
+-----------------------
+push_num-rewards_d1_b1()
+PRE
+-NegatedAtom bitvalue(d1, b0)
+Atom bitvalue(d1, b1)
+Atom stack-depth(d1)
+EFFECTS
+-NegatedAtom bitvalue(d1, b0) Atom bitvalue(d1, b0)
+Atom bitvalue(d1, b1) -NegatedAtom bitvalue(d1, b1)
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+--------- Atom in-stack(num-rewards)
+Atom stack-depth(d1) Atom stack-depth(d2)
+--------- Atom stack-idx(num-rewards, d2)
+-----------------------
+push_num-rewards_d0_b2()
+PRE
+-NegatedAtom bitvalue(d0, b0)
+-NegatedAtom bitvalue(d0, b1)
+Atom bitvalue(d0, b2)
+Atom stack-depth(d0)
+EFFECTS
+-NegatedAtom bitvalue(d0, b0) Atom bitvalue(d0, b0)
+-NegatedAtom bitvalue(d0, b1) Atom bitvalue(d0, b1)
+Atom bitvalue(d0, b2) -NegatedAtom bitvalue(d0, b2)
+--------- Atom bitvalue(d1, b0)
+--------- Atom bitvalue(d1, b1)
+--------- Atom bitvalue(d1, b2)
+--------- Atom in-stack(num-rewards)
+Atom stack-depth(d0) Atom stack-depth(d1)
+--------- Atom stack-idx(num-rewards, d1)
+-----------------------
+push_num-rewards_d0_b0()
+PRE
+Atom bitvalue(d0, b0)
+Atom stack-depth(d0)
+EFFECTS
+Atom bitvalue(d0, b0) -NegatedAtom bitvalue(d0, b0)
+--------- Atom bitvalue(d1, b0)
+--------- Atom bitvalue(d1, b1)
+--------- Atom bitvalue(d1, b2)
+--------- Atom in-stack(num-rewards)
+Atom stack-depth(d0) Atom stack-depth(d1)
+--------- Atom stack-idx(num-rewards, d1)
+-----------------------
+push_num-rewards_d1_b0()
+PRE
+Atom bitvalue(d1, b0)
+Atom stack-depth(d1)
+EFFECTS
+Atom bitvalue(d1, b0) -NegatedAtom bitvalue(d1, b0)
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+--------- Atom in-stack(num-rewards)
+Atom stack-depth(d1) Atom stack-depth(d2)
+--------- Atom stack-idx(num-rewards, d2)
+-----------------------
+pop_num-rewards_d1()
+PRE
+Atom in-stack(num-rewards)
+Atom stack-depth(d1)
+Atom stack-idx(num-rewards, d1)
+EFFECTS
+Atom in-stack(num-rewards) -NegatedAtom in-stack(num-rewards)
+Atom stack-depth(d1) Atom stack-depth(d0)
+Atom stack-idx(num-rewards, d1) -NegatedAtom stack-idx(num-rewards, d1)
+-----------------------
+action_2_d2_DETDUP_1()
+PRE
+Atom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d2)
+-NegatedAtom zero(min-dist[at_restrict_adjacent_not_blocked_reward])
+-NegatedAtom zero(num-rewards)
+EFFECTS
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+-----------------------
+push_min-dist[at_restrict_adjacent_not_blocked_reward]_d0_b1()
+PRE
+-NegatedAtom bitvalue(d0, b0)
+Atom bitvalue(d0, b1)
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom stack-depth(d0)
+EFFECTS
+-NegatedAtom bitvalue(d0, b0) Atom bitvalue(d0, b0)
+Atom bitvalue(d0, b1) -NegatedAtom bitvalue(d0, b1)
+--------- Atom bitvalue(d1, b0)
+--------- Atom bitvalue(d1, b1)
+--------- Atom bitvalue(d1, b2)
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward]) Atom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom stack-depth(d0) Atom stack-depth(d1)
+--------- Atom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d1)
+-----------------------
+action_2_d1_DETDUP_1()
+PRE
+Atom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d1)
+-NegatedAtom zero(min-dist[at_restrict_adjacent_not_blocked_reward])
+-NegatedAtom zero(num-rewards)
+EFFECTS
+--------- Atom bitvalue(d1, b0)
+--------- Atom bitvalue(d1, b1)
+--------- Atom bitvalue(d1, b2)
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+-----------------------
+action_1_d1_DETDUP_1()
+PRE
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom in-stack(num-rewards)
+Atom stack-idx(num-rewards, d1)
+-NegatedAtom zero(num-rewards)
+Atom zero(min-dist[at_restrict_adjacent_not_blocked_reward])
+EFFECTS
+--------- Atom bitvalue(d1, b0)
+--------- Atom bitvalue(d1, b1)
+--------- Atom bitvalue(d1, b2)
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+Atom zero(min-dist[at_restrict_adjacent_not_blocked_reward]) -NegatedAtom zero(min-dist[at_restrict_adjacent_not_blocked_reward])
+-----------------------
+action_1_d2_DETDUP_1()
+PRE
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom in-stack(num-rewards)
+Atom stack-idx(num-rewards, d2)
+-NegatedAtom zero(num-rewards)
+Atom zero(min-dist[at_restrict_adjacent_not_blocked_reward])
+EFFECTS
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+Atom zero(min-dist[at_restrict_adjacent_not_blocked_reward]) -NegatedAtom zero(min-dist[at_restrict_adjacent_not_blocked_reward])
+-----------------------
+push_min-dist[at_restrict_adjacent_not_blocked_reward]_d1_b0()
+PRE
+Atom bitvalue(d1, b0)
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom stack-depth(d1)
+EFFECTS
+Atom bitvalue(d1, b0) -NegatedAtom bitvalue(d1, b0)
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward]) Atom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom stack-depth(d1) Atom stack-depth(d2)
+--------- Atom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d2)
+-----------------------
+push_min-dist[at_restrict_adjacent_not_blocked_reward]_d1_b2()
+PRE
+-NegatedAtom bitvalue(d1, b0)
+-NegatedAtom bitvalue(d1, b1)
+Atom bitvalue(d1, b2)
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom stack-depth(d1)
+EFFECTS
+-NegatedAtom bitvalue(d1, b0) Atom bitvalue(d1, b0)
+-NegatedAtom bitvalue(d1, b1) Atom bitvalue(d1, b1)
+Atom bitvalue(d1, b2) -NegatedAtom bitvalue(d1, b2)
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward]) Atom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom stack-depth(d1) Atom stack-depth(d2)
+--------- Atom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d2)
+-----------------------
+push_num-rewards_d0_b1()
+PRE
+-NegatedAtom bitvalue(d0, b0)
+Atom bitvalue(d0, b1)
+Atom stack-depth(d0)
+EFFECTS
+-NegatedAtom bitvalue(d0, b0) Atom bitvalue(d0, b0)
+Atom bitvalue(d0, b1) -NegatedAtom bitvalue(d0, b1)
+--------- Atom bitvalue(d1, b0)
+--------- Atom bitvalue(d1, b1)
+--------- Atom bitvalue(d1, b2)
+--------- Atom in-stack(num-rewards)
+Atom stack-depth(d0) Atom stack-depth(d1)
+--------- Atom stack-idx(num-rewards, d1)
+-----------------------
+pop_num-rewards_d2()
+PRE
+Atom in-stack(num-rewards)
+Atom stack-depth(d2)
+Atom stack-idx(num-rewards, d2)
+EFFECTS
+Atom in-stack(num-rewards) -NegatedAtom in-stack(num-rewards)
+Atom stack-depth(d2) Atom stack-depth(d1)
+Atom stack-idx(num-rewards, d2) -NegatedAtom stack-idx(num-rewards, d2)
+-----------------------
+pop_min-dist[at_restrict_adjacent_not_blocked_reward]_d1()
+PRE
+Atom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom stack-depth(d1)
+Atom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d1)
+EFFECTS
+Atom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward]) -NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward])
+Atom stack-depth(d1) Atom stack-depth(d0)
+Atom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d1) -NegatedAtom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d1)
+-----------------------
+push_num-rewards_d1_b2()
+PRE
+-NegatedAtom bitvalue(d1, b0)
+-NegatedAtom bitvalue(d1, b1)
+Atom bitvalue(d1, b2)
+Atom stack-depth(d1)
+EFFECTS
+-NegatedAtom bitvalue(d1, b0) Atom bitvalue(d1, b0)
+-NegatedAtom bitvalue(d1, b1) Atom bitvalue(d1, b1)
+Atom bitvalue(d1, b2) -NegatedAtom bitvalue(d1, b2)
+--------- Atom bitvalue(d2, b0)
+--------- Atom bitvalue(d2, b1)
+--------- Atom bitvalue(d2, b2)
+--------- Atom in-stack(num-rewards)
+Atom stack-depth(d1) Atom stack-depth(d2)
+--------- Atom stack-idx(num-rewards, d2)
+-----------------------
+push_num-rewards_d1_b2()
+pop_num-rewards_d1()
+action_1_d2_DETDUP_0()
+action_1_d2_DETDUP_1()
+action_2_d2_DETDUP_0()
+push_min-dist[at_restrict_adjacent_not_blocked_reward]_d0_b2()
+push_min-dist[at_restrict_adjacent_not_blocked_reward]_d0_b1()
+action_2_d1_DETDUP_1()
+push_min-dist[at_restrict_adjacent_not_blocked_reward]_d1_b1()
+push_num-rewards_d0_b1()
+pop_min-dist[at_restrict_adjacent_not_blocked_reward]_d1()
+pop_num-rewards_d2()
+push_num-rewards_d1_b0()
+action_2_d2_DETDUP_1()
+push_min-dist[at_restrict_adjacent_not_blocked_reward]_d0_b0()
+action_2_d1_DETDUP_0()
+push_num-rewards_d0_b2()
+push_num-rewards_d0_b0()
+push_min-dist[at_restrict_adjacent_not_blocked_reward]_d1_b2()
+push_min-dist[at_restrict_adjacent_not_blocked_reward]_d1_b0()
+action_1_d1_DETDUP_1()
+pop_min-dist[at_restrict_adjacent_not_blocked_reward]_d2()
+push_num-rewards_d1_b1()
+action_1_d1_DETDUP_0()
+Looking for strong plans:  False 
+Fair actions:  True
+=================================================
+Trying with 2 states
+Number of atoms:  37
+Number of actions:  24
+Generation: Initial		 v :  19 		 c :  19 	0.000125885009766
+Generation: Goal		 v :  3 		 c :  3 	4.19616699219e-05
+Generation: Precs		 v :  78 		 c :  180 	0.00123000144958
+Generation: NonDet		 v :  48 		 c :  1120 	0.00691485404968
+Generation: One succ		 v :  96 		 c :  240 	0.00208401679993
+Generation: Trip bin		 v :  0 		 c :  96 	0.000988006591797
+Generation: One act		 v :  0 		 c :  1 	7.20024108887e-05
+Generation: Neg Prop		 v :  26 		 c :  772 	0.0151090621948
+Generation: Gen conn		 v :  0 		 c :  100 	0.000694990158081
+Generation: RI init		 v :  1 		 c :  1 	1.09672546387e-05
+Generation: RI prop		 v :  1 		 c :  4 	4.19616699219e-05
+Generation: IG prop		 v :  2 		 c :  2 	2.19345092773e-05
+Generation: RG init		 v :  2 		 c :  3 	2.38418579102e-05
+Generation: RG compl		 v :  0 		 c :  2 	2.19345092773e-05
+Generation: RG prop		 v :  2 		 c :  9 	7.60555267334e-05
+Generation: Sym Brk		 v :  0 		 c :  0 	5.00679016113e-06
+Generation: Mutex		 v :  0 		 c :  6 	5.29289245605e-05
+Generation time =  0.0276160240173
+Done generation...
+# Clauses = 2558
+# Variables = 278
+Creating formula...
+Done creating formula. Calling solver...
+Done solver. Round time:  0.00860691070557
+Cumulated solver time:  0.00860691070557
+UNSAT
+=================================================
+Trying with 3 states
+Number of atoms:  37
+Number of actions:  24
+Generation: Initial		 v :  19 		 c :  19 	0.000132083892822
+Generation: Goal		 v :  3 		 c :  3 	3.09944152832e-05
+Generation: Precs		 v :  125 		 c :  270 	0.00170803070068
+Generation: NonDet		 v :  72 		 c :  1680 	0.0124731063843
+Generation: One succ		 v :  216 		 c :  648 	0.00589799880981
+Generation: Trip bin		 v :  0 		 c :  216 	0.00145292282104
+Generation: One act		 v :  0 		 c :  2 	0.000118970870972
+Generation: Neg Prop		 v :  45 		 c :  1737 	0.0301918983459
+Generation: Gen conn		 v :  0 		 c :  225 	0.00188899040222
+Generation: RI init		 v :  1 		 c :  1 	1.28746032715e-05
+Generation: RI prop		 v :  2 		 c :  9 	9.32216644287e-05
+Generation: IG prop		 v :  3 		 c :  3 	3.21865081787e-05
+Generation: RG init		 v :  4 		 c :  5 	3.69548797607e-05
+Generation: RG compl		 v :  2 		 c :  6 	5.79357147217e-05
+Generation: RG prop		 v :  12 		 c :  52 	0.000405073165894
+Generation: Sym Brk		 v :  0 		 c :  0 	5.00679016113e-06
+Generation: Mutex		 v :  0 		 c :  9 	8.01086425781e-05
+Generation time =  0.0547230243683
+Done generation...
+# Clauses = 4885
+# Variables = 504
+Creating formula...
+Done creating formula. Calling solver...
+Done solver. Round time:  0.0111491680145
+Cumulated solver time:  0.0197560787201
+UNSAT
+=================================================
+Trying with 4 states
+Number of atoms:  37
+Number of actions:  24
+Generation: Initial		 v :  19 		 c :  19 	0.000128984451294
+Generation: Goal		 v :  3 		 c :  3 	3.00407409668e-05
+Generation: Precs		 v :  172 		 c :  360 	0.00291800498962
+Generation: NonDet		 v :  96 		 c :  2240 	0.013986825943
+Generation: One succ		 v :  384 		 c :  1440 	0.0140891075134
+Generation: Trip bin		 v :  0 		 c :  384 	0.00347185134888
+Generation: One act		 v :  0 		 c :  3 	0.000396966934204
+Generation: Neg Prop		 v :  66 		 c :  3088 	0.0595791339874
+Generation: Gen conn		 v :  0 		 c :  400 	0.00274109840393
+Generation: RI init		 v :  1 		 c :  1 	1.09672546387e-05
+Generation: RI prop		 v :  3 		 c :  16 	0.000145196914673
+Generation: IG prop		 v :  4 		 c :  4 	3.71932983398e-05
+Generation: RG init		 v :  6 		 c :  7 	4.48226928711e-05
+Generation: RG compl		 v :  6 		 c :  12 	0.000100135803223
+Generation: RG prop		 v :  36 		 c :  153 	0.00106406211853
+Generation: Sym Brk		 v :  12 		 c :  39 	0.000319957733154
+Generation: Mutex		 v :  0 		 c :  12 	9.10758972168e-05
+Generation time =  0.0992729663849
+Done generation...
+# Clauses = 8181
+# Variables = 808
+Creating formula...
+Done creating formula. Calling solver...
+Done solver. Round time:  0.0160901546478
+Cumulated solver time:  0.0358462333679
+UNSAT
+=================================================
+Trying with 5 states
+Number of atoms:  37
+Number of actions:  24
+Generation: Initial		 v :  19 		 c :  19 	0.000137090682983
+Generation: Goal		 v :  3 		 c :  3 	2.78949737549e-05
+Generation: Precs		 v :  219 		 c :  450 	0.00321793556213
+Generation: NonDet		 v :  120 		 c :  2800 	0.019434928894
+Generation: One succ		 v :  600 		 c :  2760 	0.0241320133209
+Generation: Trip bin		 v :  0 		 c :  600 	0.00427794456482
+Generation: One act		 v :  0 		 c :  4 	0.000236988067627
+Generation: Neg Prop		 v :  89 		 c :  4825 	0.092668056488
+Generation: Gen conn		 v :  0 		 c :  625 	0.00497579574585
+Generation: RI init		 v :  1 		 c :  1 	1.31130218506e-05
+Generation: RI prop		 v :  4 		 c :  25 	0.000258922576904
+Generation: IG prop		 v :  5 		 c :  5 	4.88758087158e-05
+Generation: RG init		 v :  8 		 c :  9 	5.98430633545e-05
+Generation: RG compl		 v :  12 		 c :  20 	0.000175952911377
+Generation: RG prop		 v :  80 		 c :  336 	0.00321102142334
+Generation: Sym Brk		 v :  20 		 c :  102 	0.00110101699829
+Generation: Mutex		 v :  0 		 c :  15 	0.0001220703125
+Generation time =  0.154214859009
+Done generation...
+# Clauses = 12599
+# Variables = 1180
+Creating formula...
+Done creating formula. Calling solver...
+Done solver. Round time:  0.0211811065674
+Cumulated solver time:  0.0570273399353
+UNSAT
+=================================================
+Trying with 6 states
+Number of atoms:  37
+Number of actions:  24
+Generation: Initial		 v :  19 		 c :  19 	0.000132083892822
+Generation: Goal		 v :  3 		 c :  3 	3.09944152832e-05
+Generation: Precs		 v :  266 		 c :  540 	0.00527811050415
+Generation: NonDet		 v :  144 		 c :  3360 	0.0238671302795
+Generation: One succ		 v :  864 		 c :  4752 	0.0429220199585
+Generation: Trip bin		 v :  0 		 c :  864 	0.00659108161926
+Generation: One act		 v :  0 		 c :  5 	0.000316143035889
+Generation: Neg Prop		 v :  114 		 c :  6948 	0.133502006531
+Generation: Gen conn		 v :  0 		 c :  900 	0.00797295570374
+Generation: RI init		 v :  1 		 c :  1 	1.31130218506e-05
+Generation: RI prop		 v :  5 		 c :  36 	0.000336885452271
+Generation: IG prop		 v :  6 		 c :  6 	5.60283660889e-05
+Generation: RG init		 v :  10 		 c :  11 	7.10487365723e-05
+Generation: RG compl		 v :  20 		 c :  30 	0.000256061553955
+Generation: RG prop		 v :  150 		 c :  625 	0.00473308563232
+Generation: Sym Brk		 v :  30 		 c :  231 	0.00269913673401
+Generation: Mutex		 v :  0 		 c :  18 	0.000143051147461
+Generation time =  0.229039907455
+Done generation...
+# Clauses = 18349
+# Variables = 1632
+Creating formula...
+Done creating formula. Calling solver...
+Done solver. Round time:  0.0327548980713
+Cumulated solver time:  0.0897822380066
+UNSAT
+=================================================
+Trying with 7 states
+Number of atoms:  37
+Number of actions:  24
+Generation: Initial		 v :  19 		 c :  19 	0.000163078308105
+Generation: Goal		 v :  3 		 c :  3 	4.6968460083e-05
+Generation: Precs		 v :  313 		 c :  630 	0.00466203689575
+Generation: NonDet		 v :  168 		 c :  3920 	0.0293128490448
+Generation: One succ		 v :  1176 		 c :  7560 	0.0657429695129
+Generation: Trip bin		 v :  0 		 c :  1176 	0.00851011276245
+Generation: One act		 v :  0 		 c :  6 	0.000373840332031
+Generation: Neg Prop		 v :  141 		 c :  9457 	0.192479133606
+Generation: Gen conn		 v :  0 		 c :  1225 	0.0100338459015
+Generation: RI init		 v :  1 		 c :  1 	1.31130218506e-05
+Generation: RI prop		 v :  6 		 c :  49 	0.000462055206299
+Generation: IG prop		 v :  7 		 c :  7 	8.70227813721e-05
+Generation: RG init		 v :  12 		 c :  13 	8.10623168945e-05
+Generation: RG compl		 v :  30 		 c :  42 	0.000427007675171
+Generation: RG prop		 v :  252 		 c :  1044 	0.00889778137207
+Generation: Sym Brk		 v :  42 		 c :  453 	0.00636219978333
+Generation: Mutex		 v :  0 		 c :  21 	0.000166177749634
+Generation time =  0.32794380188
+Done generation...
+# Clauses = 25626
+# Variables = 2170
+Creating formula...
+Done creating formula. Calling solver...
+Done solver. Round time:  0.0486550331116
+Cumulated solver time:  0.138437271118
+==========================
+----------
+Atom bitvalue(d0, b1) (n0)
+-NegatedAtom zero(num-rewards) (n0)
+-NegatedAtom bitvalue(d1, b0) (n0)
+-NegatedAtom bitvalue(d1, b1) (n0)
+Atom bitvalue(d0, b0) (n0)
+Atom stack-depth(d0) (n0)
+-NegatedAtom zero(min-dist[at_restrict_adjacent_not_blocked_reward]) (n0)
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward]) (n0)
+----------
+Atom bitvalue(d1, b1) (n1)
+-NegatedAtom bitvalue(d0, b0) (n1)
+Atom bitvalue(d1, b2) (n1)
+-NegatedAtom zero(min-dist[at_restrict_adjacent_not_blocked_reward]) (n1)
+Atom stack-depth(d1) (n1)
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward]) (n1)
+Atom bitvalue(d0, b1) (n1)
+Atom bitvalue(d1, b0) (n1)
+Atom stack-idx(num-rewards, d1) (n1)
+-NegatedAtom zero(num-rewards) (n1)
+Atom in-stack(num-rewards) (n1)
+----------
+Atom bitvalue(d0, b1) (n2)
+Atom stack-idx(num-rewards, d1) (n2)
+Atom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward]) (n2)
+Atom in-stack(num-rewards) (n2)
+-NegatedAtom bitvalue(d1, b0) (n2)
+Atom bitvalue(d1, b1) (n2)
+Atom stack-depth(d2) (n2)
+-NegatedAtom zero(num-rewards) (n2)
+Atom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d2) (n2)
+-NegatedAtom zero(min-dist[at_restrict_adjacent_not_blocked_reward]) (n2)
+-NegatedAtom bitvalue(d0, b0) (n2)
+----------
+-NegatedAtom bitvalue(d0, b0) (n3)
+Atom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward]) (n3)
+Atom bitvalue(d0, b1) (n3)
+-NegatedAtom zero(num-rewards) (n3)
+Atom stack-idx(min-dist[at_restrict_adjacent_not_blocked_reward], d2) (n3)
+Atom stack-depth(d2) (n3)
+Atom zero(min-dist[at_restrict_adjacent_not_blocked_reward]) (n3)
+Atom stack-idx(num-rewards, d1) (n3)
+Atom bitvalue(d1, b1) (n3)
+Atom in-stack(num-rewards) (n3)
+-NegatedAtom bitvalue(d1, b0) (n3)
+----------
+Atom bitvalue(d0, b1) (n4)
+Atom zero(min-dist[at_restrict_adjacent_not_blocked_reward]) (n4)
+-NegatedAtom zero(num-rewards) (n4)
+Atom stack-idx(num-rewards, d1) (n4)
+-NegatedAtom bitvalue(d1, b0) (n4)
+Atom stack-depth(d1) (n4)
+Atom bitvalue(d1, b1) (n4)
+Atom in-stack(num-rewards) (n4)
+-NegatedAtom bitvalue(d0, b0) (n4)
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward]) (n4)
+----------
+Atom stack-depth(d1) (n5)
+Atom in-stack(num-rewards) (n5)
+-NegatedAtom in-stack(min-dist[at_restrict_adjacent_not_blocked_reward]) (n5)
+-NegatedAtom zero(min-dist[at_restrict_adjacent_not_blocked_reward]) (n5)
+Atom stack-idx(num-rewards, d1) (n5)
+Atom zero(num-rewards) (n5)
+----------
+-NegatedAtom zero(min-dist[at_restrict_adjacent_not_blocked_reward]) (ng)
+Atom zero(num-rewards) (ng)
+Atom stack-depth(d0) (ng)
+==========================
+(n0,push_num-rewards_d0_b0())
+(n0,push_num-rewards_d0_b0)
+(n1,push_min-dist[at_restrict_adjacent_not_blocked_reward]_d1_b0)
+(n1,push_min-dist[at_restrict_adjacent_not_blocked_reward]_d1_b0())
+(n2,action_2_d2_DETDUP_0)
+(n2,action_2_d2_DETDUP_1)
+(n2,action_2_d2_DETDUP_0())
+(n2,action_2_d2_DETDUP_1())
+(n3,pop_min-dist[at_restrict_adjacent_not_blocked_reward]_d2)
+(n3,pop_min-dist[at_restrict_adjacent_not_blocked_reward]_d2())
+(n4,action_1_d1_DETDUP_1())
+(n4,action_1_d1_DETDUP_0())
+(n4,action_1_d1_DETDUP_1)
+(n4,action_1_d1_DETDUP_0)
+(n5,pop_num-rewards_d1)
+(n5,pop_num-rewards_d1())
+==========================
+(n0,push_num-rewards_d0_b0,n1)
+(n1,push_min-dist[at_restrict_adjacent_not_blocked_reward]_d1_b0,n2)
+(n2,action_2_d2_DETDUP_0,n3)
+(n2,action_2_d2_DETDUP_1,n2)
+(n3,pop_min-dist[at_restrict_adjacent_not_blocked_reward]_d2,n4)
+(n4,action_1_d1_DETDUP_0,n5)
+(n4,action_1_d1_DETDUP_1,n1)
+(n5,pop_num-rewards_d1,ng)
+==========================
+(n4,n5)
+(n5,ng)
+(n3,n4)
+(n1,n2)
+(n4,n1)
+(n2,n3)
+(n2,n2)
+(n0,n1)
+==========================
+Solved with 7 states
+===========
+SAS!!!
+Elapsed total time (s): 1.36842083931
+Elapsed solver time (s): 0.138437271118
+Elapsed solver time (s): [0.008606910705566406, 0.011149168014526367, 0.01609015464782715, 0.021181106567382812, 0.03275489807128906, 0.048655033111572266]
+Looking for strong plans:  False 
+Fair actions:  True
