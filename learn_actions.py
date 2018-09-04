@@ -184,7 +184,7 @@ class ModelTranslator(object):
         self.optimal_and_nonoptimal = set(state_ids)
 
         if complete_only_wrt_optimal:
-            self.optimal_states = set(x for x, _ in optimal_transitions)  # i.e. heads of optimal transitions only
+            self.optimal_states = set(itertools.chain.from_iterable(optimal_transitions))
         else:
             self.optimal_states = self.optimal_and_nonoptimal.copy()
             # Consider all transitions as optimal
@@ -575,17 +575,27 @@ class ModelTranslator(object):
         assert type_ == int
         return "{} > 0".format(fstr) if value else "{} = 0".format(fstr)
 
+    def print_qnp_conjunction(self, conjunction, namer):
+        sorted_ = sorted(self.print_qnp_precondition_atom(f, v, namer) for f, v in conjunction)
+        return "{} {}".format(len(sorted_), " ".join(sorted_))
+
     def compute_qnp(self, states, actions, features, config, data):
         logging.info("Writing QNP abstraction to {}".format(config.qnp_abstraction_filename))
         namer = lambda x: config.feature_namer(x).replace(" ", "")  # let's make sure no spaces in feature names
 
         init, goal = self.compute_init_goals(data, features)
 
-        init = next(iter(init))  # TODO ATM we just pick the first initial state, without minimization
-
         if len(goal) > 1:
-            raise RuntimeError("Goal could not be reduced to simple conjunction!!!")
-        goal = next(iter(goal))  # TODO ATM we just pick the first goal state, without minimization
+            logging.warning("Cannot minimize abstract goal DNF with {} clauses to single conjunction".format(len(goal)))
+            _ = [print("\t" + self.print_qnp_conjunction(x, namer)) for x in goal]
+
+        if len(init) > 1:
+            logging.warning("Cannot minimize abstract initial state DNF with {} clauses to single conjunction".format(len(init)))
+            _ = [print("\t" + self.print_qnp_conjunction(x, namer)) for x in init]
+
+        # TODO Just pick an arbitrary clause from the DNF. Should do better!
+        init = next(iter(init))
+        goal = next(iter(goal))
 
         with open(config.qnp_abstraction_filename, "w") as f:
             print(config.domain_dir, file=f)
@@ -594,18 +604,16 @@ class ModelTranslator(object):
             feat_line = "{} {}".format(len(features), name_types)
             print(feat_line, file=f)
 
-            init_conds = [self.print_qnp_precondition_atom(f, v, namer) for f, v in init]
-            goal_conds = [self.print_qnp_precondition_atom(f, v, namer) for f, v in goal]
-            print("{} {}".format(len(init_conds), " ".join(init_conds)), file=f)
-            print("{} {}".format(len(goal_conds), " ".join(goal_conds)), file=f)
+            print(self.print_qnp_conjunction(init, namer), file=f)
+            print(self.print_qnp_conjunction(goal, namer), file=f)
 
             # Actions
             print("{}".format(len(actions)), file=f)
             for i, action in enumerate(actions, 1):
-                precs = sorted(self.print_qnp_precondition_atom(f, v, namer) for f, v in action.preconditions)
-                effs = sorted(eff.print_qnp_named(namer) for eff in action.effects)
                 print("action_{}".format(i), file=f)
-                print("{} {}".format(len(precs), " ".join(precs)), file=f)
+                print(self.print_qnp_conjunction(action.preconditions, namer), file=f)
+
+                effs = sorted(eff.print_qnp_named(namer) for eff in action.effects)
                 print("{} {}".format(len(effs), " ".join(effs)), file=f)
 
     def extract_dnf(self, feature_indexes, states):
