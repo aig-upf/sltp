@@ -307,7 +307,8 @@ class ModelTranslator(object):
         return s, t
 
     def run(self, enforced_feature_idxs):
-
+        # allf = list(range(0, len(self.feature_names)))  # i.e. select all features
+        # self.find_inconsistency(allf)
         self.create_variables()
 
         print("Generating D1 + bridge constraints from {} D1 variables".format(len(self.var_d1)), flush=True)
@@ -422,6 +423,15 @@ class ModelTranslator(object):
         assert qchange in (-1, 1, 2)
         return {-1: FeatureValueChange.DEC, 1: FeatureValueChange.INC, 2: FeatureValueChange.INC_OR_NIL}[qchange]
 
+    def compute_state_abstractions(self, features):
+        abstract_states = set()
+        state_abstraction = dict()
+        for state in self.state_ids:
+            abstract = self.compute_abstract_state(features, state)
+            abstract_states.add(abstract)
+            state_abstraction[state] = abstract
+        return abstract_states, state_abstraction
+
     def decode_solution(self, assignment, features, namer):
         varmapping = self.writer.mapping
         true_variables = set(varmapping[idx] for idx, value in assignment.items() if value is True)
@@ -447,12 +457,7 @@ class ModelTranslator(object):
 
         # selected_features = [f for f in selected_features if str(f) == "bool[And(clear,{a})]"]
 
-        abstract_states = set()
-        state_abstraction = dict()
-        for state in self.state_ids:
-            sprime = self.compute_abstract_state(selected_features, state)
-            abstract_states.add(sprime)
-            state_abstraction[state] = sprime
+        abstract_states, state_abstraction = self.compute_state_abstractions(selected_features)
 
         abstract_actions = set()
         already_computed = set()
@@ -534,11 +539,6 @@ class ModelTranslator(object):
         raise RuntimeError("Unknown optimization policy")
 
     def compute_abstract_state(self, features, state_id):
-        # state_values = []
-        # for f in features:
-        #     x = self.model.compute_feature_value(f, state_id)
-        #     state_values.append(x)
-
         bin_values = self.bin_feat_matrix[state_id, features]
         return tuple(map(bool, bin_values))
 
@@ -547,7 +547,7 @@ class ModelTranslator(object):
         self.print_actions(actions, os.path.join(config.experiment_dir, 'actions.txt'), config.feature_namer)
         states, actions = optimize_abstract_action_model(states, actions)
         opt_filename = os.path.join(config.experiment_dir, 'optimized.txt')
-        logging.info("Optimized action model saved in {}".format(opt_filename))
+        logging.info("Minimized action model with {} actions saved in {}".format(len(actions), opt_filename))
         self.print_actions(actions, opt_filename, config.feature_namer)
         return states, actions, selected_features
 
@@ -583,19 +583,23 @@ class ModelTranslator(object):
         logging.info("Writing QNP abstraction to {}".format(config.qnp_abstraction_filename))
         namer = lambda x: config.feature_namer(x).replace(" ", "")  # let's make sure no spaces in feature names
 
-        init, goal = self.compute_init_goals(data, features)
-
-        if len(goal) > 1:
-            logging.warning("Cannot minimize abstract goal DNF with {} clauses to single conjunction".format(len(goal)))
-            _ = [print("\t" + self.print_qnp_conjunction(x, namer)) for x in goal]
-
-        if len(init) > 1:
-            logging.warning("Cannot minimize abstract initial state DNF with {} clauses to single conjunction".format(len(init)))
-            _ = [print("\t" + self.print_qnp_conjunction(x, namer)) for x in init]
+        init_dnf, goal_dnf = self.compute_init_goals(data, features)
 
         # TODO Just pick an arbitrary clause from the DNF. Should do better!
-        init = next(iter(init))
-        goal = next(iter(goal))
+        init = next(iter(init_dnf))
+        goal = next(iter(goal_dnf))
+
+        if len(goal_dnf) > 1:
+            logging.warning("Cannot minimize abstract goal DNF to single conjunction:")
+            _ = [print("\t" + self.print_qnp_conjunction(x, namer)) for x in goal_dnf]
+        else:
+            logging.info("Abstract goal is: {}".format(self.print_qnp_conjunction(goal, namer)))
+
+        if len(init_dnf) > 1:
+            logging.warning("Cannot minimize abstract initial state DNF to single conjunction:")
+            _ = [print("\t" + self.print_qnp_conjunction(x, namer)) for x in init_dnf]
+
+
 
         with open(config.qnp_abstraction_filename, "w") as f:
             print(config.domain_dir, file=f)
@@ -632,6 +636,42 @@ class ModelTranslator(object):
 
     def minimize_dnf(self, dnf):
         return merge_precondition_sets(dnf)
+
+    def find_inconsistency(self, features):
+        abstract_states, abstraction = self.compute_state_abstractions(features)
+
+        abstract2concrete = defaultdict(set)
+        for s in self.optimal_and_nonoptimal:
+            abstract2concrete[abstraction[s]].add(s)
+
+        for s, sprime in self.iterate_over_optimal_transitions():
+            abstract_s = abstraction[s]
+            qs = self.retrieve_possibly_cached_qchanges(s, sprime)
+
+            same_abstraction = [x for x in abstract2concrete[abstract_s] if x != s]
+
+            for t in same_abstraction:
+                if not self.transitions[t]:  # i.e. state was not expanded
+                    continue
+
+                equal_qchanges_found = False
+                all_qts = []
+                for tprime in self.transitions[t]:
+                    qt = self.retrieve_possibly_cached_qchanges(t, tprime)
+                    all_qts.append((tprime, qt))
+                    if np.array_equal(qs, qt):
+                        equal_qchanges_found = True
+                        break
+                if not equal_qchanges_found:
+                    named_qs = list(zip(self.feature_names, qs))
+                    logging.error("Unsoundness! No correspondence between qual. changes in transition {} "
+                                  "and qual. changes of any transition starting at state {}".format((s, sprime), t))
+                    logging.error("Q. changes for transition {}:".format((s, sprime)))
+                    logging.error("\t{}".format(named_qs))
+                    logging.error("Q. changes for all transitions starting at {}:".format(t))
+                    for tprime, qt in all_qts:
+                        named_qt = list(zip(self.feature_names, qt))
+                        logging.error("\t{}: {}".format((t, tprime), named_qt))
 
 
 class Variable(object):
@@ -835,18 +875,17 @@ def merge_precondition_sets(action_precs):
 
 
 def optimize_abstract_action_model(states, actions):
-    logging.info("Optimizing abstract action model with {} abstract actions".format(len(actions)))
     actions_grouped_by_effects = defaultdict(set)
     for a in actions:
         actions_grouped_by_effects[a.effects].add(a.preconditions)
-    logging.info("There are {} effect groups".format(len(actions_grouped_by_effects)))
+    logging.info("Optimizing abstract action model with {} actions and {} effect groups".
+                 format(len(actions), len(actions_grouped_by_effects)))
 
     merged = []
     for effs, action_precs in actions_grouped_by_effects.items():
         for prec in merge_precondition_sets(action_precs):
             merged.append(AbstractAction(prec, effs))
 
-    logging.info("Optimized abstract action model has {} actions".format(len(merged)))
     return states, merged
 
 

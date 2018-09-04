@@ -163,6 +163,40 @@ def ijcai_paper_bw_feature_namer(feature):
     }.get(s, s)
 
 
+def features_clear_x(lang):
+    obj_t = lang.Object
+    x_nominal = NominalConcept("a", obj_t)
+    y_nominal = NominalConcept("b", obj_t)
+    holding_p = lang.get_predicate("holding")
+    on_p = lang.get_predicate("on")
+    on_r = PrimitiveRole(on_p)
+    on_star = StarRole(on_r)
+
+    holding = PrimitiveConcept(holding_p)
+    x_held = AndConcept(x_nominal, holding, "object")  # H: Block x is being held
+    y_held = AndConcept(y_nominal, holding, "object")
+
+    other_block = AndConcept(NotConcept(x_nominal, obj_t), NotConcept(y_nominal, obj_t), "object")
+    other_block_held = AndConcept(other_block, holding, "object")
+
+    blocks_above_x = ExistsConcept(on_star, x_nominal)
+    blocks_above_y = ExistsConcept(on_star, y_nominal)
+
+    on_x_y = AndConcept(ExistsConcept(on_r, y_nominal), x_nominal, "object")
+    on_y_x = AndConcept(ExistsConcept(on_r, x_nominal), y_nominal, "object")
+
+    return [
+        ConceptCardinalityFeature(on_x_y),
+        # ConceptCardinalityFeature(on_y_x),
+        ConceptCardinalityFeature(blocks_above_x),
+        ConceptCardinalityFeature(blocks_above_y),
+        ConceptCardinalityFeature(x_held),
+        # ConceptCardinalityFeature(y_held),
+        # ConceptCardinalityFeature(other_block_held),
+        ConceptCardinalityFeature(holding)
+    ]
+
+
 def add_bw_domain_parameters(language):
     # We simply add block "a" as a domain constant
     return [language.constant("a", "object")]

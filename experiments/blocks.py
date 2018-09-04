@@ -4,7 +4,8 @@ import sys
 
 from abstractions_defaults import generate_experiment
 from common import build_ijcai_paper_bw_concepts, add_bw_domain_parameters, ijcai_paper_bw_feature_namer, \
-    add_bw_domain_parameters_2, build_on_x_y_feature_set, generate_features_n_ab, update_dict, get_on_x_y_feature
+    add_bw_domain_parameters_2, build_on_x_y_feature_set, generate_features_n_ab, update_dict, get_on_x_y_feature, \
+    features_clear_x
 
 
 def experiment(experiment_name=None):
@@ -68,7 +69,7 @@ def experiment(experiment_name=None):
                                           )
 
     aaai_clear_x_no_marking_2 = update_dict(aaai_clear_x_no_marking,
-                                            instances=["instance_5_clear_x_1.pddl","instance_5_clear_x_2.pddl",],
+                                            instances=["instance_5_clear_x_1.pddl"],#,"instance_5_clear_x_2.pddl",],
                                             num_states=2000, max_width=[2],
                                             num_sampled_states=100,
                                             )
@@ -104,17 +105,26 @@ def experiment(experiment_name=None):
         feature_namer=ijcai_paper_bw_feature_namer,)
 
     aaai_bw_on_x_y_completeness_opt = update_dict({},
-                                             instances=[#"inst_on_x_y_10.pddl",
-                                                        "inst_on_x_y_11.pddl", "inst_on_x_y_12.pddl", "inst_on_x_y_13.pddl"],
-                                             num_states=2000, max_width=[-1, -1, 2],
-                                             num_sampled_states=40,
-                                             complete_only_wrt_optimal=True,
-                                             sampling="all",
-                                             # enforce_features=get_on_x_y_feature
-                                             max_concept_size=10, max_concept_grammar_iterations=3,
-                                             concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
-                                             feature_namer=ijcai_paper_bw_feature_namer,
-                                             )
+                                                  instances=[
+                                                      # "inst_on_x_y_10.pddl",
+                                                      # "inst_on_x_y_11.pddl",
+                                                      # "inst_on_x_y_12.pddl",
+                                                      # "inst_on_x_y_13.pddl",
+
+                                                      # "inst_on_x_y_15.pddl",
+                                                      "inst_on_x_y_16.pddl",
+                                                      "inst_on_x_y_14.pddl",
+                                                  ],
+                                                  num_states=2000, max_width=[-1],
+                                                  num_sampled_states=51,
+                                                  complete_only_wrt_optimal=True,
+                                                  sampling="all",
+                                                  # enforce_features=get_on_x_y_feature,
+                                                  # feature_generator=features_clear_x,
+                                                  max_concept_size=10, max_concept_grammar_iterations=3,
+                                                  concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
+                                                  feature_namer=ijcai_paper_bw_feature_namer,
+                                                  )
 
     bw_on_x_y_dt_iw = dict(
         instances=["on_x_y_dt_1.pddl", "holding_a_b_unclear.pddl"],

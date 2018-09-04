@@ -276,9 +276,27 @@ class SemanticProcessor(object):
         if term is None:
             return False
         trace, extensions = self.generate_extension_trace(term)
+
+        aaa = str(term) == "Exists(Star(on),{b})"
+        bbb = str(term) == "And(Exists(Star(on),{b}), Not(ontable))"
+        aaa = bbb = False
+        if bbb:
+            print("AAARGH")
+        if aaa:
+            print("XXXXXXXXXX")
+
         if not self.cache.register_trace(term, trace):
             # The trace is equivalent to some other trace already seen, we signal so by returning False
+            if bbb:
+                print("AAARGH1")
+            if aaa:
+                print("XXXXXXXXXX1")
             return False
+
+        if aaa:
+            print("XXXXXXXXXX2")
+        if bbb:
+            print("AAARGH2")
 
         singleton_extension_over_all_states = True and term.ARITY == 1
         for sid, ext in extensions:  # We register the compressed individual extensions

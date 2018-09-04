@@ -1,0 +1,38 @@
+blocks
+5 bool[handempty] 0 n(a) 1 n(b) 1 ontable(a) 0 a_on_b_ontable_or_held 0
+5 a_on_b_ontable_or_held 1 bool[handempty] 1 n(a) 1 n(b) 1 ontable(a) 1
+4 a_on_b_ontable_or_held 1 n(a) 0 n(b) 1 ontable(a) 0
+11
+action_1
+5 a_on_b_ontable_or_held 1 bool[handempty] 1 n(a) 0 n(b) 1 ontable(a) 1
+2 bool[handempty] 0 n(b) 0
+action_2
+5 a_on_b_ontable_or_held 0 bool[handempty] 1 n(a) 0 n(b) 1 ontable(a) 0
+2 bool[handempty] 0 n(b) 0
+action_3
+5 a_on_b_ontable_or_held 0 bool[handempty] 1 n(a) 0 n(b) 0 ontable(a) 0
+2 a_on_b_ontable_or_held 1 bool[handempty] 0
+action_4
+5 a_on_b_ontable_or_held 1 bool[handempty] 0 n(a) 0 n(b) 0 ontable(a) 0
+2 bool[handempty] 1 n(b) 1
+action_5
+4 a_on_b_ontable_or_held 1 bool[handempty] 0 n(a) 0 ontable(a) 1
+1 bool[handempty] 1
+action_6
+4 a_on_b_ontable_or_held 0 bool[handempty] 0 n(b) 1 ontable(a) 0
+1 bool[handempty] 1
+action_7
+5 a_on_b_ontable_or_held 1 bool[handempty] 0 n(a) 1 n(b) 1 ontable(a) 1
+1 bool[handempty] 1
+action_8
+5 a_on_b_ontable_or_held 0 bool[handempty] 0 n(a) 0 n(b) 0 ontable(a) 0
+1 bool[handempty] 1
+action_9
+5 a_on_b_ontable_or_held 1 bool[handempty] 1 n(a) 1 n(b) 1 ontable(a) 1
+2 bool[handempty] 0 n(a) 0
+action_10
+5 a_on_b_ontable_or_held 0 bool[handempty] 1 n(a) 1 n(b) 1 ontable(a) 0
+2 bool[handempty] 0 n(a) 0
+action_11
+5 a_on_b_ontable_or_held 1 bool[handempty] 1 n(a) 0 n(b) 0 ontable(a) 1
+2 bool[handempty] 0 ontable(a) 0
