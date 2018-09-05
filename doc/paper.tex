@@ -521,8 +521,8 @@ has a number of atoms that is linear in the size of the feature pool $\cal F$,
 and quadratic in the number of expanded  states $s$  and transitions $(s,s')$ in ${\cal S}$.
 The resulting number of clauses is ....  , which can be roughly cut in half by  symmetry considerations.
 
-In the experiments we will   consider also  a smaller theory  that avoids the consideration of all pairs
-of expanded states or all pairs of transitions in $\cal S$]. For this, some expanded states $s$ and transitions $(s,s')$ in
+In the experiments we will consider also a smaller theory  that avoids the consideration of all pairs
+of expanded states or all pairs of transitions in $\cal S$. For this, some expanded states $s$ and transitions $(s,s')$ in
 tuples $(s,s',P)$ are marked as \emph{goal relevant}. This is achieved by computing some plans for some instances $P$ in $\Q$, 
 and by adding the resulting state transitions to ${\cal S}$ at the same time that the first
 arguments $s$ and $(s,s')$ in the  $D_1$ and $D_2$ atoms are restricted to be marked.
@@ -719,10 +719,14 @@ In the \emph{random} sampling strategy, a large number $M$ of states are generat
 and then a certain number $m <\!< M$ of them is sampled uniformly at random. If no goal state is found among those $m$,
 one random goal state from the larger set is drawn at random and added into the sample.
 
-The feature complexity bound $k$ in the feature pool $\mathcal{F}$ is set to a value of $k=10$, unless no solution is found
-to the theory $T({\cal S},{\cal F})$, in which case it is increased to $k=20$. 
+The feature complexity bound $k$ in the feature pool $\mathcal{F}$ is set to a value of $k=8$.
+In our experiments, we increased this value to $k=16$ if no model was found
+for the logical theories $T$ and $T_G$, and although it would be more effective
+to devise an adaptive strategy to do so incrementally or through binary search,
+that is beyond the scope of this work.
+% theory $T({\cal S},{\cal F})$, in which case it is increased to $k=20$. 
 % We have considered strategies to increase the bound adaptively
-The resulting theory $T({\cal S},{\cal F})$ is solved with the Open-WBO MAXSAT solver \cite{martins2014open}.
+The resulting theories are then solved with the Open-WBO MAXSAT solver \cite{martins2014open}.
 
 ** Details on the FOND planner, QNP translation, etc. **
 
@@ -742,10 +746,8 @@ a few (always less than xxxx) instances $P$. ??
 \centering
 % \addtolength{\tabcolsep}{-1pt}
 {
-% \scriptsize
-% \footnotesize
+% \def\arraystretch{1}%  1 is the default
 \small
-\def\arraystretch{1}%  1 is the default
 
 \newcommand{\rowspacing[1]}{&&&&&&&&&&&&&&&\\[\dimexpr-\normalbaselineskip+2pt]}
 
@@ -792,7 +794,8 @@ a few (always less than xxxx) instances $P$. ??
 
 \rowspacing \hline \rowspacing
 \multirow{1}{*}{$\Q_{on\text{-}2\text{-}tow}$}   
-& 3 &        420  & 8 & 657 & -K & -K & 18.3K &     3.3M    &  0.02&  5 & 7   &  - & - & - & - \\% Total complexity of F: 18
+& 3 &        420  & 8 & 657 & 128K & 25.8M & 18.3K &     3.3M    &  0.02&  5 & 7   &  - & - & - & - \\% Total complexity of F: 18
+% Max-sat problem has 128217 variables and 25825428 unique clauses (with repetitions: 25825428). Top weight is 4577
 
 
 \rowspacing \hline \rowspacing
@@ -836,10 +839,15 @@ Table~\ref{tab:exp-result-data} summarizes the relevant data for each of the tes
 The generalized problem $\Q_{clear}$ aims at achieving the goal $clear(x)$ for any block $x$
 in the Blocks world. 
 We take the standard encoding with primitive predicates $on(a, b)$, $clear(b)$, $ontable(b)$, $holding(b)$ and $handempty$.
+%
+With one single instance $\Q_{clear}$ with 5 blocks, we are able to learn
+an abstract action model which features two actions:
 
+- \emph{pick-above-$x$}: \tuple{\neg X, \neg H, n(x) > 0; n(x) \downarrow},
 
-The abstract action model features one action \emph{pick-above-$x$} to pick the topmost block above $x$,
-and one action \emph{place-aside} to put it away, both described in terms of features $H$, $X$ and $n(x)$, 
+- \emph{place-aside}: \tuple{\neg X, H; \neg H},
+
+\noindent both described in terms of features $H: \abs{holding}$, $X: \abs{holding \sqcap \set{x}}$ and $n(x)\equiv \abs{\exists on^* . \set{x}}$, 
 that denote, respectively, whether any block is being held, whether block $x$ is being held,
 and the number of blocks above $x$.\footnote{
 Action and features names are assigned manually by us to increase readability, but correspond faithfully
@@ -868,19 +876,87 @@ which provably \emph{achieves the goal from any configuration of blocks, for any
 
 \paragraph{Stacking two blocks from different towers.}
 The problem $\Q_{on\text{-}2\text{-}tow}$ is aims at achieving a goal of the form $on(x,y)$
-in the Blocks world for any two blocks $x$ that are initially not in the same tower.
-We take the same encoding as above.
+in the Blocks world for any two blocks $x$ and $y$ that are initially not in the same tower.
+We take the same encoding as above. Based on 3 different instances with up to 14
+blocks, we are able to learn an abstract action model with 5 features and 7 actions.
+The set of features is made up of  $X$, $n(x)$ and $n(y)$, with the same syntax and semantics as given before,
+as well as $E: handempty$
+and $XY: [(\exists on^{-1} . \set{x})\sqcap \set{b}]$,
+the second of which precisely denotes that block $x$ is on block $y$.
+The set of actions includes actions to pick up the topmost block above $x$, to pick up the topmost block above $y$,
+to put a block being held \emph{aside}, i.e. not above $x$ nor above $y$, to pick $x$, 
+to place $x$ on $y$ and to place $x$ on the table. This last action will indeed be necessary in case block $x$ is initially being held
+but block $y$ is not clear.
 
-
-
+DISCUSS POLICY WHEN AVAILABLE. / 
+DISCUSS WHY WOULDN'T WORK WHEN IN SAME TOWER.
 
 
 \paragraph{Gripper.}
-The problem $\Q_{gripper}$ is based on the classical Gripper problem, where a robot with two arms needs to 
-move a number of blocks between two different rooms, each arm being able to carry only one ball at a time.
+The problem $\Q_{gripper}$ is based on the classical Gripper problem, where a robot with two grippers needs to 
+move a number of blocks from one room into another \emph{target} room $x$, which we take to be a parameter of the problem,
+each gripper of the robot being able to carry only one ball at a time.
 We use the standard encoding with primitive predicates $at\text{-}robby(l)$, $at\text{-}ball(b, l)$, $free(g)$, $carry(b, g)$ that denote,
 respectively, whether the robot (the ball) is at location $l$, whether gripper $g$ is free, and whether gripper $g$ carries ball $b$,
-plus type unary predicates $room$, $ball$, and $gripper$.
+plus unary type predicates $room$, $ball$, and $gripper$.
+%
+We feed our pipeline with 2 training instances of the problem with only 2 rooms and at most 4 balls.
+The resulting abstract action model is based on the following features:
+
+- $C: \exists carry . \top$ (number of balls carried by the robot), 
+
+- $X: at\_robby \sqcap \set{x}$ (whether robot in target room),
+
+- $G: \abs{free}$ (number of empty grippers), and
+
+- $B: \exists at . \neg \set{x}$ (number of balls not in target room),
+
+
+\noindent and contains the following actions :
+
+- \emph{leave-ball(s)-at-$x$}: \tuple{C>0, X;  C\downarrow, G \uparrow}
+
+- \emph{move-to-$x$-half-loaded}: \tuple{\neg X, B=0, C>0, G>0;   X}
+
+- \emph{move-to-$x$-fully-loaded}: \tuple{\neg X, C>0, G=0;   X}
+
+- \emph{pick-ball-not-in-$x$}: \tuple{\neg X, B > 0, G > 0;   B \downarrow, G \downarrow, C\uparrow}
+
+- \emph{leave-$x$}: \tuple{X, C=0, G > 0;   \neg X}
+
+
+The model is not complete, as it e.g. features no action to pick a ball from room $x$,
+but is goal-oriented as a result of using the SAT theory $T_G$, in that it features all of the actions
+necessary to achieve the goal.
+This can be seen e.g. in the fact that the action to move \emph{move-to-$x$-half-loaded}
+can only be performed when no more balls remain in the other room.
+Additionally, the model is \emph{provably correct for any gripper instance with an arbitrary number of balls, 
+rooms and grippers}. CHECK !!
+
+The policy that results ... (!!??)
+
+
+
+% Action 1:
+%         PRE: ncarried > 0, robot-at-B
+%         EFFS: DEC ncarried, INC nfree-grippers
+% 
+% Action 2:
+%         PRE: NOT robot-at-B, nballs-A = 0, ncarried > 0, nfree-grippers > 0
+%         EFFS: robot-at-B
+% 
+% Action 3:
+%         PRE: NOT robot-at-B, ncarried > 0, nfree-grippers = 0
+%         EFFS: robot-at-B
+% 
+% Action 4:
+%         PRE: NOT robot-at-B, nballs-A > 0, nfree-grippers > 0
+%         EFFS: DEC nballs-A, DEC nfree-grippers, INC ncarried
+% 
+% Action 5:
+%         PRE: ncarried = 0, nfree-grippers > 0, robot-at-B
+%         EFFS: NOT robot-at-B
+
 
 
 
@@ -890,12 +966,46 @@ rewards that are spread out in certain grid cells, while avoiding other cells wh
 The encoding has primitive predicates $reward(c)$, $at(c)$, $blocked(c)$ and $adjacent(c_1, c_2)$ that denote
 respectively the position of the rewards, of the agent, of the blocked cells, and the grid topology.
 We use two single instances of the problem with size $5 \times 5$ and $4 \times 4$ and different distributions of blocks and rewards.
+We learn a set with 2 features:
+
+- $R: \abs{reward}$ (number of remaining rewards), and
+
+- $D: dist(at, adjacent:(\neg blocked), reward)$ (distance from current cell to closest cell with reward, traversing adjacent, unblocked cells only).
+
+\noindent The action model has also 2 actions:
+
+- \emph{pick-reward}: \tuple{D=0, R > 0;  R \downarrow, D \uparrow}
+
+- \emph{move-towards-closest-reward}: \tuple{R>0, D>0; D \downarrow}
+
+The model is not complete ... 
+...
+
+The policy ... 
+... EXPAND A BIT - TOO TIRED NOW.
+Discuss suboptimality of the policy.
+Perhaps discuss D=$\infty$ when no reward?
+
+% Action 1 [PICK-REWARD]:
+% 	PRE: min-dist[at, Restrict(adjacent,Not(blocked)), reward] = 0, num-rewards > 0
+% 	EFFS: DEC num-rewards, INC min-dist[at, Restrict(adjacent,Not(blocked)), reward]
+% 
+% Action 2 [MOVE-TO-CLOSEST-REWARD]:
+% 	PRE: min-dist[at, Restrict(adjacent,Not(blocked)), reward] > 0, num-rewards > 0
+% 	EFFS: DEC min-dist[at, Restrict(adjacent,Not(blocked)), reward]
 
 
 
+\paragraph{Summary.}
+XXX Perhaps mention general aspects of the results here, if space allows, e.g.:
+\begin{itemize}
+ \item Running times of the SAT solver are negligible.
+ \item Minimization of precondition DNFs
+ \item Theory T
+ \item Sample sparsity - we use very few instances, rather few transitions.
+ \item ** Mention: symbold DRL paper by Shanahan in 
+\end{itemize}
 
-
-** Mention: symbold DRL paper by Shanahan in 
 
 \section{Discussion}
 
