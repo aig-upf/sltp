@@ -716,14 +716,16 @@ an optimal plan for $P$ is computed and all of the states along the plan are inc
 as we need at least one goal state in the sample set.
 %
 In the \emph{random} sampling strategy, a large number $M$ of states are generated, potentially exhausting the full state space,
-and then a certain number $m <\!< M$ of them is sampled uniformly at random. If no goal state is found among those $m$,
+and then a certain number $m \ll M$ of them is sampled uniformly at random. If no goal state is found among those $m$,
 one random goal state from the larger set is drawn at random and added into the sample.
 
-The feature complexity bound $k$ in the feature pool $\mathcal{F}$ is set to a value of $k=8$.
-In our experiments, we increased this value to $k=16$ if no model was found
-for the logical theories $T$ and $T_G$, and although it would be more effective
-to devise an adaptive strategy to do so incrementally or through binary search,
-that is beyond the scope of this work.
+The complexity bound $k$ in the feature pool $\mathcal{F} = \mathcal{F}^k$ is set to a value of $k=8$,
+with just one difference in the concept generation process: distance features are only generated for the last example,
+meant to illustrate their usefulness.
+% In our experiments, we increased this value to $k=16$ if no model was found
+% for the logical theories $T$ and $T_G$, and although it would be more effective
+% to devise an adaptive strategy to do so incrementally or through binary search,
+% that is beyond the scope of this work.
 % theory $T({\cal S},{\cal F})$, in which case it is increased to $k=20$. 
 % We have considered strategies to increase the bound adaptively
 The resulting theories are then solved with the Open-WBO MAXSAT solver \cite{martins2014open}.
@@ -733,8 +735,23 @@ The resulting theories are then solved with the Open-WBO MAXSAT solver \cite{mar
 The whole computational pipeline made up of steps 1--6 is processed on Intel Xeon E5-2660 CPUs,
 with time and memory cutoffs of 1h and 32GB.
 
-The number of instances $P$ is never larger than $3$, and they are selected XXX THIS NEEDS TO BE WELL JUSTIFIED...
+The number of instances $P$ used to generate the samples was kept small 
+by choosing the instances $P$ manually, like a teacher. 
+Very few instances turn out to be required for generating general plans.
+The learning scheme is not supervised, as the training set are state 
+transitions, not state action pairs to be generalized; but is not fully unsupervised either as currently 
+implemented, with the instances $P$ from $\Q$ selected by hand.
+We do not expect the results to be different if such instances
+were to be sampled at random, but the number of instances required for 
+producing sound abstract actions and valid general plans, as well as the size of the 
+theories, would likely be higher.
 
+All the results below are with goal marking using the theory $T_G({\cal S},{\cal F})$ that is
+smaller than $T({\cal S,F})$ and produces smaller abstract action sets  $A_F$, which are forced
+to be sound relative to the sample $\mathcal{S}$ but not complete, thus 
+avoiding abstract actions that may make  planning harder and but are not relevant to the goal.
+In general, the theory $T({\cal S},{\cal F})$ results in a significantly larger number of atoms and clauses,
+as seen in \ref{tab:exp-result-data}, which makes the MAXSAT solving process much harder.
 
 
 The goal marking scheme that  yields the smaller  theory $T_G({\cal S},{\cal F})$ is obtained an optimal plan over
@@ -793,7 +810,7 @@ a few (always less than xxxx) instances $P$. ??
 
 
 \rowspacing \hline \rowspacing
-\multirow{1}{*}{$\Q_{on\text{-}2\text{-}tow}$}   
+\multirow{1}{*}{$\Q_{on}$}   
 & 3 &        420  & 8 & 657 & 128K & 25.8M & 18.3K &     3.3M    &  0.02&  5 & 7   &  - & - & - & - \\% Total complexity of F: 18
 % Max-sat problem has 128217 variables and 25825428 unique clauses (with repetitions: 25825428). Top weight is 4577
 
@@ -838,7 +855,7 @@ Table~\ref{tab:exp-result-data} summarizes the relevant data for each of the tes
 \paragraph{Clearing a block.}
 The generalized problem $\Q_{clear}$ aims at achieving the goal $clear(x)$ for any block $x$
 in the Blocks world. 
-We take the standard encoding with primitive predicates $on(a, b)$, $clear(b)$, $ontable(b)$, $holding(b)$ and $handempty$.
+We take the standard STRIPS representation with primitive predicates $on(a, b)$, $clear(b)$, $ontable(b)$, $holding(b)$ and $handempty$.
 %
 With one single instance $\Q_{clear}$ with 5 blocks, we are able to learn
 an abstract action model which features two actions:
@@ -875,17 +892,24 @@ which provably \emph{achieves the goal from any configuration of blocks, for any
 % 
 
 \paragraph{Stacking two blocks from different towers.}
-The problem $\Q_{on\text{-}2\text{-}tow}$ is aims at achieving a goal of the form $on(x,y)$
+The problem $\Q_{on}$ is aims at achieving a goal of the form $on(x,y)$
 in the Blocks world for any two blocks $x$ and $y$ that are initially not in the same tower.
-We take the same encoding as above. Based on 3 different instances with up to 14
+We take the same STRIPS representation as above. Based on 3 different instances with up to 14
 blocks, we are able to learn an abstract action model with 5 features and 7 actions.
 The set of features is made up of  $X$, $n(x)$ and $n(y)$, with the same syntax and semantics as given before,
 as well as $E: handempty$
 and $XY: [(\exists on^{-1} . \set{x})\sqcap \set{b}]$,
 the second of which precisely denotes that block $x$ is on block $y$.
+
 The set of actions includes actions to pick up the topmost block above $x$, to pick up the topmost block above $y$,
 to put a block being held \emph{aside}, i.e. not above $x$ nor above $y$, to pick $x$, 
-to place $x$ on $y$ and to place $x$ on the table. This last action will indeed be necessary in case block $x$ is initially being held
+to place $x$ on $y$ and to place $x$ on the table. 
+
+- \emph{pick-up-above-$x$}: 
+
+- \emph{pick-up-above-$y$}: 
+
+This last action will indeed be necessary in case block $x$ is initially being held
 but block $y$ is not clear.
 
 DISCUSS POLICY WHEN AVAILABLE. / 
@@ -896,7 +920,7 @@ DISCUSS WHY WOULDN'T WORK WHEN IN SAME TOWER.
 The problem $\Q_{gripper}$ is based on the classical Gripper problem, where a robot with two grippers needs to 
 move a number of blocks from one room into another \emph{target} room $x$, which we take to be a parameter of the problem,
 each gripper of the robot being able to carry only one ball at a time.
-We use the standard encoding with primitive predicates $at\text{-}robby(l)$, $at\text{-}ball(b, l)$, $free(g)$, $carry(b, g)$ that denote,
+We use the standard STRIPS representation with primitive predicates $at\text{-}robby(l)$, $at\text{-}ball(b, l)$, $free(g)$, $carry(b, g)$ that denote,
 respectively, whether the robot (the ball) is at location $l$, whether gripper $g$ is free, and whether gripper $g$ carries ball $b$,
 plus unary type predicates $room$, $ball$, and $gripper$.
 %
@@ -914,7 +938,7 @@ The resulting abstract action model is based on the following features:
 
 \noindent and contains the following actions :
 
-- \emph{leave-ball(s)-at-$x$}: \tuple{C>0, X;  C\downarrow, G \uparrow}
+- \emph{drop-ball(s)-at-$x$}: \tuple{C>0, X;  C\downarrow, G \uparrow}
 
 - \emph{move-to-$x$-half-loaded}: \tuple{\neg X, B=0, C>0, G>0;   X}
 
@@ -922,7 +946,7 @@ The resulting abstract action model is based on the following features:
 
 - \emph{pick-ball-not-in-$x$}: \tuple{\neg X, B > 0, G > 0;   B \downarrow, G \downarrow, C\uparrow}
 
-- \emph{leave-$x$}: \tuple{X, C=0, G > 0;   \neg X}
+- \emph{drop-$x$}: \tuple{X, C=0, G > 0;   \neg X}
 
 
 The model is not complete, as it e.g. features no action to pick a ball from room $x$,
@@ -963,7 +987,11 @@ The policy that results ... (!!??)
 \paragraph{Collecting rewards in a maze.}
 The objective in the problem $\Q_{reward}$ is to move in an $n \times m$ grid to pick up certain
 rewards that are spread out in certain grid cells, while avoiding other cells which are considered as \emph{blocked}.
-The encoding has primitive predicates $reward(c)$, $at(c)$, $blocked(c)$ and $adjacent(c_1, c_2)$ that denote
+This example is from recent work in symbolic deep
+reinforcement learning, where there is a penalty associated for 
+stepping in blocked cells instead \cite{garnelo2016towards}.
+%
+We represent the instances $P$ with primitive predicates $reward(c)$, $at(c)$, $blocked(c)$ and $adjacent(c_1, c_2)$ that denote
 respectively the position of the rewards, of the agent, of the blocked cells, and the grid topology.
 We use two single instances of the problem with size $5 \times 5$ and $4 \times 4$ and different distributions of blocks and rewards.
 We learn a set with 2 features:
@@ -996,15 +1024,70 @@ Perhaps discuss D=$\infty$ when no reward?
 
 
 
-\paragraph{Summary.}
-XXX Perhaps mention general aspects of the results here, if space allows, e.g.:
-\begin{itemize}
- \item Running times of the SAT solver are negligible.
- \item Minimization of precondition DNFs
- \item Theory T
- \item Sample sparsity - we use very few instances, rather few transitions.
- \item ** Mention: symbold DRL paper by Shanahan in 
-\end{itemize}
+\paragraph{Observations.}
+We conclude the section with a few general observations:
+
+\begin{enumerate}
+\item
+\emph{Soundness}: interestingly, abstract actions obtained from a small number of samples in
+$\mathcal{S}$ turn out to be sound not just for $\mathcal{S}$ but for the generalized problem $\Q$,
+as discussed above. Yet this does not need to be true for the resulting policies to be 
+correct for $\Q$.
+%
+Abstract actions $A_F$ do not actually have to be sound for a policy $\pi$
+obtained from them to be sound in $\Q$.
+Indeed, for the correctness of $\pi$ for solving $\Q$,
+it suffices for $A_F$ to be sound \emph{over the states reachable by $\pi$}
+in all the instances $P$ of $\Q$.
+
+For example, the abstract action \emph{pick-up-above-$y$} in $\Q_{on}$
+is sound relative to the sample set $\mathcal{S}$ used, but not relative to the general
+$\Q_{on}$. In any state $s$ where $x$ is a few blocks above $y$ and clear,
+there is no concrete action that instantiates \emph{pick-up-above-$y$},
+as picking up the topmost block above $y$ would necessarily make feature $X \equiv holding(x)$
+true, which the abstract action does not.
+%
+Keeping track of the information necessary to ensure general correctness would require indeed 
+a feature set $F$ with higher complexity.
+Yet if we start in states where $x$ and $y$ are in different towers, 
+states as $s$ will never be reached, and hence the policy is correct and solves $\Q_{on}$.
+
+
+\item
+\emph{Grammar and Feature Pool}: the general DL grammar we have described appears to be 
+adequate to generate a sufficiently expressive pool of features for the examples we use,
+but this does not have to be always so.
+To come up with a general strategy in the Towers of Hanoi, for example,
+the first action to be taken  (whether to move the smallest disk to target or buffer peg) 
+depends on the number of disks being odd or even,
+which cannot be easily expressed with the type of features generated by our grammar.
+
+\item
+\emph{Expressive and Computational Limitations}:
+The current approach 
+
+*** XXX ***
+
+The use of primitive \emph{goal predicates} like $on_g$ with denotation
+given by the goal conjunctions in the concrete instances, as done in 
+\cite{martin-geffner:generalized}, could potentially alleviate this
+e.g. to be able to generate general policies for all BW problems.
+
+
+Why pipeline cannot be used to solve arbitrary problems. Eg, logistics.
+Que partes explotan? Sizes k and $\abs{\mathcal{S}}$? 
+
+* Goal in $\Q$ needs to be expressible in generic terms (but this is not well formalized in our formulation)
+* Increasing number of domain parameters kills scalability.
+* How to select which are the good parameters if we want arbitrary goals? This is also related to the proper formalization
+  of the approach, which we havent done. 
+  
+
+
+%  \item Running times of the SAT solver are negligible.
+%  \item Minimization of precondition DNFs
+%  \item Theory T
+\end{enumerate}
 
 
 \section{Discussion}
