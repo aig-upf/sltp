@@ -190,6 +190,10 @@ def compute_feature_extensions(states, features, concept_extensions):
                  "{} states and {} features ({:0.1f}K matrix entries)".format(ns, nf, nf*ns/1000))
     accepted = []
     traces = dict()
+
+    # Sort feature by increasing complexity, so that we prune more complex ones in favor of less complex ones
+    features = sorted(features, key=lambda feat: feat.complexity())
+
     for f in features:
         all_equal, all_0_or_1 = True, True
         previous = None
