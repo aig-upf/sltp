@@ -125,6 +125,7 @@
 % Examples
 \newcommand{\Example}{\medskip\noindent\textbf{Example.}\xspace}
 
+\renewcommand\labelitemi{\raisebox{0.4ex}{\tiny$\bullet$}} %% Decrease size of items in enumerate and raise them to center them vertically
 
 %PDF Info Is Required (no accents, etc.!):
 \pdfinfo{
@@ -169,7 +170,7 @@ Generalized planning studies the computation of plans for  solving  multiple  in
 \cite{srivastava08learning,bonet09automatic,srivastava:generalized,hu:generalized,BelleL16,anders:generalized}.
 For example, the plan  that iteratively  picks  a  clear block above $x$ 
 and places it  on the table, achieves the goal $clear(x)$
-in \emph{any} instance of the blocks world where the gripper is initially empty.
+in \emph{any} instance of the Blocksworld where the gripper is initially empty.
 Once this  general plan or  policy is derived it can be  applied to solve an infinite collection
 of instances that involve different initial states, different objects, and hence  different (ground)  actions. 
 
@@ -487,7 +488,7 @@ which can go from false to true ($+$), from true to false ($-$) or remain
 unchanged ($\bot$), for boolean features, and can increase ($\uparrow$),
 decrease ($\downarrow$), or remain unchanged ($\bot$), for numerical features.
 The \emph{propositional variables} in $T(\S,\F)$ are then:
-\begin{enumerate}[{\small$\bullet$}]
+\begin{itemize}
   \item $selected(f)$ for each $f \in \F$, true iff $f$ selected (in $F$).
   \item $D_1(s,t)$ for states $s$ and $t$ expanded in $\S$,  true iff
     selected features distinguish $s$ from $t$; i.e.\ if $s$ and $t$ disagree
@@ -499,7 +500,7 @@ The \emph{propositional variables} in $T(\S,\F)$ are then:
     true iff selected features $f$ distinguish the two transitions; i.e., if
     $\Delta_f(s, s')\not=\Delta_f(t,t')$. 
     %As for $D_1$, the number of $D_2$ variables is cut in half due to symmetries.
-\end{enumerate}
+\end{itemize}
 
 \medskip
 \noindent The first formulas in $T(\S,\F)$ capture the meaning of $D_1$:
@@ -664,7 +665,7 @@ Concept languages have been used before for  generating general policies using p
 \subsection{Grammar}
 
 The DL grammar is given by the rules: \textcolor{red}{\bf **** More details?}
-\begin{enumerate}[{\small$\bullet$}]
+\begin{itemize}
   \item $C \ \leftarrow\ \ C_p, C_u, C_x$: primitive, universal, and nominal c's,\footnote{Denotation of $C_x$ for parameter $x$ is $\{x\}$.}
   \item $C \ \leftarrow\  \neg C, C \sqcap C'$: negation and conjunction, 
   \item $C \ \leftarrow\  \exists R.C , \forall R.C$: concepts that use of  roles: first denotes $x$ s.t. for some  $y$,  $R(x,y) \land C(y)$.
@@ -673,7 +674,7 @@ The DL grammar is given by the rules: \textcolor{red}{\bf **** More details?}
     \item $R \leftarrow R_p, R^{-1}, R^*$: primitive, inverse, transitive closure.
 %     \item $R \leftarrow R \circ R'$, role composition: $(x,y)$ in $R \circ R'$ if $(x,z)$ in $R$ and $(z,y)$ in $R'$.
 %     \item $R \leftarrow R:C$, denotes pairs $(x,y)$ in $R$ s.t. $C(y)$.
- \end{enumerate}
+ \end{itemize}
 
 The  compositional  semantics   of these rules allows us to determine the denotations (extensions)   $C^s$ and $R^s$  of
 the resulting unary and binary predicates from the denotation of the primitive predicates in any  state $s$. 
@@ -692,14 +693,14 @@ coincides with the denotation of another concept over all the sampled states.
 
 The pool $\F=\F^k$  is defined from $\G^k$ and contains
 the  features $f$ that represent the functions $\phi_f(s)$ as follows:
-\begin{enumerate}[{\small$\bullet$}]
+\begin{itemize}
 \item Boolean $b_p$ for each primitive predicate $p$ of arity $0$,
 \item Boolean $b_C$ for each $C$ that are true in $s$ iff $|C^s| > 0$,
 \item Numerical $n_C$ for each $C$ that stand for cardinality $|C^s|$,
 \item Numerical $\textit{dist}(C_1,R:C,C_2)$, that represent that smallest
   $n$ such that for $x_1, \ldots, x_n$, $C_1^s(x_1)$, $C_2^s(x_{n})$, and
   $(R:C)(x_i,x_{i+1})$ for $i=1, \ldots, n$. 
-\end{enumerate}  
+\end{itemize}  
 
 The role $R:C$ is such that its denotation contains the pairs $(x,y)$ in $R$
 such that $y$ is in $C$.
@@ -766,23 +767,28 @@ In principle, we could learn the formulas $I_F$ and $G_F$ from the sample as wel
 
 \section{Experimental Results}
 
-We evaluate the computational model described in steps 1--6 above over several domains.
+We evaluate the computational model described in steps 1--6 above over 4 different domains.
 %
-
 % *Fill up general details in 1--6 that don't change from problem to problem
 %how $\S$ obtained
-The sample set $\mathcal{S}$ is obtained following one of two possible strategies.
-In the \emph{exhaustive} sampling strategy,
-$\S$ contains, for every one of the training instances $P$,
-all the states generated on a breadth-first search from the initial state in $P$
-that is run until $m$ expansions have been performed. If that set includes no goal state,
-an optimal plan for $P$ is computed and all of the states along the plan are included in $\S$ as well,
-as we need at least one goal state in the sample set.
+The sample set $\S$
+% s obtained following one of two possible strategies.
+% In the \emph{exhaustive} sampling strategy, $\S$
+contains, for every one of the training instances $P$ in $\Q$,
+the first $m$  states expanded by a standard breadth-first search from the initial state in $P$,
+plus all the states along an optimal plan $\pi^*$ which is separately computed to ensure that $\S$ 
+contains at least one goal state. 
+All successor states of states in $\S$ are also added to $\S$.
 %
-In the \emph{random} sampling strategy, a large number $M$ of states are generated, potentially exhausting the full state space,
-and then a certain number $m \ll M$ of them is sampled uniformly at random. If no goal state is found among those $m$,
-one random goal state from the larger set is drawn at random and added into the sample.
-\textcolor{red}{\bf **** What if $M$ doesn't have a goal? ****}
+For the goal marking scheme that yields the smaller theory $T_G(\S, \F)$, the states that are marked as
+goal-relevant are those in $\pi^*$.
+
+
+%
+% In the \emph{random} sampling strategy, a large number $M$ of states are generated, potentially exhausting the full state space,
+% and then a certain number $m \ll M$ of them is sampled uniformly at random. If no goal state is found among those $m$,
+% one random goal state from the larger set is drawn at random and added into the sample.
+% \textcolor{red}{\bf **** What if $M$ doesn't have a goal? ****}
 
 The complexity bound $k$ in the feature pool $\mathcal{F} = \mathcal{F}^k$ is set to a value of $k=8$,
 with just one difference in the concept generation process: distance features are only generated for the last example,
@@ -795,7 +801,7 @@ meant to illustrate their usefulness.
 % We have considered strategies to increase the bound adaptively
 The resulting theories are then solved with the Open-WBO MAXSAT solver \cite{martins2014open}.
 
-** Details on the FOND planner, QNP translation, etc. **
+\alert{Details on the FOND planner, QNP translation, etc.}
 
 The whole computational pipeline made up of steps 1--6 is processed on Intel Xeon E5-2660 CPUs,
 with time and memory cutoffs of 1h and 32GB.
@@ -813,10 +819,6 @@ theories, would likely be higher.
 
 
 
-The goal marking scheme that  yields the smaller  theory $T_G(\S}, \F)$ is obtained an optimal plan over
-a few (always less than xxxx) instances $P$. ??
-
-
 
 \begin{table*}[t]
 \centering
@@ -825,63 +827,41 @@ a few (always less than xxxx) instances $P$. ??
 % \def\arraystretch{1}%  1 is the default
 \small
 
-\newcommand{\rowspacing[1]}{&&&&&&&&&&&&&&&\\[\dimexpr-\normalbaselineskip+2pt]}
+\newcommand{\rowspacing[1]}{&&&&&&&&&&&&&&&&\\[\dimexpr-\normalbaselineskip+2pt]}
 
 
-\begin{tabular}{%
-@{}l%
-@{\extracolsep{1.5em}}r%@{}l%
-@{\extracolsep{1.5em}}r%
-@{\extracolsep{8pt}}r%
-%
-@{\extracolsep{1.5em}}r%
-@{\extracolsep{8pt}}r%
-@{\extracolsep{8pt}}r%
-@{\extracolsep{8pt}}r%
-%
-@{\extracolsep{1.5em}}r%
-@{\extracolsep{8pt}}r%
-@{\extracolsep{8pt}}r%
-@{\extracolsep{8pt}}r%
-%
-@{\extracolsep{1.5em}}r%
-@{\extracolsep{8pt}}r%
-@{\extracolsep{8pt}}r%
-@{\extracolsep{8pt}}r%
-%
-@{}}
-
+\begin{tabular}{rrrrrrrrrrrrrrrrr}
 % @{\extracolsep{3pt}}
 
 
-
- & $I$ & $\abs{\S}$ & $k$ & $\abs{\F^k}$ & \multicolumn{2}{c}{$T$} & \multicolumn{2}{c}{$T_G$} &  $C_{\text{SAT}}$ & $\abs{F}$ & $\abs{A_F}$ & $\abs{I_F}$  & $\abs{G_F}$ & $\abs{Q^+_F}$ & $C_{\text{FOND}}$ \\ %
+&$I$ & $\abs{\S}$ & $k$ & $\abs{\F^k}$ & \multicolumn{2}{c}{$T$} & \multicolumn{2}{c}{$T_G$} &  $T_{\text{SAT}}$ & $\abs{F}$ & $\abs{A_F}$ & $T_{\text{trans}}$  & \multicolumn{2}{c}{$Q^+_F$}  & $T_{\text{FOND}}$
+& $\abs{\pi}$ \\ %
 
 \rowspacing 
-\cline{6-7} \cline{8-9}%
+\cline{6-7} \cline{8-9} \cline{14-15}%
 \rowspacing
 
- & &     &      &         & $\#V$ & $\#C$           & $\#V$ & $\#C$             &     &&&&&& \\%
+ & &     &      &         & $\#V$ & $\#C$           & $\#V$ & $\#C$             &     &&&&  $\#Act$ & $\#At$&& \\%
 
 \rowspacing \hline \rowspacing
 \multirow{1}{*}{$\Q_{clear}$}
-& 1     &     927 & 8  & 322 & 535K & 59.6M & 7.7K & 767K   &  0.01 & 3 & 2   &  - & - & - & - \\% Total complexity of F: 8
+& 1     &     927 & 8  & 322 & 535K & 59.6M & 7.7K & 767K   &  0.01 & 3 & 2   &  - & - & - & - & - \\% Total complexity of F: 8
 
 
 \rowspacing \hline \rowspacing
 \multirow{1}{*}{$\Q_{on}$}
-& 3 &        420  & 8 & 657 & 128K & 25.8M & 18.3K &     3.3M    &  0.02&  5 & 7   &  - & - & - & - \\% Total complexity of F: 18
+& 3 &        420  & 8 & 657 & 128K & 25.8M & 18.3K &     3.3M    &  0.02&  5 & 7   &  - & - & - & - & -\\% Total complexity of F: 18
 % Max-sat problem has 128217 variables and 25825428 unique clauses (with repetitions: 25825428). Top weight is 4577
 
 
 \rowspacing \hline \rowspacing
 \multirow{1}{*}{$\Q_{gripper}$}    
-& 2 &         403 & 8 & 130 & 93K & 4.7M & 8.1K &   358K    &  0.01 & 4 & 5&  - & - & - & - \\% Total complexity of F: 10
+& 2 &         403 & 8 & 130 & 93K & 4.7M & 8.1K &   358K    &  0.01 & 4 & 5&  - & - & - & - & -\\% Total complexity of F: 10
 
 
 \rowspacing \hline \rowspacing
 \multirow{1}{*}{$\Q_{reward}$}
-& 2 &         568 & 8 & 280 & 184K & 11.9M & 15.9K & 1.2M   &  0.01 & 2 & 2 &  - & - & - & - \\% Total complexity of F: ?
+& 2 &         568 & 8 & 280 & 184K & 11.9M & 15.9K & 1.2M   &  0.01 & 2 & 2 &  - & - & - & - & -\\% Total complexity of F: ?
 \end{tabular}
 
 }
@@ -891,12 +871,13 @@ a few (always less than xxxx) instances $P$. ??
   $\abs{\S}$: sample set size, in total number of transitions;
   $k$: max. feature comlexity; $\abs{\F^k}$: size of the pool of features;
   $\#V$, $\#C$: Number of variables and clauses of the theories $T(\S,\F)$ and $T_G(\S,\F)$;
-  $C_{\text{SAT}}$, $C_{\text{FOND}}$: computation time (sec.) of the SAT and FOND solvers, resp.;
+  $T_{\text{SAT}}$, $T_{\text{FOND}}$: computation time (sec.) of the SAT and FOND solvers, resp.;
   $\abs{F}$: number of selected features;
   $\abs{A_F}$: number of abstract actions;
-  $\abs{I_F}$: ???;
-  $\abs{G_F}$: ??? ;
-  $\abs{Q^+_F}$: ??? .
+  $T_{\text{trans}}$: time (sec.) to generate the FOND problem $Q^+_F$;
+  $\#Act$, $\#At$: number if actions and atoms in $Q^+_F$;
+  $\abs{\pi}$: size of the policy.
+%  
   All figures that depend on the SAT theory are given for $T_G(\S,\F)$.
 }}
 \label{tab:exp-result-data}
@@ -917,30 +898,39 @@ in the Blocksworld.
 We take the standard STRIPS representation with primitive predicates $on(a, b)$, $clear(b)$, $ontable(b)$, $holding(b)$ and $handempty$.
 %
 With one single instance $\Q_{clear}$ with 5 blocks, we are able to learn
-an abstract action model which features two actions:
+an abstract action space with features:
 
-- \emph{pick-above-$x$}: \tuple{\neg X, \neg H, n(x) > 0; n(x) \downarrow},
-
-- \emph{place-aside}: \tuple{\neg X, H; \neg H},
-
-\noindent both described in terms of features $H: \abs{holding}$, $X: \abs{holding \sqcap \set{x}}$ and $n(x)\equiv \abs{\exists on^* . \set{x}}$, 
-that denote, respectively, whether any block is being held, whether block $x$ is being held,
-and the number of blocks above $x$.\footnote{
-Action and features names are assigned manually by us to increase readability, but correspond faithfully
-to the learnt entities.
+\begin{itemize}
+\item $H: \abs{holding}$: whether any block is being held,
+\item $X: \abs{holding \sqcap \set{x}}$: whether block $x$ is being held,
+\item $n(x): \abs{\exists on^* . \set{x}}$: number of blocks above $x$.\footnote{
+Action and features names are assigned manually to increase readability, based on the denotations of the involved concepts.
 }
-%
-The model is provably correct, but not complete in general, as it lacks e.g.
-any action to pick block $x$.
-However, it is sufficient to obtain a policy with a single loop that will 
-alternatively \emph{pick-above-$x$} and \emph{place-aside} until block $x$ is clear,
-which provably \emph{achieves the goal from any configuration of blocks, for any number of blocks}.
+\end{itemize}
 
-% Action 1:
+\noindent The resulting action model has two actions:
+
+\begin{itemize}
+\item \emph{pick-above-$x$}: \tuple{\neg X, \neg H, n(x) > 0; n(x) \downarrow},
+\item \emph{place-aside}: \tuple{\neg X, H; \neg H},
+\end{itemize}
+
+
+\noindent 
+The model is provably correct with respect to the generalized $\Q_{clear}$, but incomplete, as it lacks e.g.
+an action to pick block $x$. However, it allows us to obtain the following policy from the FOND translation $Q^+_F$:
+
+\alert{Display policy here},
+
+\noindent which will alternatively \emph{pick-above-$x$} and \emph{place-aside} the picked block 
+until block $x$ is clear. This can be proven to \emph{achieve the goal from any starting block configuration, for any number of blocks} in 
+$\Q_{clear}$.
+
+% Action 1: PLACE-ASIDE
 %         PRE: NOT holding(a), bool[holding]
 %         EFFS: NOT bool[holding]
 % 
-% Action 2:
+% Action 2: PICK-FROM-A
 %         PRE: NOT bool[holding], NOT holding(a), n(a) > 0
 %         EFFS: DEC n(a), bool[holding]
 
@@ -951,28 +941,68 @@ which provably \emph{achieves the goal from any configuration of blocks, for any
 % 
 
 \paragraph{Stacking two blocks from different towers.}
-The problem $\Q_{on}$ is aims at achieving a goal of the form $on(x,y)$
-in the Blocksworld for any two blocks $x$ and $y$ that are initially not in the same tower.
-We take the same STRIPS representation as above. Based on 3 different instances with up to 14
-blocks, we are able to learn an abstract action model with 5 features and 7 actions.
-The set of features is made up of  $X$, $n(x)$ and $n(y)$, with the same syntax and semantics as given before,
-as well as $E: handempty$
-and $XY: [(\exists on^{-1} . \set{x})\sqcap \set{b}]$,
-the second of which precisely denotes that block $x$ is on block $y$.
+The problem $\Q_{on}$ aims at achieving a goal of the form $on(x,y)$
+in the Blocksworld for any two blocks $x$ and $y$.
+To simplify, we assume that $x$ and $y$ never start being in the same tower.
+We take the same STRIPS representation as above. From 3 different training instances with up to 14
+blocks, we are able to learn an abstract space based on the following 5 features:
 
-The set of actions includes actions to pick up the topmost block above $x$, to pick up the topmost block above $y$,
-to put a block being held \emph{aside}, i.e. not above $x$ nor above $y$, to pick $x$, 
-to place $x$ on $y$ and to place $x$ on the table.
+\begin{itemize}
+\item $X$, $n(x)$, $n(y)$: as in $\Q_{clear}$,
+\item $E: handempty$: whether gripper is empty,
+\item $XY: [(\exists on^{-1} . \set{x})\sqcap \set{b}]$: whether $x$ is on $y$.
+\end{itemize}
 
-- \emph{pick-up-above-$x$}:
+\noindent Interestingly, the last feature is exactly a concept-based representation of the actual STRIPS goal $on(x,y)$.
+The corresponding action model $A_F$ is:
 
-- \emph{pick-up-above-$y$}:
+\begin{itemize}
+\item \emph{pick-above-$x$}:  \tuple{\neg X, \neg XY, E, n(x) > 0, n(y)>0; n(x) \downarrow, \neg E  }
+\item \emph{pick-above-$y$}:  \tuple{\neg X, \neg XY, E, n(x) = 0, n(y)>0; n(y) \downarrow, \neg E  }
+\item \emph{put-$x$-on-$y$}:  \tuple{X, \neg XY, \neg E, n(x)=0, n(y)=0 ; n(y) \uparrow, \neg X, E, XY}
+\item \emph{pick-$x$}:  \tuple{;}
+\item \emph{put-$x$-on-table}:  \tuple{;}
+\item \emph{put-aside-1}:  \tuple{;}
+\item \emph{put-aside-2}:  \tuple{;}
+
+\end{itemize}
+
+% Action 1 [PUT-ASIDE-1]:
+%         PRE: NOT bool[handempty], NOT holding(a), NOT on(a, b)_2, n(a) = 0
+%         EFFS: bool[handempty]
+% 
+% Action 2 [PUT-ASIDE-2]:
+%         PRE: NOT bool[handempty], NOT holding(a), NOT on(a, b)_2, n(a) > 0, n(b) > 0
+%         EFFS: bool[handempty]
+% 
+% Action 3 [PICK-A]:
+%         PRE: NOT holding(a), NOT on(a, b)_2, bool[handempty], n(a) = 0, n(b) = 0
+%         EFFS: NOT bool[handempty], holding(a)
+% 
+% Action 4 [PUT-A-ONTABLE]:
+%         PRE: NOT bool[handempty], NOT on(a, b)_2, holding(a), n(a) = 0, n(b) > 0
+%         EFFS: NOT holding(a), bool[handempty]
+% 
+% Action 5 [PICK-FROM-ABOVE-A]:
+%         PRE: NOT holding(a), NOT on(a, b)_2, bool[handempty], n(a) > 0, n(b) > 0
+%         EFFS: DEC n(a), NOT bool[handempty]
+% 
+% Action 6 [PICK-FROM-ABOVE-B]:
+%         PRE: NOT holding(a), NOT on(a, b)_2, bool[handempty], n(a) = 0, n(b) > 0
+%         EFFS: DEC n(b), NOT bool[handempty]
+% 
+% Action 7 [PUT-A-ON-B]:
+%         PRE: NOT bool[handempty], NOT on(a, b)_2, holding(a), n(a) = 0, n(b) = 0
+%         EFFS: INC n(b), NOT holding(a), bool[handempty], on(a, b)_2
+
+
+
+\alert{ongoing}
 
 This last action will indeed be necessary in case block $x$ is initially being held
 but block $y$ is not clear.
 
-DISCUSS POLICY WHEN AVAILABLE. / 
-DISCUSS WHY WOULDN'T WORK WHEN IN SAME TOWER.
+\alert{Display policy here}
 
 
 \paragraph{Gripper.}
@@ -986,26 +1016,25 @@ plus unary type predicates $room$, $ball$, and $gripper$.
 We feed our pipeline with 2 training instances of the problem with only 2 rooms and at most 4 balls.
 The resulting abstract action model is based on the following features:
 
-- $C: \exists carry . \top$ (number of balls carried by the robot), 
-
-- $X: at\_robby \sqcap \set{x}$ (whether robot in target room),
-
-- $G: \abs{free}$ (number of empty grippers), and
-
-- $B: \exists at . \neg \set{x}$ (number of balls not in target room),
+\begin{itemize}
+\item $C: \exists carry . \top$ (number of balls carried by the robot), 
+\item $X: at\_robby \sqcap \set{x}$ (whether robot in target room),
+\item $G: \abs{free}$ (number of empty grippers), and
+\item $B: \exists at . \neg \set{x}$ (number of balls not in target room),
+\end{itemize}
 
 
 \noindent and contains the following actions :
 
-- \emph{drop-ball(s)-at-$x$}: \tuple{C>0, X;  C\downarrow, G \uparrow}
 
-- \emph{move-to-$x$-half-loaded}: \tuple{\neg X, B=0, C>0, G>0;   X}
-
-- \emph{move-to-$x$-fully-loaded}: \tuple{\neg X, C>0, G=0;   X}
-
-- \emph{pick-ball-not-in-$x$}: \tuple{\neg X, B > 0, G > 0;   B \downarrow, G \downarrow, C\uparrow}
-
-- \emph{drop-$x$}: \tuple{X, C=0, G > 0;   \neg X}
+\begin{itemize}
+\item \emph{drop-ball(s)-at-$x$}: \tuple{C>0, X;  C\downarrow, G \uparrow}
+\item \emph{move-to-$x$-half-loaded}: \tuple{\neg X, B=0, C>0, G>0;   X}
+\item \emph{move-to-$x$-fully-loaded}: \tuple{\neg X, C>0, G=0;   X}
+\item \emph{pick-ball-not-in-$x$}: \tuple{\neg X, B > 0, G > 0;   B \downarrow, G \downarrow, C\uparrow}
+\item \emph{drop-$x$}: \tuple{X, C=0, G > 0;   \neg X}
+\end{itemize}
+\noindent \alert{Action model to be checked}
 
 
 The model is not complete, as it e.g. features no action to pick a ball from room $x$,
@@ -1016,8 +1045,8 @@ can only be performed when no more balls remain in the other room.
 Additionally, the model is \emph{provably correct for any gripper instance with an arbitrary number of balls, 
 rooms and grippers}. CHECK !!
 
-The policy that results ... (!!??)
 
+\alert{Display policy here}
 
 
 % Action 1:
@@ -1125,7 +1154,7 @@ which cannot be easily expressed with the type of features generated by our gram
 \emph{Expressive and Computational Limitations}:
 The current approach
 
-*** XXX ***
+\alert{*** TO BE FINISHED ***}
 
 The use of primitive \emph{goal predicates} like $on_g$ with denotation
 given by the goal conjunctions in the concrete instances, as done in
