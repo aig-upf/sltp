@@ -134,11 +134,12 @@
 /Author ()}
 
 
-\title{Learning features and abstract actions for computing generalized plans} 
+\title{Learning Features and Abstract Actions for Computing Generalized Plans} 
 
 % \author{B. Bonet, G. Frances, H. Geffner} % Alphabetical
 % 
 \author{\textbf{Submission \#5695}}
+\nocopyright
 
 
 \begin{document}
@@ -321,7 +322,7 @@ variable  $n$.
 \begin{example}
   For the features $F=\{H,n(x)\}$, the abstract action $\bar{a}=\abst{\neg H,n(x)>0}{H,n(x)\mminus}$ 
   is sound in the generalized problem $\Q_{clear}$ which consists of all
-  BW instances with stack and unstack actions with goal $clear(x)$.
+  Blocksworld instances with stack and unstack actions with goal $clear(x)$.
   Indeed, if $s$ is a reachable state in an instance $P$ and $\bar{a}$ is
   applicable in $\bar{s}$, the gripper must be empty in $s$ and some
   block must be above $x$. Thus, if $A$ is the clear block above $x$ and
@@ -397,7 +398,7 @@ using the features $F$ and abstract actions $A_F$ are as follows \cite{bonet:ijc
     non-deterministic effects $n>0\,|\,n=0$ in $Q'_F$ are not \emph{fair} but
     \emph{conditionally fair}: infinite decrements of $n$ ensure
     $n=0$ eventually \emph{only} when the number of increments of $n$ is finite.
-    The problem of obtanining solutions of $Q'_F$ that only assume conditional
+    The problem of obtaining solutions of $Q'_F$ that only assume conditional
     fairness, the so-called terminating solutions in \cite{srivastava:aaai2011},
     is mapped into the problem of solving an amended FOND $Q^+_F$ that
      assumes standard  fairness \cite{bonet:ijcai2017}.\footnote{The
@@ -429,9 +430,9 @@ The contribution of this work is to learn them  from samples:
 \begin{definition}
   For a generalized problem $\Q$, a \emph{sample set}  $\S$ is a non-empty set of tuples  $(s,s',P)$
   such that 1)~$P$ is an instance of $\Q$, 2)~$s$ is a reachable state in $P$, 3)~$s'$
-  is a possible succesor of $s$ in $P$; i.e., $s'=f(a,s)$ for some action $a$ applicable in $s$,
+  is a possible successor of $s$ in $P$; i.e., $s'=f(a,s)$ for some action $a$ applicable in $s$,
   4)~$\S$ is closed in the sense  that if $(s,s',P)$ is in $\S$, then $(s,s'',P)$ is in $\S$  if $s''$ is another
-  succesor of $s$ in $P$.
+  successor of $s$ in $P$.
 \end{definition}
 
 By assuming that sampled states $s$ are tagged with the instance $P$, 
@@ -462,7 +463,7 @@ they both leave it unchanged,  and over a numerical feature  iff they both decre
 
 For a sufficiently large sample set, these approximate notions converge to their exact versions.
 
-\section{Learning  features and  abstract actions}
+\section{Learning Features and Abstract Actions}
 
 For computing the features and abstract actions we define a formula
 $T(\S,\F)$ where ${\cal S}$ is a sample set for $\Q$ and $\cal F$
@@ -611,7 +612,7 @@ iterating until no more simplifications can be done. They key properties are:
 \end{theorem}
 
 \begin{theorem}
-  If $\sigma$ is a satisfying assigment of $T(\S,\F)$, 
+  If $\sigma$ is a satisfying assignment of $T(\S,\F)$, 
   $A_{\sigma}$ is sound and complete relative to $\S$.
 \end{theorem}
 
@@ -622,7 +623,7 @@ iterating until no more simplifications can be done. They key properties are:
 \Omit{
 %% commented out
 The goal expression $G_F$ can be provided explicitly  in terms of the primitive predicates,
-but  more generally can be extracted  from the satisfying assigment $\sigma$ as well.
+but  more generally can be extracted  from the satisfying assignment $\sigma$ as well.
 For this, $G_F = G_{\sigma}$ is defined as the DNF formula whose terms 
 correspond to the abstract states over the selected features in $F_{\sigma}$ 
 that are false in all expanded states in $\S$ marked as non-goals
@@ -631,7 +632,7 @@ Due to  (\ref{eq:d1}) and (\ref{eq:goal}) that force the selected features in $F
 to   distinguish goal  from non-goal states, we have that:
 
 \begin{theorem}
-For a satisfying assigment $\sigma$  of $T(\S,\F)$, 
+For a satisfying assignment $\sigma$  of $T(\S,\F)$, 
 $s$ is expanded goal   state in $\S$  iff  $s$ satisfies  $G_F=G_{\sigma}$.
 \end{theorem}
 }
@@ -665,9 +666,9 @@ We use a standard  DL grammar  given by the rules:
 \begin{enumerate}[{\small$\bullet$}]
   \item $C \ \leftarrow\ \ C_p, C_u, C_x$: primitive, univ.,  nominal concepts,\footnote{Denotation of $C_x$ for parameter $x$ is $\{x\}$.}
   \item $C \ \leftarrow\  \neg C, C \sqcap C'$: negation and conjunction, 
-  \item $C \ \leftarrow\  \exists R.C , \forall R.C$: concepts that use of  roles: first denotes $x$ s.t. for some  $y$,  $R(x,y) \land C(y)$.
-  Second,  $x$ s.t. for all $y$, $R(x,y) \rightarrow C(y)$,
-  \item $C \ \leftarrow\  R=R'$: stands for $x$ s.t. set of $y$'s  s.t. $R(x,y)$ equal to set of $y$'s s.t. $R'(x,y)$,
+  \item $C \ \leftarrow\  \exists R.C , \forall R.C$: concepts that use of  roles: first denotes $x$ s.t.\ for some  $y$,  $R(x,y) \land C(y)$.
+  Second,  $x$ s.t.\ for all $y$, $R(x,y) \rightarrow C(y)$,
+  \item $C \ \leftarrow\  R=R'$: stands for $x$ s.t.\ set of $y$'s  s.t. $R(x,y)$ equal to set of $y$'s s.t. $R'(x,y)$,
     \item $R \leftarrow R_p, R^{-1}, R^*$: primitive, inverse, transitive closure.
 %     \item $R \leftarrow R \circ R'$, role composition: $(x,y)$ in $R \circ R'$ if $(x,z)$ in $R$ and $(z,y)$ in $R'$.
 %     \item $R \leftarrow R:C$, denotes pairs $(x,y)$ in $R$ s.t. $C(y)$.
@@ -729,7 +730,7 @@ In summary, the steps for computing general plans are:
     as $F_{\sigma}$ and $A_{\sigma}$,
   \item the problem $Q_F=\tup{V_F,I_F,G_F,A_F}$ is defined with initial and goal
     conditions $I_F$ and $G_F$ provided by hand to match $\Q$, 
-  \item the FONDP $Q^+_F$, constructed automatically from $Q_F$, is solved by an off-the-shelf
+  \item the FOND problem $Q^+_F$, constructed automatically from $Q_F$, is solved by an off-the-shelf
     FOND planner.
 \end{enumerate}
 
@@ -786,7 +787,6 @@ the problems.
 
 
 
-\newcommand{\rowspacing[1]}{&&&&&&&&&&&&&&&&\\[\dimexpr-\normalbaselineskip+2pt]}
 
 \begin{table*}[t]
   \centering
@@ -831,7 +831,7 @@ the problems.
 
 
 \paragraph{Clearing a block.}
-$\Q_{clear}$ contains the BW instances  with goals of the form  $clear(x)$
+$\Q_{clear}$ contains the Blocksworld instances  with goals of the form  $clear(x)$
 and stack/unstack actions. The primitive predicates, i.e., those appearing in the instances of $\Q_{clear}$, 
 are assumed to use the predicates $on(\cdot,\cdot)$, $clear(\cdot)$,
 $ontable(\cdot)$, $holding(\cdot)$, and $handempty$. 
@@ -840,9 +840,9 @@ sufficed to learn an abstract model from which a general plan was computed.
 The  set of  features $F$ obtained from the theory $T_G$ is:
 
 \begin{enumerate}[--]
-  \item $H: holding$, holding a block,
-  \item $X: \abs{holding \sqcap C_x}$, holding $x$,
-  \item $n(x): \abs{\exists\,on^* . \set{x}}$, $\#$ blocks above $x$.
+  \item $H: holding$ (holding a block),
+  \item $X: \abs{holding \sqcap C_x}$ (holding block $x$),
+  \item $n(x): \abs{\exists\,on^* . \set{x}}$, (number of blocks above block $x$).
 \end{enumerate}
 
 \noindent The set of abstract actions obtained from $T_G$ is:\footnote{
@@ -876,8 +876,8 @@ the pick-above-$x$ action followed by put-aside,  until $x$ becomes clear.
 %
 
 \paragraph{Stacking two blocks.}
- $\Q_{on}$ contains the BW instances with goals of the form $on(x,y)$,
- and initial situations where $x$ and $y$ are not in the same tower.
+$\Q_{on}$ consists  of Blocksworld instances with goals of the form $on(x,y)$,
+and initial situations where the blocks $x$ and $y$ are not in the same tower.
 The primitive predicates are the same as those above.
 For this problem, three training instances $P$ were used.
 The set of $F$ obtained from $T_G$ contains
@@ -885,12 +885,12 @@ The set of $F$ obtained from $T_G$ contains
 % Using the above Blocksworld encoding and only 3 different training
 % instances with up to 14 blocks, an abstract model involving 3 boolean
 % features, 2 numerical features, and 7 actions is learnt.
-the boolean features  $E$, $X$ and $on(x,y)$,  that stand for the gripper
-being empty, the gripper holding block $X$, and the block $x$ being  on
- $y$, and the  numerical features  $n(x)$ and $n(y)$ that stand
+the boolean features  $E$, $X$ and $G$,  that stand for the gripper
+being empty, the gripper holding block $x$, and the block $x$ being
+on block $y$, and the numerical features  $n(x)$ and $n(y)$ that stand
 for the number of blocks above $x$ and $y$ respectively.
 The DL  definition of the  features $X$, $n(x)$, and $n(y)$ are as above
-while $E$ is $handempty$ and $on(x,y)$ stands for $\exists\,on^{-1}.C_x  \sqcap C_y$.
+while $E$ is $handempty$ and $G$ stands for $(\exists\,on^{-1}.C_x)  \sqcap C_y$.
 % Interestingly, this last feature is the concept-based representation
 % of the goal $on(x,y)$.
 %
@@ -920,41 +920,43 @@ while $E$ is $handempty$ and $on(x,y)$ stands for $\exists\,on^{-1}.C_x  \sqcap 
 %% action_7 ; put a directly on b
 %% 5 bool[handempty] 0 holding(a) 1 n(a) 0 n(b) 0 on(a,b)_2 0
 %% 4 bool[handempty] 1 holding(a) 0 n(b) 1 on(a,b)_2 1
-The set of 7 abstract actions includes actions to pick up the clear
-block above $x$ or $y$, to put aside the block being held (not above
-$x$ nor $y$), to pick block $x$, to place $x$ on $y$, and to place
-$x$ on the table.
+The set $A_F$ includes actions to pick up the clear
+block above $x$ or $y$, two actions to put aside the block being held,
+and actions to pick block $x$, to place $x$ on $y$, and to place
+$x$ on the table:
+\begin{enumerate}[--]
+  \item $\text{pick-ab-$x$}\!=\!\abst{E,\neg X,\neg G,n(x)\!\!>\!0,n(y)\!>\!0}{\neg E,n(x)\mminus}$,
+  \item $\text{pick-ab-$y$}\!=\!\abst{E,\neg X,\neg G,n(x)\!=\!0,n(y)\!\!>\!0}{\neg E,n(y)\mminus}$,
+  \item $\text{put-aside-1}=\abst{\neg E,\neg X,\neg G,n(x)=0}{E}$,
+  \item $\text{put-aside-2}=\abst{\neg E,\neg X,\neg G,n(x)>0,n(y)>0}{E}$,
+  \item $\text{pick-$x$}=\abst{E,\neg X,\neg G,n(x)=0,n(y)=0}{\neg E,X}$,
+  \item $\text{put-$x$-aside}\!=\!\abst{\neg E,X,\neg G,n(x)=0,n(y)>0}{E,\neg X}$,
+  \item $\text{put-$x$-on-$y$} = \langle \neg E, X, \neg G, n(x)=0, n(y)=0; E, \neg X,$ $G, n(y)\pplus \rangle$.
+\end{enumerate}
 
-
-\textcolor{red}{\bigskip *** Hay lugar: Guillem: please have the sets $F$ and $A_F$ listed
-like in the other examples. Sorry if they were there and Blai or I
-removed it. SAME FORMAT. Tambien please llena los $I_F$ and $G_F$ con
-lo que envio Blai y/o derivable para los que no. Ej: este.
-Una vez que tengas eso; quita el texto. QUe quede en sync con los otros.*** \bigskip}
-
-
-The resulting abstraction  with $I_F = ***$ and $G_F = ***$
-is translated into the FOND problem $Q_F^+$  in 0.01 seconds,
+The resulting abstraction with $I_F\!=\!\{ E, \neg X, \neg G, n(x)\!>\!0, n(y)\!>\!0\}$
+and $G_F = \{ \neg X, G, n(x)=0, n(y)\!>\!0\}$, is translated into the FOND problem
+$Q_F^+$  in 0.01 seconds,
 which is solved by the FOND planner  in 7.56 seconds.
 The policy implements a loop  to clear block $x$ as above, 
-a loop to clear block $y$, and finishes by picking $x$ and placing it on
-$y$. 
+followed by a loop to clear block $y$, and finishes by picking
+$x$ and placing it on $y$. 
+
 
 \paragraph{Gripper.}
 $\Q_{gripper}$ contains classical Gripper instances  where a robot with
 some grippers needs to move a number of balls from one room into another
 \emph{target} room $x$. Each gripper may carry one ball
 at a time.
-% , and the number of balls  depends on the instance of the problem.
-The  standard  STRIPS predicates are   $at\text{-}robby(l)$,
-$at\text{-}ball(b, l)$, $free(g)$, $carry(b, g)$ that denote, respectively,
-whether the robot (the ball) is at location $l$, whether gripper $g$ is free,
-and whether gripper $g$ carries ball $b$, plus unary type predicates $room$,
-$ball$, and $gripper$. The type predicates are also included. 
+The standard STRIPS predicates are $at\text{-}robby(l)$, $at\text{-}ball(b,l)$,
+$free(g)$, $carry(b,g)$ that denote, respectively, whether the robot
+(the ball) is at location $l$, whether gripper $g$ is free, and whether
+gripper $g$ carries ball $b$, plus unary type predicates $room$, $ball$,
+and $gripper$. The type predicates are also included. 
 
-Pipeline 1--6 is fed  2 training instances $P$ from $\Q_{gripper}$  with 2 rooms
-each, one with 4 balls and the other with 5. The set of features that is
-obtained from the theory $T_G$ is:
+Pipeline 1--6 is fed  2 training instances $P$ from $\Q_{gripper}$  with 2
+rooms each, one with 4 balls and the other with 5. The set of features that
+is obtained from the theory $T_G$ is:
 \begin{enumerate}[--]
   \item $X: at\_robby \sqcap C_x$ (whether robby is in target room),
   \item $B: \exists\,at . \neg C_x$ (whether balls not in target room),
@@ -974,10 +976,11 @@ obtained from the theory $T_G$ is:
 
 Once again, although this set of abstract actions  is not complete,
 it is sufficient for generating a general plan. The abstraction with
-$I_F = *****$ and $G_F= ****$ is translated into the FOND problem $Q^+_F$,
-which is solved by the planner in 171.92 seconds. 
+$I_F = \{ B>0, \neg X, G>0, C=0\}$ and $G_F = \{ B=0, G>0, C=0 \}$ is
+translated into the FOND problem $Q^+_F$, which is solved by the
+planner in 171.92 seconds. 
 The resulting policy picks the balls in the source room $y$, one by one, 
-til the grippers are full or there are no more balls in $y$.
+until the grippers are full or there are no more balls in $y$.
 It then moves to room $x$, with one of the two move actions above
 according to whether the grippers are fully loaded or not,
 and then drops the balls in room $x$ one by one, until the grippers
@@ -1006,11 +1009,11 @@ From the theory $T_G$, two numerical  features are learned:
 \end{enumerate}
 Likewise, two abstract actions are obtained:
 \begin{enumerate}[--]
-  \item $\text{pick-reward} = \abst{D=0, R > 0}{R\mminus, D\pplus}$,
+  \item $\text{collect-reward} = \abst{D=0, R > 0}{R\mminus, D\pplus}$,
   \item $\text{move-to-closest-reward} = \abst{R>0, D>0}{D\mminus}$.
 \end{enumerate}
 
-The abstraction with $I_F = *****$ and $G_F= ****$
+The abstraction with $I_F = \{ R>0, D>0 \}$ and $G_F=\{R=0,D>0\}$
 is translated into the  FOND problem $Q^+_F$ which yields
 a policy  in 1.36 seconds. The policy moves the agent
 one step at a time, towards  the uncollected  reward
@@ -1019,56 +1022,41 @@ Once the reward is reached, the reward is consumed, and
 the process repeats until there are no more rewards to be collected. 
 
 
-% Action 1 [PICK-REWARD]:
-% 	PRE: min-dist[at, Restrict(adjacent,Not(blocked)), reward] = 0, num-rewards > 0
-% 	EFFS: DEC num-rewards, INC min-dist[at, Restrict(adjacent,Not(blocked)), reward]
-% 
-% Action 2 [MOVE-TO-CLOSEST-REWARD]:
-% 	PRE: min-dist[at, Restrict(adjacent,Not(blocked)), reward] > 0, num-rewards > 0
-% 	EFFS: DEC min-dist[at, Restrict(adjacent,Not(blocked)), reward]
+\subsection{Observations}
 
+We conclude the section with few observations.
 
-
-\medskip
-
-\noindent We conclude the section with a few observations.
-
-\medskip
-
-\noindent \emph{Soundness}. The abstract action \emph{pick-up-above-$y$} in $\Q_{on}$
-is sound relative to the sample set $\mathcal{S}$ used  but is not sound relative
+\paragraph{Soundness.} The abstract action \text{pick-ab-$y$} in $\Q_{on}$
+is sound relative to the sample set $\S$ used  but is not sound relative
 to $\Q_{on}$. In any state $s$ where $x$ is a few blocks above $y$ and clear,
-there is no concrete action that instantiates \emph{pick-up-above-$y$},
-as picking up the topmost block above $y$ would necessarily make feature $hold(x)$
+there is no concrete action that instantiates \text{pick-ab-$y$},
+as picking up the topmost block above $y$ would necessarily make feature $X$ (holding block $x$)
 true, which the abstract action does not. Still, the resulting policy is correct
 for $\Q_{on}$ because such states $s$ are not  visited by the policy
 from the given initial conditions.
 
 
-\medskip
-
-\noindent \emph{Expressivity}. The general DL grammar we have described is adequate
-for many  domains but may fall short  on others. 
+\paragraph{Expressivity.} The general DL grammar that we have described
+is adequate for many  domains but may fall short  on others. 
 For example,  in Towers of Hanoi, the first action to be taken
 (whether to move the smallest disk to target or buffer peg) depends
-on the number of disks is even or  odd, which is not a feature
+on the number of disks begin even or  odd, which is not a feature
 that  would result  from the primitive predicates used in the STRIPS
 instances and the general grammar. Yet, for some reason,
 Tower of Hanoi is regarded as a puzzle.  For other problems, the  use of \emph{goal predicates};
 namely, copies of some primitive predicates  evaluated in the goal
-(e.g., for solving arbitrary BW instances) would be  necessary  \cite{martin-geffner:generalized}.
+(e.g., for solving arbitrary Blocksworld instances) would be  necessary  \cite{martin-geffner:generalized}.
 
-\medskip
 
-\emph{Scalability}. The current bottleneck of the approach is 
+\paragraph{Scalability.} The current bottleneck of the approach is 
 in the size of the SAT  theories used to derive the features
 and the actions. This puts a limit on the complexity of the
 feature grammars, the bound $k$, and the number of state
-transitions in the sample, as they  results otherwise
+transitions in the sample, as they  result otherwise
 in SAT theories that are just too large (see Table~\ref{tab:exp-result-data}).
 This is indeed the reason why have chosen to use the theories $T_G$
-with goal marking. Additional ideas, however,  are required
-to improve scability and to make the computational model
+with goal marking. Additional ideas, however, are required
+to improve scalability and to make the computational model
 captured by  steps 1--6 more robust.
 
 
@@ -1086,9 +1074,8 @@ Moreover, unlike, purely learning approaches, the scope and correctness
 of the resulting general plans can be assessed.
 We have carried out a number of experiments over several domains to 
 illustrate the versatility of the approach. In the future, we want 
-% explore the use of the learned features and actions in classical planning, to
 to study of formal characterization  of the generalized problem $\Q$ and the possibilities of
-testing soudness over $\Q$ automatically, and to improve the scalability of the approach,
+testing soundness over $\Q$ automatically, and to improve the scalability of the approach,
 for example, by collecting the samples intelligently and incrementally
 from the states where the computed policy fails, and by reusing the
 features and actions obtained for some goal for more complex goals.
