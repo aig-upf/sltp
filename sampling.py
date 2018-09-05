@@ -102,7 +102,8 @@ def sample_generated_states(config, rng):
         remap_sample_expanded_states(set(selected), states, goal_states, transitions, optimal_transitions, set(root_states))
 
     expanded = lambda s: len(transitions[s]) > 0
-    logging.info("Selected (states / goals / optimal tx): {} / {} / {}".format(len(states), len(goals), len(optimal_transitions)))
+    total_tx = sum(len(transitions[sid]) for sid, _ in states.values())
+    logging.info("Resampling (states / goals / tx / optimal tx): {} / {} / {} / {}".format(len(states), len(goals), total_tx, len(optimal_transitions)))
     log_sampled_states(states, goals, transitions, expanded, optimal_transitions, root_states, config.resampled_states_filename)
     return states, goals, transitions, optimal_transitions, root_states
 

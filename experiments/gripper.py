@@ -38,7 +38,7 @@ def experiment(experiment_name=None):
         num_states=2000, max_width=[-1],
         num_sampled_states=100,
         complete_only_wrt_optimal=True,
-        max_concept_size=10, max_concept_grammar_iterations=3,
+        max_concept_size=8, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=add_domain_parameters,
         feature_namer=feature_namer,)
 

@@ -60,8 +60,8 @@ def experiment(experiment_name=None):
         instances="instance_5_clear_x_1.pddl",
         num_states=2000, max_width=[-1],
         num_sampled_states=300,
-        complete_only_wrt_optimal=True,
-        max_concept_size=18, max_concept_grammar_iterations=3,
+        # complete_only_wrt_optimal=True,
+        max_concept_size=8, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=add_bw_domain_parameters,
         feature_namer=ijcai_paper_bw_feature_namer,
     )
@@ -125,7 +125,7 @@ def experiment(experiment_name=None):
                                                   sampling="all",
                                                   # enforce_features=get_on_x_y_feature,
                                                   # feature_generator=features_clear_x,
-                                                  max_concept_size=10, max_concept_grammar_iterations=3,
+                                                  max_concept_size=8, max_concept_grammar_iterations=3,
                                                   concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
                                                   feature_namer=ijcai_paper_bw_feature_namer,
                                                   )
