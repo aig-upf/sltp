@@ -901,9 +901,9 @@ With one single instance $\Q_{clear}$ with 5 blocks, we are able to learn
 an abstract action space with features:
 
 \begin{itemize}
-\item $H: \abs{holding}$: whether any block is being held,
-\item $X: \abs{holding \sqcap \set{x}}$: whether block $x$ is being held,
-\item $n(x): \abs{\exists on^* . \set{x}}$: number of blocks above $x$.\footnote{
+\item $H: \abs{holding}$, whether any block is being held,
+\item $X: \abs{holding \sqcap \set{x}}$, whether block $x$ is being held,
+\item $n(x): \abs{\exists on^* . \set{x}}$, number of blocks above $x$.\footnote{
 Action and features names are assigned manually to increase readability, based on the denotations of the involved concepts.
 }
 \end{itemize}
@@ -911,8 +911,8 @@ Action and features names are assigned manually to increase readability, based o
 \noindent The resulting action model has two actions:
 
 \begin{itemize}
-\item \emph{pick-above-$x$}: \tuple{\neg X, \neg H, n(x) > 0; n(x) \downarrow},
-\item \emph{place-aside}: \tuple{\neg X, H; \neg H},
+\item \emph{pick-above-$x$}: \hspace*{\fill} \tuple{\neg X, \neg H, n(x) > 0; X, n(x) \downarrow},
+\item \emph{place-aside}: \hspace*{\fill} \tuple{\neg X, H; \neg H},
 \end{itemize}
 
 
@@ -948,23 +948,29 @@ We take the same STRIPS representation as above. From 3 different training insta
 blocks, we are able to learn an abstract space based on the following 5 features:
 
 \begin{itemize}
-\item $X$, $n(x)$, $n(y)$: as in $\Q_{clear}$,
-\item $E: handempty$: whether gripper is empty,
-\item $XY: [(\exists on^{-1} . \set{x})\sqcap \set{b}]$: whether $x$ is on $y$.
+\item $X$, $n(x)$, $n(y)$, as in $\Q_{clear}$,
+\item $E: handempty$, whether gripper is empty,
+\item $XY: [(\exists on^{-1} . \set{x})\sqcap \set{b}]$, whether $x$ is on $y$.
 \end{itemize}
 
-\noindent Interestingly, the last feature is exactly a concept-based representation of the actual STRIPS goal $on(x,y)$.
+\noindent Interestingly, the last feature is a concept-based representation of the actual STRIPS goal $on(x,y)$.
 The corresponding action model $A_F$ is:
 
 \begin{itemize}
-\item \emph{pick-above-$x$}:  \tuple{\neg X, \neg XY, E, n(x) > 0, n(y)>0; n(x) \downarrow, \neg E  }
-\item \emph{pick-above-$y$}:  \tuple{\neg X, \neg XY, E, n(x) = 0, n(y)>0; n(y) \downarrow, \neg E  }
-\item \emph{put-$x$-on-$y$}:  \tuple{X, \neg XY, \neg E, n(x)=0, n(y)=0 ; n(y) \uparrow, \neg X, E, XY}
-\item \emph{pick-$x$}:  \tuple{;}
-\item \emph{put-$x$-on-table}:  \tuple{;}
-\item \emph{put-aside-1}:  \tuple{;}
-\item \emph{put-aside-2}:  \tuple{;}
+% ATM I use two lines, as doesn't fit in one :-(
+\item \emph{pick-above-$x$}: \\\hspace*{\fill}  \tuple{\neg X, \neg XY, E, n(x) > 0, n(y)>0; n(x) \downarrow, \neg E  }
 
+\item \emph{pick-above-$y$}: \\\hspace*{\fill}  \tuple{\neg X, \neg XY, E, n(x) = 0, n(y)>0; n(y) \downarrow, \neg E  }
+
+\item \emph{put-$x$-on-$y$}: \\\hspace*{\fill} \tuple{X, \neg XY, \neg E, n(x)=n(y)=0 ; n(y) \uparrow, \neg X, E, XY}
+
+\item \emph{pick-$x$}:         \hspace*{\fill}  \tuple{\neg X, \neg XY, E, n(x)=0, n(y)=0; E, X}
+
+\item \emph{put-$x$-table}:                     \tuple{\neg E, \neg XY, X, n(x)=0, n(y) > 0; \neg X, E}
+
+\item \emph{put-aside-1}:      \hspace*{\fill} \tuple{\neg E, \neg X, \neg XY, n(x) = 0; E}
+
+\item \emph{put-aside-2}:      \hspace*{\fill} \tuple{\neg E, \neg X, \neg XY, n(x) > 0, n(y) > 0; E}
 \end{itemize}
 
 % Action 1 [PUT-ASIDE-1]:
@@ -995,13 +1001,23 @@ The corresponding action model $A_F$ is:
 %         PRE: NOT bool[handempty], NOT on(a, b)_2, holding(a), n(a) = 0, n(b) = 0
 %         EFFS: INC n(b), NOT holding(a), bool[handempty], on(a, b)_2
 
-
-
-\alert{ongoing}
-
-This last action will indeed be necessary in case block $x$ is initially being held
+Action \emph{put-$x$-table} will indeed be necessary only in case block $x$ starts being held
 but block $y$ is not clear.
+%
+The two last \emph{put-aside} actions show that when using the goal-oriented theory $T_G(\S,\F)$
+it is not always possible to completely merge similar actions.
+This is because some states (in this case, any state with $n(x) > 0 \land n(y) = 0$ and some block $b \not\in \set{x,y}$ being held)
+by chance did not appear on the optimal plans computed, which makes the resulting $A_F$ not complete in general.
+This limitation could be circumvented either by manually providing an additional 
+instance fulfilling that condition, or, more robustly, by using a larger set of optimal plans instead of just one.
 
+Interestingly, action \emph{pick-$x$} illustrates a different type of incompleteness, as it will
+only pick block $x$ whenever block $y$ is clear. No alternative optimal plan will possibly fix this,
+since (provided $x$ and $y$ are initially not in the same tower) no optimal plan for $on(x,y)$ will pick block $x$ before $y$ is clear.
+This incompleteness however will make the computation of the policies easier and the resulting policies likely more effective.
+
+
+The policy ...
 \alert{Display policy here}
 
 
@@ -1013,37 +1029,36 @@ We use the standard STRIPS representation with primitive predicates $at\text{-}r
 respectively, whether the robot (the ball) is at location $l$, whether gripper $g$ is free, and whether gripper $g$ carries ball $b$,
 plus unary type predicates $room$, $ball$, and $gripper$.
 %
-We feed our pipeline with 2 training instances of the problem with only 2 rooms and at most 4 balls.
-The resulting abstract action model is based on the following features:
+Using 2 training instances $P$ with only 2 rooms and at most 4 balls, we learn an abstract state space
+based on the following features:
 
 \begin{itemize}
-\item $C: \exists carry . \top$ (number of balls carried by the robot), 
-\item $X: at\_robby \sqcap \set{x}$ (whether robot in target room),
-\item $G: \abs{free}$ (number of empty grippers), and
-\item $B: \exists at . \neg \set{x}$ (number of balls not in target room),
+\item $C: \abs{\exists carry . \top}$, number of balls carried by the robot, 
+\item $X: at\_robby \sqcap \set{x}$, whether robot in target room,
+\item $G: \abs{free}$, number of empty grippers, and
+\item $B: \abs{\exists at . \neg \set{x}}$, number of balls not in target room,
 \end{itemize}
 
 
-\noindent and contains the following actions :
+\noindent and an abstract action model $A_F$:
 
 
 \begin{itemize}
-\item \emph{drop-ball(s)-at-$x$}: \tuple{C>0, X;  C\downarrow, G \uparrow}
-\item \emph{move-to-$x$-half-loaded}: \tuple{\neg X, B=0, C>0, G>0;   X}
-\item \emph{move-to-$x$-fully-loaded}: \tuple{\neg X, C>0, G=0;   X}
-\item \emph{pick-ball-not-in-$x$}: \tuple{\neg X, B > 0, G > 0;   B \downarrow, G \downarrow, C\uparrow}
-\item \emph{drop-$x$}: \tuple{X, C=0, G > 0;   \neg X}
+\item \emph{drop-ball-at-$x$}: \hspace*{\fill} \tuple{C>0, X;  C\downarrow, G \uparrow}
+\item \emph{move-to-$x$-fully-loaded}: \hspace*{\fill} \tuple{\neg X, C>0, G=0;   X}
+\item \emph{move-to-$x$-half-loaded}: \hspace*{\fill} \tuple{\neg X, B=0, C>0, G>0;   X}
+\item \emph{pick-ball-not-in-$x$}: \hspace*{\fill} \tuple{\neg X, B > 0, G > 0;   B \downarrow, G \downarrow, C\uparrow}
+\item \emph{leave-$x$}: \hspace*{\fill} \tuple{X, C=0, G > 0;   \neg X}
 \end{itemize}
-\noindent \alert{Action model to be checked}
 
-
-The model is not complete, as it e.g. features no action to pick a ball from room $x$,
-but is goal-oriented as a result of using the SAT theory $T_G$, in that it features all of the actions
-necessary to achieve the goal.
-This can be seen e.g. in the fact that the action to move \emph{move-to-$x$-half-loaded}
-can only be performed when no more balls remain in the other room.
-Additionally, the model is \emph{provably correct for any gripper instance with an arbitrary number of balls, 
-rooms and grippers}. CHECK !!
+The marking of only states in optimal plans as \emph{goal-relevant} introduces again a bias
+that can be seen e.g. in the fact that the robot is not allowed to leave room $x$ if carrying any ball,
+or that \emph{move-to-$x$-half-loaded} is only allowed in the last move, when no more balls remain in the other room.
+Although allowing moves without full load before that would help minimizing the action model and achieving completeness, it would certainly \emph{not}
+help obtaining better policies.
+%
+Despite this incompleteness, the action model is \emph{provably correct for any $\Q_{gripper}$ instance with an arbitrary number of balls, 
+rooms and grippers}.
 
 
 \alert{Display policy here}
@@ -1053,11 +1068,11 @@ rooms and grippers}. CHECK !!
 %         PRE: ncarried > 0, robot-at-B
 %         EFFS: DEC ncarried, INC nfree-grippers
 % 
-% Action 2:
+% Action 2: [move-to-x-half-loaded]
 %         PRE: NOT robot-at-B, nballs-A = 0, ncarried > 0, nfree-grippers > 0
 %         EFFS: robot-at-B
 % 
-% Action 3:
+% Action 3: [move-to-x-fully-loaded]
 %         PRE: NOT robot-at-B, ncarried > 0, nfree-grippers = 0
 %         EFFS: robot-at-B
 % 
@@ -1081,26 +1096,31 @@ stepping in blocked cells instead \cite{garnelo2016towards}.
 %
 We represent the instances $P$ with primitive predicates $reward(c)$, $at(c)$, $blocked(c)$ and $adjacent(c_1, c_2)$ that denote
 respectively the position of the rewards, of the agent, of the blocked cells, and the grid topology.
-We use two single instances of the problem with size $5 \times 5$ and $4 \times 4$ and different distributions of blocks and rewards.
-We learn a set with 2 features:
+This is the only problem where we test the $\textit{dist}(C_1,R:C,C_2)$ min-distance features introduced before.
+We use two single training instances with grid sizes $5 \times 5$ and $4 \times 4$ and different distributions of blocks and rewards,
+and learn an abstraction with 2 features:
 
-- $R: \abs{reward}$ (number of remaining rewards), and
+\begin{itemize}
+\item $R: \abs{reward}$, number of remaining rewards, and
+\item $D: dist(at, adjacent:(\neg blocked), reward)$, distance from current cell to closest cell with reward, traversing adjacent, unblocked cells only.
+\end{itemize}
 
-- $D: dist(at, adjacent:(\neg blocked), reward)$ (distance from current cell to closest cell with reward, traversing adjacent, unblocked cells only).
+\noindent The action model has the following 2 actions:
 
-\noindent The action model has also 2 actions:
+\begin{itemize}
+\item \emph{pick-reward}: \hspace*{\fill} \tuple{D=0, R > 0;  R \downarrow, D \uparrow}
+\item \emph{move-towards-closest-reward}: \hspace*{\fill} \tuple{R>0, D>0; D \downarrow}
+\end{itemize}
 
-- \emph{pick-reward}: \tuple{D=0, R > 0;  R \downarrow, D \uparrow}
+The model is very simple, and can be shown to solve any $\Q_{reward}$ instance irrespective of 
+grid size and number and location of rewards and cell blocks, \emph{as long as the instance is solvable},
+i.e. all rewards are reachable.
+\alert{Interesting point here: how does our approach fare with unsolvability? And with problems with dead-end?}
 
-- \emph{move-towards-closest-reward}: \tuple{R>0, D>0; D \downarrow}
 
-The model is not complete ... 
-...
+\alert{Display policy here}
 
-The policy ... 
-... EXPAND A BIT - TOO TIRED NOW.
-Discuss suboptimality of the policy.
-Perhaps discuss D=$\infty$ when no reward?
+Discuss suboptimality of the policy?
 
 % Action 1 [PICK-REWARD]:
 % 	PRE: min-dist[at, Restrict(adjacent,Not(blocked)), reward] = 0, num-rewards > 0
