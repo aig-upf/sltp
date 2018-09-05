@@ -10,10 +10,7 @@
 \frenchspacing  %Required
 \setlength{\pdfpagewidth}{8.5in}  %Required
 \setlength{\pdfpageheight}{11in}  %Required
-%PDF Info Is Required:
-  \pdfinfo{
-/Title ()
-/Author ()}
+
 \setcounter{secnumdepth}{0}  
 
 % \usepackage{soul}
@@ -36,8 +33,8 @@
 \usepackage{enumerate}
 %\usepackage{upgreek}
 %\usepackage[normalem]{ulem}
-
-%\usepackage[small]{caption}
+\usepackage{multirow}
+% \usepackage[small]{caption}
 
 
 \usepackage{xspace}
@@ -53,9 +50,14 @@
 \newcommand{\denselist}{\itemsep -1pt\partopsep 0pt}
 \newcommand{\tup}[1]{\langle #1 \rangle}
 \newcommand{\pair}[1]{\langle #1 \rangle}
+\newcommand{\tuple}[1]{\ensuremath{\langle #1 \rangle}}
+\newcommand{\set}[1]{\ensuremath{\left\{#1 \right\}}}
+\newcommand{\setst}[2]{\ensuremath{\left\{#1 \mid #2 \right\}}}
+\newcommand{\abs}[1]{\ensuremath{\left\vert{#1}\right\vert}}
 % \newcommand{\citeay}[1]{\citeauthor{#1} [\citeyear{#1}]}
 \newcommand{\citeay}[1]{\citeauthor{#1} (\citeyear{#1})}
 \newcommand{\citeaywithnote}[2]{\citeauthor{#1} (\citeyear[#2]{#1})}
+
 
 \newtheorem{definition}{Definition}
 \newtheorem{definitionandtheorem}[definition]{Definition and Theorem}
@@ -121,7 +123,10 @@
 \newcommand{\Example}{\medskip\noindent\textbf{Example.}\xspace}
 
 
-% \pdfinfo{ ..} 
+%PDF Info Is Required (no accents, etc.!):
+\pdfinfo{
+/Title ()
+/Author ()}
 
 
 \title{Learning features and abstract actions for computing generalized plans} 
@@ -187,7 +192,7 @@ the negation of the proposition $n=0$, decrements  are  transformed  into
 non-deterministic (disjunctive)  propositional effects $n > 0 \, | \, n=0$. 
 }
 
-Bonet's and Geffner's  formulation of generalized planning, however, assumes that the
+Bonet and Geffner's  formulation of generalized planning, however, assumes that the
 features and the abstract actions are given.   In this work, we address this limitation.
 We achieving this by  \emph{showing  how features and abstract actions  can be learned from
 the primitive predicates used to define the instances and state transitions
@@ -371,7 +376,7 @@ The strong cyclic solutions of  $Q^+_F$ computed by FOND planners off-the-shelf 
 \section{Approximate Soundness and Completeness}
 
 
-Bonet's and Geffner's formulation and computational model rest on 
+Bonet and Geffner's formulation and computational model rest on 
 features $F$ and  sound abstract actions $A_F$ provided by hand.
 The contribution of this work is to learn them both from samples:
 
@@ -511,7 +516,7 @@ The last  set of clauses force the selected features to distinguish goal from no
 \noindent where  $s$ and $t$  are expanded states  ${\cal S}$ such that exactly one of them is a goal state. 
 For this, it is assumed that  states $s$ in   tuples $(s,s',P)$ are labeled as   goal states  of $P$ or non-goals.
 
-The theory $T({\cal S},{\cal F})$ given by the formulas  \ref{d1})--(\ref{goal}
+The theory $T({\cal S},{\cal F})$ given by the formulas  (\ref{d1})--(\ref{goal})
 has a number of atoms that is linear in the size of the feature pool $\cal F$,
 and quadratic in the number of expanded  states $s$  and transitions $(s,s')$ in ${\cal S}$.
 The resulting number of clauses is ....  , which can be roughly cut in half by  symmetry considerations.
@@ -592,7 +597,7 @@ to the ``soft''  unit clauses  $\neg selected(f)$.
 
 The computation of the feature pool $\cal F$ used in $T({\cal S},{\cal F})$
 relies on the predicates used to encode the instances in $\Q$.
-A simple grammar   allow  us   to construct new predicates from them, 
+A simple grammar allows  us   to construct new predicates from them, 
 and the boolean and numerical features in the pool
 are defined from the resulting \emph{unary predicates}. 
 The key issue is how to define new predicates from old  ones. For this 
@@ -607,12 +612,12 @@ For details on the syntax and semantics of description logics; see \cite{dl-hand
 The DL grammar is given by the rules:
 
   \begin{itemize}
-  \item $C \ \leftarrow\ \ C_p, C_u, C_x$, primitive, universal,  nominal c's,\footnote{Denotation of $C_x$ for parameter $x$ is $\{x\}$.}
-  \item $C \ \leftarrow\  \neg C, C \sqcap C'$, negation and conjunction, 
-  \item $C \ \leftarrow\  \exists R.C , \forall R.C$, concepts that use of  roles: first denotes $x$ s.t. for some  $y$,  $R(x,y) \land C(y)$.
+  \item $C \ \leftarrow\ \ C_p, C_u, C_x$: primitive, universal,  nominal c's,\footnote{Denotation of $C_x$ for parameter $x$ is $\{x\}$.}
+  \item $C \ \leftarrow\  \neg C, C \sqcap C'$: negation and conjunction, 
+  \item $C \ \leftarrow\  \exists R.C , \forall R.C$: concepts that use of  roles: first denotes $x$ s.t. for some  $y$,  $R(x,y) \land C(y)$.
   Second,  $x$ s.t. for all $y$, $R(x,y) \rightarrow C(y)$,
-  \item $C \ \leftarrow\  R=R'$, stands for $x$ s.t. set of $y$'s  s.t. $R(x,y)$ equal to set of $y$'s s.t. $R'(x,y)$,
-    \item $R \leftarrow R_p, R^{-1}, R^*$ ; primitive, inverses, transitive.
+  \item $C \ \leftarrow\  R=R'$: stands for $x$ s.t. set of $y$'s  s.t. $R(x,y)$ equal to set of $y$'s s.t. $R'(x,y)$,
+    \item $R \leftarrow R_p, R^{-1}, R^*$: primitive, inverse, transitive closure.
 %     \item $R \leftarrow R \circ R'$, role composition: $(x,y)$ in $R \circ R'$ if $(x,z)$ in $R$ and $(z,y)$ in $R'$.
 %     \item $R \leftarrow R:C$, denotes pairs $(x,y)$ in $R$ s.t. $C(y)$.
  \end{itemize}
@@ -626,13 +631,13 @@ the resulting unary and binary predicates from the denotation of the primitive p
 \subsection{Pool}
 
 
-The set of  concepts and roles  with complexity bounded by $k$ is denoted as ${\cal G}(k)$
-with their  complexity given by the    minimum number of  rules for generating them.
+The set of all concepts and roles with complexity no larger than $k$ is denoted as ${\cal G}^k$,
+with their complexity given by the minimum number of rules for generating them.
 The size  of this set is reduced by incrementally pruning ``duplicate'' concepts,
 those whose denotation coincides with the denotation of a another concept over all
 the sampled states in ${\cal S}$. 
 
-The pool of features ${\cal F}={\cal F}^k$  is defined from   ${\cal G}^k$
+The pool of features ${\cal F}={\cal F}^k$  is defined from ${\cal G}^k$
 and contains the  features $f$ that represent the functions $\phi_f(s)$
 as follows:
 
@@ -697,17 +702,198 @@ In principle, we could learn the formulas $I_F$ and $G_F$ from the sample as wel
 
 \section{Experimental Results}
 
-We evaluate the computational model given by steps 1--6 above over several domains. *Fill up general  details in 1--6
-that don't change from problem to problem: how ${\cal S}$ obtained, value of $k$, SAT solver used, FOND planners, translator, etc.
+We evaluate the computational model described in steps 1--6 above over several domains.
+%
+
+% *Fill up general details in 1--6 that don't change from problem to problem
+%how ${\cal S}$ obtained
+The sample set $\mathcal{S}$ is obtained following one of two possible strategies.
+In the \emph{exhaustive} sampling strategy,
+$\mathcal{S}$ contains, for every one of the training instances $P$,
+all the states generated on a breadth-first search from the initial state in $P$
+that is run until $m$ expansions have been performed. If that set includes no goal state,
+an optimal plan for $P$ is computed and all of the states along the plan are included in $\mathcal{S}$ as well,
+as we need at least one goal state in the sample set.
+%
+In the \emph{random} sampling strategy, a large number $M$ of states are generated, potentially exhausting the full state space,
+and then a certain number $m <\!< M$ of them is sampled uniformly at random. If no goal state is found among those $m$,
+one random goal state from the larger set is drawn at random and added into the sample.
+
+The feature complexity bound $k$ in the feature pool $\mathcal{F}$ is set to a value of $k=10$, unless no solution is found
+to the theory $T({\cal S},{\cal F})$, in which case it is increased to $k=20$. 
+% We have considered strategies to increase the bound adaptively
+The resulting theory $T({\cal S},{\cal F})$ is solved with the Open-WBO MAXSAT solver \cite{martins2014open}.
+
+** Details on the FOND planner, QNP translation, etc. **
+
+The whole computational pipeline made up of steps 1--6 is processed on Intel Xeon E5-2660 CPUs,
+with time and memory cutoffs of 1h and 32GB.
+
+The number of instances $P$ is never larger than $3$, and they are selected XXX THIS NEEDS TO BE WELL JUSTIFIED...
+
+
+
 The goal marking scheme that  yields the smaller  theory $T_G({\cal S},{\cal F})$ is obtained an optimal plan over
-a few (always less than xxxx) instances $P$. 
+a few (always less than xxxx) instances $P$. ??
 
-Experiments setting: cpu, cutoffs, etc.
 
-For each problem: 1--6 details that vary from problem to problem. Follow same structure:
-$\Q$, $P$s, primitive predicates, number of atoms and clauses  of $T$ and/or $T^G$,
-SAT times,  $F$, $|A_F|$;  number of FOND atoms and actions in $Q^+_F$ (include those in $F$, $A_F$ plus translation), $I_F$ and $G_F$,
-FOND time, resulting policy.  Numbers can go all in a table.
+
+\begin{table*}[t]
+\centering
+% \addtolength{\tabcolsep}{-1pt}
+{
+% \scriptsize
+% \footnotesize
+\small
+\def\arraystretch{1}%  1 is the default
+
+\newcommand{\rowspacing[1]}{&&&&&&&&&&&&&&&\\[\dimexpr-\normalbaselineskip+2pt]}
+
+
+\begin{tabular}{%
+@{}l%
+@{\extracolsep{1.5em}}r%@{}l%
+@{\extracolsep{1.5em}}r%
+@{\extracolsep{8pt}}r%
+%
+@{\extracolsep{1.5em}}r%
+@{\extracolsep{8pt}}r%
+@{\extracolsep{8pt}}r%
+@{\extracolsep{8pt}}r%
+%
+@{\extracolsep{1.5em}}r%
+@{\extracolsep{8pt}}r%
+@{\extracolsep{8pt}}r%
+@{\extracolsep{8pt}}r%
+%
+@{\extracolsep{1.5em}}r%
+@{\extracolsep{8pt}}r%
+@{\extracolsep{8pt}}r%
+@{\extracolsep{8pt}}r%
+%
+@{}}
+
+% @{\extracolsep{3pt}}
+
+
+
+ & $I$ & $\abs{\mathcal{S}}$ & $k$ & $\abs{\mathcal{F}^k}$ & \multicolumn{2}{c}{$T$} & \multicolumn{2}{c}{$T_G$} &  $C_{\text{SAT}}$ & $\abs{F}$ & $\abs{A_F}$ & $\abs{I_F}$  & $\abs{G_F}$ & $\abs{Q^+_F}$ & $C_{\text{FOND}}$ \\ %
+
+\rowspacing 
+\cline{6-7} \cline{8-9}%
+\rowspacing
+
+ & &     &      &         & $\#V$ & $\#C$           & $\#V$ & $\#C$             &     &&&&&& \\%
+
+\rowspacing \hline \rowspacing
+\multirow{1}{*}{$\Q_{clear}$}
+& 1     &     927 & 8  & 322 & 535K & 59.6M & 7.7K & 767K   &  0.01 & 3 & 2   &  - & - & - & - \\% Total complexity of F: 8
+
+
+\rowspacing \hline \rowspacing
+\multirow{1}{*}{$\Q_{on\text{-}2\text{-}tow}$}   
+& 3 &        420  & 8 & 657 & -K & -K & 18.3K &     3.3M    &  0.02&  5 & 7   &  - & - & - & - \\% Total complexity of F: 18
+
+
+\rowspacing \hline \rowspacing
+\multirow{1}{*}{$\Q_{gripper}$}    
+& 2 &         403 & 8 & 130 & 93K & 4.7M & 8.1K &   358K    &  0.01 & 4 & 5&  - & - & - & - \\% Total complexity of F: 10
+
+
+\rowspacing \hline \rowspacing
+\multirow{1}{*}{$\Q_{reward}$}
+& 2 &         568 & 8 & 280 & 184K & 11.9M & 15.9K & 1.2M   &  0.01 & 2 & 2 &  - & - & - & - \\% Total complexity of F: ?
+\end{tabular}
+
+}
+\caption{{
+  Experimental Results on 4 different generalized planning problems. 
+  $I$: number of training instances; 
+  $\abs{\mathcal{S}}$: sample set size, in total number of transitions; 
+  $k$: max. feature comlexity; $\abs{\mathcal{F}^k}$: size of the pool of features;
+  $\#V$, $\#C$: Number of variables and clauses of the theories $T({\cal S},{\cal F})$ and $T_G({\cal S},{\cal F})$;
+  $C_{\text{SAT}}$, $C_{\text{FOND}}$: computation time (sec.) of the SAT and FOND solvers, resp.;
+  $\abs{F}$: number of selected features;
+  $\abs{A_F}$: number of abstract actions;
+  $\abs{I_F}$: ???;
+  $\abs{G_F}$: ??? ;
+  $\abs{Q^+_F}$: ??? .
+  All figures that depend on the SAT theory are given for $T_G({\cal S},{\cal F})$.
+}}
+\label{tab:exp-result-data}
+\end{table*}
+% 2018-09-05 00:54:08 INFO     Selected (states / goals / optimal tx): 220 / 34 / 20
+
+
+Table~\ref{tab:exp-result-data} summarizes the relevant data for each of the test benchmarks.
+
+% For each problem: 1--6 details that vary from problem to problem. Follow same structure:
+% $\Q$, $P$s, primitive predicates, number of atoms and clauses  of $T$ and/or $T^G$,
+% SAT times,  $F$, $|A_F|$;  number of FOND atoms and actions in $Q^+_F$ (include those in $F$, $A_F$ plus translation), $I_F$ and $G_F$,
+% FOND time, resulting policy.  Numbers can go all in a table.
+
+\paragraph{Clearing a block.}
+The generalized problem $\Q_{clear}$ aims at achieving the goal $clear(x)$ for any block $x$
+in the Blocks world. 
+We take the standard encoding with primitive predicates $on(a, b)$, $clear(b)$, $ontable(b)$, $holding(b)$ and $handempty$.
+
+
+The abstract action model features one action \emph{pick-above-$x$} to pick the topmost block above $x$,
+and one action \emph{place-aside} to put it away, both described in terms of features $H$, $X$ and $n(x)$, 
+that denote, respectively, whether any block is being held, whether block $x$ is being held,
+and the number of blocks above $x$.\footnote{
+Action and features names are assigned manually by us to increase readability, but correspond faithfully
+to the learnt entities.
+}
+%
+The model is provably correct, but not complete in general, as it lacks e.g.
+any action to pick block $x$.
+However, it is sufficient to obtain a policy with a single loop that will 
+alternatively \emph{pick-above-$x$} and \emph{place-aside} until block $x$ is clear,
+which provably \emph{achieves the goal from any configuration of blocks, for any number of blocks}.
+
+% Action 1:
+%         PRE: NOT holding(a), bool[holding]
+%         EFFS: NOT bool[holding]
+% 
+% Action 2:
+%         PRE: NOT bool[holding], NOT holding(a), n(a) > 0
+%         EFFS: DEC n(a), bool[holding]
+
+% Loop:
+%   Action 2 [Pick block above x]
+%   If n(a) = 0 Break
+%   Action 1 [Put block aside]
+% 
+
+\paragraph{Stacking two blocks from different towers.}
+The problem $\Q_{on\text{-}2\text{-}tow}$ is aims at achieving a goal of the form $on(x,y)$
+in the Blocks world for any two blocks $x$ that are initially not in the same tower.
+We take the same encoding as above.
+
+
+
+
+
+\paragraph{Gripper.}
+The problem $\Q_{gripper}$ is based on the classical Gripper problem, where a robot with two arms needs to 
+move a number of blocks between two different rooms, each arm being able to carry only one ball at a time.
+We use the standard encoding with primitive predicates $at\text{-}robby(l)$, $at\text{-}ball(b, l)$, $free(g)$, $carry(b, g)$ that denote,
+respectively, whether the robot (the ball) is at location $l$, whether gripper $g$ is free, and whether gripper $g$ carries ball $b$,
+plus type unary predicates $room$, $ball$, and $gripper$.
+
+
+
+\paragraph{Collecting rewards in a maze.}
+The objective in the problem $\Q_{reward}$ is to move in an $n \times m$ grid to pick up certain
+rewards that are spread out in certain grid cells, while avoiding other cells which are considered as \emph{blocked}.
+The encoding has primitive predicates $reward(c)$, $at(c)$, $blocked(c)$ and $adjacent(c_1, c_2)$ that denote
+respectively the position of the rewards, of the agent, of the blocked cells, and the grid topology.
+We use two single instances of the problem with size $5 \times 5$ and $4 \times 4$ and different distributions of blocks and rewards.
+
+
+
+
 
 ** Mention: symbold DRL paper by Shanahan in 
 
