@@ -355,7 +355,7 @@ an instance $P$ of $\Q$ iff
 1)~$s_0$ is the initial state in $P$,
 2)~$a_i$ is one of the actions that instantiate $\pi(\bar{s}_i)$ in $s_i$,
 3)~$a_i$ is applicable in $s_i$ and $s_{i+1}=f(a_i,s_i)$, and
-4)~$s_n$ is a goal state of $P$, $n=\infty$, or $\pi(\bar{s}_n)$ either is
+4)~$s_n$ is a goal state of $P$, $n=\infty$, or $\pi(\bar{s}_n)$ is either
 undefined, denotes an abstract action that is not applicable in $\bar{s_n}$,
 or no applicable action $a_n$ instantiates $\pi(\bar{s}_n)$.
 The policy $\pi$ solves $P$ iff all the induced trajectories reach the
@@ -500,7 +500,7 @@ The \emph{propositional variables} in $T(\S,\F)$ are then:
 
 \medskip
 \noindent The first formulas in $T(\S,\F)$ capture the meaning of $D_1$:
-  
+%  
 \begin{equation}
   \label{eq:d1}
   D_1(s, t) \ \Leftrightarrow\ \textstyle \bigvee_{f}  selected(f)
@@ -511,8 +511,8 @@ values in $s$ and $t$; i.e.\ boolean features $p$ with different truth value
 in $s$ and $t$, and numerical features $n$ with different truth values for
  $n=0$ in $s$ and $t$. 
 
-\noindent The second formulas encode the meaning of $D_2$:
-
+The second formulas encode the meaning of $D_2$:
+%
 \begin{equation}
   \label{eq:d2}
   D_2(s, s', t, t') \ \Leftrightarrow\ \textstyle\bigvee_f  selected(f)
@@ -529,7 +529,7 @@ are  taken as templates  of abstract actions. Thus, if $s$ and $t$ are not disti
 for each transition $(s, s') \in \S$, there must be a transition $(t, t') \in \S$
 such that the two transitions are not distinguished by the selected features either.
 This is expressed as
-
+%
 \begin{equation}
   \label{eq:bridge1}
   \neg D_1(s, t) \  \Rightarrow\ \textstyle\bigvee_{t'} \neg D_2(s, s', t, t')
@@ -565,7 +565,7 @@ from non-goal states as:
 \noindent where  $s$ and $t$  are expanded states  $\S$ such that exactly one of them is a goal state. 
 For this, it is assumed that expanded states $s$ in $\S$ are labeled as goal or non-goal states.
 
-The theory $T(\S,\F)$ given by formulas (\ref{eq:d1}--\ref{eq:goal})
+The theory $T(\S,\F)$ given by formulas \eqref{eq:d1}--\eqref{eq:goal}
 has a number of atoms that is linear in the size $|{\cal F}|$  of the feature pool $\F$,
 and quadratic in the number $m_1$ of expanded states $s$  and
 in the number $m_2$ of transitions $(s,s')$ in $\S$.
@@ -591,11 +591,11 @@ need to be part of some goal-relevant transition.
 % resulting state transitions to $\S$ at the same time that the first
 % arguments $s$ and $(s,s')$ in the $D_1$ and $D_2$ atoms are restricted
 % to be marked.
-If the set of marked transitions is much smaller than the full sample set, as will typically be the case,
-then $T_G(\S,\F)$ will be much smaller than $T(\S,\F)$.
-$T_G(\S,\F)$ will guarantee soundness relative to $\S$
-but completeness only relative to the the subset of goal-relevant transitions in $\S$. Yet this does not affect
-the resulting formal guarantees, which depend only on soundness. 
+If the set of marked transitions is much smaller than the full sample set, %as will typically be the case,
+$T_G(\S,\F)$ is much smaller than $T(\S,\F)$.
+$T_G(\S,\F)$ guarantees soundness relative to $\S$
+but completeness only relative to the the subset of goal-relevant transitions in $\S$.
+Yet this does not affect the resulting formal guarantees, which depend only on soundness. 
 
 
 \subsection{Extracting $F$ and  $A_F$}
@@ -641,7 +641,7 @@ For this, $G_F = G_{\sigma}$ is defined as the DNF formula whose terms
 correspond to the abstract states over the selected features in $F_{\sigma}$ 
 that are false in all expanded states in $\S$ marked as non-goals
 and true in some expanded goal state. This DNF formula can   be simplified in standard ways. 
-Due to  (\ref{eq:d1}) and (\ref{eq:goal}) that force the selected features in $F_{\sigma}$
+Due to  \eqref{eq:d1} and \eqref{eq:goal} that force the selected features in $F_{\sigma}$
 to   distinguish goal  from non-goal states, we have that:
 
 \begin{theorem}
@@ -689,12 +689,14 @@ We use a standard  DL grammar given by the following rules:
  \end{enumerate}
 
 The primitive predicates $p$ used in the grammar must be common to all instances $P$ of the generalized problem $\Q$.
-They will usually be common domain predicates. Given that parameters $x$ are common as well,
-the compositional semantics of DL defines, for any concept $C$ and role $R$ resulting from these rules and 
-any state $s$ of $P$, a denotation $C^s$ ($R^s$) \emph{that can be determined from the denotation of the primitive predicates
-in $s$ alone}. We will below see examples of derived concepts such as $\exists\, on^* . C_x$,
-whose denotation in any Blocksworld state $s$ is the set of blocks that are above $x$ in $s$.
-Our numerical features $n_C$ will be defined by the cardinality of these denotations $C^s$. 
+%They will usually be common domain predicates.
+Given that parameters $x$ are common as well,
+the compositional semantics of DL defines, for any concept $C$ and role $R$ resulting
+from these rules and any state $s$ of $P$, a denotation $C^s$ ($R^s$)
+\emph{that can be determined from the denotation of the primitive predicates in $s$ alone}.
+Below we see examples of derived concepts such as $\exists\, on^* . C_x$, whose denotation
+in any Blocksworld state $s$ is the set of blocks that are above $x$ in $s$.
+The numerical features $n_C$ are defined by the cardinality of such denotations $C^s$. 
 
 
 \subsection{Pool}
@@ -771,7 +773,7 @@ learned are sound relative to $\Q$ and that $\Q$ is restricted to the instances 
 initial and goal conditions comply with   $I_F$ and $G_F$.
 However,  for a policy to be correct, the abstract actions do
 not have to be sound relative to all reachable states $s$ in the instances $P$ of $\Q$, it  suffices
-if they are sound on the states $s$ that are reachable with the policy. We will see an example of this below.
+if they are sound on the states $s$ that are reachable with the policy. We see an example of this below.
 
 
 % \textcolor{red}{\bf ** NEXT IS UNCLEAR **}
