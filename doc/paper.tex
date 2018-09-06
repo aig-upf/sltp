@@ -148,13 +148,14 @@
 \maketitle
 
 \begin{abstract}
-  Generalized planning is concerned with the computation of plans that solve multiple instances.
+  Generalized planning is concerned with the computation of plans that solve not one but multiple instances
+  of a class of planning problems.
   Recently, it has been shown that generalized plans can be expressed as mappings of feature
   values into actions, and that they can often be computed with fully observable non-deterministic
   (FOND) planners. %  on suitable FOND problems. %after a sequence of transformations.
   The actions in such plans, however, are not the actions in the instances themselves, which are
-  not necessarily common to  other instances, but abstract actions that track the effect of 
-  actions on the set of features. The formulation assumes that both the features and the abstract
+  not necessarily common to  other instances, but \emph{abstract} actions that are defined on a set 
+  of \emph{common} features. The formulation assumes that both the features and the abstract
   actions are given.
   In this work, we address this limitation by showing how to learn them automatically. 
   %  the features and  abstract actions.
@@ -187,8 +188,8 @@ and numerical features $F$ and a set of \emph{abstract actions} $A_F$.
 The  abstract actions are  \emph{sound} and \emph{complete} if they track the
 effects  of the actions on  the features in a suitable way.
 The resulting generalized plans  map feature values into abstract actions, and soundness
-ensures that the application  of an   abstract action  results in the application of
-a concrete action with a similar  effect  on  the features. Moreover, the form of the abstract actions
+ensures that the application of an abstract action can be mapped back into the application of
+a concrete action with analog effect  on  the features. Moreover, the form of the abstract actions
 ensures that generalized plans can be computed using fully observable non-deterministic (FOND) planners
 once the generalized planning problem is transformed into a FOND problem.
 %after some transformations.
@@ -201,7 +202,7 @@ the negation of the proposition $n=0$, decrements  are  transformed  into
 non-deterministic (disjunctive)  propositional effects $n > 0 \, | \, n=0$. 
 }
 
-Bonet and Geffner's  formulation of generalized planning assumes that the
+Bonet and Geffner's generalized planning formulation assumes that the
 features and abstract actions are given. In this work we address this limitation
 by  \emph{showing  how the features and abstract actions  can be learned from
 the primitive predicates used to define the instances and a given sample of state transitions.}
@@ -211,7 +212,7 @@ feature $H$  that tracks whether the gripper holds a block,  a numerical feature
 $n(x)$ that counts the number of blocks above $x$, and two abstract actions:
 one with preconditions $\neg H$ and $n(x) > 0$, and effects $H$ and $n(x)\mminus$
 (decrement $n(x)$), and the other with precondition $H$ and effect $\neg H$.
-In this work, we show how to obtain such policies from STRIPS instances only
+In this work, we show how to obtain such policies from STRIPS instances alone,
 without having to provide the features and abstract actions by hand.
 
 The work has relation to a number of research threads in planning, knowledge
@@ -223,9 +224,9 @@ The model is not the model of an instance but a generalized model for obtaining
 plans that work for multiple instances. In this sense, the work is different than
 action model learning \cite{yang:action-learning} and model-based reinforcement
 learning and closer in aims to work on learning general policies from examples or
-experience \cite{martin:concept,fern:bias,mazebase,general-drl}.
+experience \cite{martin-geffner:generalized,fern:bias,mazebase,general-drl}.
 Generalized planning has also been formulated as a problem in first-order logic
-\cite{srivastava:generalized} and general plans over finite horizons have been
+\cite{srivastava:generalized}, and general plans over finite horizons have been
 derived using first-order regression \cite{boutilier2001symbolic,wang2008first,van2012solving}.
 Our approach differs from first-order approaches in the use of propositional
 planners, and from purely learning approaches, in the \emph{formal guarantees} that
@@ -248,7 +249,7 @@ following  \citeay{bonet:ijcai2018}.
 \subsection{Generalized Planning}
 
 A \emph{generalized planning problem} $\Q$ is a collection of planning instances $P$.
-An instance $P$ is a  classical planning problems expressed in some compact language
+An instance $P$ is a  classical planning problem expressed in some compact language
 as a tuple $P=\tup{V,I,G,A}$ where $V$ is a set of state variables that can take a
 finite set of values (boolean or not), $I$ is a set of atoms over $V$ defining an
 initial state $s_0$, $G$ is a set of atoms or literals over $V$ describing the goal
@@ -322,7 +323,7 @@ variable  $n$.
 \begin{example}
   For the features $F=\{H,n(x)\}$, the abstract action $\bar{a}=\abst{\neg H,n(x)>0}{H,n(x)\mminus}$ 
   is sound in the generalized problem $\Q_{clear}$ which consists of all
-  Blocksworld instances with stack and unstack actions with goal $clear(x)$.
+  Blocksworld instances with stack and unstack actions and goal $clear(x)$.
   Indeed, if $s$ is a reachable state in an instance $P$ and $\bar{a}$ is
   applicable in $\bar{s}$, the gripper must be empty in $s$ and some
   block must be above $x$. Thus, if $A$ is the clear block above $x$ and
@@ -526,7 +527,7 @@ and \emph{completeness} over  the samples.  Since the abstract actions  are not 
 the qualitative changes in each  transition $(s,s')$ in $\S$
 are  taken as templates  of abstract actions. Thus, if $s$ and $t$ are not distinguished by the selected features, 
 for each transition $(s, s') \in \S$, there must be a transition $(t, t') \in \S$
-such that that the two transitions are not distinguished by the selected features either.
+such that the two transitions are not distinguished by the selected features either.
 This is expressed as
 
 \begin{equation}
@@ -564,35 +565,47 @@ from non-goal states as:
 \noindent where  $s$ and $t$  are expanded states  $\S$ such that exactly one of them is a goal state. 
 For this, it is assumed that expanded states $s$ in $\S$ are labeled as goal or non-goal states.
 
-The theory $T(\S,\F)$ given by the formulas  (\ref{eq:d1})--(\ref{eq:goal})
+The theory $T(\S,\F)$ given by formulas (\ref{eq:d1}--\ref{eq:goal})
 has a number of atoms that is linear in the size $|{\cal F}|$  of the feature pool $\F$,
-and quadratic in the number $|{\cal S}_1$ of expanded  states $s$  and
-in the number $|{\cal S}|_2$ of transitions $(s,s')$ in $\S$.
-The resulting number of clauses grows   with
-$|{\cal S}_1|^2 \times ({\cal F} + {\cal S}_2)$, and 
-can be roughly cut in half by  symmetry considerations.
+and quadratic in the number $m_1$ of expanded states $s$  and
+in the number $m_2$ of transitions $(s,s')$ in $\S$.
+The number of clauses grows with
+$m_1^2 \times (\abs{{\cal F}} + m_2)$, and 
+can be roughly cut in half by eliminating symmetries.
 
-In the experiments we also consider a smaller theory that avoids the
-consideration of all pairs of expanded states or all pairs of transitions
-in $\S$. For this, some expanded states $s$ and transitions $(s,s')$ in
-tuples $(s,s',P)$ are marked as \emph{goal relevant}. This is achieved by
-computing some plans for some instances $P$ in $\Q$, and by adding the
-resulting state transitions to $\S$ at the same time that the first
-arguments $s$ and $(s,s')$ in the $D_1$ and $D_2$ atoms are restricted
-to be marked.
-If the set of marked states and transitions is much smaller than the set of unmarked ones, 
-then the resulting formula,  $T_G(\S,\F)$ will be much smaller than $T(\S,\F)$.
-The goal marking scheme that involves the theory $T_G(\S,\F)$ in place of $T(\S,\F)$
-amounts to enforcing soundness on  the sample set $\S$ but not completeness, yet this does
-not affect the resulting  formal guarantees that depend on soundness only. 
+We also consider an alternative theory $T_G(\S,\F)$
+that trades off completeness guarantees for a much smaller theory size, which
+results from not having to consider
+all pairs of expanded states or transitions in $\S$.
+%
+% No need to mark states as well - we just mark transitions, and states are marked implicitly
+%
+For this, some of the transitions $(s,s')$ in $\S$  are marked as being \emph{goal-relevant},
+and completeness is sought \emph{only with respect to these transitions}.
+These goal-relevant transitions are selected for being part of a concrete plan
+that is computed for each instance $P$ in $\Q$. The theory  $T_G(\S,\F)$ is then as
+ $T(\S,\F)$, with the sole difference that the $s$ and $s'$ arguments in the $D_1$ and $D_2$ atoms 
+need to be part of some goal-relevant transition.
+% This is achieved by
+% computing some plans for some instances $P$ in $\Q$, and by adding the
+% resulting state transitions to $\S$ at the same time that the first
+% arguments $s$ and $(s,s')$ in the $D_1$ and $D_2$ atoms are restricted
+% to be marked.
+If the set of marked transitions is much smaller than the full sample set, as will typically be the case,
+then $T_G(\S,\F)$ will be much smaller than $T(\S,\F)$.
+$T_G(\S,\F)$ will guarantee soundness relative to $\S$
+but completeness only relative to the the subset of goal-relevant transitions in $\S$. Yet this does not affect
+the resulting formal guarantees, which depend only on soundness. 
 
 
 \subsection{Extracting $F$ and  $A_F$}
 
-For a satisfying assignment $\sigma$ of the theory $T(\S,\F)$, let
+For a satisfying assignment $\sigma$ of the theories $T(\S,\F)$ and $T_G(\S,\F)$, let
 $F_{\sigma}$ be the set of features $f$ in $\F$ such that $selected(f)$
 is true in $\sigma$, and let $A_{\sigma}$ be the set of abstract actions
-that capture the transitions $(s,s')$ in $\S$, with duplicates and redundancies removed.
+that \emph{capture} all transitions $(s,s')$ in $\S$, in the case of theory $T$,
+and only the goal-relevant transitions $(s,s')$ in $\S$, in the case of $T_G$.
+% with duplicates and redundancies removed.
 The abstract action $\bar{a}=\abst{Pre}{\Eff}$ that captures the transition $(s,s')$
 has the \emph{precondition} $p$ (resp.\ $\neg p$) if $p$ is a boolean feature in
 $F_{\sigma}$ that is true (resp.\ false) in $s$, and has the precondition $n=0$
@@ -604,7 +617,7 @@ is true (resp.\ false) in $s$. Similarly, $\bar{a}$ has the \emph{effect} $p$
 decreases (resp.\ increases) in the transition from $s$ to $s'$. 
 If two abstract actions $\bar{a}$ and $\bar{a}$ differ only in the sign of a
 precondition, the precondition can be dropped, removing the duplicates and
-iterating until no more simplifications can be done. They key properties are:
+iterating until no more simplifications can be done. Their key properties are:
 
 \begin{theorem}
   The theory $T(\S,\F)$ is satisfiable iff there is a set of features $F \subseteq \F$
@@ -639,78 +652,80 @@ $s$ is expanded goal   state in $\S$  iff  $s$ satisfies  $G_F=G_{\sigma}$.
 % 
 Different satisfying assignments $\sigma$ give rise to different features $F_{\sigma}$
 and abstract actions $A_{\sigma}$. More meaningful features are found by looking for
-satisfying assignments $\sigma$ that minimizes a cost measure such as $|F_{\sigma}|$
-or more generally $\sum_{f \in F_{\sigma}} cost(f)$. We achieve this
-optimization through the use of Min SAT or Max-Weighted SAT solvers, where it suffices
-to give infinite weights to the clauses resulting from $T(\S,\F)$ and weights
-given by $cost(f)$ to the ``soft'' unit clauses $\neg selected(f)$.
+satisfying assignments $\sigma$ that minimize a cost measure such as $|F_{\sigma}|$
+or, more generally, $\sum_{f \in F_{\sigma}} cost(f)$. We achieve this
+optimization by casting the problem as a 
+% through the use of Min SAT or 
+a Weighted Max-SAT problem where clauses resulting from the above theories are taken as \emph{hard} clauses
+and additional \emph{soft} unit clauses $\neg selected(f)$ are given weight $cost(f)$, for $f \in \mathcal{F}$.
 
 
 \section{Feature Pool}
 
 The computation of the feature pool $\F$ used in $T(\S,\F)$
 relies on the predicates used to encode the instances in $\Q$.
-A simple grammar allows  us   to  construct new predicates 
-and to define  the boolean and numerical features in $\F$
-in terms of them. The key issue is how to the define
-new predicates. For this, we take a solution off-the-shelf: \emph{description logics (DL)},  also called
-\emph{concept languages},  are grammars for doing  this.
-Concepts $C$  refer  to predicates of arity 1 and roles $R$  to predicates of arity 2.
-Concept languages have been used before for  generating general policies using purely learning methods  \cite{martin:concept,fern:bias}.
+A simple grammar allows  us to  construct new predicates 
+and to define boolean and numerical features in $\F$
+from them. 
+In order to construct these predicates, we use an off-the-shelf solution:
+\emph{description logics} (DL),  also called \emph{concept languages}, which are well suited to this task.
+In DL, \emph{concepts} $C$  refer to unary predicates, and \emph{roles} $R$  to binary predicates.
+Concept languages have been used before for  generating general policies using purely learning methods  \cite{martin-geffner:generalized,fern:bias}.
 \citeay{dl-handbook} give syntax and semantics of description logics.
 
 
 \subsection{Grammar}
 
-We use a standard  DL grammar  given by the rules:
+We use a standard  DL grammar given by the following rules:
 \begin{enumerate}[{\small$\bullet$}]
-  \item $C \ \leftarrow\ \ C_p, C_u, C_x$: primitive, univ.,  nominal concepts,\footnote{Denotation of $C_x$ for parameter $x$ is $\{x\}$.}
-  \item $C \ \leftarrow\  \neg C, C \sqcap C'$: negation and conjunction, 
+  \item $C \ \leftarrow\ \ p, C_u, C_x$: primitive, universal, nominals: denotation of $C_u$ is whole universe, denotation of $C_x$, for parameter $x$, is $\set{x}$.
+  \item $C \ \leftarrow\  \neg C, C \sqcap C'$: negation and conjunction.
   \item $C \ \leftarrow\  \exists R.C , \forall R.C$: concepts that use of  roles: first denotes $x$ s.t.\ for some  $y$,  $R(x,y) \land C(y)$.
-  Second,  $x$ s.t.\ for all $y$, $R(x,y) \rightarrow C(y)$,
-  \item $C \ \leftarrow\  R=R'$: stands for $x$ s.t.\ set of $y$'s  s.t. $R(x,y)$ equal to set of $y$'s s.t. $R'(x,y)$,
-    \item $R \leftarrow R_p, R^{-1}, R^*$: primitive, inverse, transitive closure.
+  Second,  $x$ s.t.\ for all $y$, $R(x,y) \rightarrow C(y)$.
+  \item $C \ \leftarrow\  R=R'$: stands for $x$ s.t.\ set of $y$'s  s.t. $R(x,y)$ equal to set of $y$'s s.t. $R'(x,y)$.
+  \item $R \leftarrow R_p, R^{-1}, R^*$: primitive, inverse, transitive closure.
 %     \item $R \leftarrow R \circ R'$, role composition: $(x,y)$ in $R \circ R'$ if $(x,z)$ in $R$ and $(z,y)$ in $R'$.
 %     \item $R \leftarrow R:C$, denotes pairs $(x,y)$ in $R$ s.t. $C(y)$.
  \end{enumerate}
 
-The  compositional  semantics   of these rules allows us to determine the denotations (extensions)   $C^s$ and $R^s$  of
-the resulting unary and binary predicates $C^s$ and $R^s$ from the denotation of the primitive predicates
-in any  state $s$. We will see examples of derived concepts below such as ${\exists on^* . C_x}$,
-whose denotation in a state $s$ of the Blockworld is the set of blocks that are above $x$ in $s$.
-The numerical features $n_C$ will be associated with the cardinality of the extension $C^s$. 
+The primitive predicates $p$ used in the grammar must be common to all instances $P$ of the generalized problem $\Q$.
+They will usually be common domain predicates. Given that parameters $x$ are common as well,
+the compositional semantics of DL defines, for any concept $C$ and role $R$ resulting from these rules and 
+any state $s$ of $P$, a denotation $C^s$ ($R^s$) \emph{that can be determined from the denotation of the primitive predicates
+in $s$ alone}. We will below see examples of derived concepts such as $\exists\, on^* . C_x$,
+whose denotation in any Blocksworld state $s$ is the set of blocks that are above $x$ in $s$.
+Our numerical features $n_C$ will be defined by the cardinality of these denotations $C^s$. 
 
 
 \subsection{Pool}
 
-The set of all concepts and roles with complexity no larger than $k$ is
-denoted as $\G^k$. The complexity of a concept or role is the minimum
-number of rules needed to generate it. The size of $\G^k$ is reduced by
-incrementally pruning ``duplicate'' concepts; namely, those whose denotation
-coincides with the denotation of another concept over all the sampled states.
-%in $\S$. 
-
-The pool $\F=\F^k$  is defined from $\G^k$ and contains
-the  features $f$ that represent the functions $\phi_f(s)$ as follows:
+We define the \emph{complexity} of a concept or role as the minimum
+number of the above rules needed to generate it. We denote by $\G^k$
+the set of all concepts and roles with complexity no larger than $k$.
+We prune from $\G^k$ \emph{redundant} concepts whose denotation
+coincides with that of another concept over all sampled states
+in $\S$. 
+%
+The pool of features $\F=\F^k$  is defined from concepts $C \in \G^k$, and contains
+the following features $f$ that represent functions $\phi_f(s)$:
 \begin{enumerate}[{\small$\bullet$}]
-\item Boolean $b_p$ for each primitive predicate $p$ of arity $0$ that is true iff $p^s$ is true,
-\item Boolean $b_C$ for each $C$ that are true in $s$ iff $|C^s| > 0$,
-\item Numerical $n_C$ for each $C$ that stand for cardinality $|C^s|$,
-\item Numerical $\textit{dist}(C_1,R:C,C_2)$, that represent that smallest
+\item For each nullary primitive predicate $p$, a \emph{boolean} feature $b_p$ that is true in $s$ iff $p^s$ is true.
+
+\item For each concept $C$, 
+a \emph{boolean} feature $b_C$, if $|C^s| \in \set{0,1}$ for all sampled states $s$, 
+and a \emph{numerical} feature $n_C$ otherwise. The value of $b_C$ in $s$ is true iff $|C^s| = 1$;
+the value of $n_C$ is $|C^s|$.
+
+\item Numerical features $\textit{dist}(C_1,R{:}C,C_2)$, that represent the smallest
   $n$ such that for $x_1, \ldots, x_n$, $C_1^s(x_1)$, $C_2^s(x_{n})$, and
-  $(R:C)(x_i,x_{i+1})$ for $i=1, \ldots, n$. 
+  $(R{:}C)(x_i,x_{i+1})$ for $i=1, \ldots, n$. 
 \end{enumerate}  
 
-The role $R:C$ is such that its denotation contains the pairs $(x,y)$ in $R$
-such that $y$ is in $C$.
-Some pruning is done in this space of features as well. E.g., numerical
-features $n_C$ are pruned from the pool when there are no states $s$ and $s'$
-in the sample set for which $n_c(s)=0$ and $n_c(s') > 1$, while boolean
-features $n_b$ are pruned if uniformly true or false for all $s$, or if $n_C$
-is not pruned. 
+The denotation $(R{:}C)^s$ of role $R{:}C$ contains all pairs $(x,y)$ in $R^s$
+s.t. $y$ is in $C^s$.
+We also prune from this space of features all features whose denotation is either constant or coincident with that of another feature over all states in $\S$.
 The measure $cost(f)$ is set to the complexity of $C$ for $n_C$ and $b_C$,
-to $0$ for $b_p$ and to the complexities of $C_1$, $R$, $C$, and $C_2$ added
-up for $\textit{dist}(C_1,R:C,C_2)$.
+to $0$ for $b_p$ and to the sum of complexities of $C_1$, $R$, $C$, and $C_2$, for $\textit{dist}(C_1,R{:}C,C_2)$.
 Only features with cost bounded by $k$ are allowed in $\F$.
 
 
@@ -765,7 +780,7 @@ if they are sound on the states $s$ that are reachable with the policy. We will 
 Since we do not use a language for specifying $\Q$ formally, we will 
 take the formulas $I_F$ and $G_F$  as a partial formal specification of
 $\Q$. The theorem then says that if soundness over the samples, ensure
-formal soundness over $\Q$, the policy that solves the FONDP $Q^+_F$,
+formal soundness over $\Q$, the policy that solves the FONDP problem $Q^+_F$,
 solves $\Q$. The result holds whether $T$ or $T_G$ (goal marking) is used in step 3.
 In principle, we could learn the formulas $I_F$ and $G_F$ from the sample as well,  but with different guarantees. 
 }
@@ -775,7 +790,8 @@ In principle, we could learn the formulas $I_F$ and $G_F$ from the sample as wel
 
 We evaluate the computational model on four generalized problems $\Q$. For each $\Q$, we have selected  a few and small  ``training''  instances $P$ in $\Q$ by hand, 
 from which we draw  the sample sets $\cal S$.  $\S$ is constructed by collecting  the first $m$ states
-generated by  a breadth-first search  along with  the states generated in an optimal plan. This is done for each
+generated by  a breadth-first search (where $m$ is typically never larger than a few hundreds)
+along with  the states generated in an \emph{optimal} plan. This is done for each
 training instance  $P$. The plans ensure that $\cal S$ contains some goal states, and they are used to mark states and transitions for
 constructing  the theory $T_G({\cal S,\cal F})$, which is the one used in the experiments. $\S$ is closed by fully expanding the states selected
 while the bound $k$ for generating  $\cal F$ is set to $8$. The  distance features are used only in the last problem.
@@ -807,10 +823,10 @@ the problems.
   %}
   \caption{Results on 4 different benchmarks: $n$ is number of training instances $P$,
     $\abs{\S}$ is number of transitions in $\S$,
-    %$k$ is max.\ feature comlexity,
+    %$k$ is max.\ feature complexity,
     $\abs{\F}$ is size of feature pool,
     $np$ and $nc$ are the number of propositions and clauses in theories $T(\S,\F)$ and $T_G(\S,\F)$,
-    $t_{\text{SAT}}$ is time for SAT solver on theory, 
+    $t_{\text{SAT}}$ is time for SAT solver on theory $T_G$, 
     $\abs{F}$ and  $\abs{A_F}$ are the resulting number of 
     selected features and abstract actions, 
     $t_{\text{FOND}}$ is time for the FOND planner, and
@@ -832,17 +848,17 @@ the problems.
 
 \paragraph{Clearing a block.}
 $\Q_{clear}$ contains the Blocksworld instances  with goals of the form  $clear(x)$
-and stack/unstack actions. The primitive predicates, i.e., those appearing in the instances of $\Q_{clear}$, 
-are assumed to use the predicates $on(\cdot,\cdot)$, $clear(\cdot)$,
+and stack/unstack actions. The primitive predicates, i.e., those appearing in all instances $P$ of $\Q_{clear}$, 
+are $on(\cdot,\cdot)$, $clear(\cdot)$,
 $ontable(\cdot)$, $holding(\cdot)$, and $handempty$. 
 For this problem, a  single training instance $P$  with  5 blocks
 sufficed to learn an abstract model from which a general plan was computed.
 The  set of  features $F$ obtained from the theory $T_G$ is:
 
 \begin{enumerate}[--]
-  \item $H: holding$ (holding a block),
-  \item $X: \abs{holding \sqcap C_x}$ (holding block $x$),
-  \item $n(x): \abs{\exists\,on^* . \set{x}}$, (number of blocks above block $x$).
+  \item $H: holding$ (whether some block is being held),
+  \item $X: holding \sqcap C_x$ (whether block $x$ is being held),
+  \item $n(x): \abs{\exists\,on^* . C_x}$, (number of blocks above block $x$).
 \end{enumerate}
 
 \noindent The set of abstract actions obtained from $T_G$ is:\footnote{
@@ -878,9 +894,9 @@ the pick-above-$x$ action followed by put-aside,  until $x$ becomes clear.
 \paragraph{Stacking two blocks.}
 $\Q_{on}$ consists  of Blocksworld instances with goals of the form $on(x,y)$,
 and initial situations where the blocks $x$ and $y$ are not in the same tower.
-The primitive predicates are the same as those above.
+The primitive predicates are the same as in $\Q_{clear}$.
 For this problem, three training instances $P$ were used.
-The set of $F$ obtained from $T_G$ contains
+The set $F$ obtained from $T_G$ contains
 % 
 % Using the above Blocksworld encoding and only 3 different training
 % instances with up to 14 blocks, an abstract model involving 3 boolean
@@ -890,7 +906,7 @@ being empty, the gripper holding block $x$, and the block $x$ being
 on block $y$, and the numerical features  $n(x)$ and $n(y)$ that stand
 for the number of blocks above $x$ and $y$ respectively.
 The DL  definition of the  features $X$, $n(x)$, and $n(y)$ are as above
-while $E$ is $handempty$ and $G$ stands for $(\exists\,on^{-1}.C_x)  \sqcap C_y$.
+while $E$ is $handempty$ and $G$ stands for $(\exists\,on.C_y)  \sqcap C_x$.
 % Interestingly, this last feature is the concept-based representation
 % of the goal $on(x,y)$.
 %
@@ -920,7 +936,7 @@ while $E$ is $handempty$ and $G$ stands for $(\exists\,on^{-1}.C_x)  \sqcap C_y$
 %% action_7 ; put a directly on b
 %% 5 bool[handempty] 0 holding(a) 1 n(a) 0 n(b) 0 on(a,b)_2 0
 %% 4 bool[handempty] 1 holding(a) 0 n(b) 1 on(a,b)_2 1
-The set $A_F$ includes actions to pick up the clear
+The learned set $A_F$ includes actions to pick up the clear
 block above $x$ or $y$, two actions to put aside the block being held,
 and actions to pick block $x$, to place $x$ on $y$, and to place
 $x$ on the table:
@@ -959,8 +975,8 @@ rooms each, one with 4 balls and the other with 5. The set of features that
 is obtained from the theory $T_G$ is:
 \begin{enumerate}[--]
   \item $X: at\_robby \sqcap C_x$ (whether robby is in target room),
-  \item $B: \exists\,at . \neg C_x$ (whether balls not in target room),
-  \item $C: |\exists\,carry . \top|$ (number of balls carried),
+  \item $B: |\exists\,at . \neg C_x|$ (number of balls not in target room),
+  \item $C: |\exists\,carry . C_u|$ (number of balls carried),
   \item $G: \abs{free}$ (number of empty grippers).
 \end{enumerate}
 
@@ -996,15 +1012,15 @@ $\Q_{reward}$ contains instances where  an agent needs to navigate a rectangular
 grid to pick up  rewards spread in a grid  while 
 avoiding \emph{blocked} cells. A variation of the example
 has been used recently in \cite{garnelo2016towards}.
-The STRIPS instances have the primitive predicates $reward(c)$, $at(c)$, $blocked(c)$
-and $adjacent(c_1, c_2)$ that denote the position of the rewards, of
+The STRIPS instances have the primitive predicates $reward(\cdot)$, $at(\cdot)$, $blocked(\cdot)$
+and $adjacent(\cdot,\cdot)$ that denote the position of the rewards, of
 the agent, of the blocked cells, and the grid topology respectively.
 Pipeline 1--6  is fed with two instances of the problem of sizes $4 \times 4$
 and $5\times 5$, and two different  given distributions of blocked cells  and rewards.
 From the theory $T_G$, two numerical  features are learned:
 \begin{enumerate}[--]
-  \item $R: \abs{reward}$ (number of remaining rewards), and
-  \item $D: dist(at, adjacent:(\neg blocked), reward)$ (distance from current
+  \item $R: \abs{reward}$ (number of remaining rewards), 
+  \item $D: dist(at, adjacent{:}(\neg blocked), reward)$ (distance from current
     cell to closest cell with reward, traversing adjacent, unblocked cells only).
 \end{enumerate}
 Likewise, two abstract actions are obtained:
@@ -1024,7 +1040,7 @@ the process repeats until there are no more rewards to be collected.
 
 \subsection{Observations}
 
-We conclude the section with few observations.
+We conclude the section with a few observations.
 
 \paragraph{Soundness.} The abstract action \text{pick-ab-$y$} in $\Q_{on}$
 is sound relative to the sample set $\S$ used  but is not sound relative
@@ -1040,7 +1056,7 @@ from the given initial conditions.
 is adequate for many  domains but may fall short  on others. 
 For example,  in Towers of Hanoi, the first action to be taken
 (whether to move the smallest disk to target or buffer peg) depends
-on the number of disks begin even or  odd, which is not a feature
+on the number of disks being even or  odd, which is not a feature
 that  would result  from the primitive predicates used in the STRIPS
 instances and the general grammar. Yet, for some reason,
 Tower of Hanoi is regarded as a puzzle.  For other problems, the  use of \emph{goal predicates};
@@ -1070,11 +1086,11 @@ uses the abstraction, suitably transformed, to compute general plans.
 The number of samples required for obtaining correct general plans is
 very small as the learner does not have to learn how to plan, but
 just identify the features that are relevant for the  planner to track.
-Moreover, unlike, purely learning approaches, the scope and correctness
+Moreover, unlike purely learning approaches, the scope and correctness
 of the resulting general plans can be assessed.
 We have carried out a number of experiments over several domains to 
 illustrate the versatility of the approach. In the future, we want 
-to study of formal characterization  of the generalized problem $\Q$ and the possibilities of
+to study the formal characterization  of the generalized problem $\Q$ and the possibilities of
 testing soundness over $\Q$ automatically, and to improve the scalability of the approach,
 for example, by collecting the samples intelligently and incrementally
 from the states where the computed policy fails, and by reusing the
