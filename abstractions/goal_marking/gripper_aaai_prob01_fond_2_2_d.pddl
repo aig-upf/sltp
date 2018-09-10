@@ -11,101 +11,45 @@
         (robot-at-B)
     )
 
-    (:action Push_nfree-grippers_d0_b0
+    (:action PUSH_d0_b0
+        :parameters (?c - counter)
         :precondition (and (stack-depth d0) (bitvalue d0 b0))
-        :effect (and (not (stack-depth d0)) (stack-depth d1) (in-stack nfree-grippers) (stack-idx nfree-grippers d1) (not (bitvalue d0 b0)) (bitvalue d1 b0) (bitvalue d1 b1) (bitvalue d1 b2))
+        :effect (and (not (stack-depth d0)) (stack-depth d1) (in-stack ?c) (stack-idx ?c d1) (not (bitvalue d0 b0)) (bitvalue d1 b2) (bitvalue d1 b1) (bitvalue d1 b0))
     )
-    (:action Push_nfree-grippers_d0_b1
+    (:action PUSH_d0_b1
+        :parameters (?c - counter)
         :precondition (and (stack-depth d0) (bitvalue d0 b1) (not (bitvalue d0 b0)))
-        :effect (and (not (stack-depth d0)) (stack-depth d1) (in-stack nfree-grippers) (stack-idx nfree-grippers d1) (not (bitvalue d0 b1)) (bitvalue d0 b0) (bitvalue d1 b0) (bitvalue d1 b1) (bitvalue d1 b2))
+        :effect (and (not (stack-depth d0)) (stack-depth d1) (in-stack ?c) (stack-idx ?c d1) (not (bitvalue d0 b1)) (bitvalue d0 b0) (bitvalue d1 b2) (bitvalue d1 b1) (bitvalue d1 b0))
     )
-    (:action Push_nfree-grippers_d0_b2
+    (:action PUSH_d0_b2
+        :parameters (?c - counter)
         :precondition (and (stack-depth d0) (bitvalue d0 b2) (not (bitvalue d0 b1)) (not (bitvalue d0 b0)))
-        :effect (and (not (stack-depth d0)) (stack-depth d1) (in-stack nfree-grippers) (stack-idx nfree-grippers d1) (not (bitvalue d0 b2)) (bitvalue d0 b1) (bitvalue d0 b0) (bitvalue d1 b0) (bitvalue d1 b1) (bitvalue d1 b2))
+        :effect (and (not (stack-depth d0)) (stack-depth d1) (in-stack ?c) (stack-idx ?c d1) (not (bitvalue d0 b2)) (bitvalue d0 b1) (bitvalue d0 b0) (bitvalue d1 b2) (bitvalue d1 b1) (bitvalue d1 b0))
     )
-    (:action Push_ncarried_d0_b0
-        :precondition (and (stack-depth d0) (not (in-stack ncarried)) (bitvalue d0 b0))
-        :effect (and (not (stack-depth d0)) (stack-depth d1) (in-stack ncarried) (stack-idx ncarried d1) (not (bitvalue d0 b0)) (bitvalue d1 b0) (bitvalue d1 b1) (bitvalue d1 b2))
+    (:action PUSH_d1_b0
+        :parameters (?c - counter)
+        :precondition (and (stack-depth d1) (not (in-stack ?c)) (bitvalue d1 b0))
+        :effect (and (not (stack-depth d1)) (stack-depth d2) (in-stack ?c) (stack-idx ?c d2) (not (bitvalue d1 b0)) (bitvalue d2 b2) (bitvalue d2 b1) (bitvalue d2 b0))
     )
-    (:action Push_ncarried_d0_b1
-        :precondition (and (stack-depth d0) (not (in-stack ncarried)) (bitvalue d0 b1) (not (bitvalue d0 b0)))
-        :effect (and (not (stack-depth d0)) (stack-depth d1) (in-stack ncarried) (stack-idx ncarried d1) (not (bitvalue d0 b1)) (bitvalue d0 b0) (bitvalue d1 b0) (bitvalue d1 b1) (bitvalue d1 b2))
+    (:action PUSH_d1_b1
+        :parameters (?c - counter)
+        :precondition (and (stack-depth d1) (not (in-stack ?c)) (bitvalue d1 b1) (not (bitvalue d1 b0)))
+        :effect (and (not (stack-depth d1)) (stack-depth d2) (in-stack ?c) (stack-idx ?c d2) (not (bitvalue d1 b1)) (bitvalue d1 b0) (bitvalue d2 b2) (bitvalue d2 b1) (bitvalue d2 b0))
     )
-    (:action Push_ncarried_d0_b2
-        :precondition (and (stack-depth d0) (not (in-stack ncarried)) (bitvalue d0 b2) (not (bitvalue d0 b1)) (not (bitvalue d0 b0)))
-        :effect (and (not (stack-depth d0)) (stack-depth d1) (in-stack ncarried) (stack-idx ncarried d1) (not (bitvalue d0 b2)) (bitvalue d0 b1) (bitvalue d0 b0) (bitvalue d1 b0) (bitvalue d1 b1) (bitvalue d1 b2))
+    (:action PUSH_d1_b2
+        :parameters (?c - counter)
+        :precondition (and (stack-depth d1) (not (in-stack ?c)) (bitvalue d1 b2) (not (bitvalue d1 b1)) (not (bitvalue d1 b0)))
+        :effect (and (not (stack-depth d1)) (stack-depth d2) (in-stack ?c) (stack-idx ?c d2) (not (bitvalue d1 b2)) (bitvalue d1 b1) (bitvalue d1 b0) (bitvalue d2 b2) (bitvalue d2 b1) (bitvalue d2 b0))
     )
-    (:action Push_nballs-A_d0_b0
-        :precondition (and (stack-depth d0) (not (in-stack nballs-A)) (bitvalue d0 b0))
-        :effect (and (not (stack-depth d0)) (stack-depth d1) (in-stack nballs-A) (stack-idx nballs-A d1) (not (bitvalue d0 b0)) (bitvalue d1 b0) (bitvalue d1 b1) (bitvalue d1 b2))
+    (:action POP_d1
+        :parameters (?c - counter)
+        :precondition (and (stack-depth d1) (in-stack ?c) (stack-idx ?c d1))
+        :effect (and (not (stack-depth d1)) (stack-depth d0) (not (in-stack ?c)) (not (stack-idx ?c d1)))
     )
-    (:action Push_nballs-A_d0_b1
-        :precondition (and (stack-depth d0) (not (in-stack nballs-A)) (bitvalue d0 b1) (not (bitvalue d0 b0)))
-        :effect (and (not (stack-depth d0)) (stack-depth d1) (in-stack nballs-A) (stack-idx nballs-A d1) (not (bitvalue d0 b1)) (bitvalue d0 b0) (bitvalue d1 b0) (bitvalue d1 b1) (bitvalue d1 b2))
-    )
-    (:action Push_nballs-A_d0_b2
-        :precondition (and (stack-depth d0) (not (in-stack nballs-A)) (bitvalue d0 b2) (not (bitvalue d0 b1)) (not (bitvalue d0 b0)))
-        :effect (and (not (stack-depth d0)) (stack-depth d1) (in-stack nballs-A) (stack-idx nballs-A d1) (not (bitvalue d0 b2)) (bitvalue d0 b1) (bitvalue d0 b0) (bitvalue d1 b0) (bitvalue d1 b1) (bitvalue d1 b2))
-    )
-    (:action Push_nfree-grippers_d1_b0
-        :precondition (and (stack-depth d1) (bitvalue d1 b0))
-        :effect (and (not (stack-depth d1)) (stack-depth d2) (in-stack nfree-grippers) (stack-idx nfree-grippers d2) (not (bitvalue d1 b0)) (bitvalue d2 b0) (bitvalue d2 b1) (bitvalue d2 b2))
-    )
-    (:action Push_nfree-grippers_d1_b1
-        :precondition (and (stack-depth d1) (bitvalue d1 b1) (not (bitvalue d1 b0)))
-        :effect (and (not (stack-depth d1)) (stack-depth d2) (in-stack nfree-grippers) (stack-idx nfree-grippers d2) (not (bitvalue d1 b1)) (bitvalue d1 b0) (bitvalue d2 b0) (bitvalue d2 b1) (bitvalue d2 b2))
-    )
-    (:action Push_nfree-grippers_d1_b2
-        :precondition (and (stack-depth d1) (bitvalue d1 b2) (not (bitvalue d1 b1)) (not (bitvalue d1 b0)))
-        :effect (and (not (stack-depth d1)) (stack-depth d2) (in-stack nfree-grippers) (stack-idx nfree-grippers d2) (not (bitvalue d1 b2)) (bitvalue d1 b1) (bitvalue d1 b0) (bitvalue d2 b0) (bitvalue d2 b1) (bitvalue d2 b2))
-    )
-    (:action Push_ncarried_d1_b0
-        :precondition (and (stack-depth d1) (not (in-stack ncarried)) (bitvalue d1 b0))
-        :effect (and (not (stack-depth d1)) (stack-depth d2) (in-stack ncarried) (stack-idx ncarried d2) (not (bitvalue d1 b0)) (bitvalue d2 b0) (bitvalue d2 b1) (bitvalue d2 b2))
-    )
-    (:action Push_ncarried_d1_b1
-        :precondition (and (stack-depth d1) (not (in-stack ncarried)) (bitvalue d1 b1) (not (bitvalue d1 b0)))
-        :effect (and (not (stack-depth d1)) (stack-depth d2) (in-stack ncarried) (stack-idx ncarried d2) (not (bitvalue d1 b1)) (bitvalue d1 b0) (bitvalue d2 b0) (bitvalue d2 b1) (bitvalue d2 b2))
-    )
-    (:action Push_ncarried_d1_b2
-        :precondition (and (stack-depth d1) (not (in-stack ncarried)) (bitvalue d1 b2) (not (bitvalue d1 b1)) (not (bitvalue d1 b0)))
-        :effect (and (not (stack-depth d1)) (stack-depth d2) (in-stack ncarried) (stack-idx ncarried d2) (not (bitvalue d1 b2)) (bitvalue d1 b1) (bitvalue d1 b0) (bitvalue d2 b0) (bitvalue d2 b1) (bitvalue d2 b2))
-    )
-    (:action Push_nballs-A_d1_b0
-        :precondition (and (stack-depth d1) (not (in-stack nballs-A)) (bitvalue d1 b0))
-        :effect (and (not (stack-depth d1)) (stack-depth d2) (in-stack nballs-A) (stack-idx nballs-A d2) (not (bitvalue d1 b0)) (bitvalue d2 b0) (bitvalue d2 b1) (bitvalue d2 b2))
-    )
-    (:action Push_nballs-A_d1_b1
-        :precondition (and (stack-depth d1) (not (in-stack nballs-A)) (bitvalue d1 b1) (not (bitvalue d1 b0)))
-        :effect (and (not (stack-depth d1)) (stack-depth d2) (in-stack nballs-A) (stack-idx nballs-A d2) (not (bitvalue d1 b1)) (bitvalue d1 b0) (bitvalue d2 b0) (bitvalue d2 b1) (bitvalue d2 b2))
-    )
-    (:action Push_nballs-A_d1_b2
-        :precondition (and (stack-depth d1) (not (in-stack nballs-A)) (bitvalue d1 b2) (not (bitvalue d1 b1)) (not (bitvalue d1 b0)))
-        :effect (and (not (stack-depth d1)) (stack-depth d2) (in-stack nballs-A) (stack-idx nballs-A d2) (not (bitvalue d1 b2)) (bitvalue d1 b1) (bitvalue d1 b0) (bitvalue d2 b0) (bitvalue d2 b1) (bitvalue d2 b2))
-    )
-    (:action Pop_nfree-grippers_d1
-        :precondition (and (stack-depth d1) (in-stack nfree-grippers) (stack-idx nfree-grippers d1))
-        :effect (and (stack-depth d0) (not (stack-depth d1)) (not (in-stack nfree-grippers)) (not (stack-idx nfree-grippers d1)))
-    )
-    (:action Pop_ncarried_d1
-        :precondition (and (stack-depth d1) (in-stack ncarried) (stack-idx ncarried d1))
-        :effect (and (stack-depth d0) (not (stack-depth d1)) (not (in-stack ncarried)) (not (stack-idx ncarried d1)))
-    )
-    (:action Pop_nballs-A_d1
-        :precondition (and (stack-depth d1) (in-stack nballs-A) (stack-idx nballs-A d1))
-        :effect (and (stack-depth d0) (not (stack-depth d1)) (not (in-stack nballs-A)) (not (stack-idx nballs-A d1)))
-    )
-    (:action Pop_nfree-grippers_d2
-        :precondition (and (stack-depth d2) (in-stack nfree-grippers) (stack-idx nfree-grippers d2))
-        :effect (and (stack-depth d1) (not (stack-depth d2)) (not (in-stack nfree-grippers)) (not (stack-idx nfree-grippers d2)))
-    )
-    (:action Pop_ncarried_d2
-        :precondition (and (stack-depth d2) (in-stack ncarried) (stack-idx ncarried d2))
-        :effect (and (stack-depth d1) (not (stack-depth d2)) (not (in-stack ncarried)) (not (stack-idx ncarried d2)))
-    )
-    (:action Pop_nballs-A_d2
-        :precondition (and (stack-depth d2) (in-stack nballs-A) (stack-idx nballs-A d2))
-        :effect (and (stack-depth d1) (not (stack-depth d2)) (not (in-stack nballs-A)) (not (stack-idx nballs-A d2)))
+    (:action POP_d2
+        :parameters (?c - counter)
+        :precondition (and (stack-depth d2) (in-stack ?c) (stack-idx ?c d2))
+        :effect (and (not (stack-depth d2)) (stack-depth d1) (not (in-stack ?c)) (not (stack-idx ?c d2)))
     )
     (:action action_1_d1
         :precondition (and (not (zero ncarried)) (robot-at-B) (in-stack ncarried) (not (in-stack nfree-grippers)) (stack-idx ncarried d1))

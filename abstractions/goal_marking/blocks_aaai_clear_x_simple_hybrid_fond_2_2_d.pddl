@@ -12,37 +12,45 @@
         (holding_a)
     )
 
-    (:action Push_n_a_d0_b0
+    (:action PUSH_d0_b0
+        :parameters (?c - counter)
         :precondition (and (stack-depth d0) (bitvalue d0 b0))
-        :effect (and (not (stack-depth d0)) (stack-depth d1) (in-stack n_a) (stack-idx n_a d1) (not (bitvalue d0 b0)) (bitvalue d1 b0) (bitvalue d1 b1) (bitvalue d1 b2))
+        :effect (and (not (stack-depth d0)) (stack-depth d1) (in-stack ?c) (stack-idx ?c d1) (not (bitvalue d0 b0)) (bitvalue d1 b2) (bitvalue d1 b1) (bitvalue d1 b0))
     )
-    (:action Push_n_a_d0_b1
+    (:action PUSH_d0_b1
+        :parameters (?c - counter)
         :precondition (and (stack-depth d0) (bitvalue d0 b1) (not (bitvalue d0 b0)))
-        :effect (and (not (stack-depth d0)) (stack-depth d1) (in-stack n_a) (stack-idx n_a d1) (not (bitvalue d0 b1)) (bitvalue d0 b0) (bitvalue d1 b0) (bitvalue d1 b1) (bitvalue d1 b2))
+        :effect (and (not (stack-depth d0)) (stack-depth d1) (in-stack ?c) (stack-idx ?c d1) (not (bitvalue d0 b1)) (bitvalue d0 b0) (bitvalue d1 b2) (bitvalue d1 b1) (bitvalue d1 b0))
     )
-    (:action Push_n_a_d0_b2
+    (:action PUSH_d0_b2
+        :parameters (?c - counter)
         :precondition (and (stack-depth d0) (bitvalue d0 b2) (not (bitvalue d0 b1)) (not (bitvalue d0 b0)))
-        :effect (and (not (stack-depth d0)) (stack-depth d1) (in-stack n_a) (stack-idx n_a d1) (not (bitvalue d0 b2)) (bitvalue d0 b1) (bitvalue d0 b0) (bitvalue d1 b0) (bitvalue d1 b1) (bitvalue d1 b2))
+        :effect (and (not (stack-depth d0)) (stack-depth d1) (in-stack ?c) (stack-idx ?c d1) (not (bitvalue d0 b2)) (bitvalue d0 b1) (bitvalue d0 b0) (bitvalue d1 b2) (bitvalue d1 b1) (bitvalue d1 b0))
     )
-    (:action Push_n_a_d1_b0
-        :precondition (and (stack-depth d1) (bitvalue d1 b0))
-        :effect (and (not (stack-depth d1)) (stack-depth d2) (in-stack n_a) (stack-idx n_a d2) (not (bitvalue d1 b0)) (bitvalue d2 b0) (bitvalue d2 b1) (bitvalue d2 b2))
+    (:action PUSH_d1_b0
+        :parameters (?c - counter)
+        :precondition (and (stack-depth d1) (not (in-stack ?c)) (bitvalue d1 b0))
+        :effect (and (not (stack-depth d1)) (stack-depth d2) (in-stack ?c) (stack-idx ?c d2) (not (bitvalue d1 b0)) (bitvalue d2 b2) (bitvalue d2 b1) (bitvalue d2 b0))
     )
-    (:action Push_n_a_d1_b1
-        :precondition (and (stack-depth d1) (bitvalue d1 b1) (not (bitvalue d1 b0)))
-        :effect (and (not (stack-depth d1)) (stack-depth d2) (in-stack n_a) (stack-idx n_a d2) (not (bitvalue d1 b1)) (bitvalue d1 b0) (bitvalue d2 b0) (bitvalue d2 b1) (bitvalue d2 b2))
+    (:action PUSH_d1_b1
+        :parameters (?c - counter)
+        :precondition (and (stack-depth d1) (not (in-stack ?c)) (bitvalue d1 b1) (not (bitvalue d1 b0)))
+        :effect (and (not (stack-depth d1)) (stack-depth d2) (in-stack ?c) (stack-idx ?c d2) (not (bitvalue d1 b1)) (bitvalue d1 b0) (bitvalue d2 b2) (bitvalue d2 b1) (bitvalue d2 b0))
     )
-    (:action Push_n_a_d1_b2
-        :precondition (and (stack-depth d1) (bitvalue d1 b2) (not (bitvalue d1 b1)) (not (bitvalue d1 b0)))
-        :effect (and (not (stack-depth d1)) (stack-depth d2) (in-stack n_a) (stack-idx n_a d2) (not (bitvalue d1 b2)) (bitvalue d1 b1) (bitvalue d1 b0) (bitvalue d2 b0) (bitvalue d2 b1) (bitvalue d2 b2))
+    (:action PUSH_d1_b2
+        :parameters (?c - counter)
+        :precondition (and (stack-depth d1) (not (in-stack ?c)) (bitvalue d1 b2) (not (bitvalue d1 b1)) (not (bitvalue d1 b0)))
+        :effect (and (not (stack-depth d1)) (stack-depth d2) (in-stack ?c) (stack-idx ?c d2) (not (bitvalue d1 b2)) (bitvalue d1 b1) (bitvalue d1 b0) (bitvalue d2 b2) (bitvalue d2 b1) (bitvalue d2 b0))
     )
-    (:action Pop_n_a_d1
-        :precondition (and (stack-depth d1) (in-stack n_a) (stack-idx n_a d1))
-        :effect (and (stack-depth d0) (not (stack-depth d1)) (not (in-stack n_a)) (not (stack-idx n_a d1)))
+    (:action POP_d1
+        :parameters (?c - counter)
+        :precondition (and (stack-depth d1) (in-stack ?c) (stack-idx ?c d1))
+        :effect (and (not (stack-depth d1)) (stack-depth d0) (not (in-stack ?c)) (not (stack-idx ?c d1)))
     )
-    (:action Pop_n_a_d2
-        :precondition (and (stack-depth d2) (in-stack n_a) (stack-idx n_a d2))
-        :effect (and (stack-depth d1) (not (stack-depth d2)) (not (in-stack n_a)) (not (stack-idx n_a d2)))
+    (:action POP_d2
+        :parameters (?c - counter)
+        :precondition (and (stack-depth d2) (in-stack ?c) (stack-idx ?c d2))
+        :effect (and (not (stack-depth d2)) (stack-depth d1) (not (in-stack ?c)) (not (stack-idx ?c d2)))
     )
     (:action action_1
         :precondition (and (bool[holding]) (not (holding_a)))
