@@ -51,7 +51,7 @@ for i in xrange(100):
 	cnf.reset()
 	start_g = timer()
 	cnf.generate_clauses(my_task, 'n0', 'ng', controllerStates, len(controllerStates), p, verbose)
-	
+
 	print 'Generation time = ', timer() - start_g
 	print 'Done generation...'
 	print '# Clauses =', cnf.getNumberClauses()
@@ -60,7 +60,7 @@ for i in xrange(100):
 	print 'Creating formula...'
 	name_final = cnf.generateInputSat(name_formula_file)
 	# name_final = cnf.generateInputSatWSB(name_formula_file)
-	
+
 	print 'Done creating formula. Calling solver...'
 	start_solv = timer()
 
