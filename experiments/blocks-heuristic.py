@@ -35,7 +35,7 @@ def main():
 
                               # Provide a special, handcrafted method to generate concepts, if desired.
                               # This will override the standard concept generation procedure (default: None)
-                              concept_generator=generate_chosen_concepts,
+                              # concept_generator=generate_chosen_concepts,
 
                               # Max. allowed complexity for distance features (default: 0)
                               distance_feature_max_complexity=0,
