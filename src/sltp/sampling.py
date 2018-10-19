@@ -4,8 +4,8 @@ import logging
 
 from collections import defaultdict, OrderedDict
 
-from util.command import read_file
-from util.naming import filename_core
+from .util.command import read_file
+from .util.naming import filename_core
 
 
 def mark_optimal(goal_states, root_states, parents):

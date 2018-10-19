@@ -6,7 +6,7 @@ import resource
 import time
 import tracemalloc
 
-from util import console
+from . import console
 
 
 def display_top(snapshot, key_type='lineno', limit=3):

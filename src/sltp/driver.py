@@ -23,24 +23,23 @@ import sys
 from signal import signal, SIGPIPE, SIG_DFL
 import numpy as np
 
-from errors import CriticalPipelineError
-from util import console
-from util.bootstrap import setup_global_parser
-from util.command import execute
-from util.console import print_header, log_time
-from util.naming import compute_instance_tag, compute_experiment_tag, compute_serialization_name, \
+from .errors import CriticalPipelineError
+from .util import console
+from .util.bootstrap import setup_global_parser
+from .util.command import execute
+from .util.console import print_header, log_time
+from .util.naming import compute_instance_tag, compute_experiment_tag, compute_serialization_name, \
     compute_maxsat_filename, compute_info_filename, compute_maxsat_variables_filename, compute_sample_filenames
-from util.serialization import deserialize, serialize
+from .util.serialization import deserialize, serialize
 
 signal(SIGPIPE, SIG_DFL)
 
-BASEDIR = os.path.dirname(os.path.realpath(__file__))
 VERSION = "0.2"
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-BENCHMARK_DIR = os.path.join(BASE_DIR, 'domains')
-SAMPLE_DIR = os.path.join(BASE_DIR, 'samples')
-EXPDATA_DIR = os.path.join(BASE_DIR, 'runs')
+BASEDIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+BENCHMARK_DIR = os.path.join(BASEDIR, 'domains')
+SAMPLE_DIR = os.path.join(BASEDIR, 'samples')
+EXPDATA_DIR = os.path.join(BASEDIR, 'runs')
 
 
 class InvalidConfigParameter(Exception):
@@ -228,7 +227,7 @@ class ConceptGenerationStep(Step):
         return "Generation of concepts"
 
     def get_step_runner(self):
-        import features
+        from sltp import features
         return features.run
 
 
@@ -261,7 +260,7 @@ class FeatureMatrixGenerationStep(Step):
         return "Generation of the feature and transition matrices"
 
     def get_step_runner(self):
-        from matrices import generate_features
+        from sltp.matrices import generate_features
         return generate_features
 
 
@@ -311,7 +310,7 @@ class MaxsatProblemGenerationStep(Step):
         return "Generation of the max-sat problem"
 
     def get_step_runner(self):
-        import learn_actions
+        import sltp.learn_actions
         return learn_actions.generate_maxsat_problem
 
 
@@ -402,7 +401,7 @@ class MaxsatProblemSolutionStep(Step):
         return "Solution of the max-sat problem"
 
     def get_step_runner(self):
-        import learn_actions
+        import sltp.learn_actions
         return learn_actions.run_solver
 
 
@@ -431,7 +430,7 @@ class ActionModelStep(Step):
         return "Computation of the action model"
 
     def get_step_runner(self):
-        import learn_actions
+        import sltp.learn_actions
         return learn_actions.compute_action_model
 
 
@@ -455,7 +454,7 @@ class QNPGenerationStep(Step):
         return "Generation of the QNP encoding"
 
     def get_step_runner(self):
-        import qnp
+        from sltp import qnp
         return qnp.generate_encoding
 
 
@@ -567,7 +566,7 @@ class StepRunner(object):
         # import tracemalloc
         # tracemalloc.start()
         # memutils.display_top(tracemalloc.take_snapshot())
-        from util import performance
+        from .util import performance
 
         result = None
         console.print_header("({}) STARTING STEP: {}".format(os.getpid(), self.step_name))

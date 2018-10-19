@@ -15,23 +15,7 @@
 #
 #  Blai Bonet, bonet@ldc.usb.ve, bonetblai@gmail.com
 #  Guillem Frances, guillem.frances@unibas.ch
-import itertools
-import logging
-import os
-from collections import defaultdict
-from enum import Enum
-from signal import signal, SIGPIPE, SIG_DFL
-import time
 
-import numpy as np
-
-from errors import CriticalPipelineError
-from tarski.dl import FeatureValueChange, MinDistanceFeature
-from util.console import print_header, print_lines
-from util.command import count_file_lines, remove_duplicate_lines, read_file
-from solvers import solve
-from util.performance import print_memory_usage
-from util.serialization import serialize_to_string
 
 
 def generate_encoding(config, data, rng):

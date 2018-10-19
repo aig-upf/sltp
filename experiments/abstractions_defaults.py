@@ -1,13 +1,9 @@
 import os
-import sys
-
+from sltp.driver import Experiment, generate_pipeline, BENCHMARK_DIR
+from sltp.learn_actions import OptimizationPolicy
 
 def generate_experiment(domain_dir, domain, **kwargs):
     """ """
-
-    sys.path.insert(0, '..')
-    from driver import Experiment, generate_pipeline, BENCHMARK_DIR
-    from learn_actions import OptimizationPolicy
 
     if "instances" not in kwargs:
         raise RuntimeError("Please specify domain and instance when generating an experiment")

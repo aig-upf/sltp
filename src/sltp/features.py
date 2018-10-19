@@ -33,8 +33,8 @@ from tarski.dl import Concept, Role, PrimitiveConcept, PrimitiveRole, InverseRol
 from tarski.syntax.transform.errors import TransformationError
 from tarski.syntax.transform.simplifications import transform_to_ground_atoms
 
-from extensions import UniverseIndex, ExtensionCache
-from sampling import sample_generated_states
+from .extensions import UniverseIndex, ExtensionCache
+from .sampling import sample_generated_states
 
 signal(SIGPIPE, SIG_DFL)
 

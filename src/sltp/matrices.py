@@ -9,7 +9,7 @@ import numpy as np
 
 from tarski.dl import EmpiricalBinaryConcept, NullaryAtomFeature, ConceptCardinalityFeature, MinDistanceFeature
 
-from features import Model
+from .features import Model
 
 PRUNE_DUPLICATE_FEATURES = True
 NP_FEAT_VALUE_TYPE = np.int8  # Keep it allowing negative values, so that we can subtract without overflow!
