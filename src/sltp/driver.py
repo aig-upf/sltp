@@ -476,19 +476,17 @@ PIPELINES = dict(
         SatProblemSolutionStep,
         SatSolutionDecodingStep,
     ],
-    heuristic=[
-        PlannerStep,
-        ConceptGenerationStep,
-        FeatureMatrixGenerationStep,
-        HeuristicWeightsComputation,
-    ],
 )
 
 
 def generate_pipeline(pipeline="maxsat", **kwargs):
+    return generate_pipeline_from_list(PIPELINES[pipeline], **kwargs)
+
+
+def generate_pipeline_from_list(elements, **kwargs):
     steps = []
     config = kwargs
-    for klass in PIPELINES[pipeline]:
+    for klass in elements:
         step = klass(**config)
         config = step.config
         steps.append(step)
