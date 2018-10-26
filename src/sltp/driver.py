@@ -285,7 +285,7 @@ class MaxsatProblemGenerationStep(Step):
         return "Generation of the max-sat problem"
 
     def get_step_runner(self):
-        import sltp.learn_actions
+        from . import learn_actions
         return learn_actions.generate_maxsat_problem
 
 
@@ -376,7 +376,7 @@ class MaxsatProblemSolutionStep(Step):
         return "Solution of the max-sat problem"
 
     def get_step_runner(self):
-        import sltp.learn_actions
+        from . import learn_actions
         return learn_actions.run_solver
 
 
@@ -405,7 +405,7 @@ class ActionModelStep(Step):
         return "Computation of the action model"
 
     def get_step_runner(self):
-        import sltp.learn_actions
+        from . import learn_actions
         return learn_actions.compute_action_model
 
 
@@ -488,7 +488,14 @@ class Experiment(object):
         steps = [get_step(self.steps, name) for name in self.args.steps] or self.steps
 
         for step in steps:
-            result = step.run()
+            try:
+                result = step.run()
+            except Exception as e:
+                logging.error('Critical error while processing step "{}". Execution will be terminated. '
+                              'Error message:'.format(step.description()))
+                logging.error("\t{}".format(e))
+                break
+
             if result is not None:
                 logging.error('Critical error while processing step "{}". Execution will be terminated. '
                               'Error message:'.format(step.description()))
@@ -548,13 +555,16 @@ class StepRunner(object):
         start = performance.timer()
         try:
             output = self.target(config=config, data=data, rng=rng)
-        except CriticalPipelineError as exc:
-            output = dict()
-            result = exc
+        except Exception as exception:
+            # Flatten the exception so that we make sure it can be serialized,
+            # and return it immediately so that it can be reported from the parent process
+            return CriticalPipelineError("Error: {}".format(str(exception)))
+
         save(config.experiment_dir, output)
         performance.print_performance_stats(self.step_name, start)
         # profiling.start()
         return result
+
 
 
 class Bunch(object):
