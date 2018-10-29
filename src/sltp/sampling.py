@@ -32,7 +32,7 @@ def print_atom(atom):
     return "{}({})".format(atom[0], ", ".join(atom[1:]))
 
 
-def log_sampled_states(states, goals, transitions, expanded, optimal_transitions, root_states, resampled_states_filename):
+def log_sampled_states(states, goals, transitions, expanded, optimal_transitions, root_states, unsolvable, resampled_states_filename):
     # We need to recompute the parenthood relation with the remapped states to log it!
     parents = compute_parents(transitions)
     optimal_s = set(x for x, _ in optimal_transitions)
@@ -46,8 +46,9 @@ def log_sampled_states(states, goals, transitions, expanded, optimal_transitions
             is_expanded = "^" if expanded(id_) else ""
             is_root = "=" if id_ in root_states else ""
             is_optimal = "+" if id_ in optimal_s else ""
-            print("#{}{}{}{}{} (parents: {}, children: {}):\n\t{}".
-                  format(id_, is_root, is_goal, is_optimal, is_expanded, state_parents, state_children, atoms), file=f)
+            is_unsolvable = "U" if id_ in unsolvable else ""
+            print("#{}{}{}{}{}{} (parents: {}, children: {}):\n\t{}".
+                  format(id_, is_root, is_goal, is_optimal, is_expanded, is_unsolvable, state_parents, state_children, atoms), file=f)
     logging.info('Resampled states logged at "{}"'.format(resampled_states_filename))
 
 
@@ -61,7 +62,7 @@ def sample_first_x_states(root_states, sample_sizes):
 
 def sample_generated_states(config, rng):
     logging.info('Loading state space samples...')
-    states, goal_states, transitions, root_states, goals_by_instance = read_transitions(config.sample_files)
+    states, goal_states, transitions, root_states, goals_by_instance, unsolvable = read_transitions(config.sample_files)
     if not goal_states:
         raise RuntimeError("No goal found in the sample - increase # expanded states!")
 
@@ -98,14 +99,14 @@ def sample_generated_states(config, rng):
             else:
                 selected = set(states)
 
-    states, goals, transitions, optimal_transitions, root_states = \
-        remap_sample_expanded_states(set(selected), states, goal_states, transitions, optimal_transitions, set(root_states))
+    states, goals, transitions, optimal_transitions, root_states, unsolvable = \
+        remap_sample_expanded_states(set(selected), states, goal_states, transitions, optimal_transitions, set(root_states), unsolvable)
 
     expanded = lambda s: len(transitions[s]) > 0
     total_tx = sum(len(transitions[sid]) for sid, _ in states.values())
-    logging.info("Resampling (states / goals / tx / optimal tx): {} / {} / {} / {}".format(len(states), len(goals), total_tx, len(optimal_transitions)))
-    log_sampled_states(states, goals, transitions, expanded, optimal_transitions, root_states, config.resampled_states_filename)
-    return states, goals, transitions, optimal_transitions, root_states
+    logging.info("Resampling (states / goals / unsolvable / tx / optimal tx): {} / {} / {} / {}".format(len(states), len(goals), len(unsolvable), total_tx, len(optimal_transitions)))
+    log_sampled_states(states, goals, transitions, expanded, optimal_transitions, root_states, unsolvable, config.resampled_states_filename)
+    return states, goals, transitions, optimal_transitions, root_states, unsolvable
 
 
 def random_sample(config, goal_states, rng, states, transitions, parents):
@@ -150,7 +151,7 @@ def compute_parents(transitions):
     return parents
 
 
-def remap_sample_expanded_states(sampled_expanded, states, goal_states, transitions, optimal_transitions, root_states):
+def remap_sample_expanded_states(sampled_expanded, states, goal_states, transitions, optimal_transitions, root_states, unsolvable):
     # all_in_sample will contain all states we want to sample plus their children state IDs
     all_in_sample = set(sampled_expanded)
     for s in sampled_expanded:
@@ -161,6 +162,7 @@ def remap_sample_expanded_states(sampled_expanded, states, goal_states, transiti
 
     # Pick the selected elements from the data structures
     new_goal_states = {idx[x] for x in ordered_sample if x in goal_states}
+    new_unsolvable = {idx[x] for x in ordered_sample if x in unsolvable}
     new_root = {idx[x] for x in ordered_sample if x in root_states}
     new_optimal_transitions = {(idx[x], idx[y]) for x, y in optimal_transitions}
 
@@ -175,7 +177,7 @@ def remap_sample_expanded_states(sampled_expanded, states, goal_states, transiti
         if source in sampled_expanded:
             new_transitions[idx[source]] = {idx[t] for t in targets}
 
-    return new_states, new_goal_states, new_transitions, new_optimal_transitions, new_root
+    return new_states, new_goal_states, new_transitions, new_optimal_transitions, new_root, new_unsolvable
 
 
 def normalize_atom_name(name):
@@ -186,9 +188,10 @@ def normalize_atom_name(name):
     return tmp.split(',')
 
 
-def remap_state_ids(states, goals, transitions, remap):
+def remap_state_ids(states, goals, transitions, unsolvable, remap):
 
     new_goals = {remap(x) for x in goals}
+    new_unsolvable = {remap(x) for x in unsolvable}
     new_states = OrderedDict()
     for i, s in states.items():
         assert i == s[0]
@@ -198,27 +201,28 @@ def remap_state_ids(states, goals, transitions, remap):
     for source, targets in transitions.items():
         new_transitions[remap(source)] = {remap(t) for t in targets}
 
-    return new_states, new_goals, new_transitions
+    return new_states, new_goals, new_transitions, new_unsolvable
 
 
 def read_transitions(filenames):
     all_samples = [read_single_sample_file(f) for f in filenames]
     assert len(all_samples) > 0
-    states, goals, transitions = all_samples[0]
+    states, goals, transitions, unsolvable = all_samples[0]
     assert states[0][0] == 0
     root_states = [0]
     goals_by_instance = [set(goals)]
-    for s, g, tx in all_samples[1:]:
+    for s, g, tx, unsolv in all_samples[1:]:
         starting_state_id = len(states)
-        s, g, tx = remap_state_ids(s, g, tx, remap=lambda state: state + starting_state_id)
+        s, g, tx, unsolv = remap_state_ids(s, g, tx, unsolv, remap=lambda state: state + starting_state_id)
         assert next(iter(s)) == starting_state_id
         root_states.append(starting_state_id)
         states.update(s)
         transitions.update(tx)
         goals.update(g)
         goals_by_instance.append(g)
+        unsolvable.update(unsolv)
 
-    return states, goals, transitions, root_states, goals_by_instance
+    return states, goals, transitions, root_states, goals_by_instance, unsolvable
 
 
 def read_single_sample_file(filename):
@@ -228,6 +232,7 @@ def read_single_sample_file(filename):
     transitions_inv = defaultdict(set)
     seen = set()
     goal_states = set()
+    unsolvable_states  = set()
 
     def register_transition(state):
         transitions[state['parent']].add(state['id'])
@@ -240,6 +245,8 @@ def read_single_sample_file(filename):
         seen.add(state['id'])
         if j['goal']:
             goal_states.add(state['id'])
+        if 'unsolvable' in j and j['unsolvable']:
+            unsolvable_states.add(state['id'])
 
     raw_file = [line.replace(' ', '') for line in read_file(filename) if line[0:6] == '{"id":']
     for raw_line in raw_file:
@@ -276,4 +283,4 @@ def read_single_sample_file(filename):
     ordered = OrderedDict()  # Make sure we return an ordered dictionary
     for id_ in sorted(states_by_id.keys()):
         ordered[id_] = states_by_id[id_]
-    return ordered, goal_states, transitions
+    return ordered, goal_states, transitions, unsolvable_states

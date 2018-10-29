@@ -247,6 +247,7 @@ class FeatureMatrixGenerationStep(Step):
         config["feature_names_filename"] = compute_info_filename(config, "feature-names.dat")
         config["transitions_filename"] = compute_info_filename(config, "transition-matrix.dat")
         config["goal_states_filename"] = compute_info_filename(config, "goal-states.dat")
+        config["unsolvable_states_filename"] = compute_info_filename(config, "unsolvable-states.dat")
         config["sat_transitions_filename"] = compute_info_filename(config, "sat_transitions.dat")
         config["sat_feature_matrix_filename"] = compute_info_filename(config, "sat_matrix.dat")
         config["feature_info_filename"] = compute_info_filename(config, "feature-info.dat")
@@ -254,7 +255,7 @@ class FeatureMatrixGenerationStep(Step):
         return config
 
     def get_required_data(self):
-        return ["features", "extensions", "states", "goal_states", "transitions"]
+        return ["features", "extensions", "states", "goal_states", "transitions", "unsolvable_states"]
 
     def description(self):
         return "Generation of the feature and transition matrices"
@@ -491,7 +492,7 @@ class Experiment(object):
             try:
                 result = step.run()
             except Exception as e:
-                logging.error('Critical error while processing step "{}". Execution will be terminated. '
+                logging.error('Exception caught while processing step "{}". Execution will be terminated. '
                               'Error message:'.format(step.description()))
                 logging.error("\t{}".format(e))
                 break
@@ -558,7 +559,10 @@ class StepRunner(object):
         except Exception as exception:
             # Flatten the exception so that we make sure it can be serialized,
             # and return it immediately so that it can be reported from the parent process
-            return CriticalPipelineError("Error: {}".format(str(exception)))
+            logging.error("Critical error in the pipeline")
+            import traceback
+            traceback.print_exc()
+            raise CriticalPipelineError("Error: {}".format(str(exception)))
 
         save(config.experiment_dir, output)
         performance.print_performance_stats(self.step_name, start)
