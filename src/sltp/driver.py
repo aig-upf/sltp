@@ -434,27 +434,6 @@ class QNPGenerationStep(Step):
         return qnp.generate_encoding
 
 
-PIPELINES = dict(
-    maxsat=[
-        PlannerStep,
-        ConceptGenerationStep,
-        FeatureMatrixGenerationStep,
-        MaxsatProblemGenerationStep,
-        MaxsatProblemSolutionStep,
-        ActionModelStep,
-        # QNPGenerationStep,
-    ],
-    sat=[
-        PlannerStep,
-        ConceptGenerationStep,
-        FeatureMatrixGenerationStep,
-        SatProblemGenerationStep,
-        SatProblemSolutionStep,
-        SatSolutionDecodingStep,
-    ],
-)
-
-
 def generate_pipeline(pipeline="maxsat", **kwargs):
     return generate_pipeline_from_list(PIPELINES[pipeline], **kwargs)
 
@@ -570,7 +549,82 @@ class StepRunner(object):
         return result
 
 
+class SATStateFactorizationStep(Step):
+    """ Generate the SAT problem that learns a state factorization """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def get_required_attributes(self):
+        return ["experiment_dir"]
+
+    def process_config(self, config):
+        config["cnf_filename"] = compute_maxsat_filename(config)
+        config["maxsat_variables_file"] = compute_maxsat_variables_filename(config)
+        config["relax_numeric_increase"] = config.get("relax_numeric_increase", False)
+        return config
+
+    def get_required_data(self):
+        return ["goal_states", "transitions", "state_ids", "enforced_feature_idxs", "optimal_transitions"]
+
+    def description(self):
+        return "SAT encoding to learn a state factorization "
+
+    def get_step_runner(self):
+        from . import factorization
+        return factorization.learn_factorization
+
+
+class DFAGenerationStep(Step):
+    """ Generate the DFA from observation traces """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def get_required_attributes(self):
+        return ["experiment_dir"]
+
+    def process_config(self, config):
+        config["cnf_filename"] = compute_maxsat_filename(config)
+        config["maxsat_variables_file"] = compute_maxsat_variables_filename(config)
+        config["relax_numeric_increase"] = config.get("relax_numeric_increase", False)
+        return config
+
+    def get_required_data(self):
+        return ["goal_states", "transitions", "state_ids", "enforced_feature_idxs", "optimal_transitions"]
+
+    def description(self):
+        return "DFA generation from observation traces"
+
+    def get_step_runner(self):
+        from . import factorization
+        return learn_actions.generate_maxsat_problem
+
 
 class Bunch(object):
     def __init__(self, adict):
         self.__dict__.update(adict)
+
+
+PIPELINES = dict(
+    maxsat=[
+        PlannerStep,
+        ConceptGenerationStep,
+        FeatureMatrixGenerationStep,
+        MaxsatProblemGenerationStep,
+        MaxsatProblemSolutionStep,
+        ActionModelStep,
+        # QNPGenerationStep,
+    ],
+    sat=[
+        PlannerStep,
+        ConceptGenerationStep,
+        FeatureMatrixGenerationStep,
+        SatProblemGenerationStep,
+        SatProblemSolutionStep,
+        SatSolutionDecodingStep,
+    ],
+    observations=[
+        DFAGenerationStep,
+        SATStateFactorizationStep,
+    ],
+)
