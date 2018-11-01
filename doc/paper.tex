@@ -411,7 +411,7 @@ using the features $F$ and abstract actions $A_F$ are as follows \cite{bonet:ijc
 %The strong cyclic solutions of  $Q^+_F$ computed by FOND planners off-the-shelf   are solutions to the generalized problem $\Q_F$. 
 
 \begin{example}
-  Let restrict  $\Q_{clear}$  to those  instances where  the gripper is initially empty
+  Let us restrict  $\Q_{clear}$  to those  instances where  the gripper is initially empty
   and there are blocks on top of $x$. For $F=\{H,n(x)\}$  and $A_F=\{\bar{a},\bar{a'}\}$ as above, 
   $Q_F=\tup{V_F,I_F,G_F,A_F}$ can be defined with $I_F=\{\neg H, n(x) > 0\}$ and $G_F=\{n(x)=0\}$.
   $Q'_F$ is like $Q_F$ but with $n(x)=0$ regarded as a propositional symbol, $n(x) > 0$
@@ -447,7 +447,7 @@ the \emph{expanded} states in $\S$.
 The features and abstract actions for $\Q$ are  learned by
 enforcing an approximate form of soundness and completeness
 over the samples. Like before,  we take a transition $(s,s')$ and an abstract action $\bar{a}$
-to have  the same qualitative effects over a boolean  feature  iff they both make it true , they both make it false,  or
+to have  the same qualitative effects over a boolean  feature  iff they both make it true, they both make it false,  or
 they both leave it unchanged,  and over a numerical feature  iff they both decrease it,  they both increase it,  or they both leave it unchanged.
 
 \begin{definition}
@@ -615,9 +615,9 @@ is true (resp.\ false) in $s$. Similarly, $\bar{a}$ has the \emph{effect} $p$
 (resp.\ false) in $s'$ but false (resp.\ true) in $s$, and the effect $n\mminus$
 (resp.\ $n\pplus$) if $n$ is a numerical feature in $F_{\sigma}$ whose values
 decreases (resp.\ increases) in the transition from $s$ to $s'$. 
-If two abstract actions $\bar{a}$ and $\bar{a}$ differ only in the sign of a
+If two abstract actions $\bar{a}$ and $\bar{a}'$ differ only in the sign of a
 precondition, the precondition can be dropped, removing the duplicates and
-iterating until no more simplifications can be done. Their key properties are:
+iterating until no more simplifications can be done. The key properties of $T(\S,\F)$ and $T_G(\S,\F)$ are:
 
 \begin{theorem}
   The theory $T(\S,\F)$ is satisfiable iff there is a set of features $F \subseteq \F$
