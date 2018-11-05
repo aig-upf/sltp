@@ -219,7 +219,7 @@ def compute_feature_extensions(states, features, concept_extensions):
         if all_gt_0:
             logging.debug("Feature \"{}\" has denotation always > 0 over all states and will be ignored"
                           .format(f,))
-            # continue
+            continue
 
         if PRUNE_DUPLICATE_FEATURES:
             trace = tuple(all_denotations)
