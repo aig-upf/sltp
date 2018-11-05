@@ -4,3 +4,7 @@ logs
 terms
 *.cnf
 *.cnf.txt
+
+build
+dist
+*.egg-info

@@ -43,7 +43,7 @@ def experiment(experiment_name=None):
             "inst_clear_x_1.pddl",
             # "inst_clear_x_2.pddl",
         ],
-        num_states=1000, num_sampled_states=80, random_seed=10,
+        num_states=1000, num_sampled_states=100, random_seed=10,
         max_concept_size=18, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=add_bw_domain_parameters,
         feature_namer=ijcai_paper_bw_feature_namer,)
@@ -66,9 +66,8 @@ def experiment(experiment_name=None):
         feature_namer=ijcai_paper_bw_feature_namer,
     )
 
-    aaai_clear_x_no_marking = update_dict(aaai_clear_x_simple_hybrid, complete_only_wrt_optimal=False,
-                                          num_states=2000, max_width=[-1],
-                                          num_sampled_states=200,
+    aaai_clear_x_no_marking = update_dict(aaai_clear_x_simple_hybrid,
+                                          complete_only_wrt_optimal=False,  # num_sampled_states=200,
                                           )
 
     aaai_clear_x_no_marking_2 = update_dict(aaai_clear_x_no_marking,
@@ -120,7 +119,7 @@ def experiment(experiment_name=None):
 
                                                   ],
                                                   num_states=2000, max_width=[-1],
-                                                  num_sampled_states=[50, 50, 1],
+                                                  num_sampled_states=[50, 50, 5],
                                                   complete_only_wrt_optimal=True,
                                                   sampling="all",
                                                   # enforce_features=get_on_x_y_feature,
@@ -129,6 +128,9 @@ def experiment(experiment_name=None):
                                                   concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
                                                   feature_namer=ijcai_paper_bw_feature_namer,
                                                   )
+
+    aaai_bw_on_x_y_completeness_opt_no_marking = update_dict(aaai_bw_on_x_y_completeness_opt,
+                                                             complete_only_wrt_optimal=False)
 
     bw_on_x_y_dt_iw = dict(
         instances=["on_x_y_dt_1.pddl", "holding_a_b_unclear.pddl"],
@@ -212,6 +214,7 @@ def experiment(experiment_name=None):
         "simple_clear_3_completeness_opt": simple_clear_3_completeness_opt,
 
         "aaai_bw_on_x_y_completeness_opt": aaai_bw_on_x_y_completeness_opt,
+        "aaai_bw_on_x_y_completeness_opt_no_marking": aaai_bw_on_x_y_completeness_opt_no_marking,
         "aaai_clear_x_no_marking": aaai_clear_x_no_marking,
         "aaai_clear_x_no_marking_2": aaai_clear_x_no_marking_2,
 

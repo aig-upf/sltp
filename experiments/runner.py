@@ -9,6 +9,7 @@ import gridworld
 import gripper
 import logistics
 import tower
+import reward
 
 DOMAINS = {
     "blocks": blocks,
@@ -16,6 +17,7 @@ DOMAINS = {
     "gripper": gripper,
     "logistics": logistics,
     "gridworld": gridworld,
+    "reward": reward,
 }
 
 

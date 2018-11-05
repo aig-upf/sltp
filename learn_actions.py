@@ -66,8 +66,9 @@ def generate_maxsat_problem(config, data, rng):
     bin_feat_matrix = np.load(config.bin_feature_matrix_filename + ".npy")
     feature_types = feat_matrix.max(0) <= 1  # i.e. feature_types[i] is True iff i is an (empirically) bool feature
 
-    logging.info("Generating MAXSAT problem from {} states and {} features"
-                 .format(feat_matrix.shape[0], feat_matrix.shape[1]))
+    num_transitions = sum(len(x) for x in transitions.values())
+    logging.info("Generating MAXSAT problem from {} states, {} transitions and {} features"
+                 .format(feat_matrix.shape[0], num_transitions, feat_matrix.shape[1]))
 
     if not goal_states:
         raise CriticalPipelineError("No goal state identified in the sample, SAT theory will be trivially satisfiable")

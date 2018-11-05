@@ -1,0 +1,17 @@
+
+Q_clear: aaai_clear_x_simple_hybrid (using T_G)
+Q_clear: aaai_clear_x_no_marking (using T)
+
+Q_on (T_G): aaai_bw_on_x_y_completeness_opt
+Q_on (T): aaai_bw_on_x_y_completeness_opt_no_marking   (to be double-checked)
+
+Q_gripper (T_G): aaai_prob01
+Q_gripper (T): aaai_prob01_no_marking
+
+Q_reward (T_G): reward.py, instance_5
+Q_reward (T): instance_5_no_marking
+
+
+
+** Experiment Sets **
+camready1.yml: Rerun everything for the camera ready.

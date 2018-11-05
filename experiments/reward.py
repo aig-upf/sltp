@@ -59,6 +59,7 @@ def experiment(experiment_name=None):
     sample_2x2_2rewards = update_dict(sample_1x3, instances=["sample_2x2_2rewards.pddl"])
     sample_3x3_2rewards = update_dict(sample_1x3, instances=["sample_3x3_2rewards.pddl"])
     instance_5 = update_dict(sample_1x3, instances=["instance_5.pddl", "instance_4_blocked.pddl"])
+    instance_5_no_marking = update_dict(instance_5, complete_only_wrt_optimal=False,)
 
     parameters = {
         "sample_1x3": sample_1x3,
@@ -66,6 +67,7 @@ def experiment(experiment_name=None):
         "sample_2x2_2rewards": sample_2x2_2rewards,  # Overfits
         "sample_3x3_2rewards": sample_3x3_2rewards,  # Overfits
         "instance_5": instance_5,
+        "instance_5_no_marking": instance_5_no_marking,
 
     }.get(experiment_name or "test")
 
