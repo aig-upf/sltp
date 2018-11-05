@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 
 
@@ -21,7 +22,8 @@ def compute_sample_filenames(experiment_dir, instances, max_width, **_):
 
 
 def compute_experiment_tag(instance_tag, max_concept_size, **_):
-    return "{}.cs-{}".format(instance_tag, max_concept_size)
+    ts = datetime.now().strftime("%Y%m%d%H%M")
+    return "{}.{}.cs-{}".format(ts, instance_tag, max_concept_size)
 
 
 def compute_serialization_name(basedir, name):

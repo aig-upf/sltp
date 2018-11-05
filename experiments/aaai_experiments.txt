@@ -15,3 +15,7 @@ Q_reward (T): instance_5_no_marking
 
 ** Experiment Sets **
 camready1.yml: Rerun everything for the camera ready.
+camready1_181105
+
+camready1_1.yml: Same, but pruning features such that all denotations are > 0. We want to compare this to previous
+                 experiment without this type of pruning.
