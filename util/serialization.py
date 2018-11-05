@@ -1,5 +1,4 @@
-
-
+import logging
 import pickle
 
 
@@ -12,8 +11,12 @@ def serialize(data, filename):
 
 def deserialize(filename):
     with open(filename, 'rb') as f:
-        data = pickle.load(f)
-        # data = jsonpickle.decode(f.read(), keys=True)
+        try:
+            data = pickle.load(f)
+            # data = jsonpickle.decode(f.read(), keys=True)
+        except EOFError as e:
+            logging.error("Deserialization error: couldn't unpicle file '{}'".format(filename))
+            raise
     return data
 
 
