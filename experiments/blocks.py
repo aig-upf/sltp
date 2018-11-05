@@ -119,7 +119,7 @@ def experiment(experiment_name=None):
 
                                                   ],
                                                   num_states=2000, max_width=[-1],
-                                                  num_sampled_states=[50, 50, 5],
+                                                  num_sampled_states=[50, 50, 1],
                                                   complete_only_wrt_optimal=True,
                                                   sampling="all",
                                                   # enforce_features=get_on_x_y_feature,
