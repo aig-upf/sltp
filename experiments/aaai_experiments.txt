@@ -25,3 +25,4 @@ camready2: Rerun again but this time using timestamps for experiment folder name
 
 camready_clear_T_k18.yml: only clear(x) in blocks, with theory T and a bound of k=18, to see if the IJCAI paper
 feature set can be generated.
+    camready_clear_T_k18_181106: with pruning denotations always > 0
