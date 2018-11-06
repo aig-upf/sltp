@@ -367,9 +367,8 @@ def collect_all_terms(processor, atoms, concepts, roles):
 
 
 def run(config, data, rng):
-    assert not data
-
-    states, goal_states, transitions, optimal_transitions, root_states, unsolvable = sample_generated_states(config, rng)
+    states = data.states
+    logging.info("Generating concepts from {} states".format(len(states)))
 
     goal_denotation = []
     goal_predicates = set()  # The predicates and functions that appear mentioned in the goal
@@ -433,14 +432,8 @@ def run(config, data, rng):
 
     return dict(
         features=features,
-        states=states,
-        goal_states=goal_states,
-        optimal_transitions=optimal_transitions,
-        transitions=transitions,
         extensions=factory.processor.cache,
         enforced_feature_idxs=enforced_feature_idxs,
-        root_states=root_states,
-        unsolvable_states=unsolvable,
     )
 
 

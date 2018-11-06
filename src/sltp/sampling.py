@@ -284,3 +284,18 @@ def read_single_sample_file(filename):
     for id_ in sorted(states_by_id.keys()):
         ordered[id_] = states_by_id[id_]
     return ordered, goal_states, transitions, unsolvable_states
+
+
+def run(config, data, rng):
+    assert not data
+    states, goal_states, transitions, optimal_transitions, root_states, unsolvable = \
+        sample_generated_states(config, rng)
+
+    return dict(
+        states=states,
+        goal_states=goal_states,
+        optimal_transitions=optimal_transitions,
+        transitions=transitions,
+        root_states=root_states,
+        unsolvable_states=unsolvable,
+    )

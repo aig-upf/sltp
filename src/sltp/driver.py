@@ -175,30 +175,19 @@ class PlannerStep(Step):
         return _run_planner
 
 
-class ConceptGenerationStep(Step):
-    """ Generate systematically a set of features of bounded complexity from the transition (state) sample """
+class TransitionSamplingStep(Step):
+    """ Generate the sample of transitions from the set of solved planning instances """
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
     def get_required_attributes(self):
-        return ["sample_files", "domain", "experiment_dir", "max_concept_size"]
+        return ["instances", "sample_files", "experiment_dir"]
 
     def get_required_data(self):
         return []
 
     def process_config(self, config):
-        check_int_parameter(config, "max_concept_size")
-
-        config["concept_dir"] = os.path.join(config["experiment_dir"], 'terms')
-        config["feature_stdout"] = os.path.join(config["experiment_dir"], 'feature-generation.stdout.txt')
         config["resampled_states_filename"] = os.path.join(config["experiment_dir"], 'resampled.txt')
-        config["concept_generator"] = config.get("concept_generator", None)
-        config["feature_generator"] = config.get("feature_generator", None)
-        config["enforce_features"] = config.get("enforce_features", None)
-        config["parameter_generator"] = config.get("parameter_generator", None)
-        config["distance_feature_max_complexity"] = config.get("distance_feature_max_complexity", 0)
-        config["max_concept_grammar_iterations"] = config.get("max_concept_grammar_iterations", None)
-        config["random_seed"] = config.get("random_seed", 1)
         config["num_sampled_states"] = config.get("num_sampled_states", None)
         config["complete_only_wrt_optimal"] = config.get("complete_only_wrt_optimal", False)
         config["sampling"] = config.get("sampling", "all")
@@ -220,6 +209,39 @@ class ConceptGenerationStep(Step):
 
         if config["sampling"] == "random" and config["complete_only_wrt_optimal"]:
             raise InvalidConfigParameter('sampling="random" disallows the use of option "complete_only_wrt_optimal"')
+
+        return config
+
+    def description(self):
+        return "Sampling of the transition set"
+
+    def get_step_runner(self):
+        from sltp import sampling
+        return sampling.run
+
+
+class ConceptGenerationStep(Step):
+    """ Generate systematically a set of features of bounded complexity from the transition (state) sample """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def get_required_attributes(self):
+        return ["domain", "experiment_dir", "max_concept_size"]
+
+    def get_required_data(self):
+        return ["states"]
+
+    def process_config(self, config):
+        check_int_parameter(config, "max_concept_size")
+
+        config["concept_dir"] = os.path.join(config["experiment_dir"], 'terms')
+        config["feature_stdout"] = os.path.join(config["experiment_dir"], 'feature-generation.stdout.txt')
+        config["concept_generator"] = config.get("concept_generator", None)
+        config["feature_generator"] = config.get("feature_generator", None)
+        config["enforce_features"] = config.get("enforce_features", None)
+        config["parameter_generator"] = config.get("parameter_generator", None)
+        config["distance_feature_max_complexity"] = config.get("distance_feature_max_complexity", 0)
+        config["max_concept_grammar_iterations"] = config.get("max_concept_grammar_iterations", None)
 
         return config
 
@@ -449,7 +471,7 @@ def generate_pipeline_from_list(elements, **kwargs):
 
 
 class Experiment(object):
-    def __init__(self, steps):
+    def __init__(self, steps, parameters):
         self.args = None
         self.steps = steps
 
@@ -610,6 +632,7 @@ class Bunch(object):
 PIPELINES = dict(
     maxsat=[
         PlannerStep,
+        TransitionSamplingStep,
         ConceptGenerationStep,
         FeatureMatrixGenerationStep,
         MaxsatProblemGenerationStep,
