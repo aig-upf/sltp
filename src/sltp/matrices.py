@@ -9,7 +9,7 @@ import numpy as np
 
 from tarski.dl import EmpiricalBinaryConcept, NullaryAtomFeature, ConceptCardinalityFeature, MinDistanceFeature
 
-from features import Model
+from .features import Model
 
 PRUNE_DUPLICATE_FEATURES = True
 NP_FEAT_VALUE_TYPE = np.int8  # Keep it allowing negative values, so that we can subtract without overflow!
@@ -138,7 +138,7 @@ def print_sat_matrix(config, state_ids, features, model):
             )), file=f)
 
 
-def print_goal_states(goal_states, filename):
+def print_state_set(goal_states, filename):
     with open(filename, 'w') as f:
         print(" ".join(str(s) for s in goal_states), file=f)
 
@@ -150,7 +150,8 @@ def generate_features(config, data, rng):
     print_transition_matrix(state_ids, data.transitions, config.transitions_filename)
     print_sat_matrix(config, state_ids, features, model)
     print_sat_transition_matrix(state_ids, data.transitions, config.sat_transitions_filename)
-    print_goal_states(data.goal_states, config.goal_states_filename)
+    print_state_set(data.goal_states, config.goal_states_filename)
+    print_state_set(data.unsolvable_states, config.unsolvable_states_filename)
     log_features(features, config.feature_filename)
     return dict(state_ids=state_ids, features=features)
 

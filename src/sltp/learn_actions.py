@@ -25,13 +25,13 @@ import time
 
 import numpy as np
 
-from errors import CriticalPipelineError
+from .errors import CriticalPipelineError
 from tarski.dl import FeatureValueChange, MinDistanceFeature
-from util.console import print_header, print_lines
-from util.command import count_file_lines, remove_duplicate_lines, read_file
-from solvers import solve
-from util.performance import print_memory_usage
-from util.serialization import serialize_to_string
+from .util.console import print_header, print_lines
+from .util.command import count_file_lines, remove_duplicate_lines, read_file
+from .solvers import solve
+from .util.performance import print_memory_usage
+from .util.serialization import serialize_to_string
 
 signal(SIGPIPE, SIG_DFL)
 

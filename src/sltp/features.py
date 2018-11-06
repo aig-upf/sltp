@@ -33,16 +33,37 @@ from tarski.dl import Concept, Role, PrimitiveConcept, PrimitiveRole, InverseRol
 from tarski.syntax.transform.errors import TransformationError
 from tarski.syntax.transform.simplifications import transform_to_ground_atoms
 
-from extensions import UniverseIndex, ExtensionCache
-from sampling import sample_generated_states
+from .extensions import UniverseIndex, ExtensionCache
+from .sampling import sample_generated_states
 
 signal(SIGPIPE, SIG_DFL)
+
+
+def compute_universe_from_state_set(states):
+    """ Iterate through all states and collect all possible PDDL objects """
+    universe = UniverseIndex()
+
+    for sid, (_, state) in states.items():
+        for atom in state:
+            assert atom
+            if atom[0] == "=":  # Functional atom
+                assert len(atom) <= 4, "Cannot deal with arity>1 functions yet"
+                [universe.add(try_number(obj)) for obj in atom[2:]]
+            else:
+                assert len(atom) in (1, 2, 3), "Cannot deal with arity>2 predicates yet"
+                [universe.add(try_number(obj)) for obj in atom[1:]]
+
+    universe.finish()  # No more objects possible
+    return universe
 
 
 class TerminologicalFactory(object):
     def __init__(self, language: tsk.FirstOrderLanguage, states, goal_denotation):
         self.syntax = SyntacticFactory(language)
-        self.processor = SemanticProcessor(language, states, goal_denotation, self.syntax.top, self.syntax.bot)
+
+        universe = compute_universe_from_state_set(states)
+        self.processor = SemanticProcessor(language, states, universe, self.syntax.top, self.syntax.bot)
+        self.processor.initialize_global_sample_cache(states, goal_denotation)
 
     def create_atomic_concepts(self, base_concepts):
         # Start with the base concepts
@@ -149,7 +170,7 @@ class TerminologicalFactory(object):
 
 class SemanticProcessor(object):
 
-    def __init__(self, language, states, goal_denotation, top, bot):
+    def __init__(self, language, states, universe, top, bot):
         self.language = language
         self.states = states
         self.top = top
@@ -160,9 +181,12 @@ class SemanticProcessor(object):
                                       if not builtins.is_builtin_function(f) and f.arity in (0, 1))
         self.standard_dl_mapping = {0: NullaryAtom, 1: PrimitiveConcept, 2: PrimitiveRole}
         self.goal_dl_mapping = {0: GoalNullaryAtom, 1: GoalConcept, 2: GoalRole}
-        self.universe = self.compute_universe(states)
-        self.cache = self.create_cache_for_samples(goal_denotation)
+        self.universe = universe
         self.singleton_extension_concepts = []
+        self.cache = None
+
+    def initialize_global_sample_cache(self, states, goal_denotation):
+        self.cache = self.create_cache_for_samples(states, goal_denotation)
 
     # @profile
     def generate_extension_trace(self, term):
@@ -240,36 +264,20 @@ class SemanticProcessor(object):
 
         return predfun
 
-    @staticmethod
-    def compute_universe(states):
-        """ Iterate through all states and collect all possible PDDL objects """
-        universe = UniverseIndex()
+    def register_state_on_cache(self, sid, state, cache, goal_denotation):
+        all_terms = self.build_cache_for_state(state, goal_denotation)
+        for term, extension in all_terms.items():
+            if isinstance(term, (Concept, Role)):
+                cache.register_extension(term, sid, extension)
+            elif isinstance(term, NullaryAtom):
+                cache.register_nullary_truth_value(term, sid, extension)
 
-        for sid, (_, state) in states.items():
-            for atom in state:
-                assert atom
-                if atom[0] == "=":  # Functional atom
-                    assert len(atom) <= 4, "Cannot deal with arity>1 functions yet"
-                    [universe.add(try_number(obj)) for obj in atom[2:]]
-                else:
-                    assert len(atom) in (1, 2, 3), "Cannot deal with arity>2 predicates yet"
-                    [universe.add(try_number(obj)) for obj in atom[1:]]
-
-        universe.finish()  # No more objects possible
-        return universe
-
-    def create_cache_for_samples(self, goal_denotation):
+    def create_cache_for_samples(self, states, goal_denotation):
         cache = ExtensionCache(self.universe, self.top, self.bot)
-        for sid, (_, state) in self.states.items():
+        for sid, (_, state) in states.items():
             # TODO It is far from optimal to keep a per-state denotation of each static and goal concept!!
             # TODO It'd require a bit of work to fix this at the moment though
-            all_terms = self.build_cache_for_state(state, goal_denotation)
-            for term, extension in all_terms.items():
-                if isinstance(term, (Concept, Role)):
-                    cache.register_extension(term, sid, extension)
-                elif isinstance(term, NullaryAtom):
-                    cache.register_nullary_truth_value(term, sid, extension)
-
+            self.register_state_on_cache(sid, state, cache, goal_denotation)
         return cache
 
     def process_term(self, term):
@@ -361,7 +369,7 @@ def collect_all_terms(processor, atoms, concepts, roles):
 def run(config, data, rng):
     assert not data
 
-    states, goal_states, transitions, optimal_transitions, root_states = sample_generated_states(config, rng)
+    states, goal_states, transitions, optimal_transitions, root_states, unsolvable = sample_generated_states(config, rng)
 
     goal_denotation = []
     goal_predicates = set()  # The predicates and functions that appear mentioned in the goal
@@ -431,7 +439,8 @@ def run(config, data, rng):
         transitions=transitions,
         extensions=factory.processor.cache,
         enforced_feature_idxs=enforced_feature_idxs,
-        root_states=root_states
+        root_states=root_states,
+        unsolvable_states=unsolvable,
     )
 
 

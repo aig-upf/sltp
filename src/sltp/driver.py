@@ -23,24 +23,23 @@ import sys
 from signal import signal, SIGPIPE, SIG_DFL
 import numpy as np
 
-from errors import CriticalPipelineError
-from util import console
-from util.bootstrap import setup_global_parser
-from util.command import execute
-from util.console import print_header, log_time
-from util.naming import compute_instance_tag, compute_experiment_tag, compute_serialization_name, \
+from .errors import CriticalPipelineError
+from .util import console
+from .util.bootstrap import setup_global_parser
+from .util.command import execute
+from .util.console import print_header, log_time
+from .util.naming import compute_instance_tag, compute_experiment_tag, compute_serialization_name, \
     compute_maxsat_filename, compute_info_filename, compute_maxsat_variables_filename, compute_sample_filenames
-from util.serialization import deserialize, serialize
+from .util.serialization import deserialize, serialize
 
 signal(SIGPIPE, SIG_DFL)
 
-BASEDIR = os.path.dirname(os.path.realpath(__file__))
 VERSION = "0.2"
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-BENCHMARK_DIR = os.path.join(BASE_DIR, 'domains')
-SAMPLE_DIR = os.path.join(BASE_DIR, 'samples')
-EXPDATA_DIR = os.path.join(BASE_DIR, 'runs')
+BASEDIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+BENCHMARK_DIR = os.path.join(BASEDIR, 'domains')
+SAMPLE_DIR = os.path.join(BASEDIR, 'samples')
+EXPDATA_DIR = os.path.join(BASEDIR, 'runs')
 
 
 class InvalidConfigParameter(Exception):
@@ -228,7 +227,7 @@ class ConceptGenerationStep(Step):
         return "Generation of concepts"
 
     def get_step_runner(self):
-        import features
+        from sltp import features
         return features.run
 
 
@@ -248,6 +247,7 @@ class FeatureMatrixGenerationStep(Step):
         config["feature_names_filename"] = compute_info_filename(config, "feature-names.dat")
         config["transitions_filename"] = compute_info_filename(config, "transition-matrix.dat")
         config["goal_states_filename"] = compute_info_filename(config, "goal-states.dat")
+        config["unsolvable_states_filename"] = compute_info_filename(config, "unsolvable-states.dat")
         config["sat_transitions_filename"] = compute_info_filename(config, "sat_transitions.dat")
         config["sat_feature_matrix_filename"] = compute_info_filename(config, "sat_matrix.dat")
         config["feature_info_filename"] = compute_info_filename(config, "feature-info.dat")
@@ -255,39 +255,14 @@ class FeatureMatrixGenerationStep(Step):
         return config
 
     def get_required_data(self):
-        return ["features", "extensions", "states", "goal_states", "transitions"]
+        return ["features", "extensions", "states", "goal_states", "transitions", "unsolvable_states"]
 
     def description(self):
         return "Generation of the feature and transition matrices"
 
     def get_step_runner(self):
-        from matrices import generate_features
+        from sltp.matrices import generate_features
         return generate_features
-
-
-class HeuristicWeightsComputation(Step):
-    """  """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    def get_required_attributes(self):
-        return ["experiment_dir", "lp_max_weight"]
-
-    def process_config(self, config):
-        config["lp_filename"] = compute_info_filename(config, "problem.lp")
-        config["state_heuristic_filename"] = compute_info_filename(config, "state-heuristic-values.txt")
-
-        return config
-
-    def get_required_data(self):
-        return []
-
-    def description(self):
-        return "Computation of the weights of a desceding heuristic"
-
-    def get_step_runner(self):
-        from heuristics import runner
-        return runner.run
 
 
 class MaxsatProblemGenerationStep(Step):
@@ -311,7 +286,7 @@ class MaxsatProblemGenerationStep(Step):
         return "Generation of the max-sat problem"
 
     def get_step_runner(self):
-        import learn_actions
+        from . import learn_actions
         return learn_actions.generate_maxsat_problem
 
 
@@ -402,7 +377,7 @@ class MaxsatProblemSolutionStep(Step):
         return "Solution of the max-sat problem"
 
     def get_step_runner(self):
-        import learn_actions
+        from . import learn_actions
         return learn_actions.run_solver
 
 
@@ -431,7 +406,7 @@ class ActionModelStep(Step):
         return "Computation of the action model"
 
     def get_step_runner(self):
-        import learn_actions
+        from . import learn_actions
         return learn_actions.compute_action_model
 
 
@@ -455,41 +430,18 @@ class QNPGenerationStep(Step):
         return "Generation of the QNP encoding"
 
     def get_step_runner(self):
-        import qnp
+        from sltp import qnp
         return qnp.generate_encoding
 
 
-PIPELINES = dict(
-    maxsat=[
-        PlannerStep,
-        ConceptGenerationStep,
-        FeatureMatrixGenerationStep,
-        MaxsatProblemGenerationStep,
-        MaxsatProblemSolutionStep,
-        ActionModelStep,
-        # QNPGenerationStep,
-    ],
-    sat=[
-        PlannerStep,
-        ConceptGenerationStep,
-        FeatureMatrixGenerationStep,
-        SatProblemGenerationStep,
-        SatProblemSolutionStep,
-        SatSolutionDecodingStep,
-    ],
-    heuristic=[
-        PlannerStep,
-        ConceptGenerationStep,
-        FeatureMatrixGenerationStep,
-        HeuristicWeightsComputation,
-    ],
-)
-
-
 def generate_pipeline(pipeline="maxsat", **kwargs):
+    return generate_pipeline_from_list(PIPELINES[pipeline], **kwargs)
+
+
+def generate_pipeline_from_list(elements, **kwargs):
     steps = []
     config = kwargs
-    for klass in PIPELINES[pipeline]:
+    for klass in elements:
         step = klass(**config)
         config = step.config
         steps.append(step)
@@ -518,7 +470,14 @@ class Experiment(object):
         steps = [get_step(self.steps, name) for name in self.args.steps] or self.steps
 
         for step in steps:
-            result = step.run()
+            try:
+                result = step.run()
+            except Exception as e:
+                logging.error('Exception caught while processing step "{}". Execution will be terminated. '
+                              'Error message:'.format(step.description()))
+                logging.error("\t{}".format(e))
+                break
+
             if result is not None:
                 logging.error('Critical error while processing step "{}". Execution will be terminated. '
                               'Error message:'.format(step.description()))
@@ -569,7 +528,7 @@ class StepRunner(object):
         # import tracemalloc
         # tracemalloc.start()
         # memutils.display_top(tracemalloc.take_snapshot())
-        from util import performance
+        from .util import performance
 
         result = None
         console.print_header("({}) STARTING STEP: {}".format(os.getpid(), self.step_name))
@@ -578,15 +537,96 @@ class StepRunner(object):
         start = performance.timer()
         try:
             output = self.target(config=config, data=data, rng=rng)
-        except CriticalPipelineError as exc:
-            output = dict()
-            result = exc
+        except Exception as exception:
+            # Flatten the exception so that we make sure it can be serialized,
+            # and return it immediately so that it can be reported from the parent process
+            logging.error("Critical error in the pipeline")
+            import traceback
+            traceback.print_exc()
+            raise CriticalPipelineError("Error: {}".format(str(exception)))
+
         save(config.experiment_dir, output)
         performance.print_performance_stats(self.step_name, start)
         # profiling.start()
         return result
 
 
+class SATStateFactorizationStep(Step):
+    """ Generate the SAT problem that learns a state factorization """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def get_required_attributes(self):
+        return ["experiment_dir"]
+
+    def process_config(self, config):
+        config["cnf_filename"] = compute_maxsat_filename(config)
+        config["maxsat_variables_file"] = compute_maxsat_variables_filename(config)
+        config["relax_numeric_increase"] = config.get("relax_numeric_increase", False)
+        return config
+
+    def get_required_data(self):
+        return ["goal_states", "transitions", "state_ids", "enforced_feature_idxs", "optimal_transitions"]
+
+    def description(self):
+        return "SAT encoding to learn a state factorization "
+
+    def get_step_runner(self):
+        from . import factorization
+        return factorization.learn_factorization
+
+
+class DFAGenerationStep(Step):
+    """ Generate the DFA from observation traces """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def get_required_attributes(self):
+        return ["experiment_dir"]
+
+    def process_config(self, config):
+        config["cnf_filename"] = compute_maxsat_filename(config)
+        config["maxsat_variables_file"] = compute_maxsat_variables_filename(config)
+        config["relax_numeric_increase"] = config.get("relax_numeric_increase", False)
+        return config
+
+    def get_required_data(self):
+        return ["goal_states", "transitions", "state_ids", "enforced_feature_idxs", "optimal_transitions"]
+
+    def description(self):
+        return "DFA generation from observation traces"
+
+    def get_step_runner(self):
+        from . import factorization
+        return learn_actions.generate_maxsat_problem
+
+
 class Bunch(object):
     def __init__(self, adict):
         self.__dict__.update(adict)
+
+
+PIPELINES = dict(
+    maxsat=[
+        PlannerStep,
+        ConceptGenerationStep,
+        FeatureMatrixGenerationStep,
+        MaxsatProblemGenerationStep,
+        MaxsatProblemSolutionStep,
+        ActionModelStep,
+        # QNPGenerationStep,
+    ],
+    sat=[
+        PlannerStep,
+        ConceptGenerationStep,
+        FeatureMatrixGenerationStep,
+        SatProblemGenerationStep,
+        SatProblemSolutionStep,
+        SatSolutionDecodingStep,
+    ],
+    observations=[
+        DFAGenerationStep,
+        SATStateFactorizationStep,
+    ],
+)

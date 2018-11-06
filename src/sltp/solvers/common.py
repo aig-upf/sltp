@@ -2,7 +2,7 @@ import os
 import subprocess
 import sys
 
-from solvers import library
+from ..solvers import library
 
 
 class Solution(object):
