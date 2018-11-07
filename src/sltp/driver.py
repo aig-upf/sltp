@@ -71,7 +71,7 @@ def check_int_parameter(config, name, positive=False):
         if positive and config[name] <= 0:
             raise ValueError()
     except ValueError:
-        raise InvalidConfigParameter('Parameter "{}" must be a {}integer value'.format(
+        raise InvalidConfigParameter('Parameter "{}" must be a {} integer value'.format(
             name, "positive " if positive else ""))
 
 
@@ -235,7 +235,6 @@ class ConceptGenerationStep(Step):
         check_int_parameter(config, "max_concept_size")
 
         config["concept_dir"] = os.path.join(config["experiment_dir"], 'terms')
-        config["feature_stdout"] = os.path.join(config["experiment_dir"], 'feature-generation.stdout.txt')
         config["concept_generator"] = config.get("concept_generator", None)
         config["feature_generator"] = config.get("feature_generator", None)
         config["enforce_features"] = config.get("enforce_features", None)

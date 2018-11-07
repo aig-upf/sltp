@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 import sys
 
+from sltp.incremental import IncrementalExperiment
+
 from abstractions_defaults import generate_experiment
 from common import build_ijcai_paper_bw_concepts, add_bw_domain_parameters, ijcai_paper_bw_feature_namer, \
     add_bw_domain_parameters_2, build_on_x_y_feature_set, generate_features_n_ab, update_dict, get_on_x_y_feature, \
@@ -76,6 +78,18 @@ def experiment(experiment_name=None):
                                               complete_only_wrt_optimal=False,  # num_sampled_states=200,
                                               max_concept_size=18,
                                               )
+
+    aaai_clear_x_no_marking_inc = dict(experiment_class=IncrementalExperiment,
+                                       instances=["instance_5_clear_x_1.pddl"],
+                                       num_states=5000, max_width=[-1],
+                                       num_sampled_states=50,
+                                       complete_only_wrt_optimal=True,
+                                       max_concept_grammar_iterations=3,
+                                       initial_concept_bound=5, max_concept_bound=20, concept_bound_step=2,
+                                       concept_generator=None,
+                                       parameter_generator=add_bw_domain_parameters,
+                                       feature_namer=ijcai_paper_bw_feature_namer,
+                                       )
 
 
 
@@ -227,6 +241,7 @@ def experiment(experiment_name=None):
         "aaai_clear_x_no_marking": aaai_clear_x_no_marking,
         "aaai_clear_x_no_marking_k18": aaai_clear_x_no_marking_k18,
         "aaai_clear_x_no_marking_2": aaai_clear_x_no_marking_2,
+        "aaai_clear_x_no_marking_inc": aaai_clear_x_no_marking_inc,
 
         "aaai_ijcai_features_on_clear_5_rnd": aaai_ijcai_features_on_clear_5_rnd,
         "aaai_clear_x_simple_hybrid": aaai_clear_x_simple_hybrid,

@@ -2,6 +2,7 @@ import os
 from sltp.driver import Experiment, generate_pipeline, BENCHMARK_DIR
 from sltp.learn_actions import OptimizationPolicy
 
+
 def generate_experiment(domain_dir, domain, **kwargs):
     """ """
 
@@ -87,11 +88,11 @@ def generate_experiment(domain_dir, domain, **kwargs):
         encoding_m=10,
 
         domain_dir=domain_dir,
+        experiment_class=Experiment,  # The Experiment class to be used
     )
 
     parameters = {**defaults, **kwargs}  # Copy defaults, overwrite with user-specified parameters
 
     steps = generate_pipeline(**parameters)
-    exp = Experiment(steps)
-
+    exp = parameters["experiment_class"](steps, parameters)
     return exp
