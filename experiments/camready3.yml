@@ -6,3 +6,5 @@ run:
 
 experiments:
   - blocks aaai_clear_x_no_marking_8blocks
+  - blocks aaai_clear_x_8blocks
+

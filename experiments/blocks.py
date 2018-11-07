@@ -66,6 +66,9 @@ def experiment(experiment_name=None):
         feature_namer=ijcai_paper_bw_feature_namer,
     )
 
+    aaai_clear_x_8blocks = update_dict(aaai_clear_x_simple_hybrid,
+                                       instances="instance_8_clear_x_0.pddl", )
+
     aaai_clear_x_no_marking = update_dict(aaai_clear_x_simple_hybrid,
                                           complete_only_wrt_optimal=False,  # num_sampled_states=200,
                                           # concept_generator=build_ijcai_paper_bw_concepts,
@@ -229,6 +232,7 @@ def experiment(experiment_name=None):
         "aaai_clear_x_no_marking": aaai_clear_x_no_marking,
         "aaai_clear_x_no_marking_k18": aaai_clear_x_no_marking_k18,
         "aaai_clear_x_no_marking_2": aaai_clear_x_no_marking_2,
+        "aaai_clear_x_8blocks": aaai_clear_x_8blocks,
         "aaai_clear_x_no_marking_8blocks": aaai_clear_x_no_marking_8blocks,
 
         "aaai_ijcai_features_on_clear_5_rnd": aaai_ijcai_features_on_clear_5_rnd,
