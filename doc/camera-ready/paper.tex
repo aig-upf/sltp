@@ -7,7 +7,7 @@
 \usepackage{courier}  %Required
 \usepackage{url}  %Required
 \usepackage{graphicx}  %Required
-\usepackage{booktabs}  %Required
+
 
 \frenchspacing  %Required
 \setlength{\pdfpagewidth}{8.5in}  %Required
@@ -28,23 +28,20 @@
 %\newcommand\hg[1]{\sethlcolor{green}\hl{HG: #1}\sethlcolor{cyan}}
 %\newcommand\gdg[1]{\sethlcolor{yellow}\hl{GDG: #1}\sethlcolor{cyan}}
 %\newcommand\bb[1]{\sethlcolor{cyan}\hl{BB: #1}}
-
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{amsthm}
 \usepackage{enumerate}
+\usepackage{booktabs}
 %\usepackage{upgreek}
 %\usepackage[normalem]{ulem}
-\usepackage{multirow}
+% \usepackage{multirow}
 % \usepackage[small]{caption}
-
-
-\usepackage{xspace}
+% \usepackage{xspace}
 % \usepackage{ifthen}
-\usepackage{tikz}
+% \usepackage{tikz}
 % \usetikzlibrary{shapes.geometric}
 % \pgfdeclareimage[width=1cm]{dirt}{dirt2}
-
 % \usetikzlibrary{shapes.geometric}
 % \pgfdeclareimage[width=1cm]{dirt}{dirt2}
 
@@ -69,11 +66,11 @@
 \newtheorem{corollary}[definition]{Corollary}
 \newtheorem{example}[definition]{Example}
 
-\def\withproofs{0} % to include proofs in the draft: 0=don't include, 1=include
-\newcommand{\nosuchproof}{\textcolor{red}{\bf No such proof yet...}}
-\newcommand{\problem}{\textcolor{red}{\bf **** PROBLEM ****}}
-\newcommand{\alert}[1]{\textcolor{red}{\bf #1}}
-\newcommand{\CHECK}[1]{\textcolor{red}{\bf Note: #1}}
+% \def\withproofs{0} % to include proofs in the draft: 0=don't include, 1=include
+% \newcommand{\nosuchproof}{\textcolor{red}{\bf No such proof yet...}}
+% \newcommand{\problem}{\textcolor{red}{\bf **** PROBLEM ****}}
+% \newcommand{\alert}[1]{\textcolor{red}{\bf #1}}
+% \newcommand{\CHECK}[1]{\textcolor{red}{\bf Note: #1}}
 
 \newcommand{\hobs}{\ensuremath{h_{obs}}\xspace}
 \newcommand{\indicator}[1]{[\![#1]\!]}
@@ -125,7 +122,7 @@
 \newcommand{\Move}{\text{Move}}
 
 % Examples
-\newcommand{\Example}{\medskip\noindent\textbf{Example.}\xspace}
+% \newcommand{\Example}{\medskip\noindent\textbf{Example.}\xspace}
 
 
 %PDF Info Is Required (no accents, etc.!):
@@ -133,33 +130,33 @@
 /Title (Learning Features and Abstract Actions for Computing Generalized Plans)
 /Author (Blai Bonet, Guillem Frances, Hector Geffner)}
 
-
 \title{Learning Features and Abstract Actions for Computing Generalized Plans} 
 
-% \author{Blai  Bonet, G. Frances, H. Geffner} % Alphabetical
-
-\author{
-Blai Bonet$^1$,
-Guillem Franc\`es$^2$,
-Hector Geffner$^3$
-\\
-$^1$ Universidad Sim\'on Bol\'{\i}var, Caracas, Venezuela\\
-$^2$ University of Basel, Basel, Switzerland \\
-$^3$ ICREA \& Universitat Pompeu Fabra, Barcelona, Spain\\
-%
-bonet@usb.ve,
-guillem.frances@unibas.ch,
-hector.geffner@upf.edu
+\author{%
+Blai Bonet\\ Universidad Sim\'on Bol\'{\i}var \\ Caracas, Venezuela \\ bonet@usb.ve
+\And Guillem Franc\`{e}s \\ University of Basel \\ Basel, Switzerland \\ guillem.frances@unibas.ch
+\And Hector Geffner \\ ICREA \& Universitat Pompeu Fabra \\ Barcelona, Spain \\ hector.geffner@upf.edu
 }
 
-% 
-% \author{\textbf{Submission \#5695}}
+% Alternative style:
+% \author{
+% Blai Bonet, \textsuperscript{1}
+% Guillem Franc\`{e}s,\textsuperscript{2}
+% Hector Geffner,\textsuperscript{3} \\
+% \textsuperscript{1} Universidad Sim\'on Bol\'{\i}var, Caracas, Venezuela\\
+% \textsuperscript{2} University of Basel, Basel, Switzerland \\
+% \textsuperscript{3} ICREA \& Universitat Pompeu Fabra, Barcelona, Spain\\
+% bonet@usb.ve,
+% guillem.frances@unibas.ch,
+% hector.geffner@upf.edu
+% }
 
-\nocopyright
+
+% \author{\textbf{Submission \#5695}}
+% \nocopyright
 
 
 \begin{document}
-
 
 \maketitle
 
@@ -197,11 +194,11 @@ of instances that involve different initial states, different objects, and  diff
 In the basic formulation due  to \citeay{hu:generalized}, a generalized plan
 is a mapping of observations into actions that are assumed to be common
 among  all the instances. More recently, this formulation has been extended by
-\citeay{bonet:ijcai2018} to account for relational domains like Blocksworld  where the set of
+\citeay{bonet:ijcai2018} to account for relational domains like Blocksworld  where the sets of
 objects and  actions change from instance to instance.
 In the new formulation, the observations  are replaced by  a set of boolean
 and numerical features $F$ and a set of \emph{abstract actions} $A_F$.
-The  abstract actions are  \emph{sound} and \emph{complete} if they track the
+These abstract actions are  \emph{sound} and \emph{complete} if they track the
 effects  of the actions on  the features in a suitable way.
 The resulting generalized plans  map feature values into abstract actions, and soundness
 ensures that the application of an abstract action can be mapped back into the application of
@@ -258,7 +255,7 @@ and a discussion.
 
 \section{Background}
 
-We review generalized planning,   abstract actions, and solutions following  \citeay{bonet:ijcai2018}.
+We review generalized planning, abstract actions, and solutions following  \citeay{bonet:ijcai2018}.
 
 
 \subsection{Generalized Planning}
@@ -267,7 +264,7 @@ A \emph{generalized planning problem} $\Q$ is a collection of planning instances
 An instance $P$ is a  classical planning problem expressed in some compact language
 as a tuple $P=\tup{V,I,G,A}$ where $V$ is a set of state variables that can take a
 finite set of values (boolean or not), $I$ is a set of atoms over $V$ defining an
-initial state $s_0$, $G$ is a set of atoms or literals over $V$ describing the goal
+initial state $s_0$, $G$ is a set of literals over $V$ describing the goal
 states, and $A$ is a set of actions $a$ with their preconditions and effects that
 define the set $A(s)$ of actions applicable in any state $s$, and the successor
 state function $f(a,s)$, for any state $s$ and $a \in A(s)$.
@@ -280,7 +277,7 @@ $\Q$ is a solution to all instances $P \in Q$. The form of such solutions is
 described below.
 
 A \emph{feature} $f$ for a class $\Q$ of problems represents a function $\phi_f$
-that takes an   instance $P$ from $\Q$ and an  state $s$ reachable in $P$, and results
+that takes an   instance $P$ from $\Q$ and a state $s$ reachable in $P$, and results
 in a value denoted as $\phi_f(s)$. 
 A feature is \emph{boolean} if it results in a boolean value, and \emph{numeric}
 if it results in a numerical value, that we assume to be a non-negative integer.
@@ -295,7 +292,7 @@ $P$ with goal $clear(a)$ will belong to $\Q_{clear}$ and
 the value of $x$ in $P$ will be $a$.
 
 While instances $P$ in a generalized problem $\Q$ would normally share some structure \cite{bonet:ijcai2015},
-like the same planning domain and the same predicate symbols, this is not strictly  necessary.
+like the same planning domain and predicate symbols, this is not strictly  necessary.
 On the other hand,  the features $f$  must be common to all the instances  in $\Q$ and 
 represent functions $\phi_f(s)$ that are well defined over all reachable states $s$.
 
@@ -309,9 +306,9 @@ associated with the features. Preconditions and effects over boolean state varia
 and $\neg p$, that abbreviate the  atoms $p=true$ and $p=false$, while
 preconditions and effects over  numerical state variables $n$ are of  the form $n=0$ and $n > 0$,
 and   $n\mminus$ (decrements) and  $n\pplus$ (increments), respectively.
-The language for the abstraction,  that combines boolean with numerical variables
-that can be decreased or increased by unspecified amounts, is the language of the \emph{qualitative numerical problems (QNPs)},
-that unlike standard numerical planning problems \cite{helmert:numerical}
+The language for the abstraction,  that combines boolean and numerical variables
+that can be decreased or increased by unspecified amounts, is the language of \emph{qualitative numerical problems (QNPs)}.
+Unlike standard numerical planning problems \cite{helmert:numerical}, QNPs
 are decidable and can be solved effectively by means of  FOND planners \cite{srivastava:aaai2011,bonet:ijcai2017}.
 
 
@@ -327,9 +324,10 @@ if its preconditions
 are true in $\bar{s}$. 
 
 An action $a$ and an abstract action $\bar{a}=\abst{Pre}{\Eff}$  \emph{have  the same qualitative effects over the features $F$
-in a state $s$}, when they are both applicable in $s$,  and have the same effects on the boolean features $p$ and
-the same \emph{qualitative effects} on the numerical features $n$. This means: 1)~$p$ becomes true in the state $s'$
-that results from $a$ in $s$, i.e., $\phi_p(s')$ is true and $\phi_p(s)$  is false,
+in a state $s$}, when both are applicable in $s$ and have the same effects on the boolean features $p$ and
+the same \emph{qualitative effects} on the numerical features $n$. If $s'$ is the result of applying $a$ in $s$, this means: 
+1)~$p$ becomes true in $s'$,
+i.e., $\phi_p(s')$ is true and $\phi_p(s)$  is false,
 iff $p \in \Eff$ and $\neg p \in Pre$, 2)~$p$ becomes false in $s'$, i.e., $\phi_p(s')$ is false and $\phi_p(s)$  is true,
 iff $\neg p \in \Eff$ and $p \in Pre$, 3)~$n$ increases in $s'$, i.e., $\phi_n(s') > \phi_n(s)$, iff $n\pplus \in \Eff$,
 and 4)~$n$ decreases  in $s'$, i.e., $\phi_n(s') < \phi_n(s)$, iff $n\mminus \in \Eff$.
@@ -339,19 +337,18 @@ and 4)~$n$ decreases  in $s'$, i.e., $\phi_n(s') < \phi_n(s)$, iff $n\mminus \in
 Let $\Q_{clear}$ stand for  all  Blocksworld instances with stack and unstack actions and goal $clear(x)$,
 let $F=\{H,n(x)\}$   represent the two features above, and let $s$ be a state in an instance $P$
 where the gripper is empty, the atoms $on(A,B)$ and $clear(A)$ are true, and block $A$ is above
-$x$. In the state $s$,
+$x$. In this state $s$,
 the abstract action $\bar{a}=\abst{\neg H,n(x)>0}{H,n(x)\mminus}$
 and the concrete  action   $a=unstack(A,B)$ in $P$ have the same effect over the features.
 Indeed, $\bar{a}$ and $a$  are both applicable in $s$, and while $\bar{a}$ makes the variable $H$ true and decreases
-$n(x)$, the action $a$ results in a state $s'$ where $\phi_{H}(s')$ becomes true and $\phi_{n(x)}(s')$ is
-smaller than $\phi_{n(x)}(s)$. \qed
+$n(x)$, the action $a$ results in a state $s'$ where $\phi_{H}(s')$ becomes true and $\phi_{n(x)}(s') < \phi_{n(x)}(s)$. \qed
 \end{example}
 
 
 \subsection{Sound and Complete Abstractions}
 
 Soundness and completeness are the two key  properties that  enable us to reason about the collection of
-instances $P$ in $\Q$ in terms of abstract actions that operate at the level of the  features:
+instances $\Q$ in terms of abstract actions that are defined at the level of the features:
 
 \begin{definition}
 A set of abstract actions $A_F$ over the features $F$ is \emph{sound} relative to 
@@ -369,28 +366,34 @@ $A_F$ that is applicable in $\bar{s}$ and  has the \emph{same qualitative
 effects over the features as $a$.}
 \end{definition}
 
-If we say that  action $a$  \emph{instantiates} an abstract action $\bar{a}$ in a state $s$
-and that $\bar{a}$ captures $a$ in $s$,  when $a$ and $\bar{a}$ are both applicable in $s$ and have  the same qualitative effects over the features,
-then soundness means that an   applicable abstract action can always be instantiated by
-a  concrete action, while completeness  means that an applicable concrete action is always captured 
-by an  applicable abstract action.  
+Let us say that  action $a$ \emph{instantiates} abstract action $\bar{a}$ in a state $s$,
+and $\bar{a}$ \emph{captures} $a$ in $s$,  when $a$ and $\bar{a}$ are both applicable in $s$ and have the same qualitative effects over the features.
+Then, soundness means that any abstract action that is applicable in some reachable state can
+always be instantiated by a concrete action, while completeness  means that any concrete action that is applicable in some reachable state 
+is always captured by an abstract action.  
 
 It may well be possible  that a  feature set $F$ does not  support a set of abstract actions $A_F$
-that is both sound and complete relative to $\Q$. Soundness, however, is  crucial for deriving valid general plans.
-An important intuition is that the features $F$ support a set of sound abstraction action $A_F$ over $F$ when  the
-effects of the concrete actions over $F$  can be \emph{predicted} in the following sense:  there are no pairs of
-state transitions $(s,s')$ and $(t,t')$  over instances in $\Q$ where a feature $f$ in $F$ changes in  different
-ways (e.g., $f$ becomes true in one transition  but not in the other  or $f$ increases in one transition  but not in the other), 
-when all the  features start with the same values in $s$ and $t$ (i.e., $\bar{s}=\bar{t}$).
-This intuition will be made explicit  in the SAT encoding below  when enforcing 
-a  notion  of soundness and completeness over sampled sets of transitions.
+that is both sound and complete relative to $\Q$; soundness, however, is  crucial for deriving valid general plans.
+An important intuition is that the features $F$ support a set of sound abstract actions $A_F$ when the
+effects of the concrete actions over $F$ can be \emph{predicted}
+in the sense that the qualitative values of the features in a state $s$ of an instance $P$, 
+as captured by $\bar{s}$, \emph{determine} the possible
+ways in which the actual values of the features may change in the 
+transitions from $s$ to a successor state $s'$.
+Hence, if $a$ and $b$ are two actions applicable in $s$ such that one makes 
+$p$ true and the other increases the value of $n$, then in any other state $t$ 
+such that $\bar{t}=\bar{s}$,
+there should be applicable actions $a'$ and $b'$ with the same effects 
+over $p$ and $n$.
+
+
 
 \begin{example}
   The set of  abstract actions  $\bar{a}=\abst{\neg H,n(x)>0}{H,n(x)\mminus}$
-  and $\bar{a'}=\abst{H}{\neg H}$ over the features  $F=\{H,n(x)\}$
+  and $\bar{a}'=\abst{H}{\neg H}$ over the features  $F=\{H,n(x)\}$
   is sound but not complete relative to $\Q_{clear}$. 
-  This captures the concrete actions that pick blocks from above $x$ and puts them away
-  but no  other actions like stacking a block above $x$ or picking up a block that is not above $x$. \qed
+  They capture the concrete actions that pick blocks from above $x$ and put them away,
+  but do not capture others like stacking a block above $x$ or picking up a block that is not above $x$. \qed
 \end{example}
 
 
@@ -411,7 +414,7 @@ The policy $\pi$ solves $P$ iff all trajectories induced by $\pi$  reach a goal 
 \begin{example}
   A solution for $\Q_{clear}$ with   $F=\{H,n(x)\}$ is the policy $\pi$ given by the rules
   $\Rule{\neg H, n(x)>0}{\bar{a}}$ and $\Rule{H, n(x)>0}{\bar{a}'}$
-  for the abstract actions $\bar{a}$ and $\bar{a'}$ above.
+  for the abstract actions $\bar{a}$ and $\bar{a}'$ above.
   The policy picks blocks above $x$ and puts them aside (never  above $x$)
   until $n(x)$ becomes zero. \qed
 \end{example}
@@ -454,15 +457,15 @@ using the features $F$ and abstract actions $A_F$ are as follows \cite{bonet:ijc
 \end{enumerate}
 
 
-\begin{theorem}[\cite{bonet:ijcai2018}]
-If the abstract actions  $A_F$ are sound relative to the generalized problem $\Q$,   solutions  to $Q^+_F$
+\begin{theorem}[\citeay{bonet:ijcai2018}]
+If the abstract actions  $A_F$ are sound relative to the generalized problem $\Q$, the  solutions  to $Q^+_F$
 computed by FOND planners off-the-shelf  are solutions to $\Q$.
 \end{theorem}
 
 
 \begin{example}
   Let us restrict  $\Q_{clear}$  to those  instances where  the gripper is initially empty
-  and there are blocks on top of $x$. For $F=\{H,n(x)\}$  and $A_F=\{\bar{a},\bar{a'}\}$ as above, 
+  and there are blocks on top of $x$. For $F=\{H,n(x)\}$  and $A_F=\{\bar{a},\bar{a}'\}$ as above, 
   $Q_F=\tup{V_F,I_F,G_F,A_F}$ can be defined with $I_F=\{\neg H, n(x) > 0\}$ and $G_F=\{n(x)=0\}$.
   $Q'_F$ is like $Q_F$ but with $n(x)=0$ regarded as a propositional symbol, $n(x) > 0$
   as its negation, and the effect $n(x)\mminus$ replaced by  $n(x) > 0 \, | \, n(x)=0$.
@@ -481,9 +484,10 @@ by enforcing a form of soundness and completeness over a set of samples:}
 \begin{definition}
   For a generalized problem $\Q$, a \emph{sample set}  $\S$ is a non-empty set of tuples  $(s,s',P)$
   such that 1)~$P$ is an instance of $\Q$, 2)~$s$ is a reachable state in $P$, 3)~$s'$
-  is a possible successor of $s$ in $P$; i.e., $s'=f(a,s)$ for some action $a$ applicable in $s$,
-  4)~$\S$ is closed in the sense  that if $(s,s',P)$ is in $\S$, then $(s,s'',P)$ is in $\S$  if $s''$ is another
-  successor of $s$ in $P$.
+  is a successor of $s$ in $P$; i.e., $s'=f(a,s)$ for some action $a \in A(s)$,
+  and
+  4)~$\S$ is closed in the sense  that if $(s,s',P) \in \S$, then $(s,s'',P) \in \S$  for any successor $s''$ 
+  of $s$ in $P$.
 \end{definition}
 
 By assuming that sampled states $s$ are tagged with the instance $P$, 
@@ -500,8 +504,8 @@ $\bar{a}$ have the same qualitative effects over the features:
 
 \begin{definition}
   A set of abstract actions $A_F$ is sound \emph{relative to a  sample set} $\S$ for $\Q$
-  iff for  any  abstract action $\bar{a}$ in $A_F$ that is applicable in  a expanded state $s$ of $\S$,
-  there is a transition $(s,s')$ in $\S$ that has the same qualitative  effects over $F$ as $\bar{a}$.
+  iff for  any  abstract action $\bar{a}$ in $A_F$ applicable in an expanded state $s$ of $\S$,
+  there is a transition $(s,s') \in \S$ with the same qualitative  effects over $F$ as $\bar{a}$.
 \end{definition}
 
 \begin{definition}
@@ -510,14 +514,14 @@ $\bar{a}$ have the same qualitative effects over the features:
   with the same qualitative effects over $F$ that is applicable in $s$.
 \end{definition}
 
-Clearly, for a sufficiently large sample set, the approximate and exact  soundness and completeness notions  converge.
+For a sufficiently large sample set, the approximate and exact notions of soundness and completeness   converge.
 
 
 \section{Learning Features and Abstract Actions}
 
-For learning the features and abstract actions from a sample set $\S$ for $\Q$, 
-we define a propositional formula $T(\S,\F)$ where  $\cal F$ represents a large
-pool of candidate features. The formula is  \emph{satisfiable} iff there is
+In order to learn the features and abstract actions from a sample set $\S$ for $\Q$, 
+we define a propositional formula $T(\S,\F)$, where  $\cal F$ represents a large
+pool of candidate features, that is \emph{satisfiable} iff there is
 a set of abstract actions $A_F$ over  $F \subseteq \F$ that is sound and complete
 relative to $\S$. 
 
@@ -538,7 +542,7 @@ The \emph{propositional variables} in $T(\S,\F)$ are then:
     %Since $D_1$ is symmetric, only symbols for $s < t$ are created for some
     %arbitrary, fixed order over the states in $\S_1$.
   \item $D_2(s, s', t, t')$ for each $(s, s')$ and $(t, t')$ in $\S$,
-    true iff selected features $f$ distinguish the two transitions; i.e., if
+    true iff some selected feature $f$ distinguishes the two transitions; i.e., iff
     $\Delta_f(s, s')\not=\Delta_f(t,t')$. 
     %As for $D_1$, the number of $D_2$ variables is cut in half due to symmetries.
 \end{enumerate}
@@ -552,18 +556,18 @@ The \emph{propositional variables} in $T(\S,\F)$ are then:
 \end{equation}
 
 \noindent where $f$ ranges over the features in $\F$ with  different qualitative
-values in $s$ and $t$; namely, the  boolean features $p$ with different
-truth values in $s$ and $t$, and the numerical features $n$ for which 
+values in $s$ and $t$; namely, boolean features $p$ with different
+truth values in $s$ and $t$ and numerical features $n$ for which 
 the atom $n=0$ has different truth values in $s$ and $t$. 
 
-The second class of  formulas encode the meaning of $D_2$:
+The second class of formulas encode the meaning of $D_2$:
 %
 \begin{equation}
   \label{eq:d2}
   D_2(s, s', t, t') \ \Leftrightarrow\ \textstyle\bigvee_f  selected(f)
 \end{equation}
 
-\noindent where $f$ ranges over the features $f \in \F$ that have the same
+\noindent where $f$ ranges over the features in $\F$ that have the same
 qualitative values in $s$ and $t$ but which change differently in the two
 transitions; i.e., $\Delta_f(s, s') \neq \Delta_f(t, t')$.
 
@@ -585,7 +589,7 @@ This is expressed as
 
 \noindent where $s$ and $t$ are expanded states in  $\S$, $s'$ is a successor of $s$ in $\S$,
 and $t'$ ranges over the successors of $t$ in $\S$. This formula is crucial. 
-It says that \emph{if the selected features don't distinguish the state $s$ from $t$,
+It says that \emph{if the selected features do not distinguish state $s$ from $t$,
 then for each action $a$ that maps  $s$ into $s'$, there must be an action $b$ that maps the state
 $t$ into a state $t'$ such that the two transitions $(s,s')$ and $(t,t')$ affect the selected features
 in the same way.} The formula does not mention the actions $a$ and $b$ because their identity does not matter;
@@ -596,7 +600,7 @@ Moreover, if $D_1(s,t)$ and $D_2(s,s',t,t')$ are both false in the satisfying as
 will be captured by the same abstract action.
 
 
-The fourth and  last set of formulas force the selected features to distinguish goal from non-goal states as:
+The fourth and  last class of formulas force the selected features to distinguish goal from non-goal states as:
 \begin{equation}
   \label{eq:goal}
   D_1(s,t) 
@@ -627,7 +631,7 @@ this is still a large number. ..
 
 We also consider an alternative theory $T_G(\S,\F)$ that is similar to $T(\S,\F)$
 but  smaller. It is obtained by marking  some of the transitions $(s,s')$ in $\S$  as  \emph{goal-relevant}.
-Then rather than creating abstract  actions to account for all the transitions, we only create
+Then, rather than creating abstract  actions to account for all the transitions, we only create
 abstract actions to account for the marked transitions. This is achieved by drawing the states
 $s$ and the transitions $(s,s')$ in formulas (\ref{eq:d1}) and (\ref{eq:d2}) from the
 set of marked transitions in $\S$. The states $t$ and the transitions $(t,t')$, on the other hand,
@@ -682,9 +686,14 @@ the precondition dropped. The key properties of $T(\S,\F)$ and $T_G(\S,\F)$ are:
 
 While the initial and goal expressions $I_F$ and $G_F$ of the abstract problem can be learned 
 from the satisfying assignment $\sigma$ as well, for simplicity, in the examples below, they are
-provided by hand.\footnote{$G_F = G_{\sigma}$ can be defined as the DNF formula
-whose terms  correspond to the abstract states over the selected features in $F_{\sigma}$ 
-that are true in some  goal state of the sample  and false in all non-goal states.}
+provided by hand.\footnote{
+$G_F = G_{\sigma}$ can be defined as the DNF formula whose terms 
+correspond to the abstract states over 
+$F_{\sigma}$ that correspond to some goal state in the sample.}
+% \footnote{$G_F = G_{\sigma}$ can be defined as the DNF formula
+% whose terms  correspond to the abstract states over the selected features in $F_{\sigma}$ 
+% that are true in some  goal state of the sample  and false in all non-goal states.}
+
 
 
 \Omit{
@@ -698,14 +707,16 @@ $s$ is expanded goal   state in $\S$  iff  $s$ satisfies  $G_F=G_{\sigma}$.
 }
 % 
 
-Different assignments $\sigma$ give rise to different features $F_{\sigma}$
-and abstract actions $A_{\sigma}$. More meaningful features are found by looking for
-satisfying assignments $\sigma$ that minimize a cost measure such as $|F_{\sigma}|$
-or, more generally, $\sum_{f \in F_{\sigma}} cost(f)$. We achieve this by casting our problem
-into a constrained optimization problem, and more specifically, a Weighted Max-SAT problem,
-where clauses resulting from the theories $T$ or $T_G$ are taken as \emph{hard} clauses
-and \emph{soft} unit clauses $\neg selected(f)$ are added with  weights $cost(f)$
-for all $f \in \F$.
+Different assignments $\sigma$ result in different feature sets $F_{\sigma}$
+and abstract action sets $A_{\sigma}$. Simpler and more meaningful features can be found 
+by minimizing a cost measure such as $|F_{\sigma}|$
+or, more generally, $\sum_{f \in F_{\sigma}} cost(f)$.
+We achieve this by casting our problem
+into a constrained optimization problem, more specifically, a Weighted Max-SAT problem,
+where clauses resulting from the theories $T$ or $T_G$ are taken as \emph{hard} clauses,
+and we add, for each feature $f \in \F$, a
+\emph{soft} unit clause $\neg selected(f)$ with weight $cost(f)$.
+The cost measure we use will be defined below.
 
 
 \section{Feature Pool}
@@ -741,7 +752,7 @@ The grammar for generating new concepts and roles from them is:
    $C_x$ denotes $\set{x}$ for parameter $x$ if any,
   \item $C \ \leftarrow\  \neg C_A$,   negation on primitive, universal, nominals,
   \item $C \ \leftarrow\   C \sqcap C'$,   conjunctions,
-  \item $C \ \leftarrow\  \exists R.C, \forall R.C$, first denotes $x$'s  s.t.\  $R(x,y) \land C(y)$ for some  $y$, 
+  \item $C \ \leftarrow\  \exists R.C, \forall R.C$, first denotes $x$'s  s.t.\  $R(x,y) \land C(y)$ for some  $y$;
   second,  $x$'s  s.t. $R(x,y) \rightarrow C(y)$ for all $y$,
   \item $C \ \leftarrow\  R=R'$,  $x$'s  s.t. $R(x,y)$ iff $R'(x,y)$ for all $y$,
   %  set of $y$'s  for which $R(x,y)$ equal to set of $y$'s s.t. $R'(x,y)$.
@@ -798,7 +809,7 @@ The steps for computing general plans are then:
     as $F_{\sigma}$ and $A_{\sigma}$,
   \item the abstraction $Q_F=\tup{V_F,I_F,G_F,A_F}$ is defined with initial and goal
     conditions $I_F$ and $G_F$ provided by hand to match $\Q$, 
-  \item the FOND problem $Q^+_F$, constructed automatically from $Q_F$ is solved by an off-the-shelf
+  \item the FOND problem $Q^+_F$, constructed automatically from $Q_F$, is solved by an off-the-shelf
     FOND planner.
 \end{enumerate}
 
@@ -1001,7 +1012,9 @@ The set of actions  $A_F$ that is learned is:
 \end{enumerate}
 
 The abstraction $Q_F$  with $I_F\!=\!\{ E, \neg X, \neg G, n(x)\!>\!0, n(y)\!>\!0\}$
-and $G_F = \{ \neg X, G, n(x)=0, n(y)\!>\!0\}$, is translated into the FOND problem
+% and $G_F = \{ \neg X, G, n(x)=0, n(y)\!>\!0\}$,
+and $G_F = \{G\}$, 
+is translated into the FOND problem
 $Q_F^+$  in 0.01 seconds, which is solved by the FOND planner  in 7.56 seconds.
 The resulting policy solves the generalized problem $\Q_{on}$.
 It implements a loop  to clear block $x$,  followed by a second  loop to clear block $y$,
@@ -1040,9 +1053,9 @@ is learned  from the theory $T_G$ is:
 
 % Once again, although this set of abstract actions  is not complete,
 % it is sufficient for generating a general plan.
-The abstraction $Q_F$ with $I_F = \{ B>0, \neg X, G>0, C=0\}$ and $G_F = \{ B=0, G>0, C=0 \}$ is
+The abstraction $Q_F$ with $I_F = \{ B>0, \neg X, G>0, C=0\}$ and $G_F = \{ B=0, C=0 \}$ is
 translated into the FOND problem $Q^+_F$, which is solved by the
-planner in 171.92 seconds. The resulting policy solves $\Q_{gripper}$,
+planner in 171.92 seconds. The resulting policy provably solves $\Q_{gripper}$,
 meaning that it works for any  number of grippers and balls.
 \Omit{ %% Add if space
 The policy picks the balls in the source room, one by one, 
@@ -1081,7 +1094,7 @@ The set of  abstract actions  learned is:
   \item $\text{move-to-closest-reward} = \abst{R>0, D>0}{D\mminus}$.
 \end{enumerate}
 
-The resulting  abstraction $Q_F$ with $I_F = \{ R>0, D>0 \}$ and $G_F=\{R=0,D>0\}$
+The resulting  abstraction $Q_F$ with $I_F = \{ R>0, D>0 \}$ and $G_F=\{R=0\}$
 is translated into the  FOND problem $Q^+_F$ which yields
 a policy  that solves $\Q_{reward}$ in 1.36 seconds. The policy moves the agent
 one step at a time towards  the uncollected  reward that is closest, as measured by the
@@ -1100,14 +1113,14 @@ and the actions.
 This is indeed the reason why we have chosen to use the theories $T_G$
 with goal marking. Additional ideas, however, are required
 to improve scalability and to make the computational model
-captured by  steps 1--6 more robust. One possibility that we haven't explored
+captured by  steps 1--6 more robust. One possibility that we have not explored
 is the use of incomplete (suboptimal) Max SAT solvers. 
 
 
 A second limitation is the assumption that 
 the features can be obtained from a large pool of candidate  features defined 
 from the primitive predicates and a  general grammar.
-It's not fully clear whether this assumption is reasonable in general.
+It is not fully clear whether this assumption is reasonable in general.
 A relevant argument made in  \cite{bonet:ijcai2018} is that generalized problems
 over domains with low width \cite{nir:ecai2012}, have compact policies
 in terms of general features that can be computed in polynomial time.
@@ -1124,10 +1137,10 @@ up of features and abstract actions by enforcing a notion of soundness
 and completeness over a  set of samples, and a \emph{planner}
 uses the abstraction, suitably transformed, to compute general plans. 
 The number of samples required for obtaining correct general plans is
-small as the learner doesn't  have to produce plans; it just
-has to learn   the relevant features for the  planner to track.
+small, as the learner does not have to produce plans; it just
+has to learn the relevant features for the planner to track.
 Unlike purely learning approaches, the features and the policies
-are transparent, and the the scope and the correctness
+are transparent, and the scope and correctness
 of the resulting general plans can be assessed.
 
 There is  an interesting  relation to the ideas
@@ -1145,11 +1158,10 @@ in video games,  where the sampled  states have no known structure and  there ar
 One way for  achieving this, is  precisely by learning embeddings that yield sound and complete abstractions or
 suitable approximations.
 
-\medskip
 
-\noindent \textbf{Acknowledgements.}
+\subsubsection{Acknowledgments.}
 H. Geffner is partially funded by grant TIN-2015-67959-P, MINECO, Spain.
-G. Franc\`{e}s is funded by the European Research Council project ``State Space Exploration: Principles, Algorithms and Applications''.
+G. Franc\`{e}s is funded by the SSX project, European Research Council.
 
 \bibliographystyle{aaai}
 \bibliography{control}
