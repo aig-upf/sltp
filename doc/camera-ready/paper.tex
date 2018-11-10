@@ -121,6 +121,10 @@
 \newcommand{\Putdown}{\text{Putdown}}
 \newcommand{\Move}{\text{Move}}
 
+
+\providecommand{\noopsort}[1]{}
+
+
 % Examples
 % \newcommand{\Example}{\medskip\noindent\textbf{Example.}\xspace}
 
@@ -1053,7 +1057,7 @@ is learned  from the theory $T_G$ is:
 
 % Once again, although this set of abstract actions  is not complete,
 % it is sufficient for generating a general plan.
-The abstraction $Q_F$ with $I_F = \{ B>0, \neg X, G>0, C=0\}$ and $G_F = \{ B=0, C=0 \}$ is
+The abstraction $Q_F$ with $I_F\!=\!\{ B\!>\!0, \neg X, G\!>\!0, C\!=\!0\}$ and $G_F\!=\!\{ B\!=\!0, C\!=\!0 \}$ is
 translated into the FOND problem $Q^+_F$, which is solved by the
 planner in 171.92 seconds. The resulting policy provably solves $\Q_{gripper}$,
 meaning that it works for any  number of grippers and balls.
@@ -1160,11 +1164,9 @@ suitable approximations.
 
 
 \subsubsection{Acknowledgments.}
-H. Geffner is partially funded by grant TIN-2015-67959-P, MINECO, Spain.
+H. Geffner is partially funded by grant TIN-2015-67959-P, MINECO, Spain;
 G. Franc\`{e}s is funded by the SSX project, European Research Council.
 
 \bibliographystyle{aaai}
 \bibliography{control}
-
 \end{document}
-
