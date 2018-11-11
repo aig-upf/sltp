@@ -347,7 +347,7 @@ in $\Q_{clear}$
 where the gripper is empty, the atoms $on(A,B)$ and $clear(A)$ are true, and the block $A$ is above $x$.
 In this state $s$,
 the abstract action $\bar{a}=\abst{\neg H,n(x)>0}{H,n(x)\mminus}$
-and the concrete  action  $a=\text{Unstack}(A,B)$ in $P$ have the same effect over the features.
+and the concrete  action  $a=\text{Unstack}(A,B)$ have the same effect over the features.
 Indeed, $\bar{a}$ and $a$  are both applicable in $s$, and while $\bar{a}$ makes the variable $H$ true and decreases
 $n(x)$, the action $a$ results in a state $s'$ where $\phi_{H}(s')$ is true and $\phi_{n(x)}(s') < \phi_{n(x)}(s)$.
 \end{example}
@@ -355,7 +355,7 @@ $n(x)$, the action $a$ results in a state $s'$ where $\phi_{H}(s')$ is true and 
 
 \subsection{Sound and Complete Abstractions}
 
-Soundness and completeness are the two key  properties that  enable us to reason about the collection of
+Soundness and completeness are the key  properties that  enable us to reason about the collection of
 instances $\Q$ in terms of abstract actions that are defined at the level of the features:
 
 \begin{definition}
@@ -439,7 +439,7 @@ using the features $F$ and abstract actions $A_F$ are as follows \cite{bonet:ijc
     which is a QNP. For soundness, $I_F$ must be such that
     the initial states of instances $P$ in $\Q$ all satisfy $I_F$, while
     all states that satisfy $G_F$ must be goal states of $P$.
-    \textcolor{red}{\bf ** What is the format for $I_F$ and $G_F$? Conjunctions of lits, DNF, ...? **}
+    %\textcolor{red}{\bf ** What is the format for $I_F$ and $G_F$? Conjunctions of lits, DNF, ...? **}
 %
   \item The abstraction $Q_F=\tup{V_F,I_F,G_F,A_F}$ is converted into a
     \emph{boolean FOND} problem $Q'_F=\tup{V'_F,I'_F,G'_F,A'_F}$ by
@@ -458,7 +458,7 @@ using the features $F$ and abstract actions $A_F$ are as follows \cite{bonet:ijc
     fairness, the so-called terminating solutions \cite{srivastava:aaai2011},
     is mapped into the problem of solving an amended FOND $Q^+_F$ that
     assumes standard  fairness \cite{bonet:ijcai2017}.\footnote{Translator
-    available at  https://github.com/bonetblai/qnp2fond.}
+    available at https://github.com/bonetblai/qnp2fond.}
     % translation to $Q^+_F$ is performed with software supplied by the authors.}
     %available by the authors that fixes bugs in the description found]
        %in the paper at https://github.com/bonetblai/qnp2fond.}
@@ -474,15 +474,17 @@ computed by FOND planners off-the-shelf  are solutions to $\Q$.
 \begin{example}
   Let us restrict  $\Q_{clear}$  to those  instances where  the gripper is initially empty
   and there are blocks on top of $x$. For $F=\{H,n(x)\}$  and $A_F=\{\bar{a},\bar{a}'\}$ as above, 
-  $Q_F=\tup{V_F,I_F,G_F,A_F}$ can be defined with $I_F=\{\neg H, n(x) > 0\}$ and $G_F=\{n(x)=0\}$.
+  $Q_F=\tup{V_F,I_F,G_F,A_F}$ may be defined with $I_F=\{\neg H, n(x) > 0\}$ and $G_F=\{n(x)=0\}$.
   $Q'_F$ is like $Q_F$ but with $n(x)=0$ regarded as a propositional symbol, $n(x) > 0$
   as its negation, and the effect $n(x)\mminus$ replaced by  $n(x) > 0 \, | \, n(x)=0$.
-  Since  no action in $A_F$  increases $n(x)$,   $Q^+_F=Q'_F$, and the strong cyclic solution  of $Q'_F$,
-  that corresponds to the policy above, solves $\Q_{clear}$.
-  \textcolor{red}{\bf ** Why do we need to enter into details about $Q^+_F$?
-  We are using a tool and should not worry about such details.
-  Otherwise, we are conveying the idea that the user should worry about them and
-  then know how the QNP2FOND translation work. **}
+  Since  no action in $A_F$ increases $n(x)$, the strong solutions of $Q'_F$
+  are solutions to $\Q_{clear}$ \cite{bonet:ijcai2017}.
+  %$Q^+_F=Q'_F$, and the strong cyclic solution
+  %of $Q'_F$, that corresponds to the policy above, solves $\Q_{clear}$.
+  %\textcolor{red}{\bf ** Why do we need to enter into details about $Q^+_F$?
+  %We are using a tool and should not worry about such details.
+  %Otherwise, we are conveying the idea that the user should worry about them and
+  %then know how the QNP2FOND translation work. **}
 \end{example}
 
 
@@ -621,8 +623,8 @@ The fourth and  last class of formulas force the selected features to distinguis
 
 \noindent where  $s$ and $t$  are expanded states  $\S$ such that exactly one of them is a goal state. 
 % For this, it is assumed that expanded states $s$ in $\S$ are labeled as goal or non-goal states.
-For this, it is assumed that  states $s$ sampled from an instance $P$, are labeled as goal or non-goal states
-of $P$.
+%For this, it is assumed that states $s$ sampled from an instance $P$, are labeled as goal or non-goal states of $P$.
+For this, it is assumed that the states in the sample are labeled as goal or non-goal states.
 
 \medskip
 
@@ -658,7 +660,7 @@ for each sampled instance $P$ from $\Q$.
 If the set of marked transitions is much smaller than the full sample set, %as will typically be the case,
 $T_G(\S,\F)$ is much smaller than $T(\S,\F)$.
 $T_G(\S,\F)$ guarantees soundness relative to $\S$
-but completeness only relative to the the subset of goal-relevant transitions in $\S$.
+but completeness only relative to the subset of goal-relevant transitions in $\S$.
 Yet this does not affect the resulting formal guarantees, which depend only on soundness. 
 }
 
@@ -682,7 +684,8 @@ is true (resp.\ false) in $s$. Similarly, $\bar{a}$ has the \emph{effect} $p$
 decreases (resp.\ increases) in the transition from $s$ to $s'$.
 Duplicate abstract actions are removed, and if two abstract actions $\bar{a}$ and $\bar{a}'$
 differ only in the sign of a precondition, the two abstract actions are    merged into one with
-the precondition dropped. The key properties of $T(\S,\F)$ and $T_G(\S,\F)$ are:
+the precondition dropped.
+%The key properties of $T(\S,\F)$ and $T_G(\S,\F)$ are:
 
 \begin{theorem}
   The theory $T(\S,\F)$ is satisfiable iff there is a set of features $F \subseteq \F$
@@ -700,9 +703,10 @@ the precondition dropped. The key properties of $T(\S,\F)$ and $T_G(\S,\F)$ are:
 
 While the initial and goal expressions $I_F$ and $G_F$ of the abstract problem can be learned 
 from the satisfying assignment $\sigma$ as well, for simplicity, in the examples below, they are
-provided by hand.\footnote{$G_F = G_{\sigma}$ can be defined as the DNF formula whose terms 
-  correspond to the abstract states over $F_{\sigma}$ that correspond to some goal state in
-  the sample. \textcolor{red}{\bf ** Related to previous note **}
+provided by hand.\footnote{$G_F = G_{\sigma}$ may be defined as the DNF formula whose terms 
+  correspond to the abstract states over $F_{\sigma}$ that correspond to goal states in
+  the sample. For each such term, a new abstract action to reach a new goal literal
+  from such a term may be required.
   }
 % \footnote{$G_F = G_{\sigma}$ can be defined as the DNF formula
 % whose terms  correspond to the abstract states over the selected features in $F_{\sigma}$ 
@@ -730,7 +734,7 @@ into a constrained optimization problem, more specifically, a Weighted Max-SAT p
 where clauses resulting from the theories $T$ or $T_G$ are taken as \emph{hard} clauses,
 and we add, for each feature $f \in \F$, a
 \emph{soft} unit clause $\neg selected(f)$ with weight $cost(f)$.
-The cost measure that is used in the experiments is defined next.
+The cost measure that is used in the experiments is defined below.
 
 
 \section{Feature Pool}
@@ -772,16 +776,17 @@ The grammar for generating new concepts and roles from them is:
     second $\{x:\forall y[R(x,y)\land C(y)]\}$, %,  $x$'s  s.t. $R(x,y) \rightarrow C(y)$ for all $y$,
   \item $C \leftarrow R=R'$, denotes $\{ x : \forall y[R(x,y)=R'(x,y)]\}$, %$x$'s  s.t. $R(x,y)$ iff $R'(x,y)$ for all $y$,
   %  set of $y$'s  for which $R(x,y)$ equal to set of $y$'s s.t. $R'(x,y)$.
-  \item $R \leftarrow R_p, R_p^{-1}, R_p^*, [R_p^{-1}]^*$: primitive, inverse, and transitive closure of both.
+  \item $R \leftarrow R_p, R_p^{-1}, R_p^+, [R_p^{-1}]^+$: primitive, inverse, and transitive closure of both.
 %     \item $R \leftarrow R \circ R'$, role composition: $(x,y)$ in $R \circ R'$ if $(x,z)$ in $R$ and $(z,y)$ in $R'$.
 %     \item $R \leftarrow R:C$, denotes pairs $(x,y)$ in $R$ s.t. $C(y)$.
  \end{enumerate}
 
-The denotations   $C^s$  and $R^s$ of derived concepts and roles follows from the rules and the denotation of primitive
-concepts and roles. For example, for the concept  $C: \exists\, on^* . C_x$ in    Blocksworld, 
-$C^s$  denotes  the set of objects  that are above block $x$. The numerical feature
-$n_C$ associated with concept $C$ represents the number of objects in $C^s$. %$|C^s|$.
-\textcolor{red}{\bf ** $C: \exists\, on^* . C_x$ also counts block $x$ since * is reflexive! **}
+The denotations $C^s$ and $R^s$ for concepts and roles follows
+from the rules and the denotation of primitive concepts and roles.
+For example, for the concept $C: \exists\, on^+ . C_x$ in Blocksworld,
+$C^s$ denotes the set of blocks that are above $x$.
+%The numerical feature $n_C$ associated with concept $C$ represents
+%the number of objects in $C^s$. %$|C^s|$.
 
 \subsection{Candidate Features}
 
@@ -791,17 +796,18 @@ When generating  $\G^k$,  redundant  concepts are incrementally pruned. A concep
 redundant when its  denotation coincides with the denotation of a previously generated concept 
 over all  states in $\S$.  The set $\F=\F^k$, defined from $\G^k$, contains the following features:
 \begin{enumerate}[{\small$\bullet$}]
-\item For each nullary primitive predicate $p$, a \emph{boolean} feature $b_p$ that is true
-  in $s$ iff $p$ is true in $s$.
-%
-\item For each concept $C$, a \emph{boolean} feature $b_C$, if $|C^s| \in \set{0,1}$ for all
-  sampled states $s$, and a \emph{numerical} feature $n_C$ otherwise.
-  The value of $b_C$ in $s$ is true iff $|C^s| > 0$; the value of $n_C$ is $|C^s|$.
-%
-\item Numerical features $\textit{dist}(C_1,R{:}C,C_2)$ that represent the smallest
-  $n$ such that there are objects $x_1, \ldots, x_n$ satisfying $C_1^s(x_1)$,
-  $C_2^s(x_{n})$, and $(R{:}C)^s(x_i,x_{i+1})$ for $i=1,\ldots,n$.
-  The denotation $(R{:}C)^s$ contains all pairs $(x,y)$ in $R^s$ such that $y\in C^s$.
+  \item For each nullary primitive predicate $p$, a \emph{boolean}
+    feature $b_p$ that is true in $s$ iff $p$ is true in $s$.
+  %
+  \item For each concept $C$, a \emph{boolean} feature $b_C$, if
+    $|C^s| \in \set{0,1}$ for all sampled states $s$, and a \emph{numerical}
+    feature $n_C$ otherwise. The value of $b_C$ in $s$ is true iff $|C^s| > 0$;
+    the value of $n_C$ is $|C^s|$.
+  %
+  \item Numerical features $\textit{dist}(C_1,R{:}C,C_2)$ that represent the
+    smallest $n$ such that there are objects $x_1, \ldots, x_n$ satisfying
+    $C_1^s(x_1)$, $C_2^s(x_{n})$, and $(R{:}C)^s(x_i,x_{i+1})$ for $i=1,\ldots,n$.
+    The denotation $(R{:}C)^s$ contains all pairs $(x,y)$ in $R^s$ such that $y\in C^s$.
 \end{enumerate}  
 
 % We also prune from this space of features all features whose denotation is either constant
@@ -816,17 +822,17 @@ The steps for computing general plans are then:
 \begin{enumerate}[1.]
   \item a sample set $\S$ is computed from a few instances $P$ of a given
     generalized problem $\Q$,
-  \item a pool of features $\F$ is obtained from the predicates used in the
-    instances $P$, the grammar, a  bound $k$, and the sample $\S$ (used for
+  \item a pool of features $\F$ is obtained from the predicates in the instances, %used in the instances $P$,
+    the grammar, a  bound $k$, and the sample $\S$ (used for
     pruning),
-  \item a satisfying assignment $\sigma$ of $T(\S,\F)$ or $T_G(\S,\F)$
+  \item an assignment $\sigma$ of $T(\S,\F)$ or $T_G(\S,\F)$
     that minimizes $\sum_{f \in F_{\sigma}} cost(f)$ is obtained using a
     Max SAT solver,
-  \item the features $F$ and abstract actions $A_F$ are extracted from $\sigma$
-    as $F_{\sigma}$ and $A_{\sigma}$,
+  \item features $F$ and abstract actions $A_F$ are extracted from $\sigma$,
+    %as $F_{\sigma}$ and $A_{\sigma}$,
   \item the abstraction $Q_F=\tup{V_F,I_F,G_F,A_F}$ is defined with initial and goal
     conditions $I_F$ and $G_F$ provided by hand to match $\Q$, 
-  \item the FOND problem $Q^+_F$, constructed automatically from $Q_F$, is solved by an off-the-shelf
+  \item the FOND problem $Q^+_F$, constructed automatically from $Q_F$, is solved with an off-the-shelf
     FOND planner.
 \end{enumerate}
 
@@ -860,7 +866,7 @@ states $s$ that are reachable with the policy. We see an example of this below.
 Since we do not use a language for specifying $\Q$ formally, we will 
 take the formulas $I_F$ and $G_F$  as a partial formal specification of
 $\Q$. The theorem then says that if soundness over the samples, ensure
-formal soundness over $\Q$, the policy that solves the FONDP problem $Q^+_F$,
+formal soundness over $\Q$, the policy that solves the FOND problem $Q^+_F$,
 solves $\Q$. The result holds whether $T$ or $T_G$ (goal marking) is used in step 3.
 In principle, we could learn the formulas $I_F$ and $G_F$ from the sample as well,  but with different guarantees. 
 }
@@ -936,7 +942,7 @@ model on which a general plan is computed. The  set of features $F$ learned from
 \begin{enumerate}[--]
   \item $H: holding$ (whether some block is being held),
   \item $X: holding \sqcap C_x$ (whether block $x$ is being held),
-  \item $n(x): \abs{\exists\,on^* . C_x}$, (number of blocks above block $x$). \footnote{\textcolor{red}{** See note about reflexive closure **}}
+  \item $n(x): \abs{\exists\,on^+ . C_x}$, (number of blocks above block $x$).
 \end{enumerate}
 
 \noindent The set $A_F$  of abstract actions learned  from $T_G$ is:\footnote{Feature and action
@@ -949,10 +955,9 @@ model on which a general plan is computed. The  set of features $F$ learned from
 
 The  abstraction $Q_F=\tup{V_F,I_F,G_F,A_F}$ for $\Q_{clear}$ is set with 
 $I_F = \{\neg H, \neg X, n(x) > 0\}$ and $G_F=\{n(x)=0\}$.
-Since no actions increment the variable $n(x)$, $Q^+_F=Q'_F$.
-\textcolor{red}{\bf ** Do we need this comment about $Q^+_F$ **}
-The policy that solves the generalized problem $\Q_{clear}$
-is obtained from $Q^+_F$ with the planner in 0.46 seconds.
+As mentioned above, since no action increments the variable $n(x)$,
+the strong-cyclic solutions of $Q'_F$ solve $\Q_{clear}$.
+One such policy is found with the FOND planner in 0.46 seconds.
 The plan implements a loop that applies the pick-above-$x$
 action followed by put-aside, until $x$ becomes clear. 
 
@@ -975,14 +980,14 @@ action followed by put-aside, until $x$ becomes clear.
 $\Q_{on}$ consists  of Blocksworld instances with goals of the form $on(x,y)$,
 and initial situations  where the blocks $x$ and $y$ are in \emph{different towers}.
 The primitive predicates are the same as in $\Q_{clear}$.
-Three training instances $P$ are used to learn $F$ from $T_G$
-that contains
+Three training instances are used to learn $F$ from $T_G$;
+$F$ contains
 % 
 % Using the above Blocksworld encoding and only 3 different training
 % instances with up to 14 blocks, an abstract model involving 3 boolean
 % features, 2 numerical features, and 7 actions is learnt.
 the boolean features $E$, $X$ and $G$, for the gripper being empty, the
-block $x$ being held, and the block $x$ being on block $y$, and the
+block $x$ being held, and $x$ being on block $y$, and the
 numerical features $n(x)$ and $n(y)$ that count the number of blocks
 above $x$ and $y$ respectively.
 % The DL  definition of the  features $X$, $n(x)$, and $n(y)$ are as above
@@ -1016,7 +1021,7 @@ above $x$ and $y$ respectively.
 %% action_7 ; put a directly on b
 %% 5 bool[handempty] 0 holding(a) 1 n(a) 0 n(b) 0 on(a,b)_2 0
 %% 4 bool[handempty] 1 holding(a) 0 n(b) 1 on(a,b)_2 1
-The set of actions  $A_F$ that is learned is:
+The learned set of actions $A_F$ is:
 \begin{enumerate}[--]
   \item $\text{pick-ab-$x$}\!=\!\abst{E,\neg X,\neg G,n(x)\!\!>\!0,n(y)\!>\!0}{\neg E,n(x)\mminus}$,
   \item $\text{pick-ab-$y$}\!=\!\abst{E,\neg X,\neg G,n(x)\!=\!0,n(y)\!\!>\!0}{\neg E,n(y)\mminus}$,
@@ -1031,9 +1036,9 @@ The abstraction $Q_F$  with $I_F=\{E,\neg X,\neg G,n(x)>0,$ $n(y)\!>\!0\}$
 % and $G_F = \{ \neg X, G, n(x)=0, n(y)\!>\!0\}$,
 and $G_F = \{G\}$ is translated into the FOND problem $Q_F^+$
 which is then solved by the planner in 7.56 seconds.
-The resulting policy solves the generalized problem $\Q_{on}$;
-it implements a loop to clear block $x$, followed by a second
-loop to clear block $y$, picking then $x$ and placing it on $y$. 
+The resulting policy solves the generalized problem $\Q_{on}$:
+it implements a loop to clear block $x$, followed by a loop
+to clear block $y$, picking then $x$ and placing it on $y$. 
 
 
 \paragraph{Gripper.}
@@ -1046,7 +1051,7 @@ $free(g)$, $carry(b,g)$ that denote, respectively, whether the robot
 gripper $g$ carries ball $b$, plus unary type predicates $room$, $ball$,
 and $gripper$. % The type predicates are also included. 
 
-Pipeline 1--6 is fed  two instances $P$ from $\Q_{gripper}$  with two
+Pipeline 1--6 is fed with two instances $P$ from $\Q_{gripper}$  with two
 rooms each, one with 4 balls and the other with 5. The set of features that
 is learned  from the theory $T_G$ is:
 \begin{enumerate}[--]
@@ -1069,7 +1074,7 @@ is learned  from the theory $T_G$ is:
 % Once again, although this set of abstract actions  is not complete,
 % it is sufficient for generating a general plan.
 The abstraction $Q_F$ with $I_F\!=\!\{ B\!>\!0, \neg X, G\!>\!0, C\!=\!0\}$ and $G_F\!=\!\{ B\!=\!0, C\!=\!0 \}$ is
-translated into $Q^+_F$ which is solved by the FOND planner in 171.92 seconds.
+translated into $Q^+_F$ which is solved by the planner in 171.92 seconds.
 The resulting policy provably solves $\Q_{gripper}$, meaning that
 it works for any  number of grippers and balls.
 \Omit{ %% Add if space
@@ -1090,15 +1095,15 @@ are still  balls to be moved, repeating the process.
 
 \paragraph{Collecting rewards.}
 $\Q_{reward}$ contains instances where  an agent needs to navigate a rectangular
-grid to pick up  rewards spread on a grid  while 
+grid to pick up  rewards spread on the grid  while 
 avoiding \emph{blocked} cells. This is  variation of an
 example  by \citeay{garnelo2016towards}.
 The STRIPS instances have the primitive predicates $reward(\cdot)$, $at(\cdot)$, $blocked(\cdot)$
 and $adjacent(\cdot,\cdot)$ that denote the position of the rewards, of
 the agent, of the blocked cells, and the grid topology respectively.
 Pipeline 1--6  is fed with two instances of the problem of sizes $4 \times 4$
-and $5\times 5$, and two different  distributions of blocked cells  and rewards.
-From the theory $T_G$, two numerical features are learned:
+and $5\times 5$, and having different distributions of blocked cells and rewards.
+Two numerical features are learned:
 \begin{enumerate}[--]
   \item $R: \abs{reward}$ (number of remaining rewards), 
   \item $D:\! dist(at, adjacent{:}\neg blocked, reward)$ (distance from current
@@ -1111,7 +1116,7 @@ The learned set of abstract actions is:
 \end{enumerate}
 
 The resulting  abstraction $Q_F$ with $I_F = \{ R>0, D>0 \}$ and $G_F=\{R=0\}$
-is translated into $Q^+_F$ which is solved by the planning in 1.36 seconds.
+is translated into $Q^+_F$ which is solved by the planner in 1.36 seconds.
 The policy moves the agent one step at a time towards the uncollected reward
 that is closest, as measured by the numerical feature $D$. Once the reward is
 reached, the reward is consumed, and the process repeats until there are no
@@ -1169,10 +1174,18 @@ of states; namely,  how they are changed by actions and whether they denote  goa
 The notion of \emph{sound} and \emph{complete} abstract action sets expresses this requirement
 that is enforced by  the SAT formulation.
 
-An   interesting challenge for the future  is to generalize the proposed methods  to other   contexts,   such as learning  from ``screen states''
-in video games,  where the sampled  states have no known structure and  there are no primitive predicates.
-One way for  achieving this, is  precisely by learning embeddings that yield sound and complete abstractions or
-suitable approximations.
+An interesting challenge for the future  is to generalize the proposed methods
+to other contexts, such as learning from ``screen states'' in video games,
+where the sampled states have no known structure and there are no primitive
+predicates. One way for achieving this, is precisely by learning embeddings
+that yield sound and complete abstractions or suitable approximations.
+
+On the other hand, contexts involving non-deterministic actions may be
+accommodated with a simple modification of the SAT theory.
+Indeed, it would be enough to replace the formula (3) that links $D1$ and $D2$
+with a formula that says that when $s$ and $t$ are indistinguishable
+(i.e.\ $\neg D1(s,t)$), then for each action $a$ for $s$, there is an action $b$
+for $t$ whose sets of possible outcomes are indistinguishable.
 
 
 \subsubsection{Acknowledgments.}
