@@ -393,7 +393,7 @@ class MaxsatProblemSolutionStep(Step):
         super().__init__(**kwargs)
 
     def get_required_attributes(self):
-        return ['maxsat_solver']
+        return ['maxsat_solver', 'maxsat_timeout']
 
     def get_required_data(self):
         return []
