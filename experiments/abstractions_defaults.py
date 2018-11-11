@@ -86,6 +86,9 @@ def generate_experiment(domain_dir, domain, **kwargs):
         # Set a random seed for reproducibility (default: 1)
         random_seed=1,
 
+        # the max-sat solver to use. Accepted: openwbo, openwbo-inc, wpm3, maxino
+        maxsat_solver='openwbo-inc',
+
         # The number of features and actions for the SAT encoding
         encoding_k=10,
         encoding_m=10,

@@ -85,9 +85,7 @@ def generate_maxsat_problem(config, data, rng):
 
 
 def run_solver(config, data, rng):
-    # solution = solve(config.experiment_dir, config.cnf_filename, 'wpm3')
-    # solution = solve(config.experiment_dir, config.cnf_filename, 'maxino')
-    solution = solve(config.experiment_dir, config.cnf_filename, 'openwbo')
+    solution = solve(config.experiment_dir, config.cnf_filename, config.maxsat_solver)
     if not solution.solved and solution.result == "UNSATISFIABLE":
         raise CriticalPipelineError("MAXSAT encoding is UNSATISFIABLE")
     else:

@@ -34,6 +34,18 @@ class Openwbo(object):
         return ['open-wbo_static', input_filename]
 
 
+class OpenwboInc(object):
+    TAG = 'openwbo-inc'
+
+    def __init__(self, rundir=None):
+        self.run_dir = rundir
+
+    @staticmethod
+    def command(input_filename):
+        # From competition script: open-wbo-inc -ca=1 -c=100000 -algorithm=6
+        return ['open-wbo-inc', '-ca=1', '-c=100000', '-algorithm=6', input_filename]
+
+
 class Glucose(object):
     TAG = 'glucose'
 
