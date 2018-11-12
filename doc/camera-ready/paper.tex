@@ -252,11 +252,11 @@ planners, and from purely learning approaches, in the formal guarantees that
 are characteristic of planning: if the learned abstract actions are  sound,
 the resulting general plans must be correct. 
 
-The paper is organized as follows. We provide the background  first and show then
-how features and abstract actions can be learned by enforcing soundness and
-completeness over a set of samples, from a pool of candidate features derived from the domain
-predicates. The full computational model is then summarized, followed by experimental results
-and a discussion.
+The paper is organized as follows. We first provide background and then show 
+how an abstract actions can be learned by enforcing soundness and
+completeness over a set of samples from a pool of candidate features derived
+from the domain predicates. The computational model is then summarized,
+followed by experimental results and a discussion.
 
 
 \section{Background}
@@ -405,7 +405,7 @@ with the same qualitative effects on $p$ and $n$.
 
 \subsection{Solutions}
 
-A solution to a generalized problem $\Q$ given the features $F$ and abstract
+A solution to a problem $\Q$ given the features $F$ and abstract
 actions $A_F$ is a partial function $\pi$ that maps \emph{abstract states}
 into \emph{abstract actions} such that $\pi$ solves all instances $P$ in $\Q$.
 The plan or policy $\pi$ induces a trajectory $s_0,a_0,s_1, \ldots, s_n$ in
@@ -646,15 +646,17 @@ this is still a large number. ..
 %
 
 We also consider an alternative SAT theory $T_G(\S,\F)$ that is similar to $T(\S,\F)$
-but  smaller. It is obtained by marking  some of the transitions $(s,s')$ in $\S$  as  \emph{goal-relevant}.
+but  smaller. It is obtained by marking  some transitions $(s,s')$ in $\S$  as  \emph{goal relevant}.
 Then, rather than creating abstract  actions to account for all the transitions, we only create
 abstract actions to account for the marked transitions. This is achieved by drawing the states
-$s$ and the transitions $(s,s')$ in formulas (\ref{eq:d1}) and (\ref{eq:d2}) from the
+$s$ and the transitions $(s,s')$ in formulas \eqref{eq:d1} and \eqref{eq:d2} from the
 set of marked transitions in $\S$. The states $t$ and the transitions $(t,t')$, on the other hand,
-are drawn from the sample set $\S$ exactly as before. This simplification preserves soundness over $\S$
-but the completeness is not over $\S$ but over the marked transitions. 
-The   transitions marked as goal relevant in $\S$  are obtained by computing one plan
-for each sampled instance $P$ from $\Q$. 
+are drawn from the whole sample set $\S$ as before. This simplification preserves soundness over $\S$
+but completeness is not over $\S$ but over the marked transitions in $\S$. 
+The goal-relevant transitions in $\S$ are obtained by computing one plan
+for each sampled instance $P$ from $\Q$.
+%The transitions marked as goal relevant in $\S$  are obtained by computing one plan
+%for each sampled instance $P$ from $\Q$. 
 
 \Omit{
 If the set of marked transitions is much smaller than the full sample set, %as will typically be the case,
@@ -773,7 +775,7 @@ The grammar for generating new concepts and roles from them is:
   \item $C \leftarrow \neg C_A$, negation on primitive, universal, nominals,
   \item $C \leftarrow C \sqcap C'$, conjunctions,
   \item $C \leftarrow \exists R.C,\forall R.C$, first denotes $\{x:\!\exists y[R(x,y) \land C(y)]\}$, %  $x$'s  s.t.\  $R(x,y) \land C(y)$ for some  $y$;
-    second $\{x:\forall y[R(x,y)\land C(y)]\}$, %,  $x$'s  s.t. $R(x,y) \rightarrow C(y)$ for all $y$,
+    the second denotes $\{x:\forall y[R(x,y)\land C(y)]\}$, %,  $x$'s  s.t. $R(x,y) \rightarrow C(y)$ for all $y$,
   \item $C \leftarrow R=R'$, denotes $\{ x : \forall y[R(x,y)=R'(x,y)]\}$, %$x$'s  s.t. $R(x,y)$ iff $R'(x,y)$ for all $y$,
   %  set of $y$'s  for which $R(x,y)$ equal to set of $y$'s s.t. $R'(x,y)$.
   \item $R \leftarrow R_p, R_p^{-1}, R_p^+, [R_p^{-1}]^+$: primitive, inverse, and transitive closure of both.
@@ -1153,9 +1155,9 @@ that appear in the goal,  are added to the set of primitive predicates and are e
 \section{Summary and Future Work}
 
 We have introduced a scheme for computing general plans that mixes
-learning and planning: a \emph{learner} infers a general abstraction made
-up of features and abstract actions by enforcing a notion of soundness
-and completeness over a  set of samples, and a \emph{planner}
+learning and planning: a \emph{learner} infers an abstraction made
+up of features and abstract actions by enforcing %a notion of
+soundness and completeness over the samples, and a \emph{planner}
 uses the abstraction, suitably transformed, to compute general plans. 
 The number of samples required for obtaining correct general plans is
 small, as the learner does not have to produce plans; it just
@@ -1180,19 +1182,22 @@ where the sampled states have no known structure and there are no primitive
 predicates. One way for achieving this, is precisely by learning embeddings
 that yield sound and complete abstractions or suitable approximations.
 
-On the other hand, contexts involving non-deterministic actions may be
-accommodated with a simple modification of the SAT theory.
-Indeed, it would be enough to replace the formula (3) that links $D1$ and $D2$
-with a formula that says that when $s$ and $t$ are indistinguishable
-(i.e.\ $\neg D1(s,t)$), then for each action $a$ for $s$, there is an action $b$
-for $t$ whose sets of possible outcomes are indistinguishable.
+Finally, problems involving non-deterministic transitions may be
+accommodated with a simple fix to the SAT theory.
+It would be enough to replace the formula \eqref{eq:bridge1} that
+links $D1$ and $D2$ with a formula that says that when $s$ and $t$ are
+indistinguishable (i.e.\ $\neg D1(s,t)$), for each action $a$ on $s$,
+there is an action $b$ on $t$ whose transitions are indistinguishable
+from those of $a$ on $s$. For this, transitions $(s,s')$ in the sample
+would need to be tagged with action labels as $(s,a,s')$.
 
-
-\subsubsection{Acknowledgments.}
-H.\ Geffner is partially funded by grant TIN-2015-67959-P, MINECO, Spain.
-G.\ Franc\`{e}s is funded by the SSX project, European Research Council.
+%\bigskip
+\subsection*{Acknowledgments}
 B.\ Bonet is partially funded by 2018 C\'atedra de Excelencia UC3M-Banco Santander award.
+G.\ Franc\`{e}s is funded by the SSX project, European Research Council.
+H.\ Geffner is partially funded by grant TIN-2015-67959-P, MINECO, Spain.
 
 \bibliographystyle{aaai}
 \bibliography{control}
 \end{document}
+
