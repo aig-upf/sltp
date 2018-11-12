@@ -5,9 +5,10 @@
 \usepackage{times}  %Required
 \usepackage{helvet}  %Required
 \usepackage{courier}  %Required
-\usepackage{url}  %Required
+%\usepackage{url}  %Required
 \usepackage{graphicx}  %Required
 \usepackage{xcolor}  %Required
+\usepackage{xspace}  %Required
 
 
 \frenchspacing  %Required
@@ -66,7 +67,7 @@
 \newtheorem{proposition}[definition]{Proposition}
 \newtheorem{corollary}[definition]{Corollary}
 %\newtheorem{example}[definition]{Example}
-\newenvironment{example}{\noindent\textbf{Example.}}{\qed}
+\newenvironment{example}{\noindent\textbf{Example.}\xspace}{\qed}
 
 % \def\withproofs{0} % to include proofs in the draft: 0=don't include, 1=include
 % \newcommand{\nosuchproof}{\textcolor{red}{\bf No such proof yet...}}
@@ -134,7 +135,8 @@
 %PDF Info Is Required (no accents, etc.!):
 \pdfinfo{
 /Title (Learning Features and Abstract Actions for Computing Generalized Plans)
-/Author (Blai Bonet, Guillem Frances, Hector Geffner)}
+/Author (Blai Bonet, Guillem Frances, Hector Geffner)
+}
 
 \title{Learning Features and Abstract Actions for Computing Generalized Plans} 
 
@@ -1188,7 +1190,7 @@ It would be enough to replace the formula \eqref{eq:bridge1} that
 links $D1$ and $D2$ with a formula that says that when $s$ and $t$ are
 indistinguishable (i.e.\ $\neg D1(s,t)$), for each action $a$ on $s$,
 there is an action $b$ on $t$ whose transitions are indistinguishable
-from those of $a$ on $s$. For this, transitions $(s,s')$ in the sample
+from those of $a$ on $s$. To do this, transitions $(s,s')$ in the sample
 would need to be tagged with action labels as $(s,a,s')$.
 
 %\bigskip
