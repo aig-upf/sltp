@@ -44,6 +44,15 @@ class OptimizationPolicy(Enum):
     NUMERIC_FEATURES_FIRST = 3   # Minimize number of numeric features first, then overall features.
 
 
+def sort_two(s, t):
+    return (s, t) if s <= t else (t, s)
+
+
+def compute_d1_index(s, t):
+    assert s != t
+    return sort_two(s, t)
+
+
 def compute_d2_index(s0, s1, t0, t1):
     assert s0 != t0
     if s0 < t0:
@@ -190,12 +199,14 @@ class ModelTranslator(object):
             self.optimal_transitions = set((x, y) for x, y in self.iterate_over_all_transitions())
 
         # Compute for each pair s and t of states which features distinguish s and t
-        self.np_d1_distinguishing_features = self.compute_d1_distinguishing_features(bin_feat_matrix)
+        self.np_d1_distinguishing_features_v = self.compute_d1_distinguishing_features(bin_feat_matrix)
 
         self.writer = CNFWriter(cnf_filename)
 
         self.np_var_selected = None
         self.var_d1 = None
+        self.var_d1_n = None
+        self.var_d1_b = None
         self.var_d2 = None
 
         self.n_selected_clauses = 0
@@ -223,18 +234,12 @@ class ModelTranslator(object):
 
         logging.info("Computing sets of D1-distinguishing features for {} x {} state pairs "
                      "and {} features ({:0.1f}M matrix entries)".format(ns1, ns2, nf, nentries / 1000000))
-        np_d1_distinguishing_features = dict()
 
-        for s1, s2 in self.iterate_over_d1_pairs():
-            xor = np.logical_xor(bin_feat_matrix[s1], bin_feat_matrix[s2])
-            # We extract the tuple and turn it into a set:
-            np_d1_distinguishing_features[(s1, s2)] = set(np.nonzero(xor)[0].flat)
-
-        return np_d1_distinguishing_features
+        return {(s1, s2): np.logical_xor(bin_feat_matrix[s1], bin_feat_matrix[s2])
+                for s1, s2 in self.iterate_over_d1_pairs()}
 
     def create_bridge_clauses(self, d1_literal, s, t):
         # If there are no transitions (t, t') in the sample set, then we do not post the bridge constraint.
-        # if t not in self.transitions or not self.transitions[t]:
         # TODO WE MIGHT NEED A BETTER WAY OF IDENTIFYING NON-EXPANDED STATES AND DISTINGUISHING THEM FROM
         # TODO STATES WHICH HAVE NO SUCCESSOR
         if not self.transitions[s] or not self.transitions[t]:
@@ -285,8 +290,12 @@ class ModelTranslator(object):
         self.np_var_selected = \
             [self.writer.variable("selected(F{})".format(feat)) for feat in range(0, self.feat_matrix.shape[1])]
 
-        self.var_d1 = {(s1, s2): self.writer.variable("D1[{}, {}]".format(s1, s2)) for s1, s2 in
-                       self.iterate_over_d1_pairs()}
+        self.var_d1, self.var_d1_b, self.var_d1_n = dict(), dict(), dict()
+        for s1, s2 in self.iterate_over_d1_pairs():
+            # D1 is symmetric
+            self.var_d1[(s1, s2)] = self.var_d1[(s2, s1)] = self.writer.variable("D1[{}, {}]".format(s1, s2))
+            self.var_d1_b[(s1, s2)] = self.var_d1_b[(s2, s1)] = self.writer.variable("D1_B[{}, {}]".format(s1, s2))
+            self.var_d1_n[(s1, s2)] = self.var_d1_n[(s2, s1)] = self.writer.variable("D1_N[{}, {}]".format(s1, s2))
 
         self.var_d2 = dict()
 
@@ -310,22 +319,48 @@ class ModelTranslator(object):
         # self.find_inconsistency(allf)
         self.create_variables()
 
-        print("Generating D1 + bridge constraints from {} D1 variables".format(len(self.var_d1)), flush=True)
+        boolean_features = self.feature_types
+        numerical_features = np.logical_not(boolean_features)
+        logging.info("{} features are numeric".format(len(set(np.where(numerical_features)[0]))))
 
-        # for s1, s2 in itertools.combinations(self.state_ids, 2):
+        print("Generating D1 + bridge constraints from {} D1 variables".format(len(self.var_d1)/2), flush=True)
+
         for s1, s2 in self.iterate_over_d1_pairs():
             d1_variable = self.var_d1[(s1, s2)]
-            # d1_distinguishing_features = self.d1_distinguishing_features[(s1, s2)]
-            d1_distinguishing_features = self.np_d1_distinguishing_features[(s1, s2)]
+            d1_variable_b = self.var_d1_b[(s1, s2)]
+            d1_variable_n = self.var_d1_n[(s1, s2)]
 
-            # Post the constraint: D1(si, sj) <=> OR active(f), where the OR ranges over all
-            # those features f that tell apart si from sj
-            d1_lit = self.writer.literal(d1_variable, True)
-            forward_clause_literals = [self.writer.literal(d1_variable, False)]
+            d1_lit, not_d1 = self.writer.literal(d1_variable, True), self.writer.literal(d1_variable, False)
+            d1_lit_b, not_d1_lit_b = self.writer.literal(d1_variable_b, True), self.writer.literal(d1_variable_b, False)
+            d1_lit_n, not_d1_lit_n = self.writer.literal(d1_variable_n, True), self.writer.literal(d1_variable_n, False)
 
-            for f in d1_distinguishing_features:
+            # D1(s1,s2) <=> (D1_b(s1,s2) OR D1_n(s1,s2))
+            self.writer.clause([not_d1, d1_lit_b, d1_lit_n])
+            self.writer.clause([d1_lit, not_d1_lit_b])
+            self.writer.clause([d1_lit, not_d1_lit_n])
+            self.n_d1_clauses += 3
+
+            # Compute the features that are distinguishing, both numeric and boolean
+            dist_features = self.np_d1_distinguishing_features_v[(s1, s2)]
+            dist_features_b = np.where(np.logical_and(dist_features, boolean_features))[0]
+            dist_features_n = np.where(np.logical_and(dist_features, numerical_features))[0]
+
+            # Post the constraint: D1_b(si, sj) <=> OR active(f), where the OR ranges over all
+            # those binary features f that tell apart si from sj
+            forward_clause_literals = [not_d1_lit_b]
+            for f in dist_features_b:
                 forward_clause_literals.append(self.writer.literal(self.np_var_selected[f], True))
-                self.writer.clause([d1_lit, self.writer.literal(self.np_var_selected[f], False)])
+                self.writer.clause([d1_lit_b, self.writer.literal(self.np_var_selected[f], False)])
+                self.n_d1_clauses += 1
+
+            self.writer.clause(forward_clause_literals)
+            self.n_d1_clauses += 1
+
+            # Same than above but for numeric features
+            forward_clause_literals = [not_d1_lit_n]
+            for f in dist_features_n:
+                forward_clause_literals.append(self.writer.literal(self.np_var_selected[f], True))
+                self.writer.clause([d1_lit_n, self.writer.literal(self.np_var_selected[f], False)])
                 self.n_d1_clauses += 1
 
             self.writer.clause(forward_clause_literals)
@@ -336,7 +371,7 @@ class ModelTranslator(object):
                 self.writer.clause([d1_lit])
                 self.n_goal_clauses += 1
 
-                if len(d1_distinguishing_features) == 0:
+                if len(dist_features_n) + len(dist_features_b) == 0:
                     print("WARNING: No feature in the pool able to distinguish state pair {}, but one of the states "
                           "is a goal and the other is not. MAXSAT encoding will be UNSAT".format((s1, s2)), flush=True)
 
@@ -348,28 +383,33 @@ class ModelTranslator(object):
                     self.create_bridge_clauses(d1_lit, s2, s1)
 
         print("Generating D2 constraints from {} D2 variables".format(len(self.var_d2)), flush=True)
-        # self.d2_distinguished = set()
-        # for (s0, s1, t0, t1), d2_var in self.var_d2.items():
         for s0, s1, t0, t1 in self.iterate_over_d2_transitions():
             d2_var = self.var_d2[compute_d2_index(s0, s1, t0, t1)]
 
             qchanges_s0s1 = self.retrieve_possibly_cached_qchanges(s0, s1)
             qchanges_t0t1 = self.retrieve_possibly_cached_qchanges(t0, t1)
             equal_idxs = np.equal(qchanges_s0s1, qchanges_t0t1)
-            np_d2_distinguishing_features = np.where(equal_idxs==False)[0]
 
-            np_d1_dist = self.np_d1_distinguishing_features[self.compute_d1_idx(s0, t0)]
-            # if s0 == 440:
-            #     print(np_d1_dist)
-            # D2(s0,s1,t0,t2) iff OR_f selected(f), where f ranges over features that d2-distinguish the transition
-            # but do _not_ d1-distinguish the two states at the origin of each transition.
+            np_d1_dist = self.np_d1_distinguishing_features_v[self.compute_d1_idx(s0, t0)]
+
+            # Numeric features that start in the same value in both transitions and change differently
+            np_d2_distinguishing_features = np.where(np.logical_not(np.logical_or(np_d1_dist, equal_idxs)))[0]
+
+            # D2(s0,s1,t0,t2) iff (D1_b(s0, t0) or OR_f selected(f))
+            # where f ranges over numeric features that (1) don't d1-distinguish s0 and t0, and
+            # (2) f changes differently in the two transitions (s0,s1) and (t0,t1)
             d2_lit = self.writer.literal(d2_var, True)
             forward_clause_literals = [self.writer.literal(d2_var, False)]
+            if s1 != t1:
+                d1_s1t1_var = self.var_d1_b[(s1, t1)]
+                forward_clause_literals.append(self.writer.literal(d1_s1t1_var, True))
+                self.writer.clause([d2_lit, self.writer.literal(d1_s1t1_var, False)])  # D2(s0,t1,t0,t1) or -D1(s1,t1)
+                self.n_d2_clauses += 1
+
             for f in np_d2_distinguishing_features.flat:
-                if f not in np_d1_dist:
-                    forward_clause_literals.append(self.writer.literal(self.np_var_selected[f], True))
-                    self.writer.clause([d2_lit, self.writer.literal(self.np_var_selected[f], False)])
-                    self.n_d2_clauses += 1
+                forward_clause_literals.append(self.writer.literal(self.np_var_selected[f], True))
+                self.writer.clause([d2_lit, self.writer.literal(self.np_var_selected[f], False)])
+                self.n_d2_clauses += 1
 
             self.writer.clause(forward_clause_literals)
             self.n_d2_clauses += 1
@@ -394,7 +434,7 @@ class ModelTranslator(object):
         self.report_stats()
 
         # self.debug_tests()
-        self.np_d1_distinguishing_features = None  # We won't need this anymore
+        self.np_d1_distinguishing_features_v = None  # We won't need this anymore
         self.writer.save()
 
         return self.writer.mapping
@@ -485,9 +525,9 @@ class ModelTranslator(object):
 
     def report_stats(self):
 
-        d1_distinguishing = self.np_d1_distinguishing_features.values()
+        d1_distinguishing = self.np_d1_distinguishing_features_v.values()
         avg_num_d1_dist_features = sum(len(feats) for feats in d1_distinguishing) / len(d1_distinguishing)
-        n_undistinguishable_state_pairs = sum(1 for x in d1_distinguishing if len(x) == 0)
+        n_undistinguishable_state_pairs = sum(1 for x in d1_distinguishing if len(np.where(x)[0]) == 0)
         print_header("Max-sat encoding stats", 1)
         print_lines("Number of D1-undistinguishable state pairs: {}".format(n_undistinguishable_state_pairs), 1)
         print_lines("Avg. # of D1-distinguishing features: {:.2f}".format(avg_num_d1_dist_features), 1)
