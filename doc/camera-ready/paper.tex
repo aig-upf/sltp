@@ -1187,11 +1187,13 @@ that yield sound and complete abstractions or suitable approximations.
 Finally, problems involving non-deterministic transitions may be
 accounted for with a simple change to the SAT theory.
 It would be sufficient to replace the formula \eqref{eq:bridge1}
-that links $D1$ and $D2$ with a formula that establish that when
+that links $D1$ and $D2$ with a formula that establishes that when
 $s$ and $t$ are indistinguishable (i.e.\ $\neg D1(s,t)$), then
-for each action $a$ on $s$, there is an action $b$ on $t$ whose
-set of transitions from $t$ are indistinguishable from the set
-of transitions of $a$ on $s$.
+for each action $a$ for $s$, there is an action $b$ for $t$ whose
+set of transitions on $t$ is indistinguishable from the set
+of transitions of $a$ on $s$; namely, for each transition $(s,a,s')$
+there is a transition $(t,b,t')$ with $\Delta_f(s,s')=\Delta_f(t,t')$
+for each feature $f$, and vice versa.
 To do this, transitions $(s,s')$ in the sample would need to be
 tagged with action labels as $(s,a,s')$.
 
