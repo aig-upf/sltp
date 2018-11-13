@@ -195,7 +195,7 @@ Generalized planning studies the computation of plans  that   solve   multiple  
 For example, the plan  that iteratively  picks  a  clear block above $x$ 
 and places it  on the table, achieves the goal $clear(x)$
 in \emph{any} instance of the Blocksworld where the gripper is initially empty.
-Once this  general plan or  policy is derived it can be  applied to solve an infinite collection
+Once this  general plan or  policy is derived, it can be  applied to solve an infinite collection
 of instances that involve different initial states, different objects, and  different (ground)  actions. 
 
 
@@ -211,7 +211,7 @@ effects  of the actions on  the features in a suitable way.
 The resulting generalized plans  map feature values into abstract actions, and soundness
 ensures that the application of an abstract action can be mapped back into the application of
 a concrete action with the same effect  over the features. Moreover, the form of the abstract actions
-ensures that generalized plans can be computed using fully observable non-deterministic (FOND) planners
+ensures that generalized plans can be computed using fully observable non-deterministic (FOND) planners,
 once the generalized planning problem is transformed into a FOND problem.
 %after some transformations.
 
@@ -224,19 +224,19 @@ non-deterministic (disjunctive)  propositional effects $n > 0 \, | \, n=0$.
 }
 
 Bonet and Geffner's generalized planning formulation assumes that the
-features and abstract actions are given. In this work we address this limitation
+features and abstract actions are given. In this work, we address this limitation
 by  \emph{showing  how the features and abstract actions  can be learned from
-the primitive predicates used to define the instances and sampled state transitions.}
+the primitive predicates used to define the instances and from sampled state transitions.}
 For example,  the general policy for achieving $clear(x)$ % of \citeay{bonet:ijcai2018}
 is obtained using a FOND planner on an abstraction that consists of  a  boolean
-feature $H$  that tracks whether the gripper holds a block,  a numerical feature
+feature $H$,  that tracks whether the gripper holds a block,  a numerical feature
 $n(x)$ that counts the number of blocks above $x$, and two abstract actions:
 one with preconditions $\neg H$ and $n(x) > 0$, and effects $H$ and $n(x)\mminus$
 (decrement $n(x)$), and the other with precondition $H$ and effect $\neg H$.
-In this work, we show how to obtain such policies from STRIPS instances alone,
+We here show how to obtain such policies from STRIPS instances alone,
 without having to provide the features and the abstract actions by hand.
 
-The work has relation to a number of research threads in planning, knowledge
+This work relates to a number of research threads in planning, knowledge
 representation, and machine learning. We make use of SAT solvers and description
 logics for learning features and abstract actions. %\cite{sat-handbook,dl-handbook}.
 The abstract actions provide a model from which the plans are obtained via
@@ -250,7 +250,7 @@ Generalized planning has also been formulated as a problem in first-order logic
 \cite{srivastava:generalized}, and general plans over finite horizons have been
 derived using first-order regression \cite{boutilier2001symbolic,wang2008first,van2012solving,sanner:practicalMDPs}.
 Our approach differs from first-order approaches in the use of propositional
-planners, and from purely learning approaches, in the formal guarantees that
+planners, and from purely learning approaches in the formal guarantees that
 are characteristic of planning: if the learned abstract actions are  sound,
 the resulting general plans must be correct. 
 
@@ -273,7 +273,7 @@ An instance $P$ is a  classical planning problem expressed in some compact langu
 as a tuple $P=\tup{V,I,G,A}$ where $V$ is a set of state variables that can take a
 finite set of values (boolean or not), $I$ is a set of atoms over $V$ defining an
 initial state $s_0$, $G$ is a set of literals over $V$ describing the goal
-states, and $A$ is a set of actions $a$ with their preconditions and effects that
+states, and $A$ is a set of actions $a$ with their preconditions and effects, which
 define the set $A(s)$ of actions applicable in any state $s$, and the successor
 state function $f(a,s)$, for any state $s$ and $a \in A(s)$.
 A state is a valuation over $V$, and a solution to $P$ is an applicable action
@@ -397,11 +397,11 @@ with the same qualitative effects on $p$ and $n$.
 
 \medskip
 \begin{example}
-  The two abstract actions  $\bar a = \langle \neg H,n(x)>0; H,$ $n(x)\mminus\rangle$ %$\bar{a}=\abst{\neg H,n(x)>0}{H,n(x)\mminus}$
-  and $\bar{a}'=\abst{H}{\neg H}$ over the features  $F=\{H,n(x)\}$
+  The abstract action set $A_F = \{\bar{a}, \bar{a}'\}$, where $\bar{a} = \langle \neg H,n(x)>0; H,$ $n(x)\mminus\rangle$ %$\bar{a}=\abst{\neg H,n(x)>0}{H,n(x)\mminus}$
+  and $\bar{a}'=\abst{H}{\neg H}$ , defined over the above feature set $F=\{H,n(x)\}$,
   is sound but not complete relative to $\Q_{clear}$. 
-  They capture the concrete actions that pick blocks from above $x$ and put them away,
-  but do not capture other actions like stacking a block above $x$ or picking up a block that is not above $x$.
+  $A_F$ captures the concrete actions that pick blocks from above $x$ and put them away,
+  but not other actions like stacking a block above $x$ or picking up a block that is not above $x$.
 \end{example}
 
 
@@ -706,7 +706,7 @@ the precondition dropped.
 \end{theorem}
 
 While the initial and goal expressions $I_F$ and $G_F$ of the abstract problem can be learned 
-from the satisfying assignment $\sigma$ as well, for simplicity, in the examples below, they are
+from the satisfying assignment $\sigma$ as well, for simplicity, in the examples below they are
 provided by hand.\footnote{$G_F = G_{\sigma}$ may be defined as the DNF formula whose terms 
   correspond to the abstract states over $F_{\sigma}$ that correspond to goal states in
   the sample. For each such term, a new abstract action to reach a new goal literal
