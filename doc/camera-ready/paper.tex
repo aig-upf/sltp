@@ -631,10 +631,10 @@ For this, it is assumed that the states in the sample are labeled as goal or non
 \medskip
 
 The SAT theory $T(\S,\F)$ given by formulas \eqref{eq:d1}--\eqref{eq:goal}
-has $|\F| + m^2 (b^2 + 1)$ propositional variables
+has  $|\F| + m^2 (b^2 + 1)$ propositional variables, 
 %has a number of propositional variables equal to $m^2 \times (b^2 + 1) + |\F|$
 where $m$ is the number of expanded states in $\S$, and $b$ is their average branching factor (transitions per state).
-The number of clauses is bounded by $m^2(3 + b^2 + |\F|(1+b^2))$. %$m^2 \times b^2 \times |\F|$.
+The number of clauses is bounded by $m^2(2 + b^2 + |\F|(b^2+1))$. %$m^2 \times b^2 \times |\F|$.
 %
 \Omit{
 This means  that  $50$ expanded states in the sample set
@@ -709,8 +709,9 @@ While the initial and goal expressions $I_F$ and $G_F$ of the abstract problem c
 from the satisfying assignment $\sigma$ as well, for simplicity, in the examples below they are
 provided by hand.\footnote{$G_F = G_{\sigma}$ may be defined as the DNF formula whose terms 
   correspond to the abstract states over $F_{\sigma}$ that correspond to goal states in
-  the sample. For each such term, a new abstract action to reach a new goal literal
-  from such a term may be required.
+  the sample.
+  % For each such term, a new abstract action to reach a new goal literal
+  % from such a term may be required.
   }
 % \footnote{$G_F = G_{\sigma}$ can be defined as the DNF formula
 % whose terms  correspond to the abstract states over the selected features in $F_{\sigma}$ 
@@ -942,14 +943,14 @@ $\Q_{clear}$ contains the Blocksworld instances  with goals of the form  $clear(
 and stack/unstack actions. The primitive predicates, i.e., those appearing in the  instances $P$ of $\Q_{clear}$, 
 are $on(\cdot,\cdot)$, $clear(\cdot)$, $ontable(\cdot)$, $holding(\cdot)$, and $handempty$. 
 For this problem, a  single training instance $P$  with  5 blocks suffices to learn an abstract
-model on which a general plan is computed. The  set of features $F$ learned from the theory $T_G$ is:
+model from  which a general plan is computed. The  set of features $F$ learned from the theory $T_G$ is:
 \begin{enumerate}[--]
   \item $H: holding$ (whether some block is being held),
   \item $X: holding \sqcap C_x$ (whether block $x$ is being held),
   \item $n(x): \abs{\exists\,on^+ . C_x}$, (number of blocks above block $x$).
 \end{enumerate}
 
-\noindent The set $A_F$  of abstract actions learned  from $T_G$ is:\footnote{Feature and action
+\noindent The set $A_F$  of abstract actions learned is:\footnote{Feature and action
   names are provided to make their meaning explicit; the meaning follows from their syntactic form.}
 
 \begin{enumerate}[--]
@@ -1135,40 +1136,41 @@ and the actions.
 % This puts a limit on the complexity of the
 % feature grammars, the bound, and the number of state transitions in the sample,
 % as they  result otherwise in SAT theories that are just too large (see Table~\ref{tab:exp-result-data}).
-This is indeed the reason why we have chosen to use the theories $T_G$
-with goal marking. Additional ideas, however, are required
+This is the   reason why we have chosen to use the more compact theories $T_G$
+in the experiments.  Additional ideas, however, are required
 to improve scalability and to make the computational model
-captured by  steps 1--6 more robust. One possibility that we have not explored
-is the use of incomplete (suboptimal) Max SAT solvers. 
+captured by  steps 1--6 more robust.
+% One possibility that we have not explored
+% is the use of incomplete (suboptimal) Max SAT solvers. 
 
-It is not fully clear whether it is reasonable in general
-to assume that the features can be obtained from a large
-pool of candidate features that is defined from the primitive
-predicates and a general concept grammar.
+From the point of view of expressivity, it is not clear how restrictive
+is the assumption  that the  features can be obtained from a pool of  features
+defined from the primitive predicates and a general grammar.
 %A second limitation is the assumption that 
 %the features can be obtained from a large pool of candidate  features defined 
 %from the primitive predicates and a  general grammar.
 %It is not fully clear whether this assumption is reasonable in general.
 A relevant argument made by \citeay{bonet:ijcai2018} is that generalized problems
 over domains with low width \cite{nir:ecai2012}, have compact policies
-in terms of general features that can be computed in polynomial time.
-In addition, for dealing with arbitrary goals, the same grammar  appears
-to be suitable once  \emph{goal predicates}, namely, copies $p_G$ of the primitive predicates $p$
-that appear in the goal, are added to the set of primitive predicates and evaluated in the goal
-\cite{martin-geffner:generalized}. 
+in terms of features that can be computed in polynomial time.
+It is an open question, however,  whether such features are  captured
+by the proposed grammar or a  suitable variation. The feature language, however, seems 
+adequate for  dealing with arbitrary goals, once  \emph{goal predicates} are added
+to the set of primitive predicates. Goal predicates are copies $p_G$ of the primitive predicates $p$ that
+appear in the goal and which are evaluated in the goal  \cite{martin-geffner:generalized}.
 
-Finally, while we have dealt with instances with deterministic actions
-only, the formulation can be extended to handle non-deterministic actions.
-Indeed, it is sufficient to replace the formula \eqref{eq:bridge1}
-that links $D1$ and $D2$ with a formula to establish that when states
-$s$ and $t$ are indistinguishable (i.e.\ $\neg D1(s,t)$), then
-for each action $a$ for $s$, there is an action $b$ for $t$ whose
-set of transitions on $t$ is indistinguishable from the set
-of transitions of $a$ on $s$; namely, for each transition $(s,a,s')$
-there is a transition $(t,b,t')$ with $\Delta_f(s,s')=\Delta_f(t,t')$
-for each feature $f$, and vice versa.
-To do this, transitions $(s,s')$ in the sample would need to be
-tagged with action labels as $(s,a,s')$.
+
+Finally, the formulation can be extended to handle non-deterministic actions.
+For this, it is sufficient to replace the formula \eqref{eq:bridge1}
+that links $D_1$ and $D_2$ atoms  with a formula asserting that, 
+if two states $s$ and $t$ are indistinguishable (i.e.\ $\neg D_1(s,t)$), then
+for each action $a$ in $s$, there must be  an action $b$ in  $t$,
+such that the  state transitions $(t,b,t')$ generated by $b$ in $t$, 
+can't be distinguished from the transitions $(s,a,s')$ generated by $a$ in $s$. 
+For this, transitions $(s,s')$ in the sample would need to be tagged with the actions
+that generated them as  $(s,a,s')$.
+
+
 
 \section{Summary and Future Work}
 
@@ -1184,20 +1186,18 @@ Unlike purely learning approaches, the features and the policies
 are transparent, and the scope and correctness
 of the resulting general plans can be assessed.
 
-There is  an interesting  relation to the ideas
-of dimensionality reduction and embeddings in machine learning
-\cite{hamilton:embeddings}. The learned abstraction
-maps the  states of the problem instances, 
-whose size is not bounded, into valuations over a small and bounded
-set of features. Moreover,  this is done while preserving the   essential properties
-of states; namely,  how they are changed by actions and whether they denote  goal states or not.
-The notion of \emph{sound} and \emph{complete} abstract action sets expresses this requirement
-that is enforced by  the SAT formulation.
-
+There is  an interesting  relation between sound and complete abstractions, on the one hand, 
+and the ideas of dimensionality reduction and embeddings in machine learning, on the other 
+\cite{hamilton:embeddings}. Sound and complete abstractions  map  the  states of the problem
+instances,  whose size is not bounded, into valuations over a small and bounded set of features,
+while preserving the   essential properties of states; namely,  how they are changed by actions
+and whether they denote  goal states or not.
+% The notion of \emph{sound} and \emph{complete} abstract action sets expresses this requirement
+% that is enforced by  the SAT formulation.
 An interesting challenge for the future  is to generalize the proposed methods
 to other contexts, such as learning from ``screen states'' in video games,
 where the sampled states have no known structure and there are no primitive
-predicates. One way for achieving this, is precisely by learning embeddings
+predicates. One way for achieving this would be precisely by learning embeddings
 that yield sound and complete abstractions or suitable approximations.
 
 %Finally, problems involving non-deterministic transitions may be
