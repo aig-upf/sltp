@@ -286,12 +286,12 @@ described below.
 
 A \emph{feature} $f$ for a class $\Q$ of problems represents a function $\phi_f$
 that takes an instance $P$ from $\Q$ and a state $s$ reachable in $P$, and results
-in a value denoted as $\phi_f(s)$.
+in a value $\phi_f(s)$.
 A feature is \emph{boolean} if it results in boolean values, and \emph{numeric}
-if it results in numerical values. %, that we assume to be a non-negative integer.
-For example, $H$ and $n(x)$ represent two features in Blocksworld:
-$H$ is a boolean feature that tracks whether the gripper is empty, while
-$n(x)$ is numerical and tracks the number of blocks above $x$.
+if it results in numerical values, here assumed to be non-negative.
+For example, $H$ and $n(x)$ are two features in Blocksworld:
+$H$, boolean, tracks whether the gripper is empty, while
+$n(x)$, numerical, tracks the number of blocks above $x$.
 
 Symbols like $x$ denote \emph{parameters} whose value depends on the
 instance $P$ in $\Q$. For example, if $\Q_{clear}$ denotes the Blocksworld
@@ -333,7 +333,7 @@ if its preconditions are true in $\bar{s}$.
 An action $a$ and an abstract action $\bar{a}=\abst{Pre}{\Eff}$  \emph{have  the same qualitative effects over the features $F$
 in a state $s$} when both are applicable in $s$ with the same effects on the boolean features and
 the same \emph{qualitative effects} on the numerical features. If $s'$ is the result of applying $a$ in $s$,
-this means \cite{bonet:ijcai2018}:
+this means that \cite{bonet:ijcai2018}:
 1)~$p \in \Eff$ and $\neg p \in Pre$ iff
 $\phi_p(s)$ is false and $\phi_p(s')$ is true (i.e., $p$ becomes true),
 %
@@ -735,10 +735,10 @@ $s$ is expanded goal   state in $\S$  iff  $s$ satisfies  $G_F=G_{\sigma}$.
 %
 
 Different assignments $\sigma$ result in different feature sets $F_{\sigma}$
-and abstract action sets $A_{\sigma}$. Simpler and more meaningful features can be found
+and abstract action sets $A_{\sigma}$. Simpler and more meaningful features are found
 by minimizing a cost measure such as $|F_{\sigma}|$
 or, more generally, $\sum_{f \in F_{\sigma}} cost(f)$.
-We achieve this by casting our problem
+To achieve this, we cast our problem
 into a constrained optimization problem, more specifically, a Weighted Max-SAT problem,
 where clauses resulting from the theories $T$ or $T_G$ are taken as \emph{hard} clauses,
 and we add, for each feature $f \in \F$, a
