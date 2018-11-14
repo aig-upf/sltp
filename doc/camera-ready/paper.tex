@@ -223,7 +223,7 @@ the negation of the proposition $n=0$, decrements  are  transformed  into
 non-deterministic (disjunctive)  propositional effects $n > 0 \, | \, n=0$.
 }
 
-Bonet and Geffner's generalized planning formulation assumes that the
+Bonet and Geffner's formulation of generalized planning  assumes that the
 features and abstract actions are given. In this work, we address this limitation
 by  \emph{showing  how the features and abstract actions  can be learned from
 the primitive predicates used to define the instances and from sampled state transitions.}
@@ -254,9 +254,9 @@ planners, and from purely learning approaches in the formal guarantees that
 are characteristic of planning: if the learned abstract actions are  sound,
 the resulting general plans must be correct.
 
-The paper is organized as follows. We first provide background and then show
-how abstract actions can be learned by enforcing soundness and
-completeness over a set of samples from a pool of candidate features derived
+The paper is organized as follows. We first provide the relevant background, and then show
+how features and abstract actions can be learned by enforcing soundness and
+completeness over a set of samples, from a pool of candidate features derived
 from the domain predicates. The computational model is then summarized,
 followed by experimental results and a discussion.
 
@@ -285,10 +285,10 @@ $\Q$ is a solution to all instances $P \in Q$. The form of such solutions is
 described below.
 
 A \emph{feature} $f$ for a class $\Q$ of problems represents a function $\phi_f$
-that takes an   instance $P$ from $\Q$ and a state $s$ reachable in $P$, and results
-in a value denoted as $\phi_f(s)$.
-A feature is \emph{boolean} if it results in a boolean value, and \emph{numeric}
-if it results in a numerical value, that we assume to be a non-negative integer.
+that takes an instance $P$ from $\Q$ and a state $s$ reachable in $P$, and results
+in a value $\phi_f(s)$.
+A feature is \emph{boolean} if it results in boolean values, and \emph{numeric}
+if it results in numerical values. %, that we assume to be a non-negative integer.
 For example, $H$ and $n(x)$ represent two features in the Blocksworld:
 the first is a boolean feature that tracks whether the gripper is empty, while
 the second is numerical and tracks the number of blocks above $x$.
@@ -331,14 +331,19 @@ and $n=0$ true iff $\phi_n(s) = 0$. An abstract action $\bar{a}$ is applicable i
 if its preconditions are true in $\bar{s}$.
 
 An action $a$ and an abstract action $\bar{a}=\abst{Pre}{\Eff}$  \emph{have  the same qualitative effects over the features $F$
-in a state $s$} when both are applicable in $s$ and have the same effects on the boolean features and
+in a state $s$} when both are applicable in $s$ with the same effects on the boolean features and
 the same \emph{qualitative effects} on the numerical features. If $s'$ is the result of applying $a$ in $s$,
 this means \cite{bonet:ijcai2018}:
-1)~$p$ becomes true in $s'$,
-i.e., $\phi_p(s')$ is true and $\phi_p(s)$  is false,
-iff $p \in \Eff$ and $\neg p \in Pre$, 2)~$p$ becomes false in $s'$, i.e., $\phi_p(s')$ is false and $\phi_p(s)$  is true,
-iff $\neg p \in \Eff$ and $p \in Pre$, 3)~$n$ increases in $s'$, i.e., $\phi_n(s') > \phi_n(s)$, iff $n\pplus \in \Eff$,
-and 4)~$n$ decreases  in $s'$, i.e., $\phi_n(s') < \phi_n(s)$, iff $n\mminus \in \Eff$.
+1)~$p \in \Eff$ and $\neg p \in Pre$ iff
+$\phi_p(s)$ is false and $\phi_p(s')$ is true (i.e., $p$ becomes true),
+%
+2)~$\neg p \in \Eff$ and $p \in Pre$ iff
+$\phi_p(s)$ is true and $\phi_p(s')$ is false ($p$ becomes false),
+%
+3)~$n\pplus \in \Eff$ iff $\phi_n(s') > \phi_n(s)$ ($n$ increases),
+and 
+%
+4)~$n\mminus \in \Eff$ iff $\phi_n(s') < \phi_n(s)$ ($n$ decreases).
 
 \medskip
 \begin{example}
@@ -357,7 +362,7 @@ $n(x)$, the action $a$ results in a state $s'$ where $\phi_{H}(s')$ is true and 
 \subsection{Sound and Complete Abstractions}
 
 Soundness and completeness are the key  properties that  enable us to reason about the collection of
-instances $\Q$ in terms of abstract actions that are defined at the level of the features:
+instances $\Q$ in terms of abstract actions that operate at the level of the features:
 
 \begin{definition}
 A set of abstract actions $A_F$ over the features $F$ is \emph{sound} relative to
@@ -397,7 +402,7 @@ with the same qualitative effects on $p$ and $n$.
 \medskip
 \begin{example}
   The abstract action set $A_F = \{\bar{a}, \bar{a}'\}$ where $\bar{a} = \abst{\neg H,n(x)>0}{H,n(x)\mminus}$
-  and $\bar{a}'=\abst{H}{\neg H}$, defined over the above feature set $F=\{H,n(x)\}$,
+  and $\bar{a}'=\abst{H}{\neg H}$, defined over the feature set $F=\{H,n(x)\}$,
   is sound but not complete relative to $\Q_{clear}$.
   The actions in $A_F$ capture the concrete actions that pick blocks from above $x$ and put them away,
   but not other actions like stacking a block above $x$, or picking a block that is not above $x$.
@@ -737,8 +742,7 @@ We achieve this by casting our problem
 into a constrained optimization problem, more specifically, a Weighted Max-SAT problem,
 where clauses resulting from the theories $T$ or $T_G$ are taken as \emph{hard} clauses,
 and we add, for each feature $f \in \F$, a
-\emph{soft} unit clause $\neg selected(f)$ with weight $cost(f)$.
-The cost measure that is used in the experiments is defined below.
+\emph{soft} unit clause $\neg selected(f)$ with weight $cost(f)$, defined below.
 
 
 \section{Feature Pool}
@@ -1166,7 +1170,7 @@ appear in the goal, and have fixed interpretation\footnote{If $p$ is
 \cite{martin-geffner:generalized}.
 
 
-Finally, the formulation can be extended to handle non-deterministic actions.
+Finally, our formulation can be extended to handle non-deterministic actions.
 For this, it is sufficient to replace the formula \eqref{eq:bridge1}
 that links $D_1$ and $D_2$ atoms  with a formula asserting that,
 if two states $s$ and $t$ are indistinguishable (i.e., $\neg D_1(s,t)$), then
