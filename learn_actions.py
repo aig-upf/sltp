@@ -190,11 +190,11 @@ class ModelTranslator(object):
             self.optimal_transitions = set((x, y) for x, y in self.iterate_over_all_transitions())
 
         # Compute for each pair s and t of states which features distinguish s and t
-        self.np_d1_distinguishing_features = self.compute_d1_distinguishing_features(bin_feat_matrix)
+        self.d1_distinguishing_features = self.compute_d1_distinguishing_features(bin_feat_matrix)
 
         self.writer = CNFWriter(cnf_filename)
 
-        self.np_var_selected = None
+        self.var_selected = None
         self.var_d1 = None
         self.var_d2 = None
 
@@ -206,6 +206,9 @@ class ModelTranslator(object):
         self.np_qchanges = dict()
         self.compute_qchanges = self.relaxed_qchange if relax_numeric_increase else self.standard_qchange
         self.compute_feature_weight = self.setup_optimization_policy(optimization)
+
+        self.approximate_d2 = True
+        # self.approximate_d2 = False
 
     def iterate_over_d1_pairs(self):
         for (x, y) in itertools.product(self.optimal_states, self.optimal_and_nonoptimal):
@@ -223,14 +226,14 @@ class ModelTranslator(object):
 
         logging.info("Computing sets of D1-distinguishing features for {} x {} state pairs "
                      "and {} features ({:0.1f}M matrix entries)".format(ns1, ns2, nf, nentries / 1000000))
-        np_d1_distinguishing_features = dict()
+        d1_distinguishing_features = dict()
 
         for s1, s2 in self.iterate_over_d1_pairs():
             xor = np.logical_xor(bin_feat_matrix[s1], bin_feat_matrix[s2])
             # We extract the tuple and turn it into a set:
-            np_d1_distinguishing_features[(s1, s2)] = set(np.nonzero(xor)[0].flat)
+            d1_distinguishing_features[(s1, s2)] = set(np.nonzero(xor)[0].flat)
 
-        return np_d1_distinguishing_features
+        return d1_distinguishing_features
 
     def create_bridge_clauses(self, d1_literal, s, t):
         # If there are no transitions (t, t') in the sample set, then we do not post the bridge constraint.
@@ -281,8 +284,7 @@ class ModelTranslator(object):
                 yield (s, s_prime, t, t_prime)
 
     def create_variables(self):
-        # self.var_selected = {feat: self.writer.variable("selected({})".format(feat)) for feat in self.features}
-        self.np_var_selected = \
+        self.var_selected = \
             [self.writer.variable("selected(F{})".format(feat)) for feat in range(0, self.feat_matrix.shape[1])]
 
         self.var_d1 = {(s1, s2): self.writer.variable("D1[{}, {}]".format(s1, s2)) for s1, s2 in
@@ -290,10 +292,17 @@ class ModelTranslator(object):
 
         self.var_d2 = dict()
 
-        for s, s_prime, t, t_prime in self.iterate_over_d2_transitions():
-            idx = compute_d2_index(s, s_prime, t, t_prime)
-            varname = "D2[({},{}), ({},{})]".format(*idx)
-            self.var_d2[idx] = self.writer.variable(varname)
+        if self.approximate_d2:
+            # D2(s,t)
+            self.var_d2 = {(s1, s2): self.writer.variable("D2[{}, {}]".format(s1, s2)) for s1, s2 in
+                           self.iterate_over_d1_pairs() if self.transitions[s1] and self.transitions[s2]}
+
+        else:
+            # D2(s,s',t,t')
+            for s, s_prime, t, t_prime in self.iterate_over_d2_transitions():
+                idx = compute_d2_index(s, s_prime, t, t_prime)
+                varname = "D2[({},{}), ({},{})]".format(*idx)
+                self.var_d2[idx] = self.writer.variable(varname)
 
         self.writer.close()
         logging.info("A total of {} MAXSAT variables were created".format(len(self.writer.variables)))
@@ -305,18 +314,12 @@ class ModelTranslator(object):
             return min(s, t), max(s, t)
         return s, t
 
-    def run(self, enforced_feature_idxs):
-        # allf = list(range(0, len(self.feature_names)))  # i.e. select all features
-        # self.find_inconsistency(allf)
-        self.create_variables()
-
+    def generate_d1_and_bridge_clauses(self):
         print("Generating D1 + bridge constraints from {} D1 variables".format(len(self.var_d1)), flush=True)
 
-        # for s1, s2 in itertools.combinations(self.state_ids, 2):
         for s1, s2 in self.iterate_over_d1_pairs():
             d1_variable = self.var_d1[(s1, s2)]
-            # d1_distinguishing_features = self.d1_distinguishing_features[(s1, s2)]
-            d1_distinguishing_features = self.np_d1_distinguishing_features[(s1, s2)]
+            d1_distinguishing_features = self.d1_distinguishing_features[(s1, s2)]
 
             # Post the constraint: D1(si, sj) <=> OR active(f), where the OR ranges over all
             # those features f that tell apart si from sj
@@ -324,8 +327,8 @@ class ModelTranslator(object):
             forward_clause_literals = [self.writer.literal(d1_variable, False)]
 
             for f in d1_distinguishing_features:
-                forward_clause_literals.append(self.writer.literal(self.np_var_selected[f], True))
-                self.writer.clause([d1_lit, self.writer.literal(self.np_var_selected[f], False)])
+                forward_clause_literals.append(self.writer.literal(self.var_selected[f], True))
+                self.writer.clause([d1_lit, self.writer.literal(self.var_selected[f], False)])
                 self.n_d1_clauses += 1
 
             self.writer.clause(forward_clause_literals)
@@ -343,13 +346,63 @@ class ModelTranslator(object):
             # Else (i.e. D1(s1, s2) _might_ be false, create the bridge clauses between values of D1 and D2
             else:
                 assert s1 in self.optimal_states
-                self.create_bridge_clauses(d1_lit, s1, s2)
-                if s2 in self.optimal_states:
-                    self.create_bridge_clauses(d1_lit, s2, s1)
 
+                if self.approximate_d2:
+                    # -D1(s, t) => -D2'(s,t), only if both s and t have been expanded
+                    if self.is_expanded(s1) and self.is_expanded(s2):
+                        d2_prime_variable = self.var_d2[(s1, s2)]
+                        self.writer.clause([d1_lit, self.writer.literal(d2_prime_variable, False)])
+                        self.n_bridge_clauses += 1
+
+                else:
+                    self.create_bridge_clauses(d1_lit, s1, s2)
+                    if s2 in self.optimal_states:
+                        self.create_bridge_clauses(d1_lit, s2, s1)
+
+    def is_expanded(self, s):
+        return len(self.transitions[s]) > 0
+
+    def compute_delta_primes(self):
+        """ \Delta'_f(s) = {x | \exists s' \in succ(s) s.t. } """
+        print("Computing Delta' for each state s", flush=True)
+        all_deltas = dict()
+        for s in self.optimal_states:
+            # deltas will be a list of sets, such that deltas[f] is \Delta'_f(s)
+            deltas = [set() for _ in self.feature_types]
+            for sp in self.transitions[s]:  # sp in succ(s)
+                feature_deltas = 10*self.feature_types + np.sign(self.feat_matrix[sp] - self.feat_matrix[s])
+                for i, delta in enumerate(feature_deltas, 0):
+                    deltas[i].add(delta)
+            all_deltas[s] = deltas
+        return all_deltas
+
+    def generate_d2_prime_clauses(self, delta_primes):
+        print("Generating D2' constraints from {} D2 variables".format(len(self.var_d2)), flush=True)
+        n = 0
+        for s1, s2 in self.iterate_over_d1_pairs():
+            if not self.is_expanded(s1) or not self.is_expanded(s2):
+                continue
+            d2_var = self.var_d2[s1, s2]
+            d2_lit = self.writer.literal(d2_var, True)
+            forward_clause_literals = [self.writer.literal(d2_var, False)]
+            distinguishing_features = (i for i, (delta_f_s1, delta_f_s2) in
+                                       enumerate(zip(delta_primes[s1], delta_primes[s2])) if delta_f_s1 != delta_f_s2)
+
+            # D2(s, t) iff OR_f selected(f), where f ranges over features s.t. Delta'_f(s) != Delta'_f(t)
+            for f in distinguishing_features:
+                forward_clause_literals.append(self.writer.literal(self.var_selected[f], True))
+                self.writer.clause([d2_lit, self.writer.literal(self.var_selected[f], False)])
+                self.n_d2_clauses += 1
+
+            self.writer.clause(forward_clause_literals)
+            self.n_d2_clauses += 1
+            n += 1
+        logging.info("There is an avg of {} clauses for each one of the {} state pairs".format(self.n_d2_clauses/n, n))
+
+    def generate_d2_clauses(self):
         print("Generating D2 constraints from {} D2 variables".format(len(self.var_d2)), flush=True)
         # self.d2_distinguished = set()
-        # for (s0, s1, t0, t1), d2_var in self.var_d2.items():
+        n = 0
         for s0, s1, t0, t1 in self.iterate_over_d2_transitions():
             d2_var = self.var_d2[compute_d2_index(s0, s1, t0, t1)]
 
@@ -358,43 +411,56 @@ class ModelTranslator(object):
             equal_idxs = np.equal(qchanges_s0s1, qchanges_t0t1)
             np_d2_distinguishing_features = np.where(equal_idxs==False)[0]
 
-            np_d1_dist = self.np_d1_distinguishing_features[self.compute_d1_idx(s0, t0)]
-            # if s0 == 440:
-            #     print(np_d1_dist)
+            np_d1_dist = self.d1_distinguishing_features[self.compute_d1_idx(s0, t0)]
             # D2(s0,s1,t0,t2) iff OR_f selected(f), where f ranges over features that d2-distinguish the transition
             # but do _not_ d1-distinguish the two states at the origin of each transition.
             d2_lit = self.writer.literal(d2_var, True)
             forward_clause_literals = [self.writer.literal(d2_var, False)]
             for f in np_d2_distinguishing_features.flat:
                 if f not in np_d1_dist:
-                    forward_clause_literals.append(self.writer.literal(self.np_var_selected[f], True))
-                    self.writer.clause([d2_lit, self.writer.literal(self.np_var_selected[f], False)])
+                    forward_clause_literals.append(self.writer.literal(self.var_selected[f], True))
+                    self.writer.clause([d2_lit, self.writer.literal(self.var_selected[f], False)])
                     self.n_d2_clauses += 1
 
             self.writer.clause(forward_clause_literals)
             self.n_d2_clauses += 1
+            n += 1
+
+        logging.info("Avg # of {} clauses for each one of the {} D2 quadruples".format(self.n_d2_clauses/n, n))
+
+    def run(self, enforced_feature_idxs):
+        # allf = list(range(0, len(self.feature_names)))  # i.e. select all features
+        # self.find_inconsistency(allf)
+        self.create_variables()
+
+        if self.approximate_d2:
+            deltas = self.compute_delta_primes()
+            self.generate_d2_prime_clauses(deltas)
+        else:
+            self.generate_d2_clauses()
+
+        self.generate_d1_and_bridge_clauses()
 
         # Add the weighted clauses to minimize the number of selected features
-        for feature, var in enumerate(self.np_var_selected):
+        for feature, var in enumerate(self.var_selected):
             d = self.compute_feature_weight(feature)
             self.writer.clause([self.writer.literal(var, False)], weight=d)
             self.n_selected_clauses += 1
 
         # Make sure those features we want to enforce in the solution, if any, are posted as necessarily selected
         for enforced in enforced_feature_idxs:
-            self.writer.clause([self.writer.literal(self.np_var_selected[enforced], True)])
+            self.writer.clause([self.writer.literal(self.var_selected[enforced], True)])
 
         # from pympler.asizeof import asizeof
         # print(f"asizeof(self.writer): {asizeof(self.writer)/(1024*1024)}MB")
         # print(f"asizeof(self): {asizeof(self)/(1024*1024)}MB")
-        # print(f"asizeof(self.np_d1_distinguishing_features): {asizeof(self.np_d1_distinguishing_features)/(1024*1024)}MB")
+        # print(f"asizeof(d1_distinguishing_features): {asizeof(self.d1_distinguishing_features)/(1024*1024)}MB")
         # print(f"np_d2_distinguishing_features.nbytes: {np_d2_distinguishing_features.nbytes/(1024*1024)}MB")
-        print_memory_usage()
+        # print_memory_usage()
+        # self.debug_tests()
 
         self.report_stats()
-
-        # self.debug_tests()
-        self.np_d1_distinguishing_features = None  # We won't need this anymore
+        self.d1_distinguishing_features = None  # We won't need this anymore
         self.writer.save()
 
         return self.writer.mapping
@@ -434,9 +500,8 @@ class ModelTranslator(object):
     def decode_solution(self, assignment, features, namer):
         varmapping = self.writer.mapping
         true_variables = set(varmapping[idx] for idx, value in assignment.items() if value is True)
-        # feature_mapping = {variable: feature for feature, variable in self.var_selected.items()}
-        np_feature_mapping = {variable: feature for feature, variable in enumerate(self.np_var_selected)}
-        assert len(np_feature_mapping) == len(self.np_var_selected)
+        np_feature_mapping = {variable: feature for feature, variable in enumerate(self.var_selected)}
+        assert len(np_feature_mapping) == len(self.var_selected)
         selected_features = sorted(np_feature_mapping[v] for v in true_variables if v in np_feature_mapping)
 
         if not selected_features:
@@ -485,7 +550,7 @@ class ModelTranslator(object):
 
     def report_stats(self):
 
-        d1_distinguishing = self.np_d1_distinguishing_features.values()
+        d1_distinguishing = self.d1_distinguishing_features.values()
         avg_num_d1_dist_features = sum(len(feats) for feats in d1_distinguishing) / len(d1_distinguishing)
         n_undistinguishable_state_pairs = sum(1 for x in d1_distinguishing if len(x) == 0)
         print_header("Max-sat encoding stats", 1)
