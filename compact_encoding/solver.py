@@ -25,8 +25,8 @@ def run(config, data, rng):
     # solver = "openwbo"
 
     solver = choose_solver(solver)
-    error, output = common.run(solver, config.experiment_dir, config.sat_theory_filename,
-                               stdout=config.sat_solution_filename)
+    error, output = common.run_solver(solver, config.experiment_dir, config.sat_theory_filename,
+                                      stdout=config.sat_solution_filename)
 
     if error:
         raise RuntimeError("There was an error running the SAT solver. Check error logs")

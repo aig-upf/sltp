@@ -1,6 +1,9 @@
+import logging
 import os
+import signal
 import subprocess
 import sys
+from threading import Timer
 
 from ..solvers import library
 
@@ -14,7 +17,7 @@ class Solution(object):
 
     def parse_result(self, line):
         self.result = line
-        self.solved = {"UNSATISFIABLE": False, "UNKNOWN": False, "OPTIMUM FOUND": True}[line]
+        self.solved = {"UNSATISFIABLE": False, "UNKNOWN": False, "OPTIMUM FOUND": True, "SATISFIABLE": True}[line]
 
 
 def parse_maxsat_output(filename):
@@ -43,12 +46,14 @@ def choose_solver(solver):
         return library.Maxino
     elif solver == 'openwbo':
         return library.Openwbo
+    elif solver == 'openwbo-inc':
+        return library.OpenwboInc
     raise RuntimeError('Unknown solver "{}"'.format(solver))
 
 
-def solve(rundir, cnf_filename, solver='wpm3'):
+def solve(rundir, cnf_filename, solver='wpm3', timeout=None):
     solver = choose_solver(solver)(rundir)
-    error, output = run(solver, rundir, cnf_filename, 'maxsat_solver')
+    error, output = run_solver(solver, rundir, cnf_filename, 'maxsat_solver', timeout=timeout)
 
     if error:
         raise RuntimeError("There was an error running the MAXSAT solver. Check error logs")
@@ -56,7 +61,7 @@ def solve(rundir, cnf_filename, solver='wpm3'):
     return parse_maxsat_output(output)
 
 
-def run(solver, rundir, input_filename, tag=None, stdout=None):
+def run_solver(solver, rundir, input_filename, tag=None, stdout=None, timeout=None):
     assert tag or stdout
     error = False
     if stdout is None:
@@ -65,10 +70,38 @@ def run(solver, rundir, input_filename, tag=None, stdout=None):
     with open(stdout, 'w') as driver_log:
         with open(os.path.join(rundir, '{}_run.err'.format(tag)), 'w') as driver_err:
             cmd = solver.command(input_filename)
-            print('Executing "{}" on directory "{}"'.format(cmd, rundir))
-            retcode = subprocess.call(cmd, cwd=rundir, stdout=driver_log, stderr=driver_err)
+            logging.info('Executing (timeout: {}) "{}" on directory "{}"'.format(timeout, cmd, rundir))
+
+            proc = subprocess.Popen(cmd, cwd=rundir, stdout=driver_log, stderr=driver_err)
+            run_with_controlling_timer(proc, timeout)
+
+            # retcode = subprocess.call(cmd, cwd=rundir, stdout=driver_log, stderr=driver_err)
     if os.path.getsize(driver_err.name) != 0:
         error = True
     if os.path.getsize(driver_err.name) == 0:  # Delete error log if empty
         os.remove(driver_err.name)
     return error, driver_log.name
+
+
+def run_with_controlling_timer(proc, timeout=None):
+    """ Run the given process.
+    If a timeout is specified, send a SIGTERM after that timeout, and a SIGKILL a bit later.
+    Otherwise, just run the process normally. """
+    def send_sigterm():
+        logging.warning("Sending SIGTERM to subprocess with ID {}".format(proc.pid))
+        os.kill(proc.pid, signal.SIGTERM)
+
+    timeout = 0 if timeout is None else timeout
+    slack = 2
+    sigterm_timer = Timer(timeout, send_sigterm)  # Timeout in seconds
+    sigkill_timer = Timer(timeout + slack, proc.kill)  # Give a little slack for the process to shutdown
+
+    try:
+        if timeout:
+            sigterm_timer.start()
+            sigkill_timer.start()
+        proc.communicate()
+    finally:
+        if timeout:
+            sigterm_timer.cancel()
+            sigkill_timer.cancel()
