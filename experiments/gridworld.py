@@ -6,7 +6,7 @@ from tarski.dl import PrimitiveConcept, ConceptCardinalityFeature, AndConcept, E
     InverseRole
 
 from abstractions_defaults import generate_experiment
-from common import update_dict
+from sltp.util.misc import update_dict
 
 
 def experiment(experiment_name=None):

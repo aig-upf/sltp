@@ -8,14 +8,108 @@ from .util.command import read_file
 from .util.naming import filename_core
 
 
+class TransitionSample:
+    """ """
+    def __init__(self):
+        self.states = OrderedDict()
+        self.transitions = defaultdict(set)
+        self.parents = dict()
+        # self.problem = dict()
+        self.roots = set()  # The set of all roots
+        self.instance_roots = []  # The root of each instance
+        self.goals = set()
+        self.unsolvable = set()
+        self.optimal_transitions = set()
+        self.expanded = set()
+
+    def add_transitions(self, states, transitions):
+        # TODO Could check for ID overlappings, but would be expensive
+        self.states.update(states)
+        self.transitions.update(transitions)
+        self.parents.update(compute_parents(transitions))
+        # TODO: This is not correct, will fail whenever we have states in the sample that have indeed been expanded
+        # TODO: but have no children:
+        self.expanded.update(s for s in states if len(transitions[s]) > 0)
+
+    def mark_as_root(self, state):
+        self.roots.add(state)
+        self.instance_roots.append(state)
+
+    def mark_as_goals(self, goals):
+        self.goals.update(goals)
+
+    def mark_as_unsolvable(self, states):
+        self.unsolvable.update(states)
+
+    def num_states(self):
+        return len(self.states)
+
+    def num_transitions(self):
+        return sum(len(x) for x in self.transitions.values())
+
+    def mark_as_optimal(self, optimal):
+        self.optimal_transitions.update(optimal)
+
+    def compute_optimal_states(self):
+        """ Return those states that lie in some transition marked as optimal """
+        return set(itertools.chain.from_iterable(self.optimal_transitions))
+
+    def info(self):
+        return "instances: {}, states: {}, transitions: {} ({} optimal), goals: {}, unsolvable: {}".format(
+            len(self.roots), len(self.states), self.num_transitions(), len(self.optimal_transitions),
+            len(self.goals), len(self.unsolvable))
+
+    def __str__(self):
+        return "TransitionsSample[{}]".format(self.info())
+
+    def get_sorted_state_ids(self):
+        return sorted(self.states.keys())
+
+    def resample(self, selected):
+        """ Resample (i.e. project) the current sample into a new sample that will contain only states specified
+        in `selected` plus their children. """
+        # all_in_sample will contain all states we want to sample plus their children state IDs
+        all_in_sample = set(selected)
+        for s in selected:  # Add the children
+            all_in_sample.update(self.transitions[s])
+
+        # Sort the selected states and compute the remapping function
+        ordered_sample = list(sorted(all_in_sample))
+        remapping = {x: i for i, x in enumerate(ordered_sample)}
+
+        # Pick the selected elements from the data structures
+        goals = {remapping[x] for x in ordered_sample if x in self.goals}
+        unsolvable = {remapping[x] for x in ordered_sample if x in self.unsolvable}
+        roots = {remapping[x] for x in ordered_sample if x in self.roots}
+        optimal = {(remapping[x], remapping[y]) for x, y in self.optimal_transitions
+                   if x in remapping and y in remapping}
+
+        states = OrderedDict()
+        for i, s in self.states.items():
+            if i in remapping:
+                states[remapping[i]] = s
+
+        transitions = defaultdict(set)
+        for source, targets in self.transitions.items():
+            if source in selected:
+                transitions[remapping[source]] = {remapping[t] for t in targets}
+
+        resampled = TransitionSample()
+        resampled.add_transitions(states, transitions)
+        resampled.mark_as_goals(goals)
+        resampled.mark_as_optimal(optimal)
+        resampled.mark_as_unsolvable(unsolvable)
+        _ = [resampled.mark_as_root(r) for r in roots]
+        return resampled
+
+
 def mark_optimal(goal_states, root_states, parents):
     """ Collect all those states that lie on one arbitrary optimal path to the goal """
-    roots = set(root_states)
     optimal_transitions = set()
     for goal in goal_states:
         previous = current = goal
 
-        while current not in roots:
+        while current not in root_states:
             # A small trick: node IDs are ordered by depth, so we can pick the min parent ID and know the resulting path
             # will be optimal
             current = min(parents[current])
@@ -32,27 +126,28 @@ def print_atom(atom):
     return "{}({})".format(atom[0], ", ".join(atom[1:]))
 
 
-def log_sampled_states(states, goals, transitions, expanded, optimal_transitions, root_states, unsolvable, resampled_states_filename):
+def log_sampled_states(sample, filename):
     # We need to recompute the parenthood relation with the remapped states to log it!
-    parents = compute_parents(transitions)
-    optimal_s = set(x for x, _ in optimal_transitions)
+    optimal_s = set(x for x, _ in sample.optimal_transitions)
 
-    with open(resampled_states_filename, 'w') as f:
-        for id_, state in states.values():
-            state_parents = ", ".join(sorted(map(str, parents[id_])))
-            state_children = ", ".join(sorted(map(str, transitions[id_])))
+    with open(filename, 'w') as f:
+        for id_, state in sample.states.items():
+            state_parents = ", ".join(sorted(map(str, sample.parents[id_])))
+            state_children = ", ".join(sorted(map(str, sample.transitions[id_])))
             atoms = ", ".join(print_atom(atom) for atom in state)
-            is_goal = "*" if id_ in goals else ""
-            is_expanded = "^" if expanded(id_) else ""
-            is_root = "=" if id_ in root_states else ""
+            is_goal = "*" if id_ in sample.goals else ""
+            is_expanded = "^" if id_ in sample.expanded else ""
+            is_root = "=" if id_ in sample.roots else ""
             is_optimal = "+" if id_ in optimal_s else ""
-            is_unsolvable = "U" if id_ in unsolvable else ""
+            is_unsolvable = "U" if id_ in sample.unsolvable else ""
             print("#{}{}{}{}{}{} (parents: {}, children: {}):\n\t{}".
                   format(id_, is_root, is_goal, is_optimal, is_expanded, is_unsolvable, state_parents, state_children, atoms), file=f)
-    logging.info('Resampled states logged at "{}"'.format(resampled_states_filename))
+    logging.info('Resampled states logged at "{}"'.format(filename))
 
 
 def sample_first_x_states(root_states, sample_sizes):
+    """ Sample the first sample_sizes[i] states of instance i, i.e., the integers going from root_states[i] to
+    root_states[i] + sample_sizes[i] """
     sampled = set()
     assert len(root_states) == len(sample_sizes)
     for root, size in zip(root_states, sample_sizes):
@@ -62,51 +157,51 @@ def sample_first_x_states(root_states, sample_sizes):
 
 def sample_generated_states(config, rng):
     logging.info('Loading state space samples...')
-    states, goal_states, transitions, root_states, goals_by_instance, unsolvable = read_transitions(config.sample_files)
-    if not goal_states:
+    sample, goals_by_instance = read_transitions_from_files(config.sample_files)
+    if not sample.goals:
         raise RuntimeError("No goal found in the sample - increase # expanded states!")
+
+    mark_optimal_transitions(config.optimal_selection_strategy, sample, goals_by_instance)
+    logging.info("Entire Sample: {}".format(sample.info()))
 
     # if config.num_sampled_states is None and config.max_width < 1 and not config.complete_only_wrt_optimal:
     #     return states, goal_states, transitions
+    # Let's deactivate random sampling temporarily, as we're not using it
+    # optimal, optimal_transitions = set(), set()
+    # if config.sampling == "random":
+    #     assert config.num_sampled_states is not None
+    #     assert not config.complete_only_wrt_optimal
+    #     selected = random_sample(config, goal_states, rng, states, transitions, parents)
+    #
+    # else:
+    # assert config.sampling in ("all", "optimal")
 
-    parents = compute_parents(transitions)
+    if config.num_sampled_states is not None:
+        # Resample the full sample and extract only a few specified states
+        selected = sample_first_x_states(sample.instance_roots, config.num_sampled_states)
+        states_in_some_optimal_transition = sample.compute_optimal_states()
+        selected.update(states_in_some_optimal_transition)
+        sample = sample.resample(set(selected))
+        logging.info("Sample after resampling: {}".format(sample.info()))
 
-    optimal, optimal_transitions = set(), set()
+    log_sampled_states(sample, config.resampled_states_filename)
+    return sample
 
-    if config.sampling == "random":
-        assert config.num_sampled_states is not None
-        assert not config.complete_only_wrt_optimal
-        selected = random_sample(config, goal_states, rng, states, transitions, parents)
 
-    else:
-        assert config.sampling in ("all", "optimal")
-
+def mark_optimal_transitions(selection_strategy, sample: TransitionSample, goals_by_instance):
+    """ Marks which transitions are optimal in a transition system according to some selection criterium,
+    such as marking *all* optimal transitions, or marking just one *single* optimal path.
+     """
+    if selection_strategy == "arbitrary":
         # For each instance, we keep the first-reached goal, as a way of selecting an arbitrary optimal path.
-        goal_selection = set(min(x) for x in goals_by_instance)
+        goals = set(min(x) for x in goals_by_instance)
+        optimal = mark_optimal(goals, sample.roots, sample.parents)
+        sample.mark_as_optimal(optimal)
+        return
 
-        optimal_transitions = mark_optimal(goal_selection, root_states, parents)
-        states_in_some_optimal_transition = set(itertools.chain.from_iterable(optimal_transitions))
-        logging.info("Resampling: states/goals/optimal tx: {} / {} / {}".format(len(states), len(goal_states), len(optimal_transitions)))
-
-        if config.sampling == "optimal":  # Select only the optimal states
-            assert False, "not sure this makes too much sense!"
-            # selected = set(optimal)
-
-        else:  # sampling = "all"
-            if config.num_sampled_states is not None:
-                selected = sample_first_x_states(root_states, config.num_sampled_states)
-                selected.update(states_in_some_optimal_transition)
-            else:
-                selected = set(states)
-
-    states, goals, transitions, optimal_transitions, root_states, unsolvable = \
-        remap_sample_expanded_states(set(selected), states, goal_states, transitions, optimal_transitions, set(root_states), unsolvable)
-
-    expanded = lambda s: len(transitions[s]) > 0
-    total_tx = sum(len(transitions[sid]) for sid, _ in states.values())
-    logging.info("Resampling (states / goals / unsolvable / tx / optimal tx): {} / {} / {} / {}".format(len(states), len(goals), len(unsolvable), total_tx, len(optimal_transitions)))
-    log_sampled_states(states, goals, transitions, expanded, optimal_transitions, root_states, unsolvable, config.resampled_states_filename)
-    return states, goals, transitions, optimal_transitions, root_states, unsolvable
+    if selection_strategy == "complete":
+        assert 0, "To implement"
+    raise RuntimeError("Unknown optimal selection strategy")
 
 
 def random_sample(config, goal_states, rng, states, transitions, parents):
@@ -194,8 +289,7 @@ def remap_state_ids(states, goals, transitions, unsolvable, remap):
     new_unsolvable = {remap(x) for x in unsolvable}
     new_states = OrderedDict()
     for i, s in states.items():
-        assert i == s[0]
-        new_states[remap(i)] = (remap(i), s[1])
+        new_states[remap(i)] = s
 
     new_transitions = defaultdict(set)
     for source, targets in transitions.items():
@@ -204,44 +298,44 @@ def remap_state_ids(states, goals, transitions, unsolvable, remap):
     return new_states, new_goals, new_transitions, new_unsolvable
 
 
-def read_transitions(filenames):
-    all_samples = [read_single_sample_file(f) for f in filenames]
-    assert len(all_samples) > 0
-    states, goals, transitions, unsolvable = all_samples[0]
-    assert states[0][0] == 0
-    root_states = [0]
-    goals_by_instance = [set(goals)]
-    for s, g, tx, unsolv in all_samples[1:]:
-        starting_state_id = len(states)
+def read_transitions_from_files(filenames):
+    assert len(filenames) > 0
+
+    goals_by_instance = []
+    sample = TransitionSample()
+    for filename in filenames:
+        starting_state_id = sample.num_states()
+        s, g, tx, unsolv = read_single_sample_file(filename)
+        assert next(iter(s.keys())) == 0  # Make sure state IDs in the sample file start by 0
         s, g, tx, unsolv = remap_state_ids(s, g, tx, unsolv, remap=lambda state: state + starting_state_id)
         assert next(iter(s)) == starting_state_id
-        root_states.append(starting_state_id)
-        states.update(s)
-        transitions.update(tx)
-        goals.update(g)
-        goals_by_instance.append(g)
-        unsolvable.update(unsolv)
 
-    return states, goals, transitions, root_states, goals_by_instance, unsolvable
+        sample.add_transitions(s, tx)
+        sample.mark_as_root(starting_state_id)
+        sample.mark_as_goals(g)
+        sample.mark_as_unsolvable(unsolv)
+
+        goals_by_instance.append(g)
+
+    return sample, goals_by_instance
 
 
 def read_single_sample_file(filename):
     states_by_id = {}
-    states_by_str = {}
+    # states_by_str = {}
     transitions = defaultdict(set)
     transitions_inv = defaultdict(set)
     seen = set()
     goal_states = set()
-    unsolvable_states  = set()
+    unsolvable_states = set()
 
     def register_transition(state):
         transitions[state['parent']].add(state['id'])
         transitions_inv[state['id']].add(state['parent'])
 
     def register_state(state):
-        data = (state['id'], state['normalized_atoms'])
-        states_by_str[state['atoms_string']] = data
-        states_by_id[state['id']] = data
+        # states_by_str[state['atoms_string']] = data
+        states_by_id[state['id']] = state['normalized_atoms']
         seen.add(state['id'])
         if j['goal']:
             goal_states.add(state['id'])
@@ -252,7 +346,7 @@ def read_single_sample_file(filename):
     for raw_line in raw_file:
         j = json.loads(raw_line)
         j['normalized_atoms'] = [normalize_atom_name(atom) for atom in j['atoms']]
-        j['atoms_string'] = str(j['normalized_atoms'])
+        # j['atoms_string'] = str(j['normalized_atoms'])
 
         if j['id'] in seen:
             # We hit a repeated state in the search, so we simply need to record the transition
@@ -260,7 +354,7 @@ def read_single_sample_file(filename):
             continue
 
         # The state must be _really_ new
-        assert j['atoms_string'] not in states_by_str
+        # assert j['atoms_string'] not in states_by_str
         register_state(j)
 
         if j['parent'] != j['id']:  # i.e. if not in the root node, which has 0 as its "fake" parent
@@ -276,8 +370,8 @@ def read_single_sample_file(filename):
 
     assert sum([len(t) for t in transitions.values()]) == sum([len(t) for t in transitions_inv.values()])
 
-    logging.info('%s: #lines-raw-file=%d, #state-by-str=%d, #states-by-id=%d, #transition-entries=%d, #transitions=%d' %
-                 (filename_core(filename), len(raw_file), len(states_by_str), len(states_by_id), len(transitions),
+    logging.info('%s: #lines-raw-file=%d, #states-by-id=%d, #transition-entries=%d, #transitions=%d' %
+                 (filename_core(filename), len(raw_file), len(states_by_id), len(transitions),
                   sum([len(targets) for targets in transitions.values()])))
 
     ordered = OrderedDict()  # Make sure we return an ordered dictionary
@@ -288,14 +382,13 @@ def read_single_sample_file(filename):
 
 def run(config, data, rng):
     assert not data
-    states, goal_states, transitions, optimal_transitions, root_states, unsolvable = \
-        sample_generated_states(config, rng)
-
-    return dict(
-        states=states,
-        goal_states=goal_states,
-        optimal_transitions=optimal_transitions,
-        transitions=transitions,
-        root_states=root_states,
-        unsolvable_states=unsolvable,
-    )
+    sample = sample_generated_states(config, rng)
+    return dict(sample=sample)
+    # return dict(
+    #     states=states,
+    #     goal_states=goal_states,
+    #     optimal_transitions=optimal_transitions,
+    #     transitions=transitions,
+    #     root_states=root_states,
+    #     unsolvable_states=unsolvable,
+    # )

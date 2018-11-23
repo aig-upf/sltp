@@ -43,7 +43,7 @@ def compute_universe_from_state_set(states):
     """ Iterate through all states and collect all possible PDDL objects """
     universe = UniverseIndex()
 
-    for sid, (_, state) in states.items():
+    for sid, state in states.items():
         for atom in state:
             assert atom
             if atom[0] == "=":  # Functional atom
@@ -274,7 +274,7 @@ class SemanticProcessor(object):
 
     def create_cache_for_samples(self, states, goal_denotation):
         cache = ExtensionCache(self.universe, self.top, self.bot)
-        for sid, (_, state) in states.items():
+        for sid, state in states.items():
             # TODO It is far from optimal to keep a per-state denotation of each static and goal concept!!
             # TODO It'd require a bit of work to fix this at the moment though
             self.register_state_on_cache(sid, state, cache, goal_denotation)
@@ -367,8 +367,12 @@ def collect_all_terms(processor, atoms, concepts, roles):
 
 
 def run(config, data, rng):
-    states = data.states
-    logging.info("Generating concepts from {} states".format(len(states)))
+    return extract_features(config, data.sample)
+
+
+def extract_features(config, sample):
+    logging.info("Generating concepts and pruning from sample set: {}".format(sample.info()))
+    states = sample.states
 
     goal_denotation = []
     goal_predicates = set()  # The predicates and functions that appear mentioned in the goal

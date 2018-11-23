@@ -3,7 +3,7 @@
 import sys
 
 from abstractions_defaults import generate_experiment
-from common import update_dict
+from sltp.util.misc import update_dict
 
 
 def experiment(experiment_name=None):

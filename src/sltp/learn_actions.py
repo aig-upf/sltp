@@ -24,6 +24,7 @@ from signal import signal, SIGPIPE, SIG_DFL
 import time
 
 import numpy as np
+from sltp.sampling import TransitionSample
 
 from .errors import CriticalPipelineError
 from tarski.dl import FeatureValueChange, MinDistanceFeature
@@ -54,11 +55,7 @@ def compute_d2_index(s0, s1, t0, t1):
 
 def generate_maxsat_problem(config, data, rng):
     optimization = config.optimization if hasattr(config, "optimization") else OptimizationPolicy.NUM_FEATURES
-
-    state_ids = data.state_ids
-    optimal_transitions = data.optimal_transitions
-    transitions = data.transitions
-    goal_states = data.goal_states
+    sample = data.sample
 
     feature_complexity = np.load(config.feature_complexity_filename + ".npy")
     feature_names = np.load(config.feature_names_filename + ".npy")
@@ -66,15 +63,14 @@ def generate_maxsat_problem(config, data, rng):
     bin_feat_matrix = np.load(config.bin_feature_matrix_filename + ".npy")
     feature_types = feat_matrix.max(0) <= 1  # i.e. feature_types[i] is True iff i is an (empirically) bool feature
 
-    num_transitions = sum(len(x) for x in transitions.values())
     logging.info("Generating MAXSAT problem from {} states, {} transitions and {} features"
-                 .format(feat_matrix.shape[0], num_transitions, feat_matrix.shape[1]))
+                 .format(feat_matrix.shape[0], sample.num_transitions(), feat_matrix.shape[1]))
 
-    if not goal_states:
+    if not sample.goals:
         raise CriticalPipelineError("No goal state identified in the sample, SAT theory will be trivially satisfiable")
 
     translator = ModelTranslator(feat_matrix, bin_feat_matrix, feature_complexity, feature_names, feature_types,
-                                 state_ids, goal_states, transitions, optimal_transitions,
+                                 sample,
                                  config.cnf_filename, optimization,
                                  config.relax_numeric_increase, config.complete_only_wrt_optimal)
 
@@ -161,32 +157,32 @@ class ActionEffect(object):
 
 
 class ModelTranslator(object):
-    def __init__(self, feat_matrix, bin_feat_matrix, feature_complexity, feature_names, feature_types, state_ids,
-                 goal_states, transitions, optimal_transitions, cnf_filename,
-                 optimization, relax_numeric_increase, complete_only_wrt_optimal):
+    def __init__(self, feat_matrix, bin_feat_matrix, feature_complexity, feature_names, feature_types,
+                 sample: TransitionSample,
+                 cnf_filename, optimization, relax_numeric_increase, complete_only_wrt_optimal):
 
         self.feat_matrix = feat_matrix
         self.bin_feat_matrix = bin_feat_matrix
         self.feature_complexity = feature_complexity
         self.feature_names = feature_names
         self.feature_types = feature_types
-        self.state_ids = state_ids
-        self.transitions = transitions
-        self.goal_states = goal_states
         self.complete_only_wrt_optimal = complete_only_wrt_optimal
+        self.sample = sample
+        self.state_ids = sample.get_sorted_state_ids()
 
         # We'll need this later if using relaxed inc semantics:
         self.all_twos = 2*np.ones(self.feat_matrix.shape[1], dtype=np.int8)
 
-        self.optimal_transitions = optimal_transitions
-        # self.optimal_and_nonoptimal = set(state_ids).union(optimal_state_ids)
-        self.optimal_and_nonoptimal = set(state_ids)
+        # i.e. all states:
+        self.optimal_and_nonoptimal = set(sample.get_sorted_state_ids())
+
+        self.optimal_transitions = sample.optimal_transitions
 
         if complete_only_wrt_optimal:
-            self.optimal_states = set(itertools.chain.from_iterable(optimal_transitions))
+            self.optimal_states = sample.compute_optimal_states()
         else:
-            self.optimal_states = self.optimal_and_nonoptimal.copy()
             # Consider all transitions as optimal
+            self.optimal_states = self.optimal_and_nonoptimal.copy()
             self.optimal_transitions = set((x, y) for x, y in self.iterate_over_all_transitions())
 
         # Compute for each pair s and t of states which features distinguish s and t
@@ -237,18 +233,18 @@ class ModelTranslator(object):
         # if t not in self.transitions or not self.transitions[t]:
         # TODO WE MIGHT NEED A BETTER WAY OF IDENTIFYING NON-EXPANDED STATES AND DISTINGUISHING THEM FROM
         # TODO STATES WHICH HAVE NO SUCCESSOR
-        if not self.transitions[s] or not self.transitions[t]:
+        if not self.sample.transitions[s] or not self.sample.transitions[t]:
             return
 
         assert s != t
         assert s in self.optimal_states
 
-        for s_prime in self.transitions[s]:
+        for s_prime in self.sample.transitions[s]:
             if not self.is_optimal_transition(s, s_prime):
                 continue
 
             forward_clause_literals = [d1_literal]
-            for t_prime in self.transitions[t]:
+            for t_prime in self.sample.transitions[t]:
                 idx = compute_d2_index(s, s_prime, t, t_prime)
                 forward_clause_literals.append(self.writer.literal(self.var_d2[idx], False))
             self.writer.clause(forward_clause_literals)
@@ -269,8 +265,8 @@ class ModelTranslator(object):
         return self.optimal_transitions
 
     def iterate_over_all_transitions(self):
-        for s in self.transitions:
-            for s_prime in self.transitions[s]:
+        for s in self.sample.transitions:
+            for s_prime in self.sample.transitions[s]:
                 yield (s, s_prime)
 
     def iterate_over_d2_transitions(self):
@@ -332,7 +328,7 @@ class ModelTranslator(object):
             self.n_d1_clauses += 1
 
             # Force D1(s1, s2) to be true if exactly one of the two states is a goal state
-            if sum(1 for x in (s1, s2) if x in self.goal_states) == 1:
+            if sum(1 for x in (s1, s2) if x in self.sample.goals) == 1:
                 self.writer.clause([d1_lit])
                 self.n_goal_clauses += 1
 
@@ -443,9 +439,10 @@ class ModelTranslator(object):
             raise CriticalPipelineError("Zero-cost maxsat solution - "
                                         "no action model possible, the encoding has likely some error")
 
-        logging.info("Features (total complexity: {}): ".format(sum(self.feature_complexity[f] for f in selected_features)))
-        print('\t' + '\n\t'.join("{}. {} [k={}, id={}]".format(i, namer(self.feature_names[f]), self.feature_complexity[f], f)
-                        for i, f in enumerate(selected_features, 1)))
+        logging.info("Features (total complexity: {}): ".format(
+            sum(self.feature_complexity[f] for f in selected_features)))
+        print('\t' + '\n\t'.join("{}. {} [k={}, id={}]".format(
+            i, namer(self.feature_names[f]), self.feature_complexity[f], f) for i, f in enumerate(selected_features, 1)))
 
         print("Only for machine eyes: ")
         print(serialize_to_string([features[i] for i in selected_features]))
@@ -582,7 +579,7 @@ class ModelTranslator(object):
         logging.info("Writing QNP abstraction to {}".format(config.qnp_abstraction_filename))
         namer = lambda x: config.feature_namer(x).replace(" ", "")  # let's make sure no spaces in feature names
 
-        init_dnf, goal_dnf = self.compute_init_goals(data, features)
+        init_dnf, goal_dnf = self.compute_init_goals(data.sample, features)
 
         # TODO Just pick an arbitrary clause from the DNF. Should do better!
         init = next(iter(init_dnf))
@@ -597,8 +594,6 @@ class ModelTranslator(object):
         if len(init_dnf) > 1:
             logging.warning("Cannot minimize abstract initial state DNF to single conjunction:")
             _ = [print("\t" + self.print_qnp_conjunction(x, namer)) for x in init_dnf]
-
-
 
         with open(config.qnp_abstraction_filename, "w") as f:
             print(config.domain_dir, file=f)
@@ -625,11 +620,11 @@ class ModelTranslator(object):
         dnf = set(frozenset((i, val) for i, val in zip(feature_indexes, f)) for f in dnf)
         return self.minimize_dnf(dnf)
 
-    def compute_init_goals(self, data, features):
+    def compute_init_goals(self, sample, features):
         fidxs = [f["idx"] for f in features]
 
-        init_dnf = self.extract_dnf(fidxs, sorted(data.root_states))
-        goal_dnf = self.extract_dnf(fidxs, sorted(data.goal_states))
+        init_dnf = self.extract_dnf(fidxs, sorted(sample.roots))
+        goal_dnf = self.extract_dnf(fidxs, sorted(sample.goals))
 
         return init_dnf, goal_dnf
 
@@ -650,12 +645,12 @@ class ModelTranslator(object):
             same_abstraction = [x for x in abstract2concrete[abstract_s] if x != s]
 
             for t in same_abstraction:
-                if not self.transitions[t]:  # i.e. state was not expanded
+                if not self.sample.transitions[t]:  # i.e. state was not expanded
                     continue
 
                 equal_qchanges_found = False
                 all_qts = []
-                for tprime in self.transitions[t]:
+                for tprime in self.sample.transitions[t]:
                     qt = self.retrieve_possibly_cached_qchanges(t, tprime)
                     all_qts.append((tprime, qt))
                     if np.array_equal(qs, qt):

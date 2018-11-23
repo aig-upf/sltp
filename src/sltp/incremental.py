@@ -1,8 +1,10 @@
 import logging
 import os
 
+from sltp.util.misc import update_dict, project_dict
 from .driver import Experiment, generate_pipeline_from_list, PlannerStep, Step, check_int_parameter, \
-    InvalidConfigParameter
+    InvalidConfigParameter, TransitionSamplingStep, ConceptGenerationStep, StepRunner, SubprocessStepRunner, \
+    _run_and_check_output
 
 
 class FullLearningStep(Step):
@@ -11,10 +13,10 @@ class FullLearningStep(Step):
         super().__init__(**kwargs)
 
     def get_required_attributes(self):
-        return ["domain", "experiment_dir", "initial_concept_bound", "max_concept_bound", "concept_bound_step"]
+        return ["domain", "experiment_dir", "initial_concept_bound", "max_concept_bound", "concept_bound_step", "initial_sample_size"]
 
     def get_required_data(self):
-        return ["states"]
+        return ["sample"]
 
     def process_config(self, config):
         check_int_parameter(config, "initial_concept_bound")
@@ -36,7 +38,7 @@ class FullLearningStep(Step):
         return config
 
     def description(self):
-        return "Full Learning Step!"
+        return "Full Learning Step"
 
     def get_step_runner(self):
         return full_learning
@@ -44,37 +46,54 @@ class FullLearningStep(Step):
 
 def full_learning(config, data, rng):
     # TransitionSamplingStep
-    sample_set = config.states
+
+    all_states = data.sample.states
+    all_transitions = data.sample.transitions
+
+    # Get the initial sample of M states
+    working_set = project_dict(all_states, rng.choice(list(all_states.keys()), config.initial_sample_size, replace=False))
+
+    k = 1
+    while True:
+        parameters = update_dict(config.to_dict(), states=working_set, max_concept_size=k)
+        conceptgen = ConceptGenerationStep(**parameters)
+        _run_and_check_output(conceptgen, SubprocessStepRunner)
+
+        if "UNSAT":
+            pass
 
 
+        x = 1
 
-def run_step(step):
-    result = step.run()
-    if result is not None:
-        msg = 'Critical error while processing step "{}". Execution will be terminated.'.format(step.description())
-        msg += 'Error message:\t{}'.format(result)
-        logging.error(msg)
-        raise RuntimeError(msg)
-    return result
+
 
 
 class IncrementalExperiment(Experiment):
+    """ This class handcodes the sequence of steps to be run, as the logic behind incremental running is
+        more complex.
+    """
     def __init__(self, steps, parameters):
         super().__init__([], parameters)  # Simply ignore the steps
         self.parameters = parameters
 
     def run(self, args=None):
-        self.hello(args)
         # We ignore whatever specified in the command line and run the incremental algorithm
+        self.hello(args)
 
-        # 1. Sample the state spaces
-        # ppl = generate_pipeline_from_list(inc_pipeline, **self.parameters)
-        # result = ppl[0].run()
+        # 1. Extract and resample the whole training set
+        initial_steps, config = generate_pipeline_from_list([PlannerStep, TransitionSamplingStep], **self.parameters)
+        _run_and_check_output(initial_steps[0], SubprocessStepRunner)
+        _run_and_check_output(initial_steps[1], SubprocessStepRunner)
 
-        planner = PlannerStep(**self.parameters)
-        run_step(planner)
+        learner = FullLearningStep(**config)
+        result = _run_and_check_output(learner, StepRunner)
 
-        learner = FullLearningStep(**planner.config)
-        run_step(learner)
+        print("YES")
+
+        # ConceptGenerationStep,
+        # FeatureMatrixGenerationStep,
+        # MaxsatProblemGenerationStep,
+        # MaxsatProblemSolutionStep,
+        # ActionModelStep,
 
 

@@ -98,11 +98,6 @@ class Step(object):
 
         return config
 
-    def run(self):
-        runner = StepRunner(self.description(), self.get_step_runner(), self.get_required_data())
-        result = runner.run(config=Bunch(self.config))
-        return result
-
     def description(self):
         raise NotImplementedError()
 
@@ -181,7 +176,7 @@ class TransitionSamplingStep(Step):
         super().__init__(**kwargs)
 
     def get_required_attributes(self):
-        return ["instances", "sample_files", "experiment_dir"]
+        return ["instances", "sample_files", "experiment_dir", "optimal_selection_strategy"]
 
     def get_required_data(self):
         return []
@@ -213,7 +208,7 @@ class TransitionSamplingStep(Step):
         return config
 
     def description(self):
-        return "Sampling of the transition set"
+        return "Generation of the training sample"
 
     def get_step_runner(self):
         from sltp import sampling
@@ -229,7 +224,7 @@ class ConceptGenerationStep(Step):
         return ["domain", "experiment_dir", "max_concept_size"]
 
     def get_required_data(self):
-        return ["states"]
+        return ["sample"]
 
     def process_config(self, config):
         check_int_parameter(config, "max_concept_size")
@@ -239,7 +234,7 @@ class ConceptGenerationStep(Step):
         config["feature_generator"] = config.get("feature_generator", None)
         config["enforce_features"] = config.get("enforce_features", None)
         config["parameter_generator"] = config.get("parameter_generator", None)
-        config["distance_feature_max_complexity"] = config.get("distance_feature_max_complexity", 0)
+        config["distance_feature_max_complexity"] = config.get("distance_feature_max_complexity", None)
         config["max_concept_grammar_iterations"] = config.get("max_concept_grammar_iterations", None)
 
         return config
@@ -276,7 +271,7 @@ class FeatureMatrixGenerationStep(Step):
         return config
 
     def get_required_data(self):
-        return ["features", "extensions", "states", "goal_states", "transitions", "unsolvable_states"]
+        return ["features", "extensions", "sample"]
 
     def description(self):
         return "Generation of the feature and transition matrices"
@@ -301,7 +296,7 @@ class MaxsatProblemGenerationStep(Step):
         return config
 
     def get_required_data(self):
-        return ["goal_states", "transitions", "state_ids", "enforced_feature_idxs", "optimal_transitions"]
+        return ["sample", "enforced_feature_idxs"]
 
     def description(self):
         return "Generation of the max-sat problem"
@@ -421,7 +416,7 @@ class ActionModelStep(Step):
         return config
 
     def get_required_data(self):
-        return ["cnf_translator", "cnf_solution", "features", "states", "goal_states", "root_states"]
+        return ["cnf_translator", "cnf_solution", "features", "sample"]
 
     def description(self):
         return "Computation of the action model"
@@ -456,7 +451,8 @@ class QNPGenerationStep(Step):
 
 
 def generate_pipeline(pipeline="maxsat", **kwargs):
-    return generate_pipeline_from_list(PIPELINES[pipeline], **kwargs)
+    pipeline, config = generate_pipeline_from_list(PIPELINES[pipeline], **kwargs)
+    return pipeline
 
 
 def generate_pipeline_from_list(elements, **kwargs):
@@ -466,44 +462,7 @@ def generate_pipeline_from_list(elements, **kwargs):
         step = klass(**config)
         config = step.config
         steps.append(step)
-    return steps
-
-
-class Experiment(object):
-    def __init__(self, steps, parameters):
-        self.args = None
-        self.steps = steps
-
-    def print_step_description(self):
-        return "\t\t" + "\n\t\t".join("{}. {}".format(i, s.description()) for i, s in enumerate(self.steps, 1))
-
-    def hello(self, args=None):
-        print_header("Generalized Action Model Learner, v.{}".format(VERSION))
-        argparser = setup_global_parser(step_description=self.print_step_description())
-        self.args = argparser.parse_args(args)
-        if not self.args.steps and not self.args.run_all_steps:
-            argparser.print_help()
-            sys.exit(0)
-
-    def run(self, args=None):
-        self.hello(args)
-        # If no steps were given on the commandline, run all exp steps.
-        steps = [get_step(self.steps, name) for name in self.args.steps] or self.steps
-
-        for step in steps:
-            try:
-                result = step.run()
-            except Exception as e:
-                logging.error('Exception caught while processing step "{}". Execution will be terminated. '
-                              'Error message:'.format(step.description()))
-                logging.error("\t{}".format(e))
-                break
-
-            if result is not None:
-                logging.error('Critical error while processing step "{}". Execution will be terminated. '
-                              'Error message:'.format(step.description()))
-                logging.error("\t{}".format(result))
-                break
+    return steps, config
 
 
 def save(basedir, output):
@@ -531,27 +490,19 @@ def load(basedir, items):
 
 
 class StepRunner(object):
+    """ Run the given step """
     def __init__(self, step_name, target, required_data):
         self.target = target
         self.step_name = step_name
         self.required_data = required_data
 
-    def run(self, **kwargs):
-        pool = multiprocessing.Pool(processes=1)
-        result = pool.apply_async(self._runner, (), kwargs)
-        res = result.get()
-        pool.close()
-        pool.join()
-        return res
-
-    def _runner(self, config):
-        """ Entry point for the spawned subprocess """
-        # import tracemalloc
-        # tracemalloc.start()
-        # memutils.display_top(tracemalloc.take_snapshot())
+    def run(self, config):
+        """ Run the StepRunner target.
+            Keep in mind that this method will also be the entry point of spawned subprocess in the case
+            of SubprocessStepRunners
+        """
         from .util import performance
 
-        result = None
         console.print_header("({}) STARTING STEP: {}".format(os.getpid(), self.step_name))
         data = Bunch(load(config.experiment_dir, self.required_data)) if self.required_data else None
         rng = np.random.RandomState(config.random_seed)  # ATM we simply create a RNG in each subprocess
@@ -569,7 +520,17 @@ class StepRunner(object):
         save(config.experiment_dir, output)
         performance.print_performance_stats(self.step_name, start)
         # profiling.start()
-        return result
+
+
+class SubprocessStepRunner(StepRunner):
+    """ Run the given step by spawning a subprocess and waiting for its finalization """
+    def run(self, config):
+        pool = multiprocessing.Pool(processes=1)
+        result = pool.apply_async(StepRunner.run, (), {"self": self, "config": config})
+        res = result.get()
+        pool.close()
+        pool.join()
+        return res
 
 
 class SATStateFactorizationStep(Step):
@@ -623,9 +584,54 @@ class DFAGenerationStep(Step):
         return learn_actions.generate_maxsat_problem
 
 
+class Experiment(object):
+    def __init__(self, steps, parameters):
+        self.args = None
+        self.steps = steps
+
+    def print_step_description(self):
+        return "\t\t" + "\n\t\t".join("{}. {}".format(i, s.description()) for i, s in enumerate(self.steps, 1))
+
+    def hello(self, args=None):
+        print_header("Generalized Action Model Learner, v.{}".format(VERSION))
+        argparser = setup_global_parser(step_description=self.print_step_description())
+        self.args = argparser.parse_args(args)
+        if not self.args.steps and not self.args.run_all_steps:
+            argparser.print_help()
+            sys.exit(0)
+
+    def run(self, args=None):
+        self.hello(args)
+        # If no steps were given on the commandline, run all exp steps.
+        steps = [get_step(self.steps, name) for name in self.args.steps] or self.steps
+
+        for step in steps:
+            try:
+                _run_and_check_output(step, SubprocessStepRunner)
+            except Exception as e:
+                logging.error(step, _create_exception_msg(step, e))
+                break
+
+
+def _run_and_check_output(step, runner_class):
+    runner = runner_class(step.description(), step.get_step_runner(), step.get_required_data())
+    result = runner.run(config=Bunch(step.config))
+    if result is not None:
+        raise RuntimeError(_create_exception_msg(step, result))
+    return result
+
+
+def _create_exception_msg(step, e):
+    return 'Critical error processing step "{}". Error message: {}'.\
+        format(step.description(), e)
+
+
 class Bunch(object):
     def __init__(self, adict):
         self.__dict__.update(adict)
+
+    def to_dict(self):
+        return self.__dict__
 
 
 PIPELINES = dict(

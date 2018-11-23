@@ -31,6 +31,12 @@ def generate_experiment(domain_dir, domain, **kwargs):
         # that lie in some arbitrary (one) optimal path. Default: False
         complete_only_wrt_optimal=False,
 
+        # The selection strategy to be used when marking which transitions are considered as optimal.
+        # - "arbitrary" marks as optimal the transitions in one single path btw initial state
+        #  and (some) goal per instance, chosen arbitrarily.
+        # "- complete" marks the transitions between all optimal paths btw initial state and (some) goal.
+        optimal_selection_strategy="arbitrary",
+
         # Type of sampling. Accepted options are:
         # - "all" (default): Use all expanded states
         # - "random": Use only a random sample of the expanded states, of size given by the option "num_sampled_states"
@@ -70,7 +76,7 @@ def generate_experiment(domain_dir, domain, **kwargs):
         parameter_generator=None,
 
         # Use the relaxed (weak) increase semantics
-        relax_numeric_increase=False,
+        # relax_numeric_increase=False,  # Not used ATM
 
         # Optionally, use a method that gives handcrafted names to the features
         # (default: None, which will use their string representation)

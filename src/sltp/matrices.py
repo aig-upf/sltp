@@ -144,33 +144,19 @@ def print_state_set(goal_states, filename):
 
 
 def generate_features(config, data, rng):
-    state_ids, features, model = compute_features(config, data)
-    print_feature_info(config, features)
-    print_feature_matrix(config, state_ids, features, model)
-    print_transition_matrix(state_ids, data.transitions, config.transitions_filename)
-    print_sat_matrix(config, state_ids, features, model)
-    print_sat_transition_matrix(state_ids, data.transitions, config.sat_transitions_filename)
-    print_state_set(data.goal_states, config.goal_states_filename)
-    print_state_set(data.unsolvable_states, config.unsolvable_states_filename)
-    log_features(features, config.feature_filename)
-    return dict(state_ids=state_ids, features=features)
-
-
-def compute_features(config, data):
-    state_ids = sorted(list(data.states.keys()))
-
+    sample = data.sample
+    state_ids = data.sample.get_sorted_state_ids()
     # First keep only those features which are able to distinguish at least some pair of states
     features, model = compute_feature_extensions(state_ids, data.features, data.extensions)
-
-    # DEBUGGING: FORCE A CERTAIN SET OF FEATURES:
-    # selected = [translator.features[i] for i in [8, 9, 25, 26, 1232]]
-    # selected = [translator.features[i] for i in [8, 9, 25, 26, 2390]]
-    # selected = [translator.features[i] for i in [1232]]
-    # translator.features = selected
-    # selected = None
-    # log_feature_denotations(state_ids, features, model, config.feature_denotation_filename, selected)
-
-    return state_ids, features, model
+    print_feature_info(config, features)
+    print_feature_matrix(config, state_ids, features, model)
+    print_transition_matrix(state_ids, sample.transitions, config.transitions_filename)
+    print_sat_matrix(config, state_ids, features, model)
+    print_sat_transition_matrix(state_ids, sample.transitions, config.sat_transitions_filename)
+    print_state_set(sample.goals, config.goal_states_filename)
+    print_state_set(sample.unsolvable, config.unsolvable_states_filename)
+    log_features(features, config.feature_filename)
+    return dict(features=features)
 
 
 def log_features(features, feature_filename):
