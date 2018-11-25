@@ -6,6 +6,7 @@ from collections import defaultdict, OrderedDict
 
 from .util.command import read_file
 from .util.naming import filename_core
+from .returncodes import ExitCode
 
 
 class TransitionSample:
@@ -17,6 +18,7 @@ class TransitionSample:
         # self.problem = dict()
         self.roots = set()  # The set of all roots
         self.instance_roots = []  # The root of each instance
+        self.instance_goals = []  # The goals of each instance
         self.goals = set()
         self.unsolvable = set()
         self.optimal_transitions = set()
@@ -37,6 +39,7 @@ class TransitionSample:
 
     def mark_as_goals(self, goals):
         self.goals.update(goals)
+        self.instance_goals.append(goals.copy())
 
     def mark_as_unsolvable(self, states):
         self.unsolvable.update(states)
@@ -55,7 +58,7 @@ class TransitionSample:
         return set(itertools.chain.from_iterable(self.optimal_transitions))
 
     def info(self):
-        return "instances: {}, states: {}, transitions: {} ({} optimal), goals: {}, unsolvable: {}".format(
+        return "roots: {}, states: {}, transitions: {} ({} optimal), goals: {}, unsolvable: {}".format(
             len(self.roots), len(self.states), self.num_transitions(), len(self.optimal_transitions),
             len(self.goals), len(self.unsolvable))
 
@@ -101,6 +104,9 @@ class TransitionSample:
         resampled.mark_as_unsolvable(unsolvable)
         _ = [resampled.mark_as_root(r) for r in roots]
         return resampled
+
+    def get_one_goal_per_instance(self):
+        return set(min(x) for x in self.instance_goals)
 
 
 def mark_optimal(goal_states, root_states, parents):
@@ -194,7 +200,7 @@ def mark_optimal_transitions(selection_strategy, sample: TransitionSample, goals
      """
     if selection_strategy == "arbitrary":
         # For each instance, we keep the first-reached goal, as a way of selecting an arbitrary optimal path.
-        goals = set(min(x) for x in goals_by_instance)
+        goals = sample.get_one_goal_per_instance()
         optimal = mark_optimal(goals, sample.roots, sample.parents)
         sample.mark_as_optimal(optimal)
         return
@@ -383,12 +389,4 @@ def read_single_sample_file(filename):
 def run(config, data, rng):
     assert not data
     sample = sample_generated_states(config, rng)
-    return dict(sample=sample)
-    # return dict(
-    #     states=states,
-    #     goal_states=goal_states,
-    #     optimal_transitions=optimal_transitions,
-    #     transitions=transitions,
-    #     root_states=root_states,
-    #     unsolvable_states=unsolvable,
-    # )
+    return ExitCode.Success, dict(sample=sample)

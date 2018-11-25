@@ -34,7 +34,7 @@ from tarski.syntax.transform.errors import TransformationError
 from tarski.syntax.transform.simplifications import transform_to_ground_atoms
 
 from .extensions import UniverseIndex, ExtensionCache
-from .sampling import sample_generated_states
+from .returncodes import ExitCode
 
 signal(SIGPIPE, SIG_DFL)
 
@@ -434,7 +434,7 @@ def extract_features(config, sample):
 
     logging.info('Final number of features: {}'.format(len(features)))
 
-    return dict(
+    return ExitCode.Success, dict(
         features=features,
         extensions=factory.processor.cache,
         enforced_feature_idxs=enforced_feature_idxs,
@@ -462,7 +462,7 @@ def generate_concepts(config, factory, generic_constants, types, goal_predicates
         old_c, new_c = concepts[0:c_i], concepts[c_i:c_j]
         old_r, new_r = roles[0:r_i], roles[r_i:r_j]
 
-        print("Starting iteration #{}...".format(i), end='', flush=True)
+        logging.info("Starting iteration #{}...".format(i))
 
         derive_compositions = i <= 1
         derive_compositions = False  # Temporarily deactivate compositions

@@ -20,8 +20,11 @@ import logging
 import multiprocessing
 import os
 import sys
+import time
 from signal import signal, SIGPIPE, SIG_DFL
 import numpy as np
+
+from .returncodes import ExitCode
 
 from .errors import CriticalPipelineError
 from .util import console
@@ -31,6 +34,7 @@ from .util.console import print_header, log_time
 from .util.naming import compute_instance_tag, compute_experiment_tag, compute_serialization_name, \
     compute_maxsat_filename, compute_info_filename, compute_maxsat_variables_filename, compute_sample_filenames
 from .util.serialization import deserialize, serialize
+from .util import performance
 
 signal(SIGPIPE, SIG_DFL)
 
@@ -112,7 +116,7 @@ def _run_planner(config, data, rng):
             .format(i, config.domain, config.driver, config.num_states, w)
         execute(command=[sys.executable, "run.py"] + params.split(' '),
                 stdout=o, cwd=config.planner_location)
-    return dict()
+    return ExitCode.Success, dict()
 
 
 class PlannerStep(Step):
@@ -211,7 +215,7 @@ class TransitionSamplingStep(Step):
         return "Generation of the training sample"
 
     def get_step_runner(self):
-        from sltp import sampling
+        from . import sampling
         return sampling.run
 
 
@@ -243,7 +247,7 @@ class ConceptGenerationStep(Step):
         return "Generation of concepts"
 
     def get_step_runner(self):
-        from sltp import features
+        from . import features
         return features.run
 
 
@@ -277,7 +281,7 @@ class FeatureMatrixGenerationStep(Step):
         return "Generation of the feature and transition matrices"
 
     def get_step_runner(self):
-        from sltp.matrices import generate_features
+        from .matrices import generate_features
         return generate_features
 
 
@@ -446,7 +450,7 @@ class QNPGenerationStep(Step):
         return "Generation of the QNP encoding"
 
     def get_step_runner(self):
-        from sltp import qnp
+        from . import qnp
         return qnp.generate_encoding
 
 
@@ -472,7 +476,7 @@ def save(basedir, output):
     def serializer():
         return tuple(serialize(data, compute_serialization_name(basedir, name)) for name, data in output.items())
 
-    log_time(serializer,
+    log_time(serializer, logging.DEBUG,
              'Serializing data elements "{}" to directory "{}"'.format(', '.join(output.keys()), basedir))
 
 
@@ -484,7 +488,7 @@ def load(basedir, items):
     def deserializer():
         return _deserializer(basedir, items)
 
-    output = log_time(deserializer,
+    output = log_time(deserializer, logging.DEBUG,
                       'Deserializing data elements "{}" from directory "{}"'.format(', '.join(items), basedir))
     return output
 
@@ -492,23 +496,38 @@ def load(basedir, items):
 class StepRunner(object):
     """ Run the given step """
     def __init__(self, step_name, target, required_data):
+
+        self.start = performance.timer()
         self.target = target
         self.step_name = step_name
         self.required_data = required_data
 
+    def setup(self, quiet):
+        self.loglevel = logging.getLogger().getEffectiveLevel()
+        if quiet:
+            logging.getLogger().setLevel(logging.ERROR)
+        else:
+            console.print_header("({}) STARTING STEP: {}".format(os.getpid(), self.step_name))
+
+    def teardown(self, quiet):
+        if quiet:
+            logging.getLogger().setLevel(self.loglevel)
+        else:
+            console.print_header("END OF STEP {}: {:.2f} CPU sec - {:.2f} MB".format(
+                self.step_name, time.process_time() - self.start, performance.memory_usage()))
+
     def run(self, config):
         """ Run the StepRunner target.
-            Keep in mind that this method will also be the entry point of spawned subprocess in the case
+            This method will also be the entry point of spawned subprocess in the case
             of SubprocessStepRunners
         """
-        from .util import performance
+        self.setup(config.quiet)
 
-        console.print_header("({}) STARTING STEP: {}".format(os.getpid(), self.step_name))
         data = Bunch(load(config.experiment_dir, self.required_data)) if self.required_data else None
         rng = np.random.RandomState(config.random_seed)  # ATM we simply create a RNG in each subprocess
-        start = performance.timer()
+
         try:
-            output = self.target(config=config, data=data, rng=rng)
+            exitcode, output = self.target(config=config, data=data, rng=rng)
         except Exception as exception:
             # Flatten the exception so that we make sure it can be serialized,
             # and return it immediately so that it can be reported from the parent process
@@ -518,8 +537,9 @@ class StepRunner(object):
             raise CriticalPipelineError("Error: {}".format(str(exception)))
 
         save(config.experiment_dir, output)
-        performance.print_performance_stats(self.step_name, start)
+        self.teardown(config.quiet)
         # profiling.start()
+        return exitcode
 
 
 class SubprocessStepRunner(StepRunner):
@@ -527,10 +547,10 @@ class SubprocessStepRunner(StepRunner):
     def run(self, config):
         pool = multiprocessing.Pool(processes=1)
         result = pool.apply_async(StepRunner.run, (), {"self": self, "config": config})
-        res = result.get()
+        exitcode = result.get()
         pool.close()
         pool.join()
-        return res
+        return exitcode
 
 
 class SATStateFactorizationStep(Step):
@@ -613,12 +633,12 @@ class Experiment(object):
                 break
 
 
-def _run_and_check_output(step, runner_class):
+def _run_and_check_output(step, runner_class, raise_on_error=True):
     runner = runner_class(step.description(), step.get_step_runner(), step.get_required_data())
-    result = runner.run(config=Bunch(step.config))
-    if result is not None:
-        raise RuntimeError(_create_exception_msg(step, result))
-    return result
+    exitcode = runner.run(config=Bunch(step.config))
+    if raise_on_error and exitcode is not ExitCode.Success:
+        raise RuntimeError(_create_exception_msg(step, exitcode))
+    return exitcode
 
 
 def _create_exception_msg(step, e):
@@ -631,7 +651,7 @@ class Bunch(object):
         self.__dict__.update(adict)
 
     def to_dict(self):
-        return self.__dict__
+        return self.__dict__.copy()
 
 
 PIPELINES = dict(

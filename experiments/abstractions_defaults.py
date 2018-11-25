@@ -99,6 +99,9 @@ def generate_experiment(domain_dir, domain, **kwargs):
 
         domain_dir=domain_dir,
         experiment_class=Experiment,  # The Experiment class to be used
+
+        # Reduce output to a minimum
+        quiet=False,
     )
 
     parameters = {**defaults, **kwargs}  # Copy defaults, overwrite with user-specified parameters

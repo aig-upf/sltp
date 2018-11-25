@@ -10,6 +10,8 @@ import numpy as np
 from tarski.dl import EmpiricalBinaryConcept, NullaryAtomFeature, ConceptCardinalityFeature, MinDistanceFeature
 
 from .features import Model
+from .returncodes import ExitCode
+
 
 PRUNE_DUPLICATE_FEATURES = True
 NP_FEAT_VALUE_TYPE = np.int8  # Keep it allowing negative values, so that we can subtract without overflow!
@@ -156,7 +158,7 @@ def generate_features(config, data, rng):
     print_state_set(sample.goals, config.goal_states_filename)
     print_state_set(sample.unsolvable, config.unsolvable_states_filename)
     log_features(features, config.feature_filename)
-    return dict(features=features)
+    return ExitCode.Success, dict(features=features)
 
 
 def log_features(features, feature_filename):

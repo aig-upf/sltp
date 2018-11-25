@@ -20,9 +20,9 @@ def print_lines(text, indent=0):
     print(idt + ("\n"+idt).join(text))
 
 
-def log_time(f, msg=None):
-    logging.info(msg)
+def log_time(f, lvl=logging.INFO, msg=None):
+    logging.log(lvl, msg)
     t0 = time.process_time()
     result = f()
-    logging.info("\t-> Elapsed CPU time: {0:.2f}".format(time.process_time() - t0))
+    logging.log(lvl, "\t-> Elapsed CPU time: {0:.2f}".format(time.process_time() - t0))
     return result

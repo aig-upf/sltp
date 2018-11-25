@@ -21,18 +21,19 @@ import os
 from collections import defaultdict
 from enum import Enum
 from signal import signal, SIGPIPE, SIG_DFL
-import time
 
 import numpy as np
-from sltp.sampling import TransitionSample
 
+
+from .sampling import TransitionSample
 from .errors import CriticalPipelineError
-from tarski.dl import FeatureValueChange, MinDistanceFeature
+from tarski.dl import FeatureValueChange
 from .util.console import print_header, print_lines
-from .util.command import count_file_lines, remove_duplicate_lines, read_file
+from .util.cnfwriter import CNFWriter
 from .solvers import solve
 from .util.performance import print_memory_usage
 from .util.serialization import serialize_to_string
+from .returncodes import ExitCode
 
 signal(SIGPIPE, SIG_DFL)
 
@@ -74,20 +75,22 @@ def generate_maxsat_problem(config, data, rng):
                                  config.cnf_filename, optimization,
                                  config.relax_numeric_increase, config.complete_only_wrt_optimal)
 
-    translator.run(data.enforced_feature_idxs)
+    result = translator.run(data.enforced_feature_idxs)
     # translator.writer.print_variables(config.maxsat_variables_file)
 
-    return dict(cnf_translator=translator)
+    # TODO Serialize less stuff. Probably we don't need to serialize the full translator
+    data = dict(cnf_translator=translator) if result == ExitCode.Success else dict()
+    return result, data
 
 
 def run_solver(config, data, rng):
     solution = solve(config.experiment_dir, config.cnf_filename, config.maxsat_solver, config.maxsat_timeout)
     if not solution.solved and solution.result == "UNSATISFIABLE":
-        raise CriticalPipelineError("MAXSAT encoding is UNSATISFIABLE")
+        return ExitCode.MaxsatModelUnsat, dict()
     else:
         logging.info("MAXSAT solution with cost {} found".format(solution.cost))
 
-    return dict(cnf_solution=solution)
+    return ExitCode.Success, dict(cnf_solution=solution)
 
 
 class AbstractAction(object):
@@ -306,7 +309,7 @@ class ModelTranslator(object):
         # self.find_inconsistency(allf)
         self.create_variables()
 
-        print("Generating D1 + bridge constraints from {} D1 variables".format(len(self.var_d1)), flush=True)
+        logging.info("Generating D1 + bridge constraints from {} D1 variables".format(len(self.var_d1)))
 
         # for s1, s2 in itertools.combinations(self.state_ids, 2):
         for s1, s2 in self.iterate_over_d1_pairs():
@@ -333,8 +336,9 @@ class ModelTranslator(object):
                 self.n_goal_clauses += 1
 
                 if len(d1_distinguishing_features) == 0:
-                    print("WARNING: No feature in the pool able to distinguish state pair {}, but one of the states "
-                          "is a goal and the other is not. MAXSAT encoding will be UNSAT".format((s1, s2)), flush=True)
+                    logging.warning("No feature in the pool can distinguish states {}, but one of them is a goal and "
+                                    "the other is not. MAXSAT encoding will be UNSAT".format((s1, s2)))
+                    return ExitCode.MaxsatModelUnsat
 
             # Else (i.e. D1(s1, s2) _might_ be false, create the bridge clauses between values of D1 and D2
             else:
@@ -343,7 +347,7 @@ class ModelTranslator(object):
                 if s2 in self.optimal_states:
                     self.create_bridge_clauses(d1_lit, s2, s1)
 
-        print("Generating D2 constraints from {} D2 variables".format(len(self.var_d2)), flush=True)
+        logging.info("Generating D2 constraints from {} D2 variables".format(len(self.var_d2)))
         # self.d2_distinguished = set()
         # for (s0, s1, t0, t1), d2_var in self.var_d2.items():
         for s0, s1, t0, t1 in self.iterate_over_d2_transitions():
@@ -393,7 +397,7 @@ class ModelTranslator(object):
         self.np_d1_distinguishing_features = None  # We won't need this anymore
         self.writer.save()
 
-        return self.writer.mapping
+        return ExitCode.Success
 
     def standard_qchange(self, s0, s1):
         return np.sign(self.feat_matrix[s1] - self.feat_matrix[s0])
@@ -668,179 +672,6 @@ class ModelTranslator(object):
                         logging.error("\t{}: {}".format((t, tprime), named_qt))
 
 
-class Variable(object):
-    def __init__(self, name):
-        self.name = name
-
-    def __eq__(self, other):
-        return self.name == other.name
-
-    def __hash__(self):
-        return hash(self.name)
-
-    def __str__(self):
-        return self.name
-
-    __repr__ = __str__
-
-
-class Literal(object):
-    def __init__(self, variable, polarity=True):
-        assert isinstance(variable, Variable)
-        self.variable = variable
-        self.polarity = polarity
-
-    def __neg__(self):
-        return Literal(self.variable, not self.polarity)
-
-    def __str__(self):
-        return "{}{}".format(("" if self.polarity else "-"), self.variable)
-
-    def to_cnf(self, variable_index):
-        return "{}{}".format(("" if self.polarity else "-"), variable_index[self.variable])
-
-    def __eq__(self, other):
-        return self.variable == other.variable and self.polarity == other.polarity
-
-    def __hash__(self):
-        return hash((self.variable, self.polarity))
-
-    __repr__ = __str__
-
-
-class Clause(object):
-    def __init__(self, literals, weight=None):
-        # assert all(isinstance(l, Literal) for l in literals)
-        # self.literals = tuple(literals)
-        self.literals = literals
-        # assert len(set(literals)) == len(self.literals)  # Make sure all literals are unique
-        self.weight = weight
-
-    def __str__(self):
-        return "{{{}}} [{}]".format(','.join(str(l) for l in self.literals), self.weight)
-
-    __repr__ = __str__
-
-    # def cnf_line(self, top, variable_index):
-    #     # w <literals> 0
-    #     w = top if self.weight is math.inf else self.weight
-    #     literals = " ".join(l.to_cnf(variable_index) for l in self.literals)
-    #     return "{} {} 0".format(w, literals)
-
-    # def cnf_line(self, top):
-    #     # w <literals> 0
-    #     w = top if self.weight is math.inf else self.weight
-    #     literals = " ".join(str(l) for l in self.literals)
-    #     return "{} {} 0".format(w, literals)
-
-    # def __eq__(self, other):
-    #     return self.literals == other.literals
-    #
-    # def __hash__(self):
-    #     return hash(self.literals)
-
-
-def print_clause(literals, weight):
-    # w <literals> 0
-    w = "#TOP#" if weight is None else weight
-    literals = " ".join(str(l) for l in literals)
-    return "{} {} 0".format(w, literals)
-
-
-class CNFWriter(object):
-    def __init__(self, filename):
-        self.filename = filename
-        self.variables = dict()
-        self.clauses = set()
-        self.clause_batch = []
-        self.num_clauses = 0
-        self.accumulated_weight = 0
-        self.mapping = dict()
-        self.closed = False
-        self.variable_index = None
-
-        self.buffer_filename = self.filename + ".tmp"
-        self.buffer = open(self.buffer_filename, "w")
-
-    def variable(self, name):
-        assert not self.closed
-        return self.variables.setdefault(name, Variable(name))
-
-    def literal(self, variable, polarity):
-        assert self.closed
-        i = self.variable_index[variable]
-        return i if polarity else -1 * i
-
-    def clause(self, literals, weight=None):
-        assert self.closed
-        # self.clauses.add(Clause(literals=literals, weight=weight)) # Keeping the set in memory is expensive!
-        self.num_clauses += 1
-        self.accumulated_weight += weight if weight is not None else 0
-
-        self.clause_batch.append((literals, weight))
-        if len(self.clause_batch) == 1000:
-            self.flush_clauses()
-
-    def flush_clauses(self):
-        clauses_str = '\n'.join(print_clause(literals, weight) for literals, weight in self.clause_batch)
-        print(clauses_str, file=self.buffer)
-        del self.clause_batch
-        self.clause_batch = []
-
-    def save(self):
-        assert self.closed
-        numvars = len(self.variables)
-        numclauses = self.num_clauses
-
-        self.flush_clauses()
-        self.buffer.close()
-        self.buffer = None
-        self._save(self.filename, numvars, numclauses)
-
-        # debug = True
-        # debug = False
-        # if debug:
-        #     dfilename = "{}.txt".format(self.filename)
-        #     debug_clause_printer = lambda c: str(c)
-        #     self._save(dfilename, numvars, numclauses, top, debug_clause_printer)
-
-    def _save(self, filename, numvars, numclauses):
-        num_written_clauses = count_file_lines(self.buffer_filename)
-        assert numclauses == num_written_clauses
-        remove_duplicate_lines(self.buffer_filename)
-        num_unique_clauses = count_file_lines(self.buffer_filename)
-        # num_unique_clauses_in_mem = len(self.clauses)
-        # assert num_unique_clauses == num_unique_clauses_in_mem  # Keeping the set in memory is expensive!
-        top = str(self.accumulated_weight + 1)
-
-        print("Writing max-sat encoding to file \"{}\"".format(self.filename))
-        print("Max-sat problem has {} variables and {} unique clauses (with repetitions: {}). Top weight is {}".format(
-            numvars, num_unique_clauses, numclauses, top))
-
-        with open(filename, "w") as output:
-            print("c WCNF model generated on {}".format(time.strftime("%Y%m%d %H:%M:%S", time.localtime())),
-                  file=output)
-            # p wcnf nbvar nbclauses top
-            print("p wcnf {} {} {}".format(numvars, num_unique_clauses, top), file=output)
-            for line in read_file(self.buffer_filename):
-                print(line.replace("#TOP#", top), file=output)
-                # for clause in self.clauses:
-                #     print(clause_printer(clause), file=file)
-
-    def close(self):  # Once closed, the writer won't admit more variable declarations
-        assert not self.closed
-        self.closed = True
-        self.variable_index = {var: i for i, var in enumerate(self.variables.values(), start=1)}
-        # Save the variable mapping to parse the solution later
-        self.mapping = {i: name for name, i in self.variable_index.items()}
-
-    def print_variables(self, filename):
-        assert self.closed
-        variables = sorted(self.variable_index.items(), key=lambda x: x[1])  # Sort by var index
-        with open(filename, 'w') as f:
-            print("\n".join("{}: {}".format(i, v) for v, i in variables), file=f)
-
-
 def attempt_single_merge(action_precs):
     for p1, p2 in itertools.combinations(action_precs, 2):
         diff = p1.symmetric_difference(p2)
@@ -887,5 +718,4 @@ def compute_action_model(config, data, rng):
     assert data.cnf_solution.solved
     states, actions, features = data.cnf_translator.compute_action_model(data.cnf_solution.assignment, data.features, config)
     data.cnf_translator.compute_qnp(states, actions, features, config, data)
-    # return dict(abstract_states=states, abstract_actions=actions)
-    return dict()
+    return ExitCode.Success, dict()

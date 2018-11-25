@@ -92,23 +92,39 @@ def experiment(experiment_name=None):
         domain_dir="blocks-downward",
         experiment_class=IncrementalExperiment,
         # instances=["probBLOCKS-5-0.pddl", "probBLOCKS-6-0.pddl", "probBLOCKS-7-0.pddl"],
-        instances=["probBLOCKS-4-0.pddl", "probBLOCKS-4-1.pddl", "probBLOCKS-4-2.pddl"],
-        num_states=5000, max_width=[-1, -1, -1],
-        initial_sample_size=50,
+        # instances=["probBLOCKS-4-0.pddl", "probBLOCKS-4-1.pddl", "probBLOCKS-4-2.pddl"],
+        instances=["probBLOCKS-4-0.pddl", "probBLOCKS-4-1.pddl"],
+        num_states=5000, max_width=-1,
+        initial_sample_size=30,
         # num_sampled_states=50,
         complete_only_wrt_optimal=False,
         max_concept_grammar_iterations=3,
-        initial_concept_bound=5, max_concept_bound=20, concept_bound_step=2,
+        initial_concept_bound=8, max_concept_bound=8, concept_bound_step=2,
+        quiet=True,
         concept_generator=None,
         parameter_generator=add_bw_domain_parameters,
         feature_namer=ijcai_paper_bw_feature_namer,
     )
 
-    experiments["aaai_clear_x_no_marking_2"] = update_dict(experiments["aaai_clear_x_no_marking"],
-                                            instances=["instance_5_clear_x_1.pddl"],#,"instance_5_clear_x_2.pddl",],
-                                            num_states=2000, max_width=[2],
-                                            num_sampled_states=100,
-                                            )
+    # Learns a simple action model which is however overfit to 3 blocks, and not sound in general
+    experiments["toy_clear_incremental"] = dict(
+        experiment_class=IncrementalExperiment,
+        instances=["instance_3_clear_x.pddl"],
+        max_concept_grammar_iterations=3,
+        num_states=100,
+        quiet=True,
+        initial_sample_size=100,
+        initial_concept_bound=10, max_concept_bound=10, concept_bound_step=2,
+        concept_generator=None, parameter_generator=add_bw_domain_parameters,
+        feature_namer=ijcai_paper_bw_feature_namer,)
+
+
+    experiments["aaai_clear_x_no_marking_2"] = update_dict(
+        experiments["aaai_clear_x_no_marking"],
+        instances=["instance_5_clear_x_1.pddl"],#,"instance_5_clear_x_2.pddl",],
+        num_states=2000, max_width=[2],
+        num_sampled_states=100,
+    )
 
     #
     experiments["ijcai_features_on_clear_5"] = update_dict(experiments["aaai_ijcai_features_on_clear_5_rnd"], num_sampled_states=None)

@@ -1,16 +1,83 @@
 import logging
 import os
 
-from sltp.util.misc import update_dict, project_dict
+import numpy as np
+from .returncodes import ExitCode
+from .util.misc import update_dict, project_dict
 from .driver import Experiment, generate_pipeline_from_list, PlannerStep, Step, check_int_parameter, \
     InvalidConfigParameter, TransitionSamplingStep, ConceptGenerationStep, StepRunner, SubprocessStepRunner, \
-    _run_and_check_output
+    _run_and_check_output, save, FeatureMatrixGenerationStep, MaxsatProblemGenerationStep, MaxsatProblemSolutionStep, \
+    ActionModelStep, load, Bunch
 
 
-class FullLearningStep(Step):
+def full_learning(config, sample, rng):
+    all_state_ids = list(sample.states.keys())
+    initial_size = min(len(all_state_ids), config.initial_sample_size)
+
+    # Get the initial sample of M states plus one goal state per instance, if any goal is available
+    resample_idxs = set(rng.choice(all_state_ids, initial_size, replace=False))
+    resample_idxs.update(sample.get_one_goal_per_instance())
+    working_sample = sample.resample(resample_idxs)
+
+    k, k_max, k_step = config.initial_concept_bound, config.max_concept_bound, config.concept_bound_step
+    assert k <= k_max
+    while True:
+
+        res, k = try_to_compute_abstraction_in_range(config, working_sample, k, k_max, k_step)
+        if res == ExitCode.NoAbstractionUnderComplexityBound:
+            logging.error("No abstraction possible for given sample set under max. complexity {}".format(k_max))
+            return res, dict()
+
+        # Otherwise, we learnt an abstraction with max. complexity k. Let's refine the working sample set with it!
+        logging.info("Abstraction with k={} found for sample set of size {} ".format(working_sample.num_states(), k))
+        validate = "TO DO :-)"
+        if True:
+            break
+    logging.info("The computed abstraction is sound & complete wrt all of the training instances")
+
+
+
+
+def try_to_compute_abstraction_in_range(config, sample, k_0, k_max, k_step):
+    k = k_0  # To avoid referenced-before-assigned warnings
+    for k in range(k_0, k_max + 1, k_step):
+        exitcode = try_to_compute_abstraction(config, sample, k)
+        if exitcode == ExitCode.Success:
+            return exitcode, k
+        else:
+            logging.info("No abstraction possible with max. concept complexity {}".format(k))
+    return ExitCode.NoAbstractionUnderComplexityBound, k
+
+
+def try_to_compute_abstraction(config, sample, k):
+    """ Try to learn a sound&complete abstract action model for the given sample,
+    with max. concept complexity given by k
+    """
+    # Create a subdir, e.g. inc_k5_s20, to place all the data for this learning attempt
+    subdir = os.path.join(config.experiment_dir, "inc_k{}_s{}".format(k, sample.num_states()))
+    os.makedirs(subdir, exist_ok=True)
+    save(subdir, dict(sample=sample))
+    subconfig = update_dict(config.to_dict(), max_concept_size=k, experiment_dir=subdir)
+
+    logging.info("Searching for abstraction: |S|={}, k=|{}|".format(sample.num_states(), k))
+    logging.info("Data stored in {}".format(subdir))
+
+    steps, subconfig = generate_pipeline_from_list([
+        ConceptGenerationStep, FeatureMatrixGenerationStep, MaxsatProblemGenerationStep,
+        MaxsatProblemSolutionStep, ActionModelStep], **subconfig)
+
+    for step in steps:
+        exitcode = _run_and_check_output(step, SubprocessStepRunner, raise_on_error=False)
+        if exitcode != ExitCode.Success:
+            return exitcode
+
+    return ExitCode.Success
+
+
+class IncrementalLearner:
     """ Generate concepts, compute feature set, compute A_F, all in one """
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        self.config = Bunch(self.process_config(kwargs))
 
     def get_required_attributes(self):
         return ["domain", "experiment_dir", "initial_concept_bound", "max_concept_bound", "concept_bound_step", "initial_sample_size"]
@@ -26,46 +93,12 @@ class FullLearningStep(Step):
         if config["initial_concept_bound"] > config["max_concept_bound"]:
             raise InvalidConfigParameter("initial_config_bound ({}) must be <= than max_concept_bound ({})".
                                          format(config["initial_concept_bound"], config["max_concept_bound"]))
-
-        config["concept_dir"] = os.path.join(config["experiment_dir"], 'terms')
-        config["concept_generator"] = config.get("concept_generator", None)
-        config["feature_generator"] = config.get("feature_generator", None)
-        config["enforce_features"] = config.get("enforce_features", None)
-        config["parameter_generator"] = config.get("parameter_generator", None)
-        config["distance_feature_max_complexity"] = config.get("distance_feature_max_complexity", 0)
-        config["max_concept_grammar_iterations"] = config.get("max_concept_grammar_iterations", None)
-
         return config
 
-    def description(self):
-        return "Full Learning Step"
-
-    def get_step_runner(self):
-        return full_learning
-
-
-def full_learning(config, data, rng):
-    # TransitionSamplingStep
-
-    all_states = data.sample.states
-    all_transitions = data.sample.transitions
-
-    # Get the initial sample of M states
-    working_set = project_dict(all_states, rng.choice(list(all_states.keys()), config.initial_sample_size, replace=False))
-
-    k = 1
-    while True:
-        parameters = update_dict(config.to_dict(), states=working_set, max_concept_size=k)
-        conceptgen = ConceptGenerationStep(**parameters)
-        _run_and_check_output(conceptgen, SubprocessStepRunner)
-
-        if "UNSAT":
-            pass
-
-
-        x = 1
-
-
+    def run(self):
+        data = load(self.config.experiment_dir, ["sample"])  # Load the initial sample
+        rng = np.random.RandomState(self.config.random_seed)
+        full_learning(self.config, data["sample"], rng)
 
 
 class IncrementalExperiment(Experiment):
@@ -82,18 +115,8 @@ class IncrementalExperiment(Experiment):
 
         # 1. Extract and resample the whole training set
         initial_steps, config = generate_pipeline_from_list([PlannerStep, TransitionSamplingStep], **self.parameters)
-        _run_and_check_output(initial_steps[0], SubprocessStepRunner)
-        _run_and_check_output(initial_steps[1], SubprocessStepRunner)
+        exitcode = _run_and_check_output(initial_steps[0], SubprocessStepRunner)
+        exitcode = _run_and_check_output(initial_steps[1], SubprocessStepRunner)
 
-        learner = FullLearningStep(**config)
-        result = _run_and_check_output(learner, StepRunner)
-
-        print("YES")
-
-        # ConceptGenerationStep,
-        # FeatureMatrixGenerationStep,
-        # MaxsatProblemGenerationStep,
-        # MaxsatProblemSolutionStep,
-        # ActionModelStep,
-
-
+        learner = IncrementalLearner(**config)
+        exitcode = learner.run()
