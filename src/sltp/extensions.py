@@ -9,7 +9,9 @@ import itertools
 import logging
 
 from bitarray import bitarray
+
 from tarski.dl import PrimitiveRole, PrimitiveConcept, UniversalConcept, EmptyConcept, NullaryAtom
+
 
 _btrue = bitarray('1')
 _bfalse = bitarray('0')
@@ -215,8 +217,4 @@ class ExtensionCache(object):
             self.all_traces[wrapped] = term
             # self.term_to_trace[term] = wrapped
             return True
-
-
-
-
 

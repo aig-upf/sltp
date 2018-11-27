@@ -23,18 +23,20 @@ import os
 import tarski as tsk
 
 from bitarray import bitarray
+from .language import parse_pddl, compute_goal_denotation
+from .util.misc import try_number
 from tarski import Predicate, Function
 from tarski.dl.concepts import GoalNullaryAtom, GoalConcept, GoalRole
-from tarski.io import FstripsReader
 from tarski.syntax import builtins
 from tarski.dl import Concept, Role, PrimitiveConcept, PrimitiveRole, InverseRole, StarRole, \
     ConceptCardinalityFeature, MinDistanceFeature, SyntacticFactory, NullaryAtomFeature, NullaryAtom, \
-    EmpiricalBinaryConcept
+    EmpiricalBinaryConcept, UniversalConcept, EmptyConcept
 from tarski.syntax.transform.errors import TransformationError
 from tarski.syntax.transform.simplifications import transform_to_ground_atoms
 
 from .extensions import UniverseIndex, ExtensionCache
 from .returncodes import ExitCode
+
 
 signal(SIGPIPE, SIG_DFL)
 
@@ -315,22 +317,6 @@ def store_role_restrictions(roles, args):
         f.write("\n".join(map(str, roles)))
 
 
-def parse_pddl(domain_file, instance_file=None):
-    """ Parse the given PDDL domain and instance files, the latter only if provided """
-    reader = FstripsReader()
-    reader.parse_domain(domain_file)
-    problem = reader.problem
-    types = []
-
-    # The generic constants are those which are parsed before parsing the instance file
-    generic_constants = problem.language.constants()
-
-    if instance_file is not None:
-        reader.parse_instance(instance_file)
-
-    return problem, problem.language, generic_constants, types
-
-
 def create_nullary_features(atoms):
     return [NullaryAtomFeature(a) for a in atoms]
 
@@ -433,6 +419,7 @@ def extract_features(config, sample):
         features = config.feature_generator(language)
 
     logging.info('Final number of features: {}'.format(len(features)))
+    # log_concept_denotations(states, concepts, factory.processor.cache, config.concept_denotation_filename)
 
     return ExitCode.Success, dict(
         features=features,
@@ -452,7 +439,7 @@ def generate_concepts(config, factory, generic_constants, types, goal_predicates
     # construct derived concepts and rules obtained with grammar
     c_i, c_j = 0, len(concepts)
     r_i, r_j = 0, len(roles)
-    logging.info('\nDeriving concepts/roles of max. size {}, starting from {} atomic concepts and {} roles'.
+    logging.info('Deriving concepts/roles of max. size {}, starting from {} atomic concepts and {} roles'.
                  format(config.max_concept_size, c_j, r_j))
 
     i = 1
@@ -481,14 +468,17 @@ def generate_concepts(config, factory, generic_constants, types, goal_predicates
     return atoms, concepts, roles
 
 
-def try_number(x):
-    try:
-        return int(x)
-    except ValueError:
-        try:
-            return float(x)
-        except ValueError:
-            return x
+def log_concept_denotations(states, concepts, cache, filename, selected=None):
+    selected = selected or concepts
+    # selected = ((str(f), f) for f in selected)
+    # selected = sorted(selected, key=lambda x: x[0])  # Sort features by name
+
+    with open(filename, 'w') as file:
+        for s, concept in itertools.product(states, selected):
+            val = cache.as_set(concept, s)
+            print("s_{}[{}] = {}".format(s, concept, val), file=file)
+
+    logging.info("Concept denotations logged in '{}'".format(filename))
 
 
 class Model(object):
@@ -507,3 +497,40 @@ class Model(object):
             value = feature.value(self.cache, state_id)
             self.cache.register_feature_value(feature, state_id, value)
             return value
+
+
+def create_denotation_processor(domain, instance, use_goal_denotation):
+    # Parse the domain & instance with Tarski
+    problem, language, generic_constants, types = parse_pddl(domain, instance)
+    goal_denotation = compute_goal_denotation(problem, use_goal_denotation)
+    return problem, DenotationProcessor(language, goal_denotation)
+
+
+class DenotationProcessor(object):
+    """ A helper to compute the denotation of concepts on single states """
+    def __init__(self, language, goal_denotation):
+        self.language = language
+        self.universe_sort = language.get_sort('object')
+        self.top = UniversalConcept(self.universe_sort.name)
+        self.bot = EmptyConcept(self.universe_sort.name)
+        self.universe = compute_universe_from_pddl_model(language)
+        self.processor = SemanticProcessor(language, [], self.universe, self.top, self.bot)
+        self.goal_denotation = goal_denotation
+
+    def create_cache_for_state(self, state):
+        cache = ExtensionCache(self.universe, self.top, self.bot)
+        # We give an arbitrary state ID to 0 to the only state we're interested in
+        self.processor.register_state_on_cache(0, state, cache, self.goal_denotation)
+        return cache
+
+    def compute_model_from_state(self, state):
+        return Model(self.create_cache_for_state(state))
+
+
+def compute_universe_from_pddl_model(language):
+    """ Compute a Universe Index from the PDDL model """
+    universe = UniverseIndex()
+    for obj in language.constants():
+        universe.add(try_number(obj.symbol))
+    universe.finish()  # No more objects possible
+    return universe

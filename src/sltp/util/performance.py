@@ -46,7 +46,3 @@ def memory_usage():
 def print_memory_usage():
     logging.info("Total memory usage: {:.2f}MB".format(memory_usage()))
     logging.info('Max. memory usage: {:.2f}MB'.format(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024))
-
-
-def timer():
-    return time.process_time()

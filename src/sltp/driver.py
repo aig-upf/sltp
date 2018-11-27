@@ -30,7 +30,6 @@ from .errors import CriticalPipelineError
 from .util import console
 from .util.bootstrap import setup_global_parser
 from .util.command import execute
-from .util.console import print_header, log_time
 from .util.naming import compute_instance_tag, compute_experiment_tag, compute_serialization_name, \
     compute_maxsat_filename, compute_info_filename, compute_maxsat_variables_filename, compute_sample_filenames
 from .util.serialization import deserialize, serialize
@@ -38,7 +37,7 @@ from .util import performance
 
 signal(SIGPIPE, SIG_DFL)
 
-VERSION = "0.2"
+VERSION = "0.5"
 
 BASEDIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 BENCHMARK_DIR = os.path.join(BASEDIR, 'domains')
@@ -124,9 +123,6 @@ class PlannerStep(Step):
 
     VALID_DRIVERS = ("bfs", "ff")
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def get_required_attributes(self):
         return ["instances", "domain", "num_states", "planner_location", "driver"]
 
@@ -176,9 +172,6 @@ class PlannerStep(Step):
 
 class TransitionSamplingStep(Step):
     """ Generate the sample of transitions from the set of solved planning instances """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def get_required_attributes(self):
         return ["instances", "sample_files", "experiment_dir", "optimal_selection_strategy"]
 
@@ -221,9 +214,6 @@ class TransitionSamplingStep(Step):
 
 class ConceptGenerationStep(Step):
     """ Generate systematically a set of features of bounded complexity from the transition (state) sample """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def get_required_attributes(self):
         return ["domain", "experiment_dir", "max_concept_size"]
 
@@ -240,6 +230,7 @@ class ConceptGenerationStep(Step):
         config["parameter_generator"] = config.get("parameter_generator", None)
         config["distance_feature_max_complexity"] = config.get("distance_feature_max_complexity", None)
         config["max_concept_grammar_iterations"] = config.get("max_concept_grammar_iterations", None)
+        config["concept_denotation_filename"] = compute_info_filename(config, "concept-denotations.txt")
 
         return config
 
@@ -253,9 +244,6 @@ class ConceptGenerationStep(Step):
 
 class FeatureMatrixGenerationStep(Step):
     """ Generate and output the feature and transition matrices for the problem  """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def get_required_attributes(self):
         return ["experiment_dir"]
 
@@ -287,9 +275,6 @@ class FeatureMatrixGenerationStep(Step):
 
 class MaxsatProblemGenerationStep(Step):
     """ Generate the max-sat problem from a given set of generated features """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def get_required_attributes(self):
         return ["experiment_dir"]
 
@@ -312,9 +297,6 @@ class MaxsatProblemGenerationStep(Step):
 
 class SatProblemGenerationStep(Step):
     """ Call Blai's SAT-encoding generator from a given set of generated features """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def get_required_attributes(self):
         return ["experiment_dir", "encoding_k", "encoding_m"]
 
@@ -335,9 +317,6 @@ class SatProblemGenerationStep(Step):
 
 class SatProblemSolutionStep(Step):
     """ Call some SAT solver to solve Blai's SAT encoding """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def get_required_attributes(self):
         return ["experiment_dir", "encoding_k", "encoding_m", "sat_theory_prefix"]
 
@@ -361,9 +340,6 @@ class SatProblemSolutionStep(Step):
 
 class SatSolutionDecodingStep(Step):
     """ Decode the SAT solution from Blai's encoding """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def get_required_attributes(self):
         return ["experiment_dir", "encoding_k", "encoding_m", "sat_theory_prefix", "sat_solution_filename"]
 
@@ -383,10 +359,6 @@ class SatSolutionDecodingStep(Step):
 
 class MaxsatProblemSolutionStep(Step):
     """ Run some max-sat solver on the generated encoding """
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def get_required_attributes(self):
         return ['maxsat_solver', 'maxsat_timeout']
 
@@ -476,8 +448,8 @@ def save(basedir, output):
     def serializer():
         return tuple(serialize(data, compute_serialization_name(basedir, name)) for name, data in output.items())
 
-    log_time(serializer, logging.DEBUG,
-             'Serializing data elements "{}" to directory "{}"'.format(', '.join(output.keys()), basedir))
+    console.log_time(serializer, logging.DEBUG,
+                     'Serializing data elements "{}" to directory "{}"'.format(', '.join(output.keys()), basedir))
 
 
 def _deserializer(basedir, items):
@@ -488,16 +460,15 @@ def load(basedir, items):
     def deserializer():
         return _deserializer(basedir, items)
 
-    output = log_time(deserializer, logging.DEBUG,
-                      'Deserializing data elements "{}" from directory "{}"'.format(', '.join(items), basedir))
+    output = console.log_time(deserializer, logging.DEBUG,
+                              'Deserializing data elements "{}" from directory "{}"'.format(', '.join(items), basedir))
     return output
 
 
 class StepRunner(object):
     """ Run the given step """
     def __init__(self, step_name, target, required_data):
-
-        self.start = performance.timer()
+        self.start = time.process_time()
         self.target = target
         self.step_name = step_name
         self.required_data = required_data
@@ -507,14 +478,14 @@ class StepRunner(object):
         if quiet:
             logging.getLogger().setLevel(logging.ERROR)
         else:
-            console.print_header("({}) STARTING STEP: {}".format(os.getpid(), self.step_name))
+            print(console.header("({}) STARTING STEP: {}".format(os.getpid(), self.step_name)))
 
     def teardown(self, quiet):
         if quiet:
             logging.getLogger().setLevel(self.loglevel)
         else:
-            console.print_header("END OF STEP {}: {:.2f} CPU sec - {:.2f} MB".format(
-                self.step_name, time.process_time() - self.start, performance.memory_usage()))
+            print(console.header("END OF STEP {}: {:.2f} CPU sec - {:.2f} MB".format(
+                self.step_name, time.process_time() - self.start, performance.memory_usage())))
 
     def run(self, config):
         """ Run the StepRunner target.
@@ -613,7 +584,7 @@ class Experiment(object):
         return "\t\t" + "\n\t\t".join("{}. {}".format(i, s.description()) for i, s in enumerate(self.steps, 1))
 
     def hello(self, args=None):
-        print_header("Generalized Action Model Learner, v.{}".format(VERSION))
+        print(console.header("SLTP v.{}".format(VERSION)))
         argparser = setup_global_parser(step_description=self.print_step_description())
         self.args = argparser.parse_args(args)
         if not self.args.steps and not self.args.run_all_steps:
@@ -627,13 +598,14 @@ class Experiment(object):
 
         for step in steps:
             try:
-                _run_and_check_output(step, SubprocessStepRunner)
+                run_and_check_output(step, SubprocessStepRunner)
             except Exception as e:
                 logging.error(step, _create_exception_msg(step, e))
                 break
 
 
-def _run_and_check_output(step, runner_class, raise_on_error=True):
+def run_and_check_output(step, runner_class, raise_on_error=True):
+    # return ExitCode.Success
     runner = runner_class(step.description(), step.get_step_runner(), step.get_required_data())
     exitcode = runner.run(config=Bunch(step.config))
     if raise_on_error and exitcode is not ExitCode.Success:

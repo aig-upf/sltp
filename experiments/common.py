@@ -148,6 +148,8 @@ def get_on_x_y_feature(lang):
 def ijcai_paper_bw_feature_namer(feature):
     s = str(feature)
     return {
+        "bool[And(clear, {a})]": "clear(a)",
+        "bool[holding]": "holding(·)",
         "bool[And(Exists(on,{b}), {a})]": "on(a, b)",
         "bool[And(Exists(Inverse(on),{a}), {b})]": "on(a, b)_2",
         "bool[And({a}, holding)]": "holding(a)",

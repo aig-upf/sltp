@@ -28,7 +28,7 @@ import numpy as np
 from .sampling import TransitionSample
 from .errors import CriticalPipelineError
 from tarski.dl import FeatureValueChange
-from .util.console import print_header, print_lines
+from .util.console import header, lines
 from .util.cnfwriter import CNFWriter
 from .solvers import solve
 from .util.performance import print_memory_usage
@@ -108,14 +108,17 @@ class AbstractAction(object):
                 self.preconditions == other.preconditions and self.effects == other.effects)
 
     def __str__(self):
-        return "AbstractAction[]"
+        precs = " and ".join(map(str, self.preconditions))
+        effs = ", ".join(map(str, self.effects))
+        return "AbstractAction<{}; {}>".format(precs, effs)
 
     __repr__ = __str__
 
 
 class ActionEffect(object):
-    def __init__(self, feature, change):
+    def __init__(self, feature, feature_name, change):
         self.feature = feature
+        self.feature_name = feature_name
         self.change = change
         self.hash = hash((self.__class__, self.feature, self.change))
 
@@ -132,22 +135,23 @@ class ActionEffect(object):
     __repr__ = __str__
 
     def print_named(self, namer=lambda s: s):
+        name = namer(self.feature_name)
         if self.change == FeatureValueChange.ADD:
-            return namer(self.feature)
+            return name
         if self.change == FeatureValueChange.DEL:
-            return "NOT {}".format(namer(self.feature))
+            return "NOT {}".format(name)
         if self.change == FeatureValueChange.ADD_OR_NIL:
-            return "ADD* {}".format(namer(self.feature))
+            return "ADD* {}".format(name)
         if self.change == FeatureValueChange.INC:
-            return "INC {}".format(namer(self.feature))
+            return "INC {}".format(name)
         if self.change == FeatureValueChange.DEC:
-            return "DEC {}".format(namer(self.feature))
+            return "DEC {}".format(name)
         if self.change == FeatureValueChange.INC_OR_NIL:
-            return "INC* {}".format(namer(self.feature))
+            return "INC* {}".format(name)
         raise RuntimeError("Unexpected effect type")
 
     def print_qnp_named(self, namer=lambda s: s):
-        name = namer(self.feature)
+        name = namer(self.feature_name)
         if self.change in (FeatureValueChange.ADD, FeatureValueChange.INC):
             return "{} 1".format(name)
 
@@ -443,13 +447,12 @@ class ModelTranslator(object):
             raise CriticalPipelineError("Zero-cost maxsat solution - "
                                         "no action model possible, the encoding has likely some error")
 
-        logging.info("Features (total complexity: {}): ".format(
+        print("Features (total complexity: {}): ".format(
             sum(self.feature_complexity[f] for f in selected_features)))
         print('\t' + '\n\t'.join("{}. {} [k={}, id={}]".format(
             i, namer(self.feature_names[f]), self.feature_complexity[f], f) for i, f in enumerate(selected_features, 1)))
 
-        print("Only for machine eyes: ")
-        print(serialize_to_string([features[i] for i in selected_features]))
+        logging.debug("Only for the machine:\n{}".format(serialize_to_string([features[i] for i in selected_features])))
         selected_data = [dict(idx=f,
                               name=namer(self.feature_names[f]),
                               type=int(not self.feature_types[f]))
@@ -467,16 +470,15 @@ class ModelTranslator(object):
 
             qchanges = self.retrieve_possibly_cached_qchanges(s, sprime)
             selected_qchanges = qchanges[selected_features]
-            abstract_effects = [ActionEffect(self.feature_names[f], self.generate_eff_change(f, c))
-                                for f, c in zip(selected_features, selected_qchanges) if c != 0]
+            abstract_effects = [ActionEffect(f, self.feature_names[f], self.generate_eff_change(f, c))
+                                for f, c in zip(selected_features, selected_qchanges) if c != 0]  # No need to record "NIL" changes
 
             precondition_bitmap = frozenset(zip(selected_features, abstract_s))
             abstract_actions.add(AbstractAction(precondition_bitmap, abstract_effects))
             if len(abstract_effects) == 0:
-                msg = "Abstract no-op necessary [concrete: ({}, {}), abstract: ({}, {})]"\
-                    .format(s, sprime, abstract_s, abstract_sprime)
+                msg = "Abstract no-op necessary [concrete: ({}, {}), abstract: ({}, {})]".format(
+                    s, sprime, abstract_s, abstract_sprime)
                 logging.warning(msg)
-                # raise RuntimeError(msg)
 
             already_computed.add((abstract_s, abstract_sprime))
 
@@ -489,17 +491,18 @@ class ModelTranslator(object):
         d1_distinguishing = self.np_d1_distinguishing_features.values()
         avg_num_d1_dist_features = sum(len(feats) for feats in d1_distinguishing) / len(d1_distinguishing)
         n_undistinguishable_state_pairs = sum(1 for x in d1_distinguishing if len(x) == 0)
-        print_header("Max-sat encoding stats", 1)
-        print_lines("Number of D1-undistinguishable state pairs: {}".format(n_undistinguishable_state_pairs), 1)
-        print_lines("Avg. # of D1-distinguishing features: {:.2f}".format(avg_num_d1_dist_features), 1)
-        print_lines("Clauses (possibly with repetitions):".format(), 1)
-        print_lines("Selected: {}".format(self.n_selected_clauses), 2)
-        print_lines("D1: {}".format(self.n_d1_clauses), 2)
-        print_lines("D2: {}".format(self.n_d2_clauses), 2)
-        print_lines("Bridge: {}".format(self.n_bridge_clauses), 2)
-        print_lines("Goal: {}".format(self.n_goal_clauses), 2)
-        print_lines("TOTAL: {}".format(self.n_selected_clauses + self.n_d1_clauses + self.n_d2_clauses +
-                                       self.n_bridge_clauses + self.n_goal_clauses), 2)
+        s = header("Max-sat encoding stats", 1)
+        s += "\n" + lines("Number of D1-undistinguishable state pairs: {}".format(n_undistinguishable_state_pairs), 1)
+        s += "\n" + lines("Avg. # of D1-distinguishing features: {:.2f}".format(avg_num_d1_dist_features), 1)
+        s += "\n" + lines("Clauses (possibly with repetitions):".format(), 1)
+        s += "\n" + lines("Selected: {}".format(self.n_selected_clauses), 2)
+        s += "\n" + lines("D1: {}".format(self.n_d1_clauses), 2)
+        s += "\n" + lines("D2: {}".format(self.n_d2_clauses), 2)
+        s += "\n" + lines("Bridge: {}".format(self.n_bridge_clauses), 2)
+        s += "\n" + lines("Goal: {}".format(self.n_goal_clauses), 2)
+        s += "\n" + lines("TOTAL: {}".format(self.n_selected_clauses + self.n_d1_clauses + self.n_d2_clauses +
+                                      self.n_bridge_clauses + self.n_goal_clauses), 2)
+        logging.info("\n{}".format(s))
 
     def debug_tests(self):
         # undist = self.undistinguishable_state_pairs
@@ -591,13 +594,13 @@ class ModelTranslator(object):
 
         if len(goal_dnf) > 1:
             logging.warning("Cannot minimize abstract goal DNF to single conjunction:")
-            _ = [print("\t" + self.print_qnp_conjunction(x, namer)) for x in goal_dnf]
+            # _ = [print("\t" + self.print_qnp_conjunction(x, namer)) for x in goal_dnf]
         else:
             logging.info("Abstract goal is: {}".format(self.print_qnp_conjunction(goal, namer)))
 
         if len(init_dnf) > 1:
             logging.warning("Cannot minimize abstract initial state DNF to single conjunction:")
-            _ = [print("\t" + self.print_qnp_conjunction(x, namer)) for x in init_dnf]
+            # _ = [print("\t" + self.print_qnp_conjunction(x, namer)) for x in init_dnf]
 
         with open(config.qnp_abstraction_filename, "w") as f:
             print(config.domain_dir, file=f)
@@ -718,4 +721,4 @@ def compute_action_model(config, data, rng):
     assert data.cnf_solution.solved
     states, actions, features = data.cnf_translator.compute_action_model(data.cnf_solution.assignment, data.features, config)
     data.cnf_translator.compute_qnp(states, actions, features, config, data)
-    return ExitCode.Success, dict()
+    return ExitCode.Success, dict(abstract_actions=actions, selected_features=features)

@@ -7,17 +7,17 @@ def get_terminal_size():
     return shutil.get_terminal_size()
 
 
-def print_header(text, indent=0):
+def header(text, indent=0):
     term_s = shutil.get_terminal_size()
     n_free = min(max((term_s.columns - indent*8), 0), 80)
     sep = "="*n_free
-    print_lines([sep, text, sep], indent)
+    return lines([sep, text, sep], indent)
 
 
-def print_lines(text, indent=0):
+def lines(text, indent=0):
     text = [text] if isinstance(text, str) else text
     idt = "\t"*indent
-    print(idt + ("\n"+idt).join(text))
+    return idt + ("\n"+idt).join(text)
 
 
 def log_time(f, lvl=logging.INFO, msg=None):

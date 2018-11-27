@@ -100,6 +100,12 @@ def generate_experiment(domain_dir, domain, **kwargs):
         domain_dir=domain_dir,
         experiment_class=Experiment,  # The Experiment class to be used
 
+        # The max. number of states in the Flaw set when validating an incremental abstraction
+        batch_refinement_size=10,
+
+        # Whether to clean the (sub-) workspaces used to compute incremental abstractions after finishing.
+        clean_workspace=True,
+
         # Reduce output to a minimum
         quiet=False,
     )

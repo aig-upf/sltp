@@ -102,6 +102,7 @@ class TransitionSample:
         resampled.mark_as_goals(goals)
         resampled.mark_as_optimal(optimal)
         resampled.mark_as_unsolvable(unsolvable)
+        resampled.remapping = remapping
         _ = [resampled.mark_as_root(r) for r in roots]
         return resampled
 
@@ -138,7 +139,8 @@ def log_sampled_states(sample, filename):
 
     with open(filename, 'w') as f:
         for id_, state in sample.states.items():
-            state_parents = ", ".join(sorted(map(str, sample.parents[id_])))
+            parents = sample.parents[id_] if id_ in sample.parents else []
+            state_parents = ", ".join(sorted(map(str, parents)))
             state_children = ", ".join(sorted(map(str, sample.transitions[id_])))
             atoms = ", ".join(print_atom(atom) for atom in state)
             is_goal = "*" if id_ in sample.goals else ""

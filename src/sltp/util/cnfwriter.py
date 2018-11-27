@@ -1,4 +1,4 @@
-
+import logging
 import time
 
 from .command import count_file_lines, remove_duplicate_lines, read_file
@@ -70,8 +70,8 @@ class CNFWriter(object):
         # assert num_unique_clauses == num_unique_clauses_in_mem  # Keeping the set in memory is expensive!
         top = str(self.accumulated_weight + 1)
 
-        print("Writing max-sat encoding to file \"{}\"".format(self.filename))
-        print("Max-sat problem has {} variables and {} unique clauses (with repetitions: {}). Top weight is {}".format(
+        logging.info("Writing max-sat encoding to file \"{}\"".format(self.filename))
+        logging.info("Max-sat problem: {} vars and {} unique clauses (with repetitions: {}). Top weight: {}".format(
             numvars, num_unique_clauses, numclauses, top))
 
         with open(filename, "w") as output:

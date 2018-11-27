@@ -158,6 +158,12 @@ def generate_features(config, data, rng):
     print_state_set(sample.goals, config.goal_states_filename)
     print_state_set(sample.unsolvable, config.unsolvable_states_filename)
     log_features(features, config.feature_filename)
+
+    # selected = [translator.features[i] for i in [8, 9, 25, 26, 1232]]
+    selected = [features[1], features[35], ]
+    selected = None
+    log_feature_denotations(state_ids, features, model, config.feature_denotation_filename, selected)
+
     return ExitCode.Success, dict(features=features)
 
 

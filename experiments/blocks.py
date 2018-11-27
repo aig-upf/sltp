@@ -89,18 +89,20 @@ def experiment(experiment_name=None):
                                               )
 
     experiments["clear_x_incremental"] = dict(
-        domain_dir="blocks-downward",
+        # domain_dir="blocks-downward",
         experiment_class=IncrementalExperiment,
         # instances=["probBLOCKS-5-0.pddl", "probBLOCKS-6-0.pddl", "probBLOCKS-7-0.pddl"],
         # instances=["probBLOCKS-4-0.pddl", "probBLOCKS-4-1.pddl", "probBLOCKS-4-2.pddl"],
-        instances=["probBLOCKS-4-0.pddl", "probBLOCKS-4-1.pddl"],
+        instances=["instance_8_clear_x_0.pddl", "instance_5_clear_x.pddl"],  # , "instance_4_clear_x.pddl"],
         num_states=5000, max_width=-1,
-        initial_sample_size=30,
+        initial_sample_size=5,
         # num_sampled_states=50,
         complete_only_wrt_optimal=False,
         max_concept_grammar_iterations=3,
-        initial_concept_bound=8, max_concept_bound=8, concept_bound_step=2,
-        quiet=True,
+        initial_concept_bound=16, max_concept_bound=16, concept_bound_step=2,
+        batch_refinement_size=1,
+        # quiet=True,
+        clean_workspace=False,
         concept_generator=None,
         parameter_generator=add_bw_domain_parameters,
         feature_namer=ijcai_paper_bw_feature_namer,
@@ -117,7 +119,6 @@ def experiment(experiment_name=None):
         initial_concept_bound=10, max_concept_bound=10, concept_bound_step=2,
         concept_generator=None, parameter_generator=add_bw_domain_parameters,
         feature_namer=ijcai_paper_bw_feature_namer,)
-
 
     experiments["aaai_clear_x_no_marking_2"] = update_dict(
         experiments["aaai_clear_x_no_marking"],
