@@ -473,6 +473,7 @@ class Theory {
 
         AbstractAction() : selected_precondition_(0), precondition_(0), selected_effect_(0), effect_(0) { }
         AbstractAction(const string &name) : name_(name), selected_precondition_(0), precondition_(0), selected_effect_(0), effect_(0) { }
+
         void add_precondition(const string &feature, int prec) {
             if( (feature_map_ == nullptr) || (feature_map_->find(feature) == feature_map_->end()) ) {
                 cout << "error: add_precondition: feature '" << feature << "' not found in feature map; did you forget --add-features to add features in forced actions?" << endl;
@@ -559,13 +560,15 @@ class Theory {
         bool add_actions_;
         bool add_features_;
         bool only_soundness_;
+        bool log_feature_variables_;
         Options()
-          : ordering_(true),
+          : ordering_(false),
             decode_(false),
             explicit_goals_(false),
             add_actions_(false),
             add_features_(false),
-            only_soundness_(false) {
+            only_soundness_(false),
+            log_feature_variables_(true) {
         }
     };
 
@@ -574,11 +577,12 @@ class Theory {
     const Transitions &T_;
     const int K_;           // number of features in abstraction
     const int N_;           // number of actions in abstraction
-
     const Options options_;
-    Items<AbstractAction> actions_;
-    Items<string> features_;
-    Items<int> goals_;
+
+    // forced elements (added by "hand")
+    Items<AbstractAction> forced_actions_;
+    Items<string> forced_features_;
+    Items<int> forced_goals_;
 
     const int num_states_;
     const int num_features_;
@@ -598,7 +602,8 @@ class Theory {
 
   public:
     Theory(const Matrix &M, const Transitions &T, int K, int N, const Options &options)
-      : M_(M), T_(T), K_(K), N_(N), options_(options),
+      : M_(M), T_(T), K_(K), N_(N),
+        options_(options),
         num_states_(M_.num_states()),
         num_features_(M_.num_features()),
         log_num_features_(0),
@@ -657,15 +662,9 @@ class Theory {
         assert((-int(literals_.size()) <= index) && (index <= int(literals_.size())));
         return index > 0 ? *literals_[index - 1] : *literals_[variables_.size() + -index - 1];
     }
+
     int num_variables() const {
         return variables_.size();
-    }
-
-    void add_implication(const Implication *IP) {
-        implications_.push_back(IP);
-    }
-    void add_comment(const string &comment) {
-        comments_.push_back(make_pair(implications_.size(), comment));
     }
     int num_implications() const {
         return implications_.size();
@@ -678,11 +677,22 @@ class Theory {
         return model_;
     }
 
-    int index_for_selected_feature(const vector<bool> &model, int j) const {
+    int index_for_selected_feature(const vector<bool> &model, int k) const {
         int index = 0;
-        for( int k = 0; k < log_num_features_; ++k ) {
-            assert(F(j, k) < model.size());
-            index += model[F(j, k)] ? (1 << k) : 0;
+        if( options_.log_feature_variables_ ) {
+            for( int t = 0; t < log_num_features_; ++t ) {
+                assert(F(k, t) < model.size());
+                index += model[F(k, t)] ? (1 << t) : 0;
+            }
+        } else {
+            index = -1;
+            for( int j = 0; j < num_features_; ++j ) {
+                if( model[Fn(k, j)] ) {
+                    index = j;
+                    break;
+                }
+            }
+            assert(index != -1);
         }
         return index;
     }
@@ -723,6 +733,19 @@ class Theory {
         return feature;
     }
 
+  protected:
+    bool do_ordering() const {
+        bool disable = (forced_features_.size() == K_) || ((forced_features_.size() < K_) && !forced_actions_.empty());
+        return options_.ordering_ && !disable;
+    }
+
+    void add_implication(const Implication *IP) {
+        implications_.push_back(IP);
+    }
+    void add_comment(const string &comment) {
+        comments_.push_back(make_pair(implications_.size(), comment));
+    }
+
     void build_variables() {
         // A variables: 4 x K x N
         var_offsets_.push_back(make_pair(0, "A"));
@@ -738,17 +761,31 @@ class Theory {
         }
         cout << "A: #variables=" << variables_.size() - var_offsets_.back().first << " (4KN), offset=" << var_offsets_.back().first << endl;
 
-        // F variables: K x log2(F)
-        var_offsets_.push_back(make_pair(variables_.size(), "F"));
-        for( int j = 0; j < K_; ++j ) {
-            for( int k = 0; k < log_num_features_; ++k ) {
-                int index = variables_.size();
-                string name = string("F(") + to_string(j) + "," + to_string(k) + ")";
-                variables_.push_back(new Var(index, name));
-                assert(index == F(j, k));
+        if( options_.log_feature_variables_ ) {
+            // F variables: K x log2(F) (logarithmic encoding)
+            var_offsets_.push_back(make_pair(variables_.size(), "F"));
+            for( int k = 0; k < K_; ++k ) {
+                for( int t = 0; t < log_num_features_; ++t ) {
+                    int index = variables_.size();
+                        string name = string("F(") + to_string(k) + "," + to_string(t) + ")";
+                    variables_.push_back(new Var(index, name));
+                    assert(index == F(k, t));
+                }
             }
+            cout << "F: #variables=" << variables_.size() - var_offsets_.back().first << " (KL) where L=log2(F), offset=" << var_offsets_.back().first << endl;
+        } else {
+            // Fn variables: K x F (naive encoding)
+            var_offsets_.push_back(make_pair(variables_.size(), "Fn"));
+            for( int k = 0; k < K_; ++k ) {
+                for( int j = 0; j < num_features_; ++j ) {
+                    int index = variables_.size();
+                    string name = string("Fn(") + to_string(k) + "," + to_string(j) + ")";
+                    variables_.push_back(new Var(index, name));
+                    assert(index == Fn(k, j));
+                }
+            }
+            cout << "Fn: #variables=" << variables_.size() - var_offsets_.back().first << " (KF), offset=" << var_offsets_.back().first << endl;
         }
-        cout << "F: #variables=" << variables_.size() - var_offsets_.back().first << " (KL) where L=log2(F), offset=" << var_offsets_.back().first << endl;
 
         // phi and phi* variables: 2 x S x K
         var_offsets_.push_back(make_pair(variables_.size(), "phi"));
@@ -856,19 +893,22 @@ class Theory {
         }
         cout << "APPMATCH: #variables=" << variables_.size() - var_offsets_.back().first << " (TN), offset=" << var_offsets_.back().first << endl;
 
-        bool disable_ordering = (features_.size() == K_) || ((features_.size() < K_) && !actions_.empty());
-        if( options_.ordering_ && !disable_ordering ) {
-            // df variables:
-            var_offsets_.push_back(make_pair(variables_.size(), "df"));
-            for( int j = 0; j + 1 < K_; ++j ) {
-                for( int k = 0; k < log_num_features_; ++k ) {
-                    int index = variables_.size();
-                    string name = string("df(") + to_string(j) + "," + to_string(k) + ")";
-                    variables_.push_back(new Var(index, name));
-                    assert(index == df(j, k));
+        if( do_ordering() ) {
+            if( options_.log_feature_variables_ ) {
+                // df variables:
+                var_offsets_.push_back(make_pair(variables_.size(), "df"));
+                for( int j = 0; j + 1 < K_; ++j ) {
+                    for( int k = 0; k < log_num_features_; ++k ) {
+                        int index = variables_.size();
+                        string name = string("df(") + to_string(j) + "," + to_string(k) + ")";
+                        variables_.push_back(new Var(index, name));
+                        assert(index == df(j, k));
+                    }
                 }
+                cout << "df: #variables=" << variables_.size() - var_offsets_.back().first << " ((K-1) x log2(F)), offset=" << var_offsets_.back().first << endl;
+            } else {
+                // there is no need for extra variables when log encoding is disabled
             }
-            cout << "df: #variables=" << variables_.size() - var_offsets_.back().first << " ((K-1) x log2(F)), offset=" << var_offsets_.back().first << endl;
         }
 
         add_variables_for_features();
@@ -895,23 +935,34 @@ class Theory {
         return var_offsets_[0].first + index;
     }
 
-    // F(j, k) iff j-th feature encodes feature whose index has k-th set to 1 (logarithmic encoding)
-    int F(int j, int k) const { // j in {0, ..., K-1}, k in {0, ..., log2(F)-1}
-        assert((0 <= j) && (j < K_));
-        assert((0 <= k) && (k < log_num_features_));
-        int index = k + log_num_features_ * j;
+    // F(k, t) iff k-th feature is feature whose index has t-th bit set to 1 (logarithmic encoding)
+    int F(int k, int t) const { // k in {0, ..., K-1}, t in {0, ..., log2(F)-1}
+        assert(options_.log_feature_variables_);
+        assert((0 <= k) && (k < K_));
+        assert((0 <= t) && (t < log_num_features_));
+        int index = t + log_num_features_ * k;
         assert(var_offsets_[1].second == "F");
         return var_offsets_[1].first + index;
     }
-    int df(int j, int k) const { // j in {0, ..., K-2}, k in {0, ..., log2(F)-1}
-        assert((0 <= j) && (j + 1 < K_));
-        assert((0 <= k) && (k < log_num_features_));
-        int index = k + log_num_features_ * j;
+    // Fn(k, j) iff k-th feature is feature whose index is j (naive encoding)
+    int Fn(int k, int j) const { // k in {0, ..., K-1}, j in {0, ..., F-1}
+        assert(!options_.log_feature_variables_);
+        assert((0 <= k) && (k < K_));
+        assert((0 <= j) && (j < num_features_));
+        int index = j + num_features_ * k;
+        assert(var_offsets_[1].second == "Fn");
+        return var_offsets_[1].first + index;
+    }
+
+    int df(int k, int j) const { // k in {0, ..., K-2}, j in {0, ..., log2(F)-1}
+        assert((0 <= k) && (k + 1 < K_));
+        assert((0 <= j) && (j < log_num_features_));
+        int index = j + log_num_features_ * k;
         assert(var_offsets_[9].second == "df");
         return var_offsets_[9].first + index;
     }
     int MappedBy(int j, int k) const { // j in {0, ..., #forced-features-1}, k in {0, ..., K-1}
-        assert((0 <= j) && (j < int(features_.size())));
+        assert((0 <= j) && (j < int(forced_features_.size())));
         assert((0 <= k) && (k < K_));
         int index = k + K_ * j;
         assert(var_offsets_[10].second == "MappedBy");
@@ -949,7 +1000,7 @@ class Theory {
         return var_offsets_[4].first + index;
     }
 
-    // used for soundness/completeness
+    // INC(k, i, l) iff F^k increases in transition (s_i, s_l) in sample
     int INC(int k, int i, int l) const { // k in {0, ..., K}, (i,l) in {0, ..., transitions-1}
         assert((0 <= k) && (k < K_));
         assert((0 <= i) && (i < num_states_));
@@ -959,7 +1010,7 @@ class Theory {
         return var_offsets_[5].first + index;
     }
 
-    // used for soundness/completeness
+    // DEC(k, i, l) iff F^k decreases in transition (s_i, s_l) in sample
     int DEC(int k, int i, int l) const { // k in {0, ..., K}, (i,l) in {0, ..., transitions-1}
         assert((0 <= k) && (k < K_));
         assert((0 <= i) && (i < num_states_));
@@ -989,6 +1040,19 @@ class Theory {
         return var_offsets_[8].first + index;
     }
 
+    // auxiliary
+    // [F^k is numeric] is equiv. to -F(k,t) for all t >= index_for_numerical
+    void add_antecedent_for_numeric_feature(Implication &IP, int k) const {
+        assert((0 <= k) && (k < K_));
+        if( options_.log_feature_variables_ ) {
+            for( int t = log_last_numerical_feature_; t < log_num_features_; ++t )
+                IP.add_antecedent(-(1 + F(k, t)));
+        } else {
+            for( int j = M_.last_numerical_feature(); j < num_features_; ++j )
+                IP.add_antecedent(-(1 + Fn(k, j)));
+        }
+    }
+
     // construction of base formulas
     void build_formulas_A() {
         // constraints for A formulas
@@ -1006,14 +1070,12 @@ class Theory {
                 IP2->add_consequent(1 + A(3, j, k));
                 add_implication(IP2);
 
-                // if F^k is numeric and it is decremented, precondition must be value is > 0
-                // A(1,j,k) & -A(2,j,k) & [F^k is numeric] => A(4,j,k)
-                // [F^k is numeric] = -F(k,t) for all t >= index_for_numerical
+                // if F^k is numeric and it is decremented, precondition must be value > 0;
+                // that is, A(1,j,k) & -A(2,j,k) & [F^k is numeric] => A(4,j,k)
                 Implication *IP3 = new Implication;
                 IP3->add_antecedent(1 + A(1, j, k));
                 IP3->add_antecedent(-(1 + A(2, j, k)));
-                for( int t = log_last_numerical_feature_; t < log_num_features_; ++t )
-                    IP3->add_antecedent(-(1 + F(k, t)));
+                add_antecedent_for_numeric_feature(*IP3, k);
                 IP3->add_consequent(1 + A(4, j, k));
                 add_implication(IP3);
             }
@@ -1054,89 +1116,115 @@ class Theory {
     }
 
     void build_formulas_F() {
-        // constraints: dummy features are not selected
-        for( int j = 0; j < K_; ++j ) {
-            for( int index = M_.last_numerical_feature(); index < M_.first_boolean_feature(); ++index ) {
+        if( options_.log_feature_variables_ ) {
+            // constraints: dummy features are not selected
+            for( int k = 0; k < K_; ++k ) {
+                for( int index = M_.last_numerical_feature(); index < M_.first_boolean_feature(); ++index ) {
+                    Implication *IP = new Implication;
+                    for( int t = 0; t < log_num_features_; ++t )
+                        IP->add_antecedent(bit(t, index) ? 1 + F(k, t) : -(1 + F(k, t)));
+                    add_implication(IP);
+                }
+            }
+
+            // constraints: inexistent features are not selected
+            for( int k = 0; k < K_; ++k ) {
+                for( int index = num_features_; index < (1 << log_num_features_); ++index ) {
+                    Implication *IP = new Implication;
+                    for( int t = 0; t < log_num_features_; ++t )
+                        IP->add_antecedent(bit(t, index) ? 1 + F(k, t) : -(1 + F(k, t)));
+                    add_implication(IP);
+                }
+            }
+        } else {
+            // F^k should be some feature
+            for( int k = 0; k < K_; ++k ) {
                 Implication *IP = new Implication;
-                for( int k = 0; k < log_num_features_; ++k )
-                    IP->add_antecedent(bit(k, index) ? 1 + F(j, k) : -(1 + F(j, k)));
+                for( int j = 0; j < num_features_; ++j )
+                    IP->add_consequent(1 + Fn(k, j));
                 add_implication(IP);
             }
-        }
 
-        // constraints: inexistent features are not selected
-        for( int j = 0; j < K_; ++j ) {
-            for( int index = num_features_; index < (1 << log_num_features_); ++index ) {
-                Implication *IP = new Implication;
-                for( int k = 0; k < log_num_features_; ++k )
-                    IP->add_antecedent(bit(k, index) ? 1 + F(j, k) : -(1 + F(j, k)));
-                add_implication(IP);
-            }
-        }
-
-        // constraints: ordering of selected features F^0 < F^0 < ... < F^{K-1}
-        bool disable_ordering = (features_.size() == K_) || ((features_.size() < K_) && !actions_.empty());
-        if( options_.ordering_ && !disable_ordering ) {
-            for( int k = 0; k + 1 < K_; ++k ) {
-#if 1 // CHECK: for some reason, it is more efficient to generate these implications here
-                for( int t = 0; t < log_num_features_; ++t ) {
-                    Implication *IP1 = new Implication;
-                    IP1->add_antecedent(1 + df(k, t));
-                    IP1->add_consequent(-(1 + F(k, t)));
-                    add_implication(IP1);
-
-                    Implication *IP2 = new Implication;
-                    IP2->add_antecedent(1 + df(k, t));
-                    IP2->add_consequent(1 + F(k + 1, t));
-                    add_implication(IP2);
-
-                    for( int i = t + 1; i < log_num_features_; ++i ) {
-                        Implication *IQ1 = new Implication;
-                        IQ1->add_antecedent(1 + df(k, t));
-                        IQ1->add_antecedent(1 + F(k, i));
-                        IQ1->add_consequent(1 + F(k + 1, i));
-                        add_implication(IQ1);
-
-                        Implication *IQ2 = new Implication;
-                        IQ2->add_antecedent(1 + df(k, t));
-                        IQ2->add_antecedent(-(1 + F(k, i)));
-                        IQ2->add_consequent(-(1 + F(k + 1, i)));
-                        add_implication(IQ2);
+            // F^k cannot map to two different features
+            for( int k = 0; k < K_; ++k ) {
+                for( int i = 0; i < num_features_; ++i ) {
+                    for( int j = i + 1; j < num_features_; ++j ) {
+                        Implication *IP = new Implication;
+                        IP->add_consequent(-(1 + Fn(k, i)));
+                        IP->add_consequent(-(1 + Fn(k, j)));
+                        add_implication(IP);
                     }
                 }
-#endif
+            }
 
-                Implication *IP = new Implication;
-                for( int t = 0; t < log_num_features_; ++t )
-                    IP->add_consequent(1 + df(k, t));
-                add_implication(IP);
+            // constraints: dummy features are not selected
+            for( int k = 0; k < K_; ++k ) {
+                for( int j = M_.last_numerical_feature(); j < M_.first_boolean_feature(); ++j ) {
+                    Implication *IP = new Implication;
+                    IP->add_antecedent(-(1 + Fn(k, j)));
+                    add_implication(IP);
+                }
+            }
+
+            // constraints: inexistent features are not selected
+            for( int k = 0; k < K_; ++k ) {
+                for( int j = num_features_; j < (1 << log_num_features_); ++j ) {
+                    Implication *IP = new Implication;
+                    IP->add_antecedent(-(1 + Fn(k, j)));
+                    add_implication(IP);
+                }
             }
         }
+
+        // ordering of selected features F^0 < F^0 < ... < F^{K-1}
+        build_formulas_ordering();
     }
 
     void build_phi(int k, int i, bool star) {
         assert((0 <= k) && (k < K_));
         assert((0 <= i) && (i < num_states_));
 
-        // forward implications
-        for( int l = 0; l < num_features_; ++l ) {
-            if( (!star && !M_(i, l)) || (star && M_(i, l)) ) {
-                Implication *IP = new Implication;
-                IP->add_antecedent(1 + phi(k, i, star));
-                for( int t = 0; t < log_num_features_; ++t )
-                    IP->add_consequent(bit(t, l) ? -(1 + F(k, t)) : (1 + F(k, t)));
-                add_implication(IP);
+        if( options_.log_feature_variables_ ) {
+            // forward implications
+            for( int l = 0; l < num_features_; ++l ) {
+                if( (!star && (M_(i, l) == 0)) || (star && (M_(i, l) > 0)) ) {
+                    Implication *IP = new Implication;
+                    IP->add_antecedent(1 + phi(k, i, star));
+                    for( int t = 0; t < log_num_features_; ++t )
+                        IP->add_consequent(bit(t, l) ? -(1 + F(k, t)) : (1 + F(k, t)));
+                    add_implication(IP);
+                }
             }
-        }
 
-        // backward implications
-        for( int l = 0; l < num_features_; ++l ) {
-            if( (!star && M_(i, l)) || (star && !M_(i, l)) ) {
-                Implication *IP = new Implication;
-                IP->add_consequent(1 + phi(k, i, star));
-                for( int t = 0; t < log_num_features_; ++t )
-                    IP->add_antecedent(bit(t, l) ? (1 + F(k, t)) : -(1 + F(k, t)));
-                add_implication(IP);
+            // backward implications
+            for( int l = 0; l < num_features_; ++l ) {
+                if( (!star && (M_(i, l) > 0)) || (star && (M_(i, l) == 0)) ) {
+                    Implication *IP = new Implication;
+                    IP->add_consequent(1 + phi(k, i, star));
+                    for( int t = 0; t < log_num_features_; ++t )
+                        IP->add_antecedent(bit(t, l) ? (1 + F(k, t)) : -(1 + F(k, t)));
+                    add_implication(IP);
+                }
+            }
+        } else {
+            // forward implications
+            for( int l = 0; l < num_features_; ++l ) {
+                if( (!star && (M_(i, l) == 0)) || (star && (M_(i, l) > 0)) ) {
+                    Implication *IP = new Implication;
+                    IP->add_antecedent(1 + phi(k, i, star));
+                    IP->add_consequent(-(1 + Fn(k, l)));
+                    add_implication(IP);
+                }
+            }
+
+            // backward implications
+            for( int l = 0; l < num_features_; ++l ) {
+                if( (!star && (M_(i, l) > 0)) || (star && (M_(i, l) == 0)) ) {
+                    Implication *IP = new Implication;
+                    IP->add_consequent(1 + phi(k, i, star));
+                    IP->add_antecedent(1 + Fn(k, l));
+                    add_implication(IP);
+                }
             }
         }
     }
@@ -1212,14 +1300,26 @@ class Theory {
             add_implication(IP1);
 
             // RES(i,l,j) & A(1,j,k) & -A(2,j,k) & -[F^k is numeric] -> phi*(k,l)
-            for( int t = log_last_numerical_feature_; t < log_num_features_; ++t ) {
-                Implication *IP2 = new Implication;
-                IP2->add_antecedent(1 + RES(i, l, j));
-                IP2->add_antecedent(1 + A(1, j, k));
-                IP2->add_antecedent(-(1 + A(2, j, k)));
-                IP2->add_antecedent(1 + F(k, t)); // -[F^k is numeric]
-                IP2->add_consequent(1 + phi(k, state_l, true));
-                add_implication(IP2);
+            if( options_.log_feature_variables_ ) {
+                for( int t = log_last_numerical_feature_; t < log_num_features_; ++t ) {
+                    Implication *IP2 = new Implication;
+                    IP2->add_antecedent(1 + RES(i, l, j));
+                    IP2->add_antecedent(1 + A(1, j, k));
+                    IP2->add_antecedent(-(1 + A(2, j, k)));
+                    IP2->add_antecedent(1 + F(k, t)); // -[F^k is numeric]
+                    IP2->add_consequent(1 + phi(k, state_l, true));
+                    add_implication(IP2);
+                }
+            } else {
+                for( int t = M_.last_numerical_feature(); t < num_features_; ++t ) {
+                    Implication *IP2 = new Implication;
+                    IP2->add_antecedent(1 + RES(i, l, j));
+                    IP2->add_antecedent(1 + A(1, j, k));
+                    IP2->add_antecedent(-(1 + A(2, j, k)));
+                    IP2->add_antecedent(1 + Fn(k, t)); // -[F^k is numeric]
+                    IP2->add_consequent(1 + phi(k, state_l, true));
+                    add_implication(IP2);
+                }
             }
 
             // RES(i,l,j) & -A(1,j,k) & phi(k,i) -> phi(k,l)
@@ -1254,25 +1354,47 @@ class Theory {
         assert((0 <= l) && (l < T_.num_transitions(i)));
         int state_l = T_.transition_state(i, l);
 
-        // forward implications
-        for( int f = 0; f < num_features_; ++f ) {
-            if( M_(i, f) >= M_(state_l, f) ) {
-                Implication *IP = new Implication;
-                IP->add_antecedent(1 + INC(k, i, l));
-                for( int z = 0; z < log_num_features_; ++z )
-                    IP->add_consequent(bit(z, f) ? -(1 + F(k, z)) : (1 + F(k, z)));
-                add_implication(IP);
+        if( options_.log_feature_variables_ ) {
+            // forward implications
+            for( int j = 0; j < num_features_; ++j ) {
+                if( M_(i, j) >= M_(state_l, j) ) {
+                    Implication *IP = new Implication;
+                    IP->add_antecedent(1 + INC(k, i, l));
+                    for( int t = 0; t < log_num_features_; ++t )
+                        IP->add_consequent(bit(t, j) ? -(1 + F(k, t)) : (1 + F(k, t)));
+                    add_implication(IP);
+                }
             }
-        }
 
-        // backward implications
-        for( int f = 0; f < num_features_; ++f ) {
-            if( M_(i, f) < M_(state_l, f) ) {
-                Implication *IP = new Implication;
-                for( int z = 0; z < log_num_features_; ++z )
-                    IP->add_antecedent(bit(z, f) ? 1 + F(k, z) : -(1 + F(k, z)));
-                IP->add_consequent(1 + INC(k, i, l));
-                add_implication(IP);
+            // backward implications
+            for( int j = 0; j < num_features_; ++j ) {
+                if( M_(i, j) < M_(state_l, j) ) {
+                    Implication *IP = new Implication;
+                    for( int t = 0; t < log_num_features_; ++t )
+                        IP->add_antecedent(bit(t, j) ? 1 + F(k, t) : -(1 + F(k, t)));
+                    IP->add_consequent(1 + INC(k, i, l));
+                    add_implication(IP);
+                }
+            }
+        } else {
+            // forward implications
+            for( int j = 0; j < num_features_; ++j ) {
+                if( M_(i, j) >= M_(state_l, j) ) {
+                    Implication *IP = new Implication;
+                    IP->add_antecedent(1 + INC(k, i, l));
+                    IP->add_consequent(-(1 + Fn(k, j)));
+                    add_implication(IP);
+                }
+            }
+
+            // backward implications
+            for( int j = 0; j < num_features_; ++j ) {
+                if( M_(i, j) < M_(state_l, j) ) {
+                    Implication *IP = new Implication;
+                    IP->add_antecedent(1 + Fn(k, j));
+                    IP->add_consequent(1 + INC(k, i, l));
+                    add_implication(IP);
+                }
             }
         }
     }
@@ -1291,25 +1413,47 @@ class Theory {
         assert((0 <= l) && (l < T_.num_transitions(i)));
         int state_l = T_.transition_state(i, l);
 
-        // forward implications
-        for( int f = 0; f < num_features_; ++f ) {
-            if( M_(i, f) <= M_(state_l, f) ) {
-                Implication *IP = new Implication;
-                IP->add_antecedent(1 + DEC(k, i, l));
-                for( int z = 0; z < log_num_features_; ++z )
-                    IP->add_consequent(bit(z, f) ? -(1 + F(k, z)) : (1 + F(k, z)));
-                add_implication(IP);
+        if( options_.log_feature_variables_ ) {
+            // forward implications
+            for( int j = 0; j < num_features_; ++j ) {
+                if( M_(i, j) <= M_(state_l, j) ) {
+                    Implication *IP = new Implication;
+                    IP->add_antecedent(1 + DEC(k, i, l));
+                    for( int t = 0; t < log_num_features_; ++t )
+                        IP->add_consequent(bit(t, j) ? -(1 + F(k, t)) : (1 + F(k, t)));
+                    add_implication(IP);
+                }
             }
-        }
 
-        // backward implications
-        for( int f = 0; f < num_features_; ++f ) {
-            if( M_(i, f) > M_(state_l, f) ) {
-                Implication *IP = new Implication;
-                for( int z = 0; z < log_num_features_; ++z )
-                    IP->add_antecedent(bit(z, f) ? 1 + F(k, z) : -(1 + F(k, z)));
-                IP->add_consequent(1 + DEC(k, i, l));
-                add_implication(IP);
+            // backward implications
+            for( int j = 0; j < num_features_; ++j ) {
+                if( M_(i, j) > M_(state_l, j) ) {
+                    Implication *IP = new Implication;
+                    for( int t = 0; t < log_num_features_; ++t )
+                        IP->add_antecedent(bit(t, j) ? 1 + F(k, t) : -(1 + F(k, t)));
+                    IP->add_consequent(1 + DEC(k, i, l));
+                    add_implication(IP);
+                }
+            }
+        } else {
+            // forward implications
+            for( int j = 0; j < num_features_; ++j ) {
+                if( M_(i, j) <= M_(state_l, j) ) {
+                    Implication *IP = new Implication;
+                    IP->add_antecedent(1 + DEC(k, i, l));
+                    IP->add_consequent(-(1 + Fn(k, j)));
+                    add_implication(IP);
+                }
+            }
+
+            // backward implications
+            for( int j = 0; j < num_features_; ++j ) {
+                if( M_(i, j) > M_(state_l, j) ) {
+                    Implication *IP = new Implication;
+                    IP->add_antecedent(1 + Fn(k, j));
+                    IP->add_consequent(1 + DEC(k, i, l));
+                    add_implication(IP);
+                }
             }
         }
     }
@@ -1338,18 +1482,14 @@ class Theory {
         for( int k = 0; k < K_; ++k ) {
             Implication *IP1 = new Implication;
             IP1->add_antecedent(1 + MATCH(i, l, j));
-            // F^k is numeric
-            for( int z = log_last_numerical_feature_; z < log_num_features_; ++z )
-                IP1->add_antecedent(-(1 + F(k, z)));
+            add_antecedent_for_numeric_feature(*IP1, k);
             IP1->add_antecedent(1 + A(2, j, k));
             IP1->add_consequent(1 + INC(k, i, l));
             add_implication(IP1);
 
             Implication *IP2 = new Implication;
             IP2->add_antecedent(1 + MATCH(i, l, j));
-            // F^k is numeric
-            for( int z = log_last_numerical_feature_; z < log_num_features_; ++z )
-                IP2->add_antecedent(-(1 + F(k, z)));
+            add_antecedent_for_numeric_feature(*IP2, k);
             IP2->add_antecedent(1 + INC(k, i, l));
             IP2->add_consequent(1 + A(2, j, k));
             add_implication(IP2);
@@ -1359,9 +1499,7 @@ class Theory {
         for( int k = 0; k < K_; ++k ) {
             Implication *IP1 = new Implication;
             IP1->add_antecedent(1 + MATCH(i, l, j));
-            // F^k is numeric
-            for( int z = log_last_numerical_feature_; z < log_num_features_; ++z )
-                IP1->add_antecedent(-(1 + F(k, z)));
+            add_antecedent_for_numeric_feature(*IP1, k);
             IP1->add_antecedent(1 + A(1, j, k));
             IP1->add_antecedent(-(1 + A(2, j, k)));
             IP1->add_consequent(1 + DEC(k, i, l));
@@ -1369,18 +1507,14 @@ class Theory {
 
             Implication *IP2 = new Implication;
             IP2->add_antecedent(1 + MATCH(i, l, j));
-            // F^k is numeric
-            for( int z = log_last_numerical_feature_; z < log_num_features_; ++z )
-                IP2->add_antecedent(-(1 + F(k, z)));
+            add_antecedent_for_numeric_feature(*IP2, k);
             IP2->add_antecedent(1 + DEC(k, i, l));
             IP2->add_consequent(1 + A(1, j, k));
             add_implication(IP2);
 
             Implication *IP3 = new Implication;
             IP3->add_antecedent(1 + MATCH(i, l, j));
-            // F^k is numeric
-            for( int z = log_last_numerical_feature_; z < log_num_features_; ++z )
-                IP3->add_antecedent(-(1 + F(k, z)));
+            add_antecedent_for_numeric_feature(*IP3, k);
             IP3->add_antecedent(1 + DEC(k, i, l));
             IP3->add_consequent(-(1 + A(2, j, k)));
             add_implication(IP3);
@@ -1425,42 +1559,50 @@ class Theory {
         }
     }
 
-    void build_df(int j, int k) { // j in {0, ..., K-2}, k in {0, ..., log(F)}
-        assert((0 <= j) && (j + 1 < K_));
-        assert((0 <= k) && (k < log_num_features_));
+    // this formula says F^k < F^{k+1}
+    void build_df(int k, int t) { // k in {0, ..., K-2}, t in {0, ..., log(F)}
+        assert((0 <= k) && (k + 1 < K_));
+        assert((0 <= t) && (t < log_num_features_));
 
-#if 0 // CHECK: generated with formulas for F as it is more efficient (for unknown reasons... see above)
         Implication *IP1 = new Implication;
-        IP1->add_antecedent(1 + df(j, k));
-        IP1->add_consequent(-(1 + F(j, k)));
+        IP1->add_antecedent(1 + df(k, t));
+        IP1->add_consequent(-(1 + F(k, t)));
         add_implication(IP1);
 
         Implication *IP2 = new Implication;
-        IP2->add_antecedent(1 + df(j, k));
-        IP2->add_consequent(1 + F(j + 1, k));
+        IP2->add_antecedent(1 + df(k, t));
+        IP2->add_consequent(1 + F(k + 1, t));
         add_implication(IP2);
 
-        for( int i = k + 1; i < log_num_features_; ++i ) {
-            Implication *IP1 = new Implication;
-            IP1->add_antecedent(1 + df(j, k));
-            IP1->add_antecedent(1 + F(j, i));
-            IP1->add_consequent(1 + F(j + 1, i));
-            add_implication(IP1);
+        for( int j = t + 1; j < log_num_features_; ++j ) {
+            Implication *IQ1 = new Implication;
+            IQ1->add_antecedent(1 + df(k, t));
+            IQ1->add_antecedent(1 + F(k, j));
+            IQ1->add_consequent(1 + F(k + 1, j));
+            add_implication(IQ1);
 
-            Implication *IP2 = new Implication;
-            IP2->add_antecedent(1 + df(j, k));
-            IP2->add_antecedent(1 + F(j + 1, i));
-            IP2->add_consequent(1 + F(j, i));
-            //IP2->add_antecedent(-(1 + F(j, i)));
-            //IP2->add_consequent(-(1 + F(j + 1, i)));
-            add_implication(IP2);
+            Implication *IQ2 = new Implication;
+            IQ2->add_antecedent(1 + df(k, t));
+            IQ2->add_antecedent(-(1 + F(k, j)));
+            IQ2->add_consequent(-(1 + F(k + 1, j)));
+            add_implication(IQ2);
         }
-#endif
     }
-    void build_formulas_df() {
-        for( int j = 0; j + 1 < K_; ++j ) {
-            for( int k = 0; k < log_num_features_; ++k )
-                build_df(j, k);
+    void build_formulas_ordering() {
+        if( do_ordering() ) {
+            if( options_.log_feature_variables_ ) {
+                for( int k = 0; k + 1 < K_; ++k ) {
+                    for( int t = 0; t < log_num_features_; ++t )
+                        build_df(k, t);
+
+                    Implication *IP = new Implication;
+                    for( int t = 0; t < log_num_features_; ++t )
+                        IP->add_consequent(1 + df(k, t));
+                    add_implication(IP);
+                }
+            } else {
+                assert(0); // HOLA
+            }
         }
     }
 
@@ -1472,7 +1614,7 @@ class Theory {
         //print_implications(cout, imp_offsets_.back().first, implications_.size());
 
         imp_offsets_.push_back(make_pair(implications_.size(), "F"));
-        add_comment("Theory for formulas F(j,k)");
+        add_comment("Theory for formulas F(k,t)");
         build_formulas_F();
         cout << "F: #implications=" << implications_.size() - imp_offsets_.back().first << " (K x (D+U) + (K-1)) where D=#dummy-features and U=#unused-features" << endl;
         //print_implications(cout, imp_offsets_.back().first, implications_.size());
@@ -1519,34 +1661,56 @@ class Theory {
         cout << "APPMATCH: #implications=" << implications_.size() - imp_offsets_.back().first << " (TN + 2TNK)" << endl;
         //print_implications(cout, imp_offsets_.back().first, implications_.size());
 
-        imp_offsets_.push_back(make_pair(implications_.size(), "df"));
-        add_comment("Theory for formulas df(j,k)");
-        build_formulas_df();
-        cout << "df: #implications=" << implications_.size() - imp_offsets_.back().first << " ((K-1) x (2L + L(L-1)))" << endl;
+#if 0
+        // CHECK: for some reason, it is more efficient to emit this formula
+        // CHECK: when emiting F formulas
+        imp_offsets_.push_back(make_pair(implications_.size(), "ordering"));
+        add_comment("Theory for ordering formulas");
+        build_formulas_ordering();
+        cout << "ordering: #implications=" << implications_.size() - imp_offsets_.back().first << " ((K-1) x (2L + L(L-1)))" << endl;
         //print_implications(cout, imp_offsets_.back().first, implications_.size());
+#endif
     }
 
     // features added (forced)
+    // j-th forced feature is feature whose index is feature_index
     void force_feature(int j, int feature_index) {
-        bool disable_ordering = (features_.size() == K_) || ((features_.size() < K_) && !actions_.empty());
-        if( options_.ordering_ && !disable_ordering ) {
+        if( do_ordering() ) {
+            // some F^k is this feature
             Implication *IP = new Implication;
             for( int k = 0; k < K_; ++k )
                 IP->add_consequent(1 + MappedBy(j, k));
             add_implication(IP);
 
-            for( int k = 0; k < K_; ++k ) {
-                for( int t = 0; t < log_num_features_; ++t ) {
+            if( options_.log_feature_variables_ ) {
+                // if F^k is feature, set bits F(k, t) accordingly
+                for( int k = 0; k < K_; ++k ) {
+                    for( int t = 0; t < log_num_features_; ++t ) {
+                        Implication *IP = new Implication;
+                        IP->add_antecedent(1 + MappedBy(j, k));
+                        IP->add_consequent(bit(t, feature_index) ? (1 + F(k, t)) : -(1 + F(k, t)));
+                        add_implication(IP);
+                    }
+                }
+            } else {
+                for( int k = 0; k < K_; ++k ) {
                     Implication *IP = new Implication;
                     IP->add_antecedent(1 + MappedBy(j, k));
-                    IP->add_consequent(bit(t, feature_index) ? (1 + F(k, t)) : -(1 + F(k, t)));
+                    IP->add_consequent(1 + Fn(k, feature_index));
                     add_implication(IP);
                 }
             }
         } else {
-            for( int t = 0; t < log_num_features_; ++t ) {
+            if( options_.log_feature_variables_ ) {
+                // F^j is j-th forced feature, set bits F(j, t) accordingly
+                for( int t = 0; t < log_num_features_; ++t ) {
+                    Implication *IP = new Implication;
+                    IP->add_consequent(bit(t, feature_index) ? 1 + F(j, t) : -(1 + F(j, t)));
+                    add_implication(IP);
+                }
+            } else {
                 Implication *IP = new Implication;
-                IP->add_consequent(bit(t, feature_index) ? 1 + F(j, t) : -(1 + F(j, t)));
+                IP->add_consequent(1 + Fn(j, feature_index));
                 add_implication(IP);
             }
         }
@@ -1559,28 +1723,26 @@ class Theory {
             force_feature(j, feature_index);
     }
     void add_implications_for_features() {
-        assert(features_.size() <= K_);
-        if( !features_.empty() ) {
+        assert(forced_features_.size() <= K_);
+        if( !forced_features_.empty() ) {
             imp_offsets_.push_back(make_pair(implications_.size(), "forced-features"));
             add_comment("Implications for added (forced) features");
         }
 
         int j = 0;
-        for( Items<string>::const_iterator it = features_.begin(); it != features_.end(); ++it, ++j )
+        for( Items<string>::const_iterator it = forced_features_.begin(); it != forced_features_.end(); ++it, ++j )
             force_feature(j, *it);
 
-        bool disable_ordering = (features_.size() == K_) || ((features_.size() < K_) && !actions_.empty());
-        if( options_.ordering_ && !disable_ordering )
+        if( do_ordering() )
             cout << "features: #implications=" << implications_.size() - imp_offsets_.back().first << " (M x (1 + K x log2(#features)))" << endl;
         else
             cout << "features: #implications=" << implications_.size() - imp_offsets_.back().first << " (M x log2(#features))" << endl;
         //print_implications(cout, imp_offsets_.back().first, implications_.size());
     }
     void add_variables_for_features() {
-        bool disable_ordering = (features_.size() == K_) || ((features_.size() < K_) && !actions_.empty());
-        if( options_.ordering_ && !disable_ordering ) {
+        if( do_ordering() ) {
             var_offsets_.push_back(make_pair(variables_.size(), "MappedBy"));
-            for( int j = 0; j < int(features_.size()); ++j ) {
+            for( int j = 0; j < int(forced_features_.size()); ++j ) {
                 for( int k = 0; k < K_; ++k ) {
                     int index = variables_.size();
                     string name = string("MappedBy(") + to_string(j) + "," + to_string(k) + ")";
@@ -1598,7 +1760,7 @@ class Theory {
         if( !ifs.fail() ) {
             const Items<string> *features = Items<string>::read_dump(ifs);
             ifs.close();
-            features_ = *features;
+            forced_features_ = *features;
             delete features;
         } else {
             cout << "error: opening file '" << features_filename << "'" << endl;
@@ -1615,7 +1777,7 @@ class Theory {
     //      phi*(g,f) & phi(g,f) -> not-sim(g,n,k)
     //   In total need G x N x L vars and G x N x (1 + 2K) implications where G=#goals and N=#non-goals
     void add_implications_for_goals() {
-        assert(goals_.empty());
+        assert(forced_goals_.empty());
     }
     void add_variables_for_goals() {
         //CHECK assert(0);
@@ -1627,7 +1789,7 @@ class Theory {
         if( !ifs.fail() ) {
             const Items<int> *goals = Items<int>::read_dump(ifs);
             ifs.close();
-            goals_ = *goals;
+            forced_goals_ = *goals;
             delete goals;
         } else {
             cout << "error: opening file '" << goals_filename << "'" << endl;
@@ -1653,13 +1815,13 @@ class Theory {
         }
     }
     void add_implications_for_actions() {
-        assert(actions_.size() <= N_);
+        assert(forced_actions_.size() <= N_);
 
         imp_offsets_.push_back(make_pair(implications_.size(), "force-actions"));
         add_comment("Theory for forced actions");
 
         int j = 0;
-        for( Items<AbstractAction>::const_iterator it = actions_.begin(); it != actions_.end(); ++it, ++j )
+        for( Items<AbstractAction>::const_iterator it = forced_actions_.begin(); it != forced_actions_.end(); ++it, ++j )
             force_action(j, *it);
 
         cout << "actions: #implications=" << implications_.size() - imp_offsets_.back().first << " (?)" << endl;
@@ -1707,6 +1869,7 @@ class Theory {
         //print_implications(cout, imp_offsets_.back().first, implications_.size());
     }
 
+  public:
     // readers
     void read_minisat_output(ifstream &is) const {
         string status;
@@ -1859,7 +2022,7 @@ void Theory::read_actions(const string &prefix) {
     // construct and set feature map
     int j = 0;
     map<string, int> feature_map;
-    for( Items<string>::const_iterator it = features_.begin(); it != features_.end(); ++it, ++j )
+    for( Items<string>::const_iterator it = forced_features_.begin(); it != forced_features_.end(); ++it, ++j )
         feature_map.insert(make_pair(*it, j));
     Theory::AbstractAction::feature_map_ = &feature_map;
 
@@ -1870,7 +2033,7 @@ void Theory::read_actions(const string &prefix) {
     if( !ifs.fail() ) {
         const Items<AbstractAction> *actions = Items<AbstractAction>::read_dump(ifs);
         ifs.close();
-        actions_ = *actions;
+        forced_actions_ = *actions;
         delete actions;
     } else {
         cout << "error: opening file '" << actions_filename << "'" << endl;
@@ -1907,7 +2070,7 @@ pair<const Matrix*, const Transitions*> read_data(const string &matrix_filename,
 
 void usage(ostream &os, const string &name) {
     cout << endl
-         << "usage: " << name << " [--add-actions] [--add-features] [--decode] [--explicit-goals] [--only-soundness] <prefix> <K> <N>" << endl
+         << "usage: " << name << " [--add-actions] [--add-features] [--decode] [--explicit-goals] [--naive-feature-variables] [--only-soundness] [--ordering-clauses] <prefix> <K> <N>" << endl
          << endl
          << "where" << endl
          << "    <prefix> is prefix for all files" << endl
@@ -1919,7 +2082,9 @@ void usage(ostream &os, const string &name) {
          << "    --add-features to force inclusion of features in '<prefix>_features.dat'" << endl
          << "    --decode to decode model in '<prefix>_<K>_<N>_model.cnf' found by minisat" << endl
          << "    --explicit-goals to separate goals from non-goals using goals in '<prefix>_goals.dat'" << endl
+         << "    --naive-feature-variables to generate naive encoding of feature variables rather than log encoding" << endl
          << "    --only-soundness to generate clauses that only enforce soundness instead of soundness+completeness" << endl
+         << "    --ordering-clauses to generate clauses to enforce ordering of selected features and abstract actions" << endl
          << endl
          << "A feature file consists of number <n> of features in file, followed by space" << endl
          << "followed by space-separated list of features names (the names need to match those" << endl
@@ -1949,8 +2114,12 @@ int main(int argc, const char **argv) {
             options.add_actions_ = true;
         } else if( string(*argv) == "--add-features" ) {
             options.add_features_ = true;
+        } else if( string(*argv) == "--naive-feature-variables" ) {
+            options.log_feature_variables_ = false;
         } else if( string(*argv) == "--only-soundness" ) {
             options.only_soundness_ = true;
+        } else if( string(*argv) == "--ordering-clauses" ) {
+            options.ordering_ = true;
         } else {
             cout << "error: unrecognized option '" << *argv << "'" << endl;
             usage(cout, name);
