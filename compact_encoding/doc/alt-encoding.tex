@@ -269,7 +269,7 @@ variables $df(k,t)$ satisfy
   &df(k,t) \rightarrow \neg F^k_t \,, \\
   &df(k,t) \rightarrow \neg F^{k+1}_t \,, \\
   &df(k,t) \land F^k_i \rightarrow F^{k+1}_i \qquad \text{for $i\in\{t+1,\ldots,L-1\}$} \,, \\
-  &df(k,t) \land \neg F^{k+1}_i \rightarrow F^k_i \qquad \text{for $i\in\{t+1,\ldots,L-1\}$} \,.
+  &df(k,t) \land \neg F^k_i \rightarrow \neg F^{k+1}_i \qquad \text{for $i\in\{t+1,\ldots,L-1\}$} \,.
 \end{alignat}
 The total number of clauses in (7)--(12) is $K(D+U) + (K-1)(1 + 2L + L(L-1))$
 where $D$ and $U$ are the number of dummy and inexistent features respectively.
