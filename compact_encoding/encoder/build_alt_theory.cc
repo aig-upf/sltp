@@ -787,6 +787,16 @@ class Theory {
             cout << "Fn: #variables=" << variables_.size() - var_offsets_.back().first << " (KF), offset=" << var_offsets_.back().first << endl;
         }
 
+        // n variables: K
+        var_offsets_.push_back(make_pair(variables_.size(), "n"));
+        for( int k = 0; k < K_; ++k ) {
+            int index = variables_.size();
+            string name = string("n(") + to_string(k) + ")";
+            variables_.push_back(new Var(index, name));
+            assert(index == n(k));
+        }
+        cout << "n: #variables=" << variables_.size() - var_offsets_.back().first << " (K), offset=" << var_offsets_.back().first << endl;
+
         // phi and phi* variables: 2 x S x K
         var_offsets_.push_back(make_pair(variables_.size(), "phi"));
         for( int k = 0; k < K_; ++k ) {
@@ -954,19 +964,26 @@ class Theory {
         return var_offsets_[1].first + index;
     }
 
+    int n(int k) const { // k in {0, ..., K-1}
+        assert((0 <= k) && (k < K_));
+        int index = k;
+        assert(var_offsets_[2].second == "n");
+        return var_offsets_[2].first + index;
+    }
+
     int df(int k, int j) const { // k in {0, ..., K-2}, j in {0, ..., log2(F)-1}
         assert((0 <= k) && (k + 1 < K_));
         assert((0 <= j) && (j < log_num_features_));
         int index = j + log_num_features_ * k;
-        assert(var_offsets_[9].second == "df");
-        return var_offsets_[9].first + index;
+        assert(var_offsets_[10].second == "df");
+        return var_offsets_[10].first + index;
     }
     int MappedBy(int j, int k) const { // j in {0, ..., #forced-features-1}, k in {0, ..., K-1}
         assert((0 <= j) && (j < int(forced_features_.size())));
         assert((0 <= k) && (k < K_));
         int index = k + K_ * j;
-        assert(var_offsets_[10].second == "MappedBy");
-        return var_offsets_[10].first + index;
+        assert(var_offsets_[11].second == "MappedBy");
+        return var_offsets_[11].first + index;
     }
 
     // phi(k, i, F) iff k-th feature *holds* in state s_i in sample
@@ -975,8 +992,8 @@ class Theory {
         assert((0 <= k) && (k < K_));
         assert((0 <= i) && (i < num_states_));
         int index = i + num_states_ * (k + K_ * int(star));
-        assert(var_offsets_[2].second == "phi");
-        return var_offsets_[2].first + index;
+        assert(var_offsets_[3].second == "phi");
+        return var_offsets_[3].first + index;
     }
 
     // used for soundness
@@ -986,8 +1003,8 @@ class Theory {
         assert((0 <= i) && (i < num_states_));
         assert((0 <= k) && (k < K_));
         int index = k + K_ * (i + num_states_ * (j + N_ * (t - 1)));
-        assert(var_offsets_[3].second == "B");
-        return var_offsets_[3].first + index;
+        assert(var_offsets_[4].second == "B");
+        return var_offsets_[4].first + index;
     }
 
     // used for soundness/completeness
@@ -996,8 +1013,8 @@ class Theory {
         assert((0 <= l) && (l < T_.num_transitions(i)));
         assert((0 <= j) && (j < N_));
         int index = (T_.offset(i) + l) + T_.num_transitions() * j;
-        assert(var_offsets_[4].second == "RES");
-        return var_offsets_[4].first + index;
+        assert(var_offsets_[5].second == "RES");
+        return var_offsets_[5].first + index;
     }
 
     // INC(k, i, l) iff F^k increases in transition (s_i, s_l) in sample
@@ -1006,8 +1023,8 @@ class Theory {
         assert((0 <= i) && (i < num_states_));
         assert((0 <= l) && (l < T_.num_transitions(i)));
         int index = (T_.offset(i) + l) + T_.num_transitions() * k;
-        assert(var_offsets_[5].second == "INC");
-        return var_offsets_[5].first + index;
+        assert(var_offsets_[6].second == "INC");
+        return var_offsets_[6].first + index;
     }
 
     // DEC(k, i, l) iff F^k decreases in transition (s_i, s_l) in sample
@@ -1016,8 +1033,8 @@ class Theory {
         assert((0 <= i) && (i < num_states_));
         assert((0 <= l) && (l < T_.num_transitions(i)));
         int index = (T_.offset(i) + l) + T_.num_transitions() * k;
-        assert(var_offsets_[6].second == "DEC");
-        return var_offsets_[6].first + index;
+        assert(var_offsets_[7].second == "DEC");
+        return var_offsets_[7].first + index;
     }
 
     // used for soundness/completeness
@@ -1026,8 +1043,8 @@ class Theory {
         assert((0 <= l) && (l < T_.num_transitions(i)));
         assert((0 <= j) && (j < N_));
         int index = (T_.offset(i) + l) + T_.num_transitions() * j;
-        assert(var_offsets_[7].second == "MATCH");
-        return var_offsets_[7].first + index;
+        assert(var_offsets_[8].second == "MATCH");
+        return var_offsets_[8].first + index;
     }
 
     // used only for completeness
@@ -1036,13 +1053,15 @@ class Theory {
         assert((0 <= l) && (l < T_.num_transitions(i)));
         assert((0 <= j) && (j < N_));
         int index = (T_.offset(i) + l) + T_.num_transitions() * j;
-        assert(var_offsets_[8].second == "APPMATCH");
-        return var_offsets_[8].first + index;
+        assert(var_offsets_[9].second == "APPMATCH");
+        return var_offsets_[9].first + index;
     }
 
+#if 0
     // auxiliary
     // [F^k is numeric] is equiv. to -F(k,t) for all t >= index_for_numerical
     void add_antecedent_for_numeric_feature(Implication &IP, int k) const {
+        assert(0); // HOLA
         assert((0 <= k) && (k < K_));
         if( options_.log_feature_variables_ ) {
             for( int t = log_last_numerical_feature_; t < log_num_features_; ++t )
@@ -1052,6 +1071,7 @@ class Theory {
                 IP.add_antecedent(-(1 + Fn(k, j)));
         }
     }
+#endif
 
     // construction of base formulas
     void build_formulas_A() {
@@ -1075,7 +1095,7 @@ class Theory {
                 Implication *IP3 = new Implication;
                 IP3->add_antecedent(1 + A(1, j, k));
                 IP3->add_antecedent(-(1 + A(2, j, k)));
-                add_antecedent_for_numeric_feature(*IP3, k);
+                IP3->add_antecedent(1 + n(k));
                 IP3->add_consequent(1 + A(4, j, k));
                 add_implication(IP3);
             }
@@ -1161,16 +1181,7 @@ class Theory {
             for( int k = 0; k < K_; ++k ) {
                 for( int j = M_.last_numerical_feature(); j < M_.first_boolean_feature(); ++j ) {
                     Implication *IP = new Implication;
-                    IP->add_antecedent(-(1 + Fn(k, j)));
-                    add_implication(IP);
-                }
-            }
-
-            // constraints: inexistent features are not selected
-            for( int k = 0; k < K_; ++k ) {
-                for( int j = num_features_; j < (1 << log_num_features_); ++j ) {
-                    Implication *IP = new Implication;
-                    IP->add_antecedent(-(1 + Fn(k, j)));
+                    IP->add_antecedent(1 + Fn(k, j));
                     add_implication(IP);
                 }
             }
@@ -1178,6 +1189,34 @@ class Theory {
 
         // ordering of selected features F^0 < F^0 < ... < F^{K-1}
         build_formulas_ordering();
+    }
+
+    void build_n(int k) {
+        if( options_.log_feature_variables_ ) {
+            Implication *IP1 = new Implication;
+            for( int t = log_last_numerical_feature_; t < log_num_features_; ++t )
+                IP1->add_antecedent(-(1 + F(k, t)));
+            IP1->add_consequent(1 + n(k));
+            add_implication(IP1);
+
+            for( int t = log_last_numerical_feature_; t < log_num_features_; ++t ) {
+                Implication *IP2 = new Implication;
+                IP2->add_antecedent(1 + F(k, t));
+                IP2->add_consequent(-(1 + n(k)));
+                add_implication(IP2);
+            }
+        } else {
+            for( int j = 0; j < num_features_; ++j ) {
+                Implication *IP = new Implication;
+                IP->add_antecedent(1 + Fn(k, j));
+                IP->add_consequent(j < M_.last_numerical_feature() ? 1 + n(k) : -(1 + n(k)));
+                add_implication(IP);
+            }
+        }
+    }
+    void build_formulas_n() {
+        for( int k = 0; k < K_; ++k )
+            build_n(k);
     }
 
     void build_phi(int k, int i, bool star) {
@@ -1300,27 +1339,13 @@ class Theory {
             add_implication(IP1);
 
             // RES(i,l,j) & A(1,j,k) & -A(2,j,k) & -[F^k is numeric] -> phi*(k,l)
-            if( options_.log_feature_variables_ ) {
-                for( int t = log_last_numerical_feature_; t < log_num_features_; ++t ) {
-                    Implication *IP2 = new Implication;
-                    IP2->add_antecedent(1 + RES(i, l, j));
-                    IP2->add_antecedent(1 + A(1, j, k));
-                    IP2->add_antecedent(-(1 + A(2, j, k)));
-                    IP2->add_antecedent(1 + F(k, t)); // -[F^k is numeric]
-                    IP2->add_consequent(1 + phi(k, state_l, true));
-                    add_implication(IP2);
-                }
-            } else {
-                for( int t = M_.last_numerical_feature(); t < num_features_; ++t ) {
-                    Implication *IP2 = new Implication;
-                    IP2->add_antecedent(1 + RES(i, l, j));
-                    IP2->add_antecedent(1 + A(1, j, k));
-                    IP2->add_antecedent(-(1 + A(2, j, k)));
-                    IP2->add_antecedent(1 + Fn(k, t)); // -[F^k is numeric]
-                    IP2->add_consequent(1 + phi(k, state_l, true));
-                    add_implication(IP2);
-                }
-            }
+            Implication *IP2 = new Implication;
+            IP2->add_antecedent(1 + RES(i, l, j));
+            IP2->add_antecedent(1 + A(1, j, k));
+            IP2->add_antecedent(-(1 + A(2, j, k)));
+            IP2->add_antecedent(-(1 + n(k)));
+            IP2->add_consequent(1 + phi(k, state_l, true));
+            add_implication(IP2);
 
             // RES(i,l,j) & -A(1,j,k) & phi(k,i) -> phi(k,l)
             Implication *IP3 = new Implication;
@@ -1482,15 +1507,15 @@ class Theory {
         for( int k = 0; k < K_; ++k ) {
             Implication *IP1 = new Implication;
             IP1->add_antecedent(1 + MATCH(i, l, j));
-            add_antecedent_for_numeric_feature(*IP1, k);
             IP1->add_antecedent(1 + A(2, j, k));
+            IP1->add_antecedent(1 + n(k));
             IP1->add_consequent(1 + INC(k, i, l));
             add_implication(IP1);
 
             Implication *IP2 = new Implication;
             IP2->add_antecedent(1 + MATCH(i, l, j));
-            add_antecedent_for_numeric_feature(*IP2, k);
             IP2->add_antecedent(1 + INC(k, i, l));
+            IP2->add_antecedent(1 + n(k));
             IP2->add_consequent(1 + A(2, j, k));
             add_implication(IP2);
         }
@@ -1499,23 +1524,23 @@ class Theory {
         for( int k = 0; k < K_; ++k ) {
             Implication *IP1 = new Implication;
             IP1->add_antecedent(1 + MATCH(i, l, j));
-            add_antecedent_for_numeric_feature(*IP1, k);
             IP1->add_antecedent(1 + A(1, j, k));
             IP1->add_antecedent(-(1 + A(2, j, k)));
+            IP1->add_antecedent(1 + n(k));
             IP1->add_consequent(1 + DEC(k, i, l));
             add_implication(IP1);
 
             Implication *IP2 = new Implication;
             IP2->add_antecedent(1 + MATCH(i, l, j));
-            add_antecedent_for_numeric_feature(*IP2, k);
             IP2->add_antecedent(1 + DEC(k, i, l));
+            IP2->add_antecedent(1 + n(k));
             IP2->add_consequent(1 + A(1, j, k));
             add_implication(IP2);
 
             Implication *IP3 = new Implication;
             IP3->add_antecedent(1 + MATCH(i, l, j));
-            add_antecedent_for_numeric_feature(*IP3, k);
             IP3->add_antecedent(1 + DEC(k, i, l));
+            IP3->add_antecedent(1 + n(k));
             IP3->add_consequent(-(1 + A(2, j, k)));
             add_implication(IP3);
         }
@@ -1601,7 +1626,15 @@ class Theory {
                     add_implication(IP);
                 }
             } else {
-                assert(0); // HOLA
+                for( int k = 0; k + 1 < K_; ++k ) {
+                    for( int i = 0; i < num_features_; ++i ) {
+                        Implication *IP = new Implication;
+                        IP->add_antecedent(1 + Fn(k, i));
+                        for( int j = i + 1; j < num_features_; ++j )
+                            IP->add_consequent(1 + Fn(k + 1, j));
+                        add_implication(IP);
+                    }
+                }
             }
         }
     }
@@ -1617,6 +1650,12 @@ class Theory {
         add_comment("Theory for formulas F(k,t)");
         build_formulas_F();
         cout << "F: #implications=" << implications_.size() - imp_offsets_.back().first << " (K x (D+U) + (K-1)) where D=#dummy-features and U=#unused-features" << endl;
+        //print_implications(cout, imp_offsets_.back().first, implications_.size());
+        //
+        imp_offsets_.push_back(make_pair(implications_.size(), "n"));
+        add_comment("Theory for formulas n(k)");
+        build_formulas_n();
+        cout << "n: #implications=" << implications_.size() - imp_offsets_.back().first << " (?)" << endl;
         //print_implications(cout, imp_offsets_.back().first, implications_.size());
 
         imp_offsets_.push_back(make_pair(implications_.size(), "phi"));
