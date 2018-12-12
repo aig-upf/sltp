@@ -1,8 +1,8 @@
-CXX=clang++
+CC=clang++
+CCFLAGS=-Wall -std=c++11 -O3
 
+build_alt_theory:	build_alt_theory.cc sample.h
+			$(CC) $(CCFLAGS) -o build_alt_theory build_alt_theory.cc
 
-build_alt_theory:	build_alt_theory.cc
-			$(CXX) -std=c++11 -o build_alt_theory build_alt_theory.cc
-
-debug:			build_alt_theory.cc
-			$(CXX) -g -std=c++11 -o build_alt_theory.d build_alt_theory.cc
+clean:			
+			rm -f build_alt_theory *~

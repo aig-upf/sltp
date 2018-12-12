@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "sample.h"
+
 // TODO: * action must be applicable at some state
 //       * further ordering of actions to reduce more symmetries
 //       * separate goal from non-goal states (IMPORTANT)
@@ -145,321 +147,6 @@ class Items : public set<T> {
     }
 };
 
-class Matrix {
-  protected:
-    const int num_states_;
-    const int num_features_;
-    const int last_numerical_feature_;
-    const int first_boolean_feature_;
-    int num_non_zero_entries_;
-    vector<pair<int, pair<int, int>*> > rows_;
-    vector<string> features_;
-    map<string, int> feature_map_;
-
-  public:
-    Matrix(int num_states, int num_features, int last_numerical_feature, int first_boolean_feature)
-      : num_states_(num_states),
-        num_features_(num_features),
-        last_numerical_feature_(last_numerical_feature),
-        first_boolean_feature_(first_boolean_feature),
-        num_non_zero_entries_(0) {
-    }
-    virtual ~Matrix() {
-        for( size_t i = 0; i < rows_.size(); ++i )
-            delete[] rows_[i].second;
-    }
-
-    int num_states() const {
-        return num_states_;
-    }
-    int num_features() const {
-        return num_features_;
-    }
-    int last_numerical_feature() const {
-        return last_numerical_feature_;
-    }
-    int first_boolean_feature() const {
-        return first_boolean_feature_;
-    }
-    int num_non_zero_entries() const {
-        return num_non_zero_entries_;
-    }
-    const string& feature(int i) const {
-        assert((0 <= i) && (i < num_features_));
-        return features_[i];
-    }
-    int feature(const string &f) const {
-        map<string, int>::const_iterator it = feature_map_.find(f);
-        return it != feature_map_.end() ? it->second : -1;
-    }
-    bool numerical(int i) const {
-        return i < last_numerical_feature_;
-    }
-
-    // accessors
-    int binary_search(int s, int f) const {
-        assert((0 <= s) && (s < rows_.size()));
-        int start = 0;
-        int end = rows_[s].first - 1;
-        while( start < end ) {
-            int mid = (start + end) / 2;
-            if( rows_[s].second[mid].first == f ) {
-                assert(rows_[s].second[mid].second > 0);
-                return mid;
-            } else if( rows_[s].second[mid].first < f ) {
-                start = mid + 1;
-            } else {
-                end = mid - 1;
-            }
-        }
-        return (start == end) && rows_[s].second[start].first == f ? start : -1;
-    }
-    int entry(int s, int f) const {
-        int i = binary_search(s, f);
-        return i == -1 ? 0 : rows_[s].second[i].second;
-    }
-    void get_row(int s, vector<int> &row) const {
-        assert((0 <= s) && (s < rows_.size()));
-        row = vector<int>(num_features_, 0);
-        for( int i = 0; i < rows_[s].first; ++i )
-            row[rows_[s].second[i].first] = rows_[s].second[i].second;
-    }
-    void get_column(int f, vector<int> &col) const {
-        col = vector<int>(num_states_, 0);
-        for( int s = 0; s < num_states_; ++s )
-            col[f] = entry(s, f);;
-    }
-    int operator()(int s, int f) const {
-        return entry(s, f);
-    }
-
-    // output
-    void dump(ostream &os) const {
-        os << num_states_ << " " << num_features_ << " " << last_numerical_feature_ << " " << first_boolean_feature_ << endl;
-        for( size_t s = 0; s < rows_.size(); ++s ) {
-            int count = rows_[s].first;;
-            os << count;
-            for( int i = 0; i < count; ++i )
-                os << " " << rows_[s].second[i].first << ":" << rows_[s].second[i].second;
-            os << endl;
-        }
-    }
-    void print(ostream &os) const {
-        os << "Matrix stats: #states=" << num_states_
-           << ", #features=" << num_features_
-           << ", last-numerical-feature=" << last_numerical_feature_
-           << ", first-boolean-feature=" << first_boolean_feature_
-           << ", #non-zero-entries=" << num_non_zero_entries_
-           << endl;
-        for( int s = 0; s < num_states_; ++s ) {
-            os << "state " << s << ":";
-            for( int f = 0; f < num_features_; ++f ) {
-                int value = entry(s, f);
-                if( value > 0 )
-                    os << " " << f << ":" << value;
-            }
-            os << endl;
-        }
-    }
-
-    // readers
-    void read(istream &is) {
-        // read features
-        int n;
-        is >> n;
-        assert(n == num_features_);
-        for( int i = 0; i < num_features_; ++i ) {
-            string feature;
-            is >> feature;
-            feature_map_.insert(make_pair(feature, features_.size())); // there may be duplicate entries (e.g. 'dummy()')
-            features_.push_back(feature);
-        }
-
-        // read rows
-        rows_ = vector<pair<int, pair<int, int>*> >(num_states_, make_pair(0, nullptr));
-        for( int i = 0; i < num_states_; ++i ) {
-            int s, count, f, value;
-            is >> s >> count;
-            rows_[s] = make_pair(count, new pair<int, int>[count]);
-            for( int j = 0; j < count; ++j ) {
-                char filler;
-                is >> f >> filler >> value;
-                assert(filler == ':');
-                assert((0 <= f) && (f < num_features_));
-                assert(value > 0);
-                assert((j == 0) || (rows_[s].second[j - 1].first < f)); // verify unique and ordered entries
-                rows_[s].second[j] = make_pair(f, value);
-                ++num_non_zero_entries_;
-            }
-        }
-    }
-    static const Matrix* read_dump(istream &is) {
-        int num_states, num_features, last_numerical_feature, first_boolean_feature;
-        is >> num_states >> num_features >> last_numerical_feature >> first_boolean_feature;
-        Matrix *M = new Matrix(num_states, num_features, last_numerical_feature, first_boolean_feature);
-        M->read(is);
-        cout << "Matrix::read_dump: "
-             << "#states=" << M->num_states()
-             << ", #features=" << M->num_features()
-             << ", #last-numerical-feature=" << M->last_numerical_feature()
-             << ", #first-boolean-feature=" << M->first_boolean_feature()
-             << ", #non-zero-entries=" << M->num_non_zero_entries()
-             << endl;
-        return M;
-    }
-};
-
-class Transitions {
-  protected:
-    const int num_states_;
-    const int num_transitions_;
-    vector<pair<int, int*> > tr_;
-    vector<int> offset_;
-
-  public:
-    Transitions(int num_states, int num_transitions)
-      : num_states_(num_states), num_transitions_(num_transitions) {
-        tr_ = vector<pair<int, int*> >(num_states_, make_pair(0, nullptr));
-        offset_ = vector<int>(num_states_, 0);
-    }
-    virtual ~Transitions() {
-        for( int i = 0; i < tr_.size(); ++i )
-            delete[] tr_[i].second;
-    }
-
-    int num_states() const {
-        return num_states_;
-    }
-    int num_transitions() const {
-        return num_transitions_;
-    }
-    int num_transitions(int s) const {
-        assert((0 <= s) && (s < num_states_));
-        return tr_[s].first;
-    }
-    int transition_state(int s, int l) const {
-        assert((0 <= s) && (s < num_states_));
-        assert((0 <= l) && (l < tr_[s].first));
-        return tr_[s].second[l];
-    }
-    int offset(int s) const {
-        assert((0 <= s) && (s < num_states_));
-        return offset_[s];
-    }
-
-    // accessors
-    int binary_search(int s, int t) const {
-        assert((0 <= s) && (s < num_states_));
-        int start = 0;
-        int end = tr_[s].first - 1;
-        while( start < end ) {
-            int mid = (start + end) / 2;
-            if( tr_[s].second[mid] == t ) {
-                return mid;
-            } else if( tr_[s].second[mid] < t ) {
-                start = mid + 1;
-            } else {
-                end = mid - 1;
-            }
-        }
-        return (start == end) && tr_[s].second[start] == t ? start : -1;
-    }
-    bool tr(int s, int t) const {
-        return binary_search(s, t) != -1;
-    }
-    int successors(int s, vector<int> &succ) const {
-        assert((0 <= s) && (s < num_states_));
-        int count = tr_[s].first;
-        if( count == 0 ) {
-            succ.clear();
-        } else {
-            succ = vector<int>(count, 0);
-            for( int i = 0; i < count; ++i )
-                succ[i] = tr_[s].second[i];
-        }
-        return count;
-    }
-
-    // output
-    void dump(ostream &os) const {
-        os << num_states_ << " " << num_transitions_ << endl;
-
-        int count = 0;
-        for( size_t s = 0; s < num_states_; ++s )
-            count += tr_[s].first > 0 ? 1 : 0;
-        os << count << endl;
-
-        for( size_t s = 0; s < num_states_; ++s ) {
-            int count = tr_[s].first;
-            if( count > 0 ) {
-                os << s << " " << count;
-                for( int i = 0; i < count; ++i )
-                    os << " " << tr_[s].second[i];
-                os << endl;
-            }
-        }
-    }
-    void print(ostream &os) const {
-        os << "Transitions stats: #states=" << num_states_
-           << ", #transitions=" << num_transitions_
-           << endl;
-        for( size_t s = 0; s < num_states_; ++s ) {
-            int count = tr_[s].first;;
-            if( count > 0 ) {
-                os << "state " << s << ":";
-                for( int i = 0; i < count; ++i )
-                    os << " " << tr_[s].second[i];
-                os << endl;
-            }
-        }
-    }
-
-    // readers
-    void read(istream &is) {
-        int num_records = 0, last_src = -1;
-        is >> num_records;
-        for( int i = 0; i < num_records; ++i ) {
-            int src, count, dst;
-            is >> src >> count;
-
-            while( last_src < src ) {
-                offset_[last_src + 1] = last_src == -1 ? 0 : offset_[last_src];
-                ++last_src;
-            }
-
-            tr_[src] = make_pair(count, new int[count]);
-            for( int j = 0; j < count; ++j ) {
-                is >> dst;
-                // std::cout << "src: " << src << ", j: " << j << " tr_[src].second[j - 1]: " << tr_[src].second[j - 1] << " dst: " << dst << " num_states: " << num_states_ << std::endl;
-                assert((0 <= dst) && (dst < num_states_));
-                assert((j == 0) || (tr_[src].second[j - 1] < dst)); // verify unique and ordered transitions
-                tr_[src].second[j] = dst;
-            }
-
-            if( src + 1 < num_states_ ) offset_[src + 1] = offset_[src] + count;
-            assert(last_src == src);
-            ++last_src;
-        }
-
-        // fill remaining offsets
-        while( last_src < num_states_ ) {
-            offset_[last_src + 1] = last_src == -1 ? 0 : offset_[last_src];
-            ++last_src;
-        }
-
-        // check all transitions are accounted for
-        assert(offset_[num_states_ - 1] + tr_[num_states_ - 1].first == num_transitions_);
-    }
-    static const Transitions* read_dump(istream &is) {
-        int num_states, num_transitions;
-        is >> num_states >> num_transitions;
-        Transitions *T = new Transitions(num_states, num_transitions);
-        T->read(is);
-        cout << "Transitions::read_dump: #states=" << T->num_states() << ", #transitions=" << T->num_transitions() << endl;
-        return T;
-    }
-};
-
 class Theory {
   public:
     struct AbstractAction {
@@ -551,7 +238,6 @@ class Theory {
         }
     };
 
-  public:
     struct Options {
         string prefix_;
         bool ordering_;
@@ -573,8 +259,7 @@ class Theory {
     };
 
   protected:
-    const Matrix &M_;
-    const Transitions &T_;
+    const Sample::Sample &S_;
     const int K_;           // number of features in abstraction
     const int N_;           // number of actions in abstraction
     const Options options_;
@@ -601,18 +286,18 @@ class Theory {
     mutable vector<bool> model_;
 
   public:
-    Theory(const Matrix &M, const Transitions &T, int K, int N, const Options &options)
-      : M_(M), T_(T), K_(K), N_(N),
+    Theory(const Sample::Sample &S, int K, int N, const Options &options)
+      : S_(S), K_(K), N_(N),
         options_(options),
-        num_states_(M_.num_states()),
-        num_features_(M_.num_features()),
+        num_states_(S_.M().num_states()),
+        num_features_(S_.M().num_features()),
         log_num_features_(0),
         log_last_numerical_feature_(0),
         satisfiable_(false) {
 
         while( (1 << log_num_features_) < num_features_ )
             ++log_num_features_;
-        while( (1 << log_last_numerical_feature_) < M_.last_numerical_feature() )
+        while( (1 << log_last_numerical_feature_) < S_.M().last_numerical_feature() )
             ++log_last_numerical_feature_;
 
         cout << "Theory: parameters:"
@@ -703,14 +388,14 @@ class Theory {
         // generate string
         string feature;
         if( qnp_format ) {
-            feature += M_.feature(f);
+            feature += S_.M().feature(f);
             feature += prec ? " 1" : " 0";
-        } else if( M_.numerical(f) ) {
-            feature += to_string(f) + "." + M_.feature(f);
+        } else if( S_.M().numerical(f) ) {
+            feature += to_string(f) + "." + S_.M().feature(f);
             feature += prec ? ">0" : "=0";
         } else {
             feature += prec ? "" : "-";
-            feature += to_string(f) + "." + M_.feature(f);
+            feature += to_string(f) + "." + S_.M().feature(f);
         }
         return feature;
     }
@@ -721,14 +406,14 @@ class Theory {
         // generate string
         string feature;
         if( qnp_format ) {
-            feature += M_.feature(f);
+            feature += S_.M().feature(f);
             feature += eff ? " 1" : " 0";
-        } else if( M_.numerical(f) ) {
+        } else if( S_.M().numerical(f) ) {
             feature += eff ? "INC(" : "DEC(";
-            feature += to_string(f) + "." + M_.feature(f) + ")";
+            feature += to_string(f) + "." + S_.M().feature(f) + ")";
         } else {
             feature += eff ? "" : "-";
-            feature += to_string(f) + "." + M_.feature(f);
+            feature += to_string(f) + "." + S_.M().feature(f);
         }
         return feature;
     }
@@ -837,7 +522,7 @@ class Theory {
         var_offsets_.push_back(make_pair(variables_.size(), "RES"));
         for( int j = 0; j < N_; ++j ) {
             for( int i = 0; i < num_states_; ++i ) {
-                for( int l = 0; l < T_.num_transitions(i); ++l ) {
+                for( int l = 0; l < S_.T().num_transitions(i); ++l ) {
                     int index = variables_.size();
                     string name = string("RES(") + to_string(i) + "," + to_string(l) + "," + to_string(j) + ")";
                     variables_.push_back(new Var(index, name));
@@ -851,7 +536,7 @@ class Theory {
         var_offsets_.push_back(make_pair(variables_.size(), "INC"));
         for( int k = 0; k < K_; ++k ) {
             for( int i = 0; i < num_states_; ++i ) {
-                for( int l = 0; l < T_.num_transitions(i); ++l ) {
+                for( int l = 0; l < S_.T().num_transitions(i); ++l ) {
                     int index = variables_.size();
                     string name = string("INC(") + to_string(k) + "," + to_string(i) + "," + to_string(l) + ")";
                     variables_.push_back(new Var(index, name));
@@ -865,7 +550,7 @@ class Theory {
         var_offsets_.push_back(make_pair(variables_.size(), "DEC"));
         for( int k = 0; k < K_; ++k ) {
             for( int i = 0; i < num_states_; ++i ) {
-                for( int l = 0; l < T_.num_transitions(i); ++l ) {
+                for( int l = 0; l < S_.T().num_transitions(i); ++l ) {
                     int index = variables_.size();
                     string name = string("DEC(") + to_string(k) + "," + to_string(i) + "," + to_string(l) + ")";
                     variables_.push_back(new Var(index, name));
@@ -879,7 +564,7 @@ class Theory {
         var_offsets_.push_back(make_pair(variables_.size(), "MATCH"));
         for( int j = 0; j < N_; ++j ) {
             for( int i = 0; i < num_states_; ++i ) {
-                for( int l = 0; l < T_.num_transitions(i); ++l ) {
+                for( int l = 0; l < S_.T().num_transitions(i); ++l ) {
                     int index = variables_.size();
                     string name = string("MATCH(") + to_string(i) + "," + to_string(l) + "," + to_string(j) + ")";
                     variables_.push_back(new Var(index, name));
@@ -893,7 +578,7 @@ class Theory {
         var_offsets_.push_back(make_pair(variables_.size(), "APPMATCH"));
         for( int j = 0; j < N_; ++j ) {
             for( int i = 0; i < num_states_; ++i ) {
-                for( int l = 0; l < T_.num_transitions(i); ++l ) {
+                for( int l = 0; l < S_.T().num_transitions(i); ++l ) {
                     int index = variables_.size();
                     string name = string("APPMATCH(") + to_string(i) + "," + to_string(l) + "," + to_string(j) + ")";
                     variables_.push_back(new Var(index, name));
@@ -1010,9 +695,9 @@ class Theory {
     // used for soundness/completeness
     int RES(int i, int l, int j) const { // (i,l) in {0, ..., transitions-1}, j in {0, ..., N-1}
         assert((0 <= i) && (i < num_states_));
-        assert((0 <= l) && (l < T_.num_transitions(i)));
+        assert((0 <= l) && (l < S_.T().num_transitions(i)));
         assert((0 <= j) && (j < N_));
-        int index = (T_.offset(i) + l) + T_.num_transitions() * j;
+        int index = (S_.T().offset(i) + l) + S_.T().num_transitions() * j;
         assert(var_offsets_[5].second == "RES");
         return var_offsets_[5].first + index;
     }
@@ -1021,8 +706,8 @@ class Theory {
     int INC(int k, int i, int l) const { // k in {0, ..., K}, (i,l) in {0, ..., transitions-1}
         assert((0 <= k) && (k < K_));
         assert((0 <= i) && (i < num_states_));
-        assert((0 <= l) && (l < T_.num_transitions(i)));
-        int index = (T_.offset(i) + l) + T_.num_transitions() * k;
+        assert((0 <= l) && (l < S_.T().num_transitions(i)));
+        int index = (S_.T().offset(i) + l) + S_.T().num_transitions() * k;
         assert(var_offsets_[6].second == "INC");
         return var_offsets_[6].first + index;
     }
@@ -1031,8 +716,8 @@ class Theory {
     int DEC(int k, int i, int l) const { // k in {0, ..., K}, (i,l) in {0, ..., transitions-1}
         assert((0 <= k) && (k < K_));
         assert((0 <= i) && (i < num_states_));
-        assert((0 <= l) && (l < T_.num_transitions(i)));
-        int index = (T_.offset(i) + l) + T_.num_transitions() * k;
+        assert((0 <= l) && (l < S_.T().num_transitions(i)));
+        int index = (S_.T().offset(i) + l) + S_.T().num_transitions() * k;
         assert(var_offsets_[7].second == "DEC");
         return var_offsets_[7].first + index;
     }
@@ -1040,9 +725,9 @@ class Theory {
     // used for soundness/completeness
     int MATCH(int i, int l, int j) const { // (i,l) in {0, ..., transitions-1}, j in {0, ..., N-1}
         assert((0 <= i) && (i < num_states_));
-        assert((0 <= l) && (l < T_.num_transitions(i)));
+        assert((0 <= l) && (l < S_.T().num_transitions(i)));
         assert((0 <= j) && (j < N_));
-        int index = (T_.offset(i) + l) + T_.num_transitions() * j;
+        int index = (S_.T().offset(i) + l) + S_.T().num_transitions() * j;
         assert(var_offsets_[8].second == "MATCH");
         return var_offsets_[8].first + index;
     }
@@ -1050,9 +735,9 @@ class Theory {
     // used only for completeness
     int APPMATCH(int i, int l, int j) const { // (i,l) in {0, ..., transitions-1}, j in {0, ..., N-1}
         assert((0 <= i) && (i < num_states_));
-        assert((0 <= l) && (l < T_.num_transitions(i)));
+        assert((0 <= l) && (l < S_.T().num_transitions(i)));
         assert((0 <= j) && (j < N_));
-        int index = (T_.offset(i) + l) + T_.num_transitions() * j;
+        int index = (S_.T().offset(i) + l) + S_.T().num_transitions() * j;
         assert(var_offsets_[9].second == "APPMATCH");
         return var_offsets_[9].first + index;
     }
@@ -1067,7 +752,7 @@ class Theory {
             for( int t = log_last_numerical_feature_; t < log_num_features_; ++t )
                 IP.add_antecedent(-(1 + F(k, t)));
         } else {
-            for( int j = M_.last_numerical_feature(); j < num_features_; ++j )
+            for( int j = S_.M().last_numerical_feature(); j < num_features_; ++j )
                 IP.add_antecedent(-(1 + Fn(k, j)));
         }
     }
@@ -1139,7 +824,7 @@ class Theory {
         if( options_.log_feature_variables_ ) {
             // constraints: dummy features are not selected
             for( int k = 0; k < K_; ++k ) {
-                for( int index = M_.last_numerical_feature(); index < M_.first_boolean_feature(); ++index ) {
+                for( int index = S_.M().last_numerical_feature(); index < S_.M().first_boolean_feature(); ++index ) {
                     Implication *IP = new Implication;
                     for( int t = 0; t < log_num_features_; ++t )
                         IP->add_antecedent(bit(t, index) ? 1 + F(k, t) : -(1 + F(k, t)));
@@ -1179,7 +864,7 @@ class Theory {
 
             // constraints: dummy features are not selected
             for( int k = 0; k < K_; ++k ) {
-                for( int j = M_.last_numerical_feature(); j < M_.first_boolean_feature(); ++j ) {
+                for( int j = S_.M().last_numerical_feature(); j < S_.M().first_boolean_feature(); ++j ) {
                     Implication *IP = new Implication;
                     IP->add_antecedent(1 + Fn(k, j));
                     add_implication(IP);
@@ -1209,7 +894,7 @@ class Theory {
             for( int j = 0; j < num_features_; ++j ) {
                 Implication *IP = new Implication;
                 IP->add_antecedent(1 + Fn(k, j));
-                IP->add_consequent(j < M_.last_numerical_feature() ? 1 + n(k) : -(1 + n(k)));
+                IP->add_consequent(j < S_.M().last_numerical_feature() ? 1 + n(k) : -(1 + n(k)));
                 add_implication(IP);
             }
         }
@@ -1226,7 +911,7 @@ class Theory {
         if( options_.log_feature_variables_ ) {
             // forward implications
             for( int l = 0; l < num_features_; ++l ) {
-                if( (!star && (M_(i, l) == 0)) || (star && (M_(i, l) > 0)) ) {
+                if( (!star && (S_.M()(i, l) == 0)) || (star && (S_.M()(i, l) > 0)) ) {
                     Implication *IP = new Implication;
                     IP->add_antecedent(1 + phi(k, i, star));
                     for( int t = 0; t < log_num_features_; ++t )
@@ -1237,7 +922,7 @@ class Theory {
 
             // backward implications
             for( int l = 0; l < num_features_; ++l ) {
-                if( (!star && (M_(i, l) > 0)) || (star && (M_(i, l) == 0)) ) {
+                if( (!star && (S_.M()(i, l) > 0)) || (star && (S_.M()(i, l) == 0)) ) {
                     Implication *IP = new Implication;
                     IP->add_consequent(1 + phi(k, i, star));
                     for( int t = 0; t < log_num_features_; ++t )
@@ -1248,7 +933,7 @@ class Theory {
         } else {
             // forward implications
             for( int l = 0; l < num_features_; ++l ) {
-                if( (!star && (M_(i, l) == 0)) || (star && (M_(i, l) > 0)) ) {
+                if( (!star && (S_.M()(i, l) == 0)) || (star && (S_.M()(i, l) > 0)) ) {
                     Implication *IP = new Implication;
                     IP->add_antecedent(1 + phi(k, i, star));
                     IP->add_consequent(-(1 + Fn(k, l)));
@@ -1258,7 +943,7 @@ class Theory {
 
             // backward implications
             for( int l = 0; l < num_features_; ++l ) {
-                if( (!star && (M_(i, l) > 0)) || (star && (M_(i, l) == 0)) ) {
+                if( (!star && (S_.M()(i, l) > 0)) || (star && (S_.M()(i, l) == 0)) ) {
                     Implication *IP = new Implication;
                     IP->add_consequent(1 + phi(k, i, star));
                     IP->add_antecedent(1 + Fn(k, l));
@@ -1325,9 +1010,9 @@ class Theory {
 
     void build_RES(int i, int l, int j) { // (i,l) in {0, ..., transitions-1}, j in {0, ..., N-1}
         assert((0 <= i) && (i < num_states_));
-        assert((0 <= l) && (l < T_.num_transitions(i)));
+        assert((0 <= l) && (l < S_.T().num_transitions(i)));
         assert((0 <= j) && (j < N_));
-        int state_l = T_.transition_state(i, l);
+        int state_l = S_.T().transition_state(i, l);
 
         // forward implications: 4 of them
         for( int k = 0; k < K_; ++k ) {
@@ -1367,7 +1052,7 @@ class Theory {
     void build_formulas_RES() {
         for( int j = 0; j < N_; ++j ) {
             for( int i = 0; i < num_states_; ++i ) {
-                for( int l = 0; l < T_.num_transitions(i); ++l )
+                for( int l = 0; l < S_.T().num_transitions(i); ++l )
                     build_RES(i, l, j);
             }
         }
@@ -1376,13 +1061,13 @@ class Theory {
     void build_INC(int k, int i, int l) { // k in {0, ..., K-1}, (i,l) in {0, ..., transitions-1}
         assert((0 <= k) && (k < K_));
         assert((0 <= i) && (i < num_states_));
-        assert((0 <= l) && (l < T_.num_transitions(i)));
-        int state_l = T_.transition_state(i, l);
+        assert((0 <= l) && (l < S_.T().num_transitions(i)));
+        int state_l = S_.T().transition_state(i, l);
 
         if( options_.log_feature_variables_ ) {
             // forward implications
             for( int j = 0; j < num_features_; ++j ) {
-                if( M_(i, j) >= M_(state_l, j) ) {
+                if( S_.M()(i, j) >= S_.M()(state_l, j) ) {
                     Implication *IP = new Implication;
                     IP->add_antecedent(1 + INC(k, i, l));
                     for( int t = 0; t < log_num_features_; ++t )
@@ -1393,7 +1078,7 @@ class Theory {
 
             // backward implications
             for( int j = 0; j < num_features_; ++j ) {
-                if( M_(i, j) < M_(state_l, j) ) {
+                if( S_.M()(i, j) < S_.M()(state_l, j) ) {
                     Implication *IP = new Implication;
                     for( int t = 0; t < log_num_features_; ++t )
                         IP->add_antecedent(bit(t, j) ? 1 + F(k, t) : -(1 + F(k, t)));
@@ -1404,7 +1089,7 @@ class Theory {
         } else {
             // forward implications
             for( int j = 0; j < num_features_; ++j ) {
-                if( M_(i, j) >= M_(state_l, j) ) {
+                if( S_.M()(i, j) >= S_.M()(state_l, j) ) {
                     Implication *IP = new Implication;
                     IP->add_antecedent(1 + INC(k, i, l));
                     IP->add_consequent(-(1 + Fn(k, j)));
@@ -1414,7 +1099,7 @@ class Theory {
 
             // backward implications
             for( int j = 0; j < num_features_; ++j ) {
-                if( M_(i, j) < M_(state_l, j) ) {
+                if( S_.M()(i, j) < S_.M()(state_l, j) ) {
                     Implication *IP = new Implication;
                     IP->add_antecedent(1 + Fn(k, j));
                     IP->add_consequent(1 + INC(k, i, l));
@@ -1426,7 +1111,7 @@ class Theory {
     void build_formulas_INC() {
         for( int k = 0; k < K_; ++k ) {
             for( int i = 0; i < num_states_; ++i ) {
-                for( int l = 0; l < T_.num_transitions(i); ++l )
+                for( int l = 0; l < S_.T().num_transitions(i); ++l )
                     build_INC(k, i, l);
             }
         }
@@ -1435,13 +1120,13 @@ class Theory {
     void build_DEC(int k, int i, int l) { // k in {0, ..., K-1}, (i,l) in {0, ..., transitions-1}
         assert((0 <= k) && (k < K_));
         assert((0 <= i) && (i < num_states_));
-        assert((0 <= l) && (l < T_.num_transitions(i)));
-        int state_l = T_.transition_state(i, l);
+        assert((0 <= l) && (l < S_.T().num_transitions(i)));
+        int state_l = S_.T().transition_state(i, l);
 
         if( options_.log_feature_variables_ ) {
             // forward implications
             for( int j = 0; j < num_features_; ++j ) {
-                if( M_(i, j) <= M_(state_l, j) ) {
+                if( S_.M()(i, j) <= S_.M()(state_l, j) ) {
                     Implication *IP = new Implication;
                     IP->add_antecedent(1 + DEC(k, i, l));
                     for( int t = 0; t < log_num_features_; ++t )
@@ -1452,7 +1137,7 @@ class Theory {
 
             // backward implications
             for( int j = 0; j < num_features_; ++j ) {
-                if( M_(i, j) > M_(state_l, j) ) {
+                if( S_.M()(i, j) > S_.M()(state_l, j) ) {
                     Implication *IP = new Implication;
                     for( int t = 0; t < log_num_features_; ++t )
                         IP->add_antecedent(bit(t, j) ? 1 + F(k, t) : -(1 + F(k, t)));
@@ -1463,7 +1148,7 @@ class Theory {
         } else {
             // forward implications
             for( int j = 0; j < num_features_; ++j ) {
-                if( M_(i, j) <= M_(state_l, j) ) {
+                if( S_.M()(i, j) <= S_.M()(state_l, j) ) {
                     Implication *IP = new Implication;
                     IP->add_antecedent(1 + DEC(k, i, l));
                     IP->add_consequent(-(1 + Fn(k, j)));
@@ -1473,7 +1158,7 @@ class Theory {
 
             // backward implications
             for( int j = 0; j < num_features_; ++j ) {
-                if( M_(i, j) > M_(state_l, j) ) {
+                if( S_.M()(i, j) > S_.M()(state_l, j) ) {
                     Implication *IP = new Implication;
                     IP->add_antecedent(1 + Fn(k, j));
                     IP->add_consequent(1 + DEC(k, i, l));
@@ -1485,7 +1170,7 @@ class Theory {
     void build_formulas_DEC() {
         for( int k = 0; k < K_; ++k ) {
             for( int i = 0; i < num_states_; ++i ) {
-                for( int l = 0; l < T_.num_transitions(i); ++l )
+                for( int l = 0; l < S_.T().num_transitions(i); ++l )
                     build_DEC(k, i, l);
             }
         }
@@ -1493,9 +1178,9 @@ class Theory {
 
     void build_MATCH(int i, int l, int j) { // (i,l) in {0, ..., transitions-1}, j in {0, ..., N-1}
         assert((0 <= i) && (i < num_states_));
-        assert((0 <= l) && (l < T_.num_transitions(i)));
+        assert((0 <= l) && (l < S_.T().num_transitions(i)));
         assert((0 <= j) && (j < N_));
-        int state_l = T_.transition_state(i, l);
+        //int state_l = S_.T().transition_state(i, l); // unused
 
         // forward: implication for RES
         Implication *IP = new Implication;
@@ -1547,7 +1232,7 @@ class Theory {
     }
     void build_formulas_MATCH() {
         for( int i = 0; i < num_states_; ++i ) {
-            for( int l = 0; l < T_.num_transitions(i); ++l ) {
+            for( int l = 0; l < S_.T().num_transitions(i); ++l ) {
                 for( int j = 0; j < N_; ++j )
                     build_MATCH(i, l, j);
             }
@@ -1556,9 +1241,9 @@ class Theory {
 
     void build_APPMATCH(int i, int l, int j) { // (i,l) in {0, ..., transitions-1}, j in {0, ..., N-1}
         assert((0 <= i) && (i < num_states_));
-        assert((0 <= l) && (l < T_.num_transitions(i)));
+        assert((0 <= l) && (l < S_.T().num_transitions(i)));
         assert((0 <= j) && (j < N_));
-        int state_l = T_.transition_state(i, l);
+        //int state_l = S_.T().transition_state(i, l); // unused
 
         // forward implications
         Implication *IP = new Implication;
@@ -1577,7 +1262,7 @@ class Theory {
     }
     void build_formulas_APPMATCH() {
         for( int i = 0; i < num_states_; ++i ) {
-            for( int l = 0; l < T_.num_transitions(i); ++l ) {
+            for( int l = 0; l < S_.T().num_transitions(i); ++l ) {
                 for( int j = 0; j < N_; ++j )
                     build_APPMATCH(i, l, j);
             }
@@ -1755,7 +1440,7 @@ class Theory {
         }
     }
     void force_feature(int j, const string &feature) {
-        int feature_index = M_.feature(feature);
+        int feature_index = S_.M().feature(feature);
         if( feature_index == -1 )
             cout << "error: inexistent feature '" << feature << "'" << endl;
         else
@@ -1882,7 +1567,7 @@ class Theory {
                 }
 
                 // consequent
-                for( int l = 0; l < T_.num_transitions(i); ++l )
+                for( int l = 0; l < S_.T().num_transitions(i); ++l )
                     IP->add_consequent(1 + MATCH(i, l, j));
 
                 // add implications
@@ -1897,7 +1582,7 @@ class Theory {
         imp_offsets_.push_back(make_pair(implications_.size(), "completeness"));
         add_comment("Theory for enforcing completeness");
         for( int i = 0; i < num_states_; ++i ) {
-            for( int l = 0; l < T_.num_transitions(i); ++l ) {
+            for( int l = 0; l < S_.T().num_transitions(i); ++l ) {
                 Implication *IP = new Implication;
                 for( int j = 0; j < N_; ++j )
                     IP->add_consequent(1 + APPMATCH(i, l, j));
@@ -2001,9 +1686,9 @@ class Theory {
             int feature_index = index_for_selected_feature(model_, j);
             assert(feature_index < num_features_);
             if( qnp_format )
-                os << " " << M_.feature(feature_index) << " " << M_.numerical(feature_index);
+                os << " " << S_.M().feature(feature_index) << " " << S_.M().numerical(feature_index);
             else
-                os << "F" << j << ": " << M_.feature(feature_index) << endl;
+                os << "F" << j << ": " << S_.M().feature(feature_index) << endl;
         }
         if( qnp_format ) os << endl;
 
@@ -2082,31 +1767,6 @@ void Theory::read_actions(const string &prefix) {
     Theory::AbstractAction::feature_map_ = nullptr;
 }
 
-pair<const Matrix*, const Transitions*> read_data(const string &matrix_filename, const string &transitions_filename) {
-    pair<const Matrix*, const Transitions*> p(nullptr, nullptr);
-
-    cout << "reading '" << matrix_filename << "' ... " << flush;
-    ifstream ifs_matrix(matrix_filename.c_str());
-    if( !ifs_matrix.fail() ) {
-        p.first = Matrix::read_dump(ifs_matrix);
-        ifs_matrix.close();
-    } else {
-            throw std::runtime_error("error: opening file '" + matrix_filename + "'");
-        cout << "error: opening file '" << matrix_filename << "'" << endl;
-    }
-
-    cout << "reading '" << transitions_filename << "' ... " << flush;
-    ifstream ifs_transitions(transitions_filename.c_str());
-    if( !ifs_transitions.fail() ) {
-        p.second = Transitions::read_dump(ifs_transitions);
-        ifs_transitions.close();
-    } else {
-        cout << "error: opening file '" << transitions_filename << "'" << endl;
-    }
-
-    return p;
-}
-
 void usage(ostream &os, const string &name) {
     cout << endl
          << "usage: " << name << " [--add-actions] [--add-features] [--decode] [--explicit-goals] [--naive-feature-variables] [--only-soundness] [--ordering-clauses] <prefix> <K> <N>" << endl
@@ -2183,13 +1843,11 @@ int main(int argc, const char **argv) {
     string transitions_filename = filename(options.prefix_, K, N, "_transitions.dat", false);
 
     // read data
-    pair<const Matrix*, const Transitions*> p;
-    p = read_data(matrix_filename, transitions_filename);
-    const Matrix *M = p.first;
-    const Transitions *Tr = p.second;
+    Sample::Sample data;
+    data.read(matrix_filename, transitions_filename);
 
     // create theory
-    Theory Th(*M, *Tr, K, N, options);
+    Theory Th(data, K, N, options);
     cout << "#variables=" << Th.num_variables() << endl;
     cout << "#implications=" << Th.num_implications() << endl;
 
@@ -2226,8 +1884,6 @@ int main(int argc, const char **argv) {
         cout << " done!" << endl;
     }
 
-    delete M;
-    delete Tr;
     return 0;
 }
 
