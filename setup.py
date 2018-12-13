@@ -49,6 +49,7 @@ def main():
             'psutil',
             'bitarray',
             'numpy',
+            'jsonpickle'
             # "pip @ git+ssh://git@github.com/aig-upf/tarski.git@cb92626051e79dca0439acd6b76a877adf30d497"
         ],
 

@@ -572,8 +572,8 @@ class Theory {
   protected:
     const Matrix &M_;
     const Transitions &T_;
-    const int K_;
-    const int N_;
+    const int K_;           // number of features in abstraction
+    const int N_;           // number of actions in abstraction
 
     const Options options_;
     Items<AbstractAction> actions_;
@@ -882,6 +882,10 @@ class Theory {
     }
 
     // references to variables
+    // A(1, j, k) iff j-th action *affects* k-th feature
+    // A(2, j, k) iff type of effect of j-th action on k-th feature (0=false/decrement, 1=true/increment)
+    // A(3, j, k) iff k-th feature is *precondition* of j-th action
+    // A(4, j, k) iff type of precondition of k-th feature in j-th action (0=false/=0, 1=true/>0)
     int A(int t, int j, int k) const { // t in {1, ... ,4}, j in {0, ..., N-1}, k in {0, ... ,K-1}
         assert((0 < t) && (t < 5));
         assert((0 <= j) && (j < N_));
@@ -891,6 +895,7 @@ class Theory {
         return var_offsets_[0].first + index;
     }
 
+    // F(j, k) iff j-th feature encodes feature whose index has k-th set to 1 (logarithmic encoding)
     int F(int j, int k) const { // j in {0, ..., K-1}, k in {0, ..., log2(F)-1}
         assert((0 <= j) && (j < K_));
         assert((0 <= k) && (k < log_num_features_));
@@ -913,6 +918,8 @@ class Theory {
         return var_offsets_[10].first + index;
     }
 
+    // phi(k, i, F) iff k-th feature *holds* in state s_i in sample
+    // phi(k, i, T) iff k-th feature *does not hold* in state s_i in sample
     int phi(int k, int i, bool star) const { // k in {0, ..., K-1}, i in {0, ..., states-1}
         assert((0 <= k) && (k < K_));
         assert((0 <= i) && (i < num_states_));
@@ -921,6 +928,7 @@ class Theory {
         return var_offsets_[2].first + index;
     }
 
+    // used for soundness
     int B(int t, int j, int i, int k) const { // t in {1,...,2}, j in {0, ..., N-1}, i in {0, ..., states-1}, k in {0, ..., K-1}
         assert((1 <= t) && (t < 3));
         assert((0 <= j) && (j < N_));
@@ -931,6 +939,7 @@ class Theory {
         return var_offsets_[3].first + index;
     }
 
+    // used for soundness/completeness
     int RES(int i, int l, int j) const { // (i,l) in {0, ..., transitions-1}, j in {0, ..., N-1}
         assert((0 <= i) && (i < num_states_));
         assert((0 <= l) && (l < T_.num_transitions(i)));
@@ -940,6 +949,7 @@ class Theory {
         return var_offsets_[4].first + index;
     }
 
+    // used for soundness/completeness
     int INC(int k, int i, int l) const { // k in {0, ..., K}, (i,l) in {0, ..., transitions-1}
         assert((0 <= k) && (k < K_));
         assert((0 <= i) && (i < num_states_));
@@ -949,6 +959,7 @@ class Theory {
         return var_offsets_[5].first + index;
     }
 
+    // used for soundness/completeness
     int DEC(int k, int i, int l) const { // k in {0, ..., K}, (i,l) in {0, ..., transitions-1}
         assert((0 <= k) && (k < K_));
         assert((0 <= i) && (i < num_states_));
@@ -958,6 +969,7 @@ class Theory {
         return var_offsets_[6].first + index;
     }
 
+    // used for soundness/completeness
     int MATCH(int i, int l, int j) const { // (i,l) in {0, ..., transitions-1}, j in {0, ..., N-1}
         assert((0 <= i) && (i < num_states_));
         assert((0 <= l) && (l < T_.num_transitions(i)));
@@ -967,6 +979,7 @@ class Theory {
         return var_offsets_[7].first + index;
     }
 
+    // used only for completeness
     int APPMATCH(int i, int l, int j) const { // (i,l) in {0, ..., transitions-1}, j in {0, ..., N-1}
         assert((0 <= i) && (i < num_states_));
         assert((0 <= l) && (l < T_.num_transitions(i)));
