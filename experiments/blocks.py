@@ -94,6 +94,7 @@ def experiment(experiment_name=None):
         # instances=["probBLOCKS-5-0.pddl", "probBLOCKS-6-0.pddl", "probBLOCKS-7-0.pddl"],
         # instances=["probBLOCKS-4-0.pddl", "probBLOCKS-4-1.pddl", "probBLOCKS-4-2.pddl"],
         instances=["instance_8_clear_x_0.pddl", "instance_5_clear_x.pddl"],  # , "instance_4_clear_x.pddl"],
+        # instances=["probBLOCKS-4-0.pddl"],
         num_states=5000, max_width=-1,
         initial_sample_size=5,
         # num_sampled_states=50,

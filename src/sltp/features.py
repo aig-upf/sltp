@@ -17,55 +17,26 @@
 import logging
 import itertools
 import sys
-from signal import signal, SIGPIPE, SIG_DFL
 
 import os
 import tarski as tsk
 
 from bitarray import bitarray
-from .language import parse_pddl, compute_goal_denotation
-from .util.misc import try_number
-from tarski import Predicate, Function
-from tarski.dl.concepts import GoalNullaryAtom, GoalConcept, GoalRole
-from tarski.syntax import builtins
-from tarski.dl import Concept, Role, PrimitiveConcept, PrimitiveRole, InverseRole, StarRole, \
-    ConceptCardinalityFeature, MinDistanceFeature, SyntacticFactory, NullaryAtomFeature, NullaryAtom, \
-    EmpiricalBinaryConcept, UniversalConcept, EmptyConcept
-from tarski.syntax.transform.errors import TransformationError
-from tarski.syntax.transform.simplifications import transform_to_ground_atoms
+from models import DLModelFactory, FeatureModel
+from sltp.util.misc import compute_universe_from_pddl_model
 
-from .extensions import UniverseIndex, ExtensionCache
+from .language import parse_pddl, compute_goal_denotation
+from tarski.dl import Concept, Role, InverseRole, StarRole, \
+    ConceptCardinalityFeature, MinDistanceFeature, SyntacticFactory, NullaryAtomFeature, compute_dl_vocabulary
+
+from .extensions import DLDenotationTraceIndex
 from .returncodes import ExitCode
 
 
-signal(SIGPIPE, SIG_DFL)
-
-
-def compute_universe_from_state_set(states):
-    """ Iterate through all states and collect all possible PDDL objects """
-    universe = UniverseIndex()
-
-    for sid, state in states.items():
-        for atom in state:
-            assert atom
-            if atom[0] == "=":  # Functional atom
-                assert len(atom) <= 4, "Cannot deal with arity>1 functions yet"
-                [universe.add(try_number(obj)) for obj in atom[2:]]
-            else:
-                assert len(atom) in (1, 2, 3), "Cannot deal with arity>2 predicates yet"
-                [universe.add(try_number(obj)) for obj in atom[1:]]
-
-    universe.finish()  # No more objects possible
-    return universe
-
-
 class TerminologicalFactory(object):
-    def __init__(self, language: tsk.FirstOrderLanguage, states, goal_denotation):
+    def __init__(self, language: tsk.FirstOrderLanguage, processor):
         self.syntax = SyntacticFactory(language)
-
-        universe = compute_universe_from_state_set(states)
-        self.processor = SemanticProcessor(language, states, universe, self.syntax.top, self.syntax.bot)
-        self.processor.initialize_global_sample_cache(states, goal_denotation)
+        self.processor = processor
 
     def create_atomic_concepts(self, base_concepts):
         # Start with the base concepts
@@ -171,134 +142,36 @@ class TerminologicalFactory(object):
 
 
 class SemanticProcessor(object):
-
-    def __init__(self, language, states, universe, top, bot):
-        self.language = language
+    def __init__(self, states, model_cache):
         self.states = states
-        self.top = top
-        self.bot = bot
-        self.relevant_predicates = set(p for p in self.language.predicates
-                                       if not builtins.is_builtin_predicate(p) and p.arity in (0, 1, 2))
-        self.relevant_functions = set(f for f in self.language.functions
-                                      if not builtins.is_builtin_function(f) and f.arity in (0, 1))
-        self.standard_dl_mapping = {0: NullaryAtom, 1: PrimitiveConcept, 2: PrimitiveRole}
-        self.goal_dl_mapping = {0: GoalNullaryAtom, 1: GoalConcept, 2: GoalRole}
-        self.universe = universe
+        self.model_cache = model_cache
         self.singleton_extension_concepts = []
-        self.cache = None
-
-    def initialize_global_sample_cache(self, states, goal_denotation):
-        self.cache = self.create_cache_for_samples(states, goal_denotation)
-
-    # @profile
-    def generate_extension_trace(self, term):
-        assert isinstance(term, (Concept, Role))
-
-        trace = bitarray()
-        state_extensions = []
-        for sid in self.states:
-            extension = term.extension(self.cache, sid)
-            trace += extension
-            state_extensions.append((sid, extension))
-
-        return trace, state_extensions
-
-    def build_cache_for_state(self, state, goal_denotation):
-        cache = dict()
-        cache[self.top] = self.universe.as_extension()
-        cache[self.bot] = set()
-        # cache["_index_"] = universe
-        # cache["_state_"] = state
-
-        unprocessed = set(self.relevant_predicates) | set(self.relevant_functions)
-
-        for atom in state:
-            assert atom
-            if atom[0] == "=":  # Functional atom
-                atom = atom[1:]
-
-            predfun = self.process_atom(atom, cache, self.standard_dl_mapping)
-            unprocessed.discard(predfun)
-
-        # CWA: those predicates not appearing on the state trace are assumed to have empty denotation
-        def set_defaults_for_unprocessed_elements(cache_, unprocessed_, dl_mapping):
-            for p in unprocessed_:
-                ar = p.uniform_arity()
-                dl_element = dl_mapping[ar](p)
-                if ar == 1:
-                    cache_[dl_element] = set()
-                elif ar == 2:
-                    cache_[dl_element] = set()
-                else:
-                    assert ar == 0
-                    cache_[dl_element] = False
-
-        set_defaults_for_unprocessed_elements(cache, unprocessed, self.standard_dl_mapping)
-
-        # If some goal denotation is specified, then we create goal concepts and roles based on it
-        if goal_denotation:
-            unprocessed = set(self.relevant_predicates) | set(self.relevant_functions)
-
-            for atom in goal_denotation:
-                predfun = self.process_atom(atom, cache, self.goal_dl_mapping)
-                unprocessed.discard(predfun)
-            set_defaults_for_unprocessed_elements(cache, unprocessed, self.goal_dl_mapping)
-
-        return cache
-
-    def process_atom(self, atom, cache, dl_mapping):
-        assert len(atom) <= 3, "Cannot deal with arity>2 predicates or arity>1 functions yet"
-        predfun = self.language.get(atom[0])
-        assert isinstance(predfun, (Predicate, Function))
-        assert predfun.uniform_arity() == len(atom) - 1
-        dl_element = dl_mapping[predfun.uniform_arity()](predfun)
-
-        if len(atom) == 1:  # i.e. a nullary predicate
-            assert dl_element not in cache
-            cache[dl_element] = True
-
-        elif len(atom) == 2:  # i.e. a unary predicate or nullary function
-            cache.setdefault(dl_element, set()).add(self.universe.index(try_number(atom[1])))
-
-        else:  # i.e. a binary predicate or unary function
-            t = (self.universe.index(try_number(atom[1])), self.universe.index(try_number(atom[2])))
-            cache.setdefault(dl_element, set()).add(t)
-
-        return predfun
-
-    def register_state_on_cache(self, sid, state, cache, goal_denotation):
-        all_terms = self.build_cache_for_state(state, goal_denotation)
-        for term, extension in all_terms.items():
-            if isinstance(term, (Concept, Role)):
-                cache.register_extension(term, sid, extension)
-            elif isinstance(term, NullaryAtom):
-                cache.register_nullary_truth_value(term, sid, extension)
-
-    def create_cache_for_samples(self, states, goal_denotation):
-        cache = ExtensionCache(self.universe, self.top, self.bot)
-        for sid, state in states.items():
-            # TODO It is far from optimal to keep a per-state denotation of each static and goal concept!!
-            # TODO It'd require a bit of work to fix this at the moment though
-            self.register_state_on_cache(sid, state, cache, goal_denotation)
-        return cache
+        self.traces = DLDenotationTraceIndex()
 
     def process_term(self, term):
         if term is None:
             return False
-        trace, extensions = self.generate_extension_trace(term)
+        trace, all_denotations_are_singleton = self._generate_denotation_trace(term)
 
-        if not self.cache.register_trace(term, trace):
+        if not self.traces.register_trace(term, trace):
             # The trace is equivalent to some other trace already seen, we signal so by returning False
             return False
 
-        singleton_extension_over_all_states = True and term.ARITY == 1
-        for sid, ext in extensions:  # We register the compressed individual extensions
-            self.cache.register_compressed_extension(term, sid, ext)
-            singleton_extension_over_all_states = singleton_extension_over_all_states and ext.count(True) == 1
-
-        if singleton_extension_over_all_states:
+        if all_denotations_are_singleton and term.ARITY == 1:
             self.singleton_extension_concepts.append(term)
         return True
+
+    def _generate_denotation_trace(self, term):
+        assert isinstance(term, (Concept, Role))
+        all_denotations_are_singleton = True
+        trace = bitarray()
+        for sid in self.states:
+            # This doesn't cache the denotation, which is intended, because at this point we still don't know if
+            # the term might be redundant, in which case we don't want to clutter the cache with its denotation
+            extension = term.denotation(self.model_cache.get_term_model(sid))
+            trace += extension
+            all_denotations_are_singleton = all_denotations_are_singleton and extension.count(True) == 1
+        return trace, all_denotations_are_singleton
 
 
 def store_terms(concepts, roles, args):
@@ -358,26 +231,25 @@ def run(config, data, rng):
 
 def extract_features(config, sample):
     logging.info("Generating concepts and pruning from sample set: {}".format(sample.info()))
-    states = sample.states
-
-    goal_denotation = []
     goal_predicates = set()  # The predicates and functions that appear mentioned in the goal
 
     if config.parameter_generator is not None:
         logging.info('Using user-provided domain parameters and ignoring goal representation')
-        problem, language, generic_constants, types = parse_pddl(config.domain)
-        generic_constants += config.parameter_generator(language)
     else:
         logging.info('Using goal representation and no domain parameters')
-        problem, language, generic_constants, types = parse_pddl(config.domain, config.instance)
-        try:
-            goal_denotation = transform_to_ground_atoms(problem.goal)
-            goal_predicates = {x[0] for x in goal_denotation}
-        except TransformationError:
-            logging.error("Cannot create goal concepts when problem goal is not a conjunction of ground atoms")
-            raise
+        assert 0
+        # TODO THIS NEEDS TO BE REFACTORED AND WON'T WORK AS IT IS NOW, SINCE WE CAN NOW HAVE MULTIPLE INSTANCES
+        # problem, language, nominals, types = parse_pddl(config.domain, config.instance)
+        # try:
+        #     goal_denotation = transform_to_ground_atoms(problem.goal)
+        #     goal_predicates = {x[0] for x in goal_denotation}
+        # except TransformationError:
+        #     logging.error("Cannot create goal concepts when problem goal is not a conjunction of ground atoms")
+        #     raise
 
-    factory = TerminologicalFactory(language, states, goal_denotation)
+    language, nominals, types, model_cache = create_model_cache_from_samples(sample, config)
+    processor = SemanticProcessor(sample.states, model_cache)
+    factory = TerminologicalFactory(language, processor)
 
     if config.concept_generator is not None:
         logging.info('Using set of concepts and roles provided by the user'.format())
@@ -387,7 +259,7 @@ def extract_features(config, sample):
         atoms, concepts, roles = user_atoms, user_concepts, user_roles
     elif config.feature_generator is None:
         logging.info('Starting automatic generation of concepts'.format())
-        atoms, concepts, roles = generate_concepts(config, factory, generic_constants, types, goal_predicates)
+        atoms, concepts, roles = generate_concepts(config, factory, nominals, types, goal_predicates)
     else:
         atoms, concepts, roles = [], [], []
 
@@ -395,7 +267,7 @@ def extract_features(config, sample):
 
     # store_terms(concepts, roles, config)
     logging.info('Final output: {} concept(s) and {} role(s)'.format(len(concepts), len(roles)))
-    logging.info('Number of states in the sample: {}'.format(len(states)))
+    logging.info('Number of states in the sample: {}'.format(len(sample.states)))
     logging.info('Number of concepts with singleton extensions over all states: {}'.format(
         len(factory.processor.singleton_extension_concepts)))
 
@@ -419,18 +291,18 @@ def extract_features(config, sample):
         features = config.feature_generator(language)
 
     logging.info('Final number of features: {}'.format(len(features)))
-    # log_concept_denotations(states, concepts, factory.processor.cache, config.concept_denotation_filename)
+    # log_concept_denotations(sample.states, concepts, factory.processor.models, config.concept_denotation_filename)
 
     return ExitCode.Success, dict(
         features=features,
-        extensions=factory.processor.cache,
+        model_cache=factory.processor.model_cache,
         enforced_feature_idxs=enforced_feature_idxs,
     )
 
 
-def generate_concepts(config, factory, generic_constants, types, goal_predicates):
+def generate_concepts(config, factory, nominals, types, goal_predicates):
     # Construct the primitive terms from the input language, and then add the atoms
-    concepts, roles, atoms = factory.syntax.generate_primitives_from_language(generic_constants, types, goal_predicates)
+    concepts, roles, atoms = factory.syntax.generate_primitives_from_language(nominals, types, goal_predicates)
     logging.info('Primitive (nullary) atoms : {}'.format(", ".join(map(str, atoms))))
     logging.info('Primitive (unary) concepts: {}'.format(", ".join(map(str, concepts))))
     logging.info('Primitive (binary) roles  : {}'.format(", ".join(map(str, roles))))
@@ -468,69 +340,78 @@ def generate_concepts(config, factory, generic_constants, types, goal_predicates
     return atoms, concepts, roles
 
 
-def log_concept_denotations(states, concepts, cache, filename, selected=None):
+def log_concept_denotations(states, concepts, models, filename, selected=None):
     selected = selected or concepts
     # selected = ((str(f), f) for f in selected)
     # selected = sorted(selected, key=lambda x: x[0])  # Sort features by name
 
     with open(filename, 'w') as file:
         for s, concept in itertools.product(states, selected):
-            val = cache.as_set(concept, s)
+            val = models[s].uncompressed_denotation(concept)
             print("s_{}[{}] = {}".format(s, concept, val), file=file)
 
     logging.info("Concept denotations logged in '{}'".format(filename))
 
 
-class Model(object):
-    def __init__(self, cache):
-        assert isinstance(cache, ExtensionCache)
-        self.cache = cache
-
-    def compute_feature_value(self, feature, state_id):
-        try:
-            # HACK: no need to duplicately store denotations
-            # of empirical binary concepts and their base features
-            if isinstance(feature, EmpiricalBinaryConcept):
-                return bool(self.cache.feature_value(feature, state_id))
-            return self.cache.feature_value(feature, state_id)
-        except KeyError:
-            value = feature.value(self.cache, state_id)
-            self.cache.register_feature_value(feature, state_id, value)
-            return value
+def compute_nominals(domain, parameter_generator):
+    # A first parse without all constants to get exactly those constants that we want as nominals
+    _, language, nominals, types = parse_pddl(domain)
+    if parameter_generator is not None:
+        nominals += parameter_generator(language)
+    return nominals, types
 
 
-def create_denotation_processor(domain, instance, use_goal_denotation):
-    # Parse the domain & instance with Tarski
-    problem, language, generic_constants, types = parse_pddl(domain, instance)
-    goal_denotation = compute_goal_denotation(problem, use_goal_denotation)
-    return problem, DenotationProcessor(language, goal_denotation)
+def create_model_factory(domain, instance, parameter_generator):
+    nominals, _ = compute_nominals(domain, parameter_generator)
+
+    # Compute the whole universe of the instance
+    problem, language, _, types = parse_pddl(domain, instance)
+    vocabulary = compute_dl_vocabulary(language)
+    universe = compute_universe_from_pddl_model(language)
+
+    assert parameter_generator is not None  # Need to refine this to work again when we want goal-denotation DL terms
+    goal_denotation = None  # TODO
+    # goal_denotation = compute_goal_denotation(problem, use_goal_denotation)
+    return problem, DLModelFactory(universe, vocabulary, nominals, goal_denotation)
 
 
-class DenotationProcessor(object):
-    """ A helper to compute the denotation of concepts on single states """
-    def __init__(self, language, goal_denotation):
-        self.language = language
-        self.universe_sort = language.get_sort('object')
-        self.top = UniversalConcept(self.universe_sort.name)
-        self.bot = EmptyConcept(self.universe_sort.name)
-        self.universe = compute_universe_from_pddl_model(language)
-        self.processor = SemanticProcessor(language, [], self.universe, self.top, self.bot)
-        self.goal_denotation = goal_denotation
+def create_model_cache_from_samples(sample, config):
+    """  """
+    goal_denotation = None  # TODO
+    nominals, types = compute_nominals(config.domain, config.parameter_generator)
 
-    def create_cache_for_state(self, state):
-        cache = ExtensionCache(self.universe, self.top, self.bot)
-        # We give an arbitrary state ID to 0 to the only state we're interested in
-        self.processor.register_state_on_cache(0, state, cache, self.goal_denotation)
-        return cache
+    # Compute the universe of each instance - a bit redundant with the above, but should be OK
+    universes = []
+    for i, instance in enumerate(config.instances, 0):
+        _, language, _, _ = parse_pddl(config.domain, instance)
+        universes.append(compute_universe_from_pddl_model(language))
 
-    def compute_model_from_state(self, state):
-        return Model(self.create_cache_for_state(state))
+    model_cache = create_model_cache(language, sample.states, sample.instance, universes, nominals, goal_denotation)
+    return language, nominals, types, model_cache
 
 
-def compute_universe_from_pddl_model(language):
-    """ Compute a Universe Index from the PDDL model """
-    universe = UniverseIndex()
-    for obj in language.constants():
-        universe.add(try_number(obj.symbol))
-    universe.finish()  # No more objects possible
-    return universe
+def create_model_cache(language, states, state_instances, universes, nominals, goal_conjunction):
+    """ Create a DLModelCache from the given parameters"""
+    vocabulary = compute_dl_vocabulary(language)
+
+    # First create the model factory corresponding to each instance
+    model_factories = [DLModelFactory(universe, vocabulary, nominals, goal_conjunction) for universe in universes]
+
+    # Then create the model corresponding to each state in the sample
+    models = {}
+    for sid, state in states.items():
+        instance = state_instances[sid]
+        models[sid] = model_factories[instance].create_model(state)
+    return DLModelCache(models)
+
+
+class DLModelCache:
+    def __init__(self, models):
+        """ Create a DLModelCache from a dictionary of precomputed models, indexed by corresponding state """
+        self.models = models
+
+    def get_term_model(self, state):
+        return self.models[state]
+
+    def get_feature_model(self, state):
+        return FeatureModel(self.models[state])

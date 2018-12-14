@@ -263,7 +263,7 @@ class FeatureMatrixGenerationStep(Step):
         return config
 
     def get_required_data(self):
-        return ["features", "extensions", "sample"]
+        return ["features", "model_cache", "sample"]
 
     def description(self):
         return "Generation of the feature and transition matrices"
@@ -504,7 +504,7 @@ class StepRunner(object):
             # and return it immediately so that it can be reported from the parent process
             logging.error("Critical error in the pipeline")
             import traceback
-            traceback.print_exc()
+            traceback.print_exception(None, exception, exception.__traceback__)
             raise CriticalPipelineError("Error: {}".format(str(exception)))
 
         save(config.experiment_dir, output)
@@ -600,12 +600,11 @@ class Experiment(object):
             try:
                 run_and_check_output(step, SubprocessStepRunner)
             except Exception as e:
-                logging.error(step, _create_exception_msg(step, e))
+                logging.error((step, _create_exception_msg(step, e)))
                 break
 
 
 def run_and_check_output(step, runner_class, raise_on_error=True):
-    # return ExitCode.Success
     runner = runner_class(step.description(), step.get_step_runner(), step.get_required_data())
     exitcode = runner.run(config=Bunch(step.config))
     if raise_on_error and exitcode is not ExitCode.Success:

@@ -23,12 +23,15 @@ class TransitionSample:
         self.unsolvable = set()
         self.optimal_transitions = set()
         self.expanded = set()
+        self.instance = dict()  # A mapping between states and the problem instances they came from
 
-    def add_transitions(self, states, transitions):
+    def add_transitions(self, states, transitions, instance_id):
         # TODO Could check for ID overlappings, but would be expensive
         self.states.update(states)
         self.transitions.update(transitions)
         self.parents.update(compute_parents(transitions))
+        for s in states:
+            self.instance[s] = instance_id
         # TODO: This is not correct, will fail whenever we have states in the sample that have indeed been expanded
         # TODO: but have no children:
         self.expanded.update(s for s in states if len(transitions[s]) > 0)
@@ -87,10 +90,12 @@ class TransitionSample:
         optimal = {(remapping[x], remapping[y]) for x, y in self.optimal_transitions
                    if x in remapping and y in remapping}
 
+        instance = dict()
         states = OrderedDict()
         for i, s in self.states.items():
             if i in remapping:
                 states[remapping[i]] = s
+                instance[remapping[i]] = self.instance[i]
 
         transitions = defaultdict(set)
         for source, targets in self.transitions.items():
@@ -98,7 +103,8 @@ class TransitionSample:
                 transitions[remapping[source]] = {remapping[t] for t in targets}
 
         resampled = TransitionSample()
-        resampled.add_transitions(states, transitions)
+        resampled.add_transitions(states, transitions, 0)
+        resampled.instance = instance
         resampled.mark_as_goals(goals)
         resampled.mark_as_optimal(optimal)
         resampled.mark_as_unsolvable(unsolvable)
@@ -170,7 +176,7 @@ def sample_generated_states(config, rng):
         raise RuntimeError("No goal found in the sample - increase # expanded states!")
 
     mark_optimal_transitions(config.optimal_selection_strategy, sample, goals_by_instance)
-    logging.info("Entire Sample: {}".format(sample.info()))
+    logging.info("Entire sample: {}".format(sample.info()))
 
     # if config.num_sampled_states is None and config.max_width < 1 and not config.complete_only_wrt_optimal:
     #     return states, goal_states, transitions
@@ -311,14 +317,14 @@ def read_transitions_from_files(filenames):
 
     goals_by_instance = []
     sample = TransitionSample()
-    for filename in filenames:
+    for instance_id, filename in enumerate(filenames, 0):
         starting_state_id = sample.num_states()
         s, g, tx, unsolv = read_single_sample_file(filename)
         assert next(iter(s.keys())) == 0  # Make sure state IDs in the sample file start by 0
         s, g, tx, unsolv = remap_state_ids(s, g, tx, unsolv, remap=lambda state: state + starting_state_id)
         assert next(iter(s)) == starting_state_id
 
-        sample.add_transitions(s, tx)
+        sample.add_transitions(s, tx, instance_id)
         sample.mark_as_root(starting_state_id)
         sample.mark_as_goals(g)
         sample.mark_as_unsolvable(unsolv)

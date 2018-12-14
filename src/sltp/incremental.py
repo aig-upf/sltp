@@ -7,7 +7,7 @@ import numpy as np
 from tarski.dl import FeatureValueChange
 
 from .sampling import log_sampled_states
-from .features import create_denotation_processor
+from .features import create_model_cache_from_samples
 from .returncodes import ExitCode
 from .util.misc import update_dict
 from .driver import Experiment, generate_pipeline_from_list, PlannerStep, check_int_parameter, \
@@ -17,14 +17,16 @@ from .driver import Experiment, generate_pipeline_from_list, PlannerStep, check_
 
 
 def initial_sample_selection(sample, config, rng):
-    # Get the initial sample of M states plus one goal state per instance, if any goal is available
+    # Get the initial sample of M states plus one goal state per instance, if any goal is available,
+    # and all instance roots
     # all_state_ids_shuffled = list(sample.states.keys())
     # rng.shuffle(all_state_ids_shuffled)
     expanded_state_ids_shuffled = list(sample.expanded)
     rng.shuffle(expanded_state_ids_shuffled)
-    initial_size = min(len(expanded_state_ids_shuffled), config.initial_sample_size)
+    initial_size = min(len(expanded_state_ids_shuffled), config.initial_sample_size-len(sample.roots))
     working_sample_idxs = set(expanded_state_ids_shuffled[:initial_size])
     working_sample_idxs.update(sample.get_one_goal_per_instance())
+    working_sample_idxs.update(sample.roots)
     return working_sample_idxs, expanded_state_ids_shuffled
 
 
@@ -32,10 +34,9 @@ def full_learning(config, sample, rng):
     working_sample_idxs, expanded_state_ids_shuffled = initial_sample_selection(sample, config, rng)
     working_sample = sample.resample(working_sample_idxs)
 
-    # TODO This needs to be adjusted for sample sets coming from diff instances
-    use_goal_denotation = config.parameter_generator is None
-    _, processor = create_denotation_processor(config.domain, config.instances[0], use_goal_denotation)
-    validator = AbstractionValidator(processor, sample, expanded_state_ids_shuffled)
+    # Note that the validator will validate wrt the full sample
+    model_cache = create_model_cache_from_samples(sample, config)
+    validator = AbstractionValidator(model_cache, sample, expanded_state_ids_shuffled)
 
     k, k_max, k_step = config.initial_concept_bound, config.max_concept_bound, config.concept_bound_step
     assert k <= k_max
@@ -60,7 +61,6 @@ def full_learning(config, sample, rng):
         # Augment the sample set with the flaws found for the current abstraction
         working_sample_idxs.update(flaws)
         working_sample = sample.resample(working_sample_idxs)  # This will "close" the sample set with children states
-
 
     logging.info("The computed abstraction is sound & complete wrt all of the training instances")
     return ExitCode.Success
@@ -93,8 +93,8 @@ def setup_workspace(config, sample, k):
 def teardown_workspace(experiment_dir, clean_workspace, **kwargs):
     """ Clean up the given workspace """
     data = load(experiment_dir, ["abstract_actions", "selected_features", "features"])
-    if clean_workspace:
-        print(experiment_dir)
+    # if clean_workspace:
+    #     print(experiment_dir)
         # shutil.rmtree(experiment_dir)  # TODO activate
     return data
 
@@ -130,8 +130,8 @@ class AbstractionValidator:
         """ Return true iff the abstract action captures (i.e. represents) transition (s, s') """
         for idx, f in feature_set:
             effect_of_action_on_f = action_effs[idx]
-            x0 = self.get_possibly_cached_model(models, s).compute_feature_value(f, 0)
-            x1 = self.get_possibly_cached_model(models, sprime).compute_feature_value(f, 0)
+            x0 = self.get_possibly_cached_model(models, s).denotation(f)
+            x1 = self.get_possibly_cached_model(models, sprime).denotation(f)
             diff = f.diff(x0, x1)
             if diff != effect_of_action_on_f:
                 return False
@@ -144,8 +144,7 @@ class AbstractionValidator:
 
     def get_possibly_cached_model(self, models, state_id):
         if state_id not in models:
-            state = self.sample.states[state_id]
-            models[state_id] = self.processor.compute_model_from_state(state)
+            models[state_id] = self.processor.compute_model_from_state(state_id)
         return models[state_id]
 
     def find_flaws(self, abstraction, max_flaws):
@@ -171,7 +170,7 @@ class AbstractionValidator:
             # Check soundness
             for action in abstract_actions:
                 # We need to cast the actual feature value into a bool to compare it with the abstraction bool value
-                is_applicable = all(bool(model.compute_feature_value(pool[idx], 0)) is val for idx, val in action.preconditions)
+                is_applicable = all(bool(model.denotation(pool[idx])) is val for idx, val in action.preconditions)
                 if is_applicable and not any(self.action_captures(models, sid, sprime, feature_idx[action], selected_features) for sprime in sample.transitions[sid]):
                     # The abstract action is not sound
                     print("Action {} not *sound* wrt state {}".format(action, sid))

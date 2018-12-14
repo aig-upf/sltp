@@ -23,7 +23,7 @@ def compute_sample_filenames(experiment_dir, instances, max_width, **_):
 
 def compute_experiment_tag(instance_tag, max_concept_size, **_):
     ts = datetime.now().strftime("%Y%m%d%H%M")
-    # ts = "NONE"
+    ts = "NONE"
     return "{}.{}.cs-{}".format(ts, instance_tag, max_concept_size)
 
 

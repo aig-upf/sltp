@@ -154,16 +154,14 @@ def get_term_key(term):
 
 
 class ExtensionCache(object):
-    def __init__(self, universe: UniverseIndex, top, bot):
-        self.universe = universe
+    """ A standard cache of concept denotations, caches all computed denotations by default """
+    # TODO DEPRECATE AND REMOVE
+    def __init__(self, universe: UniverseIndex):
         self.m = len(universe)
-        self.universe_set = universe.as_extension()
-        self.top = top
-        self.bot = bot
-        self.index = dict()
+        self.top = UniversalConcept('object')
+        self.index = dict()  # This is the actual cache storing pairs of <state id, concept denotation>
         self.nullaries = dict()
         self.all_traces = dict()  # a dictionary from extension trace to simplest concept / role achieving it
-        self.term_to_trace = dict()
         self.feature_values = dict()
 
     def register_feature_value(self, feature, sid, value):
@@ -189,11 +187,10 @@ class ExtensionCache(object):
         return self.feature_values[(feature, sid)]
 
     def as_bitarray(self, term, state):
-        # return self.index[(term, state)]
-        if (term, state) in self.index:
+        if (term, state) in self.index:  # If cached, returned the copy on the cache
             return self.index[(term, state)]
         ext = term.extension(self, state)
-        self.register_compressed_extension(term, state, ext)
+        self.register_compressed_extension(term, state, ext)  # Otherwise, compute value and cache it
         return ext
 
     def as_set(self, term, state):  # TODO CACHE A CERTAIN AMOUNT OF ITEMS?
@@ -211,10 +208,56 @@ class ExtensionCache(object):
         try:
             equivalent = self.all_traces[wrapped]
             logging.debug("Term '{}' semantically equivalent to the previously-generated '{}'".format(term, equivalent))
-            # self.term_to_trace[term] = self.term_to_trace[equivalent]
             return False
         except KeyError:
             self.all_traces[wrapped] = term
-            # self.term_to_trace[term] = wrapped
             return True
 
+
+class DLDenotationCache(object):
+    """ A standard cache of concept denotations, caches all computed denotations by default """
+    def __init__(self, universe: UniverseIndex):
+        self.m = len(universe)
+        self.top = UniversalConcept('object')
+        self.cache = dict()  # This is the actual cache with a mapping from concepts to their denotations
+        self.nullaries = dict()
+
+    def universe(self):
+        return self.as_bitarray(self.top)
+
+    def nullary_value(self, atom):
+        return self.nullaries[atom]
+
+    def as_bitarray(self, term):
+        if term in self.cache:  # If cached, returned the copy on the cache
+            return self.cache[term]
+        ext = self.cache[get_term_key(term)] = term.extension(self)  # Otherwise, compute value and cache it
+        return ext
+
+    def as_set(self, term):
+        return self.uncompress(self.as_bitarray(term), term.ARITY)
+
+    def uncompress(self, data, arity):
+        return uncompress_extension(data, self.m, arity)
+
+    def compress(self, data, arity):
+        return compress_extension(data, self.m, arity)
+
+
+class DLDenotationTraceIndex:
+    """ A cache of full traces of denotations, i.e. sequences containing the denotation of concepts / roles over
+    a full (ordered) set of states <s_1, ..., s_n>. We assume that the provided traces always contain the
+    """
+    def __init__(self):
+        self.all_traces = dict()  # a dictionary from extension trace to (simplest/earliest) concept / role achieving it
+
+    def register_trace(self, term, trace):
+        """ Register the trace for the given term. Return true iff no equivalent trace was already registered """
+        wrapped = ExtensionTrace(trace)
+        try:
+            equivalent = self.all_traces[wrapped]
+            logging.debug("Term '{}' semantically equivalent to the previously-generated '{}'".format(term, equivalent))
+            return False
+        except KeyError:
+            self.all_traces[wrapped] = term
+            return True

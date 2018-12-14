@@ -55,7 +55,7 @@ def main():
 
         # Git dependencies - egg names need to match whatever written in install_requires
         dependency_links=[
-            'git+ssh://git@github.com/aig-upf/tarski.git@cb92626051e79dca0439acd6b76a877adf30d497#egg=tarski-0.1.0',
+            'git+ssh://git@github.com/aig-upf/tarski.git@058dfd90a8acdd4273df96e249df07dcf25c7478#egg=tarski-0.1.0',
         ],
 
 

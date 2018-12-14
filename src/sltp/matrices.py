@@ -6,10 +6,11 @@ import math
 import sys
 
 import numpy as np
+from models import FeatureModel
+from sltp.features import DLModelCache
 
 from tarski.dl import EmpiricalBinaryConcept, NullaryAtomFeature, ConceptCardinalityFeature, MinDistanceFeature
 
-from .features import Model
 from .returncodes import ExitCode
 
 
@@ -63,21 +64,20 @@ def cast_feature_value_to_numpy_value(value):
     return value
 
 
-def print_feature_matrix(config, state_ids, features, model):
+def print_feature_matrix(config, state_ids, features, models):
     filename = config.feature_matrix_filename
     logging.info("Printing feature matrix of {} features x {} states to '{}'".
                  format(len(features), len(state_ids), filename))
 
-    with open(filename, 'w') as f:
-        for s in state_ids:
-            line = "{} {}".format(s, " ".join(int_printer(model.compute_feature_value(feat, s)) for feat in features))
-            print(line, file=f)
-
     # Convert features to a numpy array with n rows and m columns, where n=num states, m=num features
     matrix = np.empty(shape=(len(state_ids), len(features)), dtype=NP_FEAT_VALUE_TYPE)
-    for i, s in enumerate(state_ids, 0):
-        assert i == s
-        matrix[i] = [cast_feature_value_to_numpy_value(model.compute_feature_value(feat, s)) for feat in features]
+
+    with open(filename, 'w') as f:
+        for i, s in enumerate(state_ids, 0):
+            assert i == s
+            matrix[i] = [cast_feature_value_to_numpy_value(models[s].denotation(feat)) for feat in features]
+            line = "{} {}".format(s, " ".join(int_printer(models[s].denotation(feat)) for feat in features))
+            print(line, file=f)
 
     bin_matrix = np.array(matrix, dtype=np.bool)
 
@@ -102,7 +102,7 @@ def print_feature_info(config, features):
             print("{} {}".format(feat, feat.complexity()), file=f)
 
 
-def print_sat_matrix(config, state_ids, features, model):
+def print_sat_matrix(config, state_ids, features, models):
     filename = config.sat_feature_matrix_filename
     logging.info("Printing SAT feature matrix of {} features x {} states to '{}'".
                  format(len(features), len(state_ids), filename))
@@ -132,7 +132,7 @@ def print_sat_matrix(config, state_ids, features, model):
         # next lines: one per each state with format: <state-index> <#features-in-state> <list-features>
         # each feature has format: <feature-index>:<value>
         for s in state_ids:
-            feature_values = ((i, model.compute_feature_value(f, s)) for i, f in enumerate(all_with_dummy, 0)
+            feature_values = ((i, models[s].denotation(f)) for i, f in enumerate(all_with_dummy, 0)
                               if not isinstance(f, str))
             nonzero_features = [(i, v) for i, v in feature_values if v != 0]
             print("{} {} {}".format(s, len(nonzero_features), " ".join(
@@ -149,20 +149,21 @@ def generate_features(config, data, rng):
     sample = data.sample
     state_ids = data.sample.get_sorted_state_ids()
     # First keep only those features which are able to distinguish at least some pair of states
-    features, model = compute_feature_extensions(state_ids, data.features, data.extensions)
+    features, models = compute_feature_extensions(state_ids, data.features, data.model_cache)
     print_feature_info(config, features)
-    print_feature_matrix(config, state_ids, features, model)
+    print_feature_matrix(config, state_ids, features, models)
     print_transition_matrix(state_ids, sample.transitions, config.transitions_filename)
-    print_sat_matrix(config, state_ids, features, model)
+    print_sat_matrix(config, state_ids, features, models)
     print_sat_transition_matrix(state_ids, sample.transitions, config.sat_transitions_filename)
     print_state_set(sample.goals, config.goal_states_filename)
     print_state_set(sample.unsolvable, config.unsolvable_states_filename)
     log_features(features, config.feature_filename)
 
     # selected = [translator.features[i] for i in [8, 9, 25, 26, 1232]]
-    selected = [features[1], features[35], ]
-    selected = None
-    log_feature_denotations(state_ids, features, model, config.feature_denotation_filename, selected)
+    # selected = [features[1], features[35], ]
+    # selected = [features[11]]
+    # selected = None
+    # log_feature_denotations(state_ids, features, models, config.feature_denotation_filename, selected)
 
     return ExitCode.Success, dict(features=features)
 
@@ -177,9 +178,9 @@ def log_features(features, feature_filename):
             # assert deserialize_from_string(serialized) == feat
 
 
-def compute_feature_extensions(states, features, concept_extensions):
+def compute_feature_extensions(states, features, model_cache: DLModelCache):
     """ Cache all feature denotations and prune those which have constant denotation at the same time """
-    model = Model(concept_extensions)
+    models = {sid: model_cache.get_feature_model(sid) for sid in states}
     ns, nf = len(states), len(features)
     logging.info("Computing feature denotations over a total of "
                  "{} states and {} features ({:0.1f}K matrix entries)".format(ns, nf, nf*ns/1000))
@@ -194,7 +195,7 @@ def compute_feature_extensions(states, features, concept_extensions):
         previous = None
         all_denotations = []
         for s in states:
-            denotation = model.compute_feature_value(f, s)
+            denotation = models[s].denotation(f)
             if previous is not None and previous != denotation:
                 all_equal = False
             if denotation not in (0, 1):
@@ -234,18 +235,19 @@ def compute_feature_extensions(states, features, concept_extensions):
 
     logging.info("{}/{} features have constant or duplicated denotations and have been pruned"
                  .format(len(features)-len(accepted), len(features)))
-    return accepted, model
+    return accepted, models
 
 
-def log_feature_denotations(state_ids, features, model, feature_denotation_filename, selected=None):
+def log_feature_denotations(state_ids, features, models, feature_denotation_filename, selected=None):
     selected = selected or features
     selected = ((str(f), f) for f in selected)
     selected = sorted(selected, key=lambda x: x[0])  # Sort features by name
 
     with open(feature_denotation_filename, 'w') as file:
         for s, (fname, f) in itertools.product(state_ids, selected):
-            val = model.compute_feature_value(f, s)
+            val = models[s].denotation(f)
             print("s_{}[{}] = {}".format(s, fname, val), file=file)
+    logging.info("Logged feature denotations at '{}'".format(feature_denotation_filename))
 
 
 def printer(feature, value):
