@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import sys
 
-from abstractions_defaults import generate_experiment
+from defaults import generate_experiment
 from tarski.dl import PrimitiveRole, NominalConcept, ExistsConcept, NotConcept, UniversalConcept, AndConcept, \
     ForallConcept, EmptyConcept
 

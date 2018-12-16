@@ -35,7 +35,7 @@ def full_learning(config, sample, rng):
     working_sample = sample.resample(working_sample_idxs)
 
     # Note that the validator will validate wrt the full sample
-    model_cache = create_model_cache_from_samples(sample, config)
+    _, _, _, model_cache = create_model_cache_from_samples(sample, config)
     validator = AbstractionValidator(model_cache, sample, expanded_state_ids_shuffled)
 
     k, k_max, k_step = config.initial_concept_bound, config.max_concept_bound, config.concept_bound_step
@@ -120,9 +120,9 @@ def try_to_compute_abstraction(config, sample, k):
 
 
 class AbstractionValidator:
-    def __init__(self, processor, sample, state_ids):
+    def __init__(self, model_cache, sample, state_ids):
         """ """
-        self.processor = processor
+        self.model_cache = model_cache
         self.sample = sample
         self.state_ids = state_ids
 
@@ -144,7 +144,7 @@ class AbstractionValidator:
 
     def get_possibly_cached_model(self, models, state_id):
         if state_id not in models:
-            models[state_id] = self.processor.compute_model_from_state(state_id)
+            models[state_id] = self.model_cache.get_feature_model(state_id)
         return models[state_id]
 
     def find_flaws(self, abstraction, max_flaws):
@@ -219,7 +219,7 @@ class IncrementalLearner:
     def run(self):
         data = load(self.config.experiment_dir, ["sample"])  # Load the initial sample
         rng = np.random.RandomState(self.config.random_seed)
-        full_learning(self.config, data["sample"], rng)
+        return full_learning(self.config, data["sample"], rng)
 
 
 class IncrementalExperiment(Experiment):
@@ -241,3 +241,4 @@ class IncrementalExperiment(Experiment):
 
         learner = IncrementalLearner(**config)
         exitcode = learner.run()
+        return exitcode

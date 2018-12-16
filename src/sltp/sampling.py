@@ -113,7 +113,7 @@ class TransitionSample:
         return resampled
 
     def get_one_goal_per_instance(self):
-        return set(min(x) for x in self.instance_goals)
+        return set(min(x) for x in self.instance_goals if x)
 
 
 def mark_optimal(goal_states, root_states, parents):
@@ -172,6 +172,10 @@ def sample_first_x_states(root_states, sample_sizes):
 def sample_generated_states(config, rng):
     logging.info('Loading state space samples...')
     sample, goals_by_instance = read_transitions_from_files(config.sample_files)
+
+    if not config.compute_unsolvable_states:
+        sample.unsolvable = set()
+
     if not sample.goals:
         raise RuntimeError("No goal found in the sample - increase # expanded states!")
 

@@ -80,7 +80,7 @@ def generate_experiment(domain_dir, domain, **kwargs):
 
         # Optionally, use a method that gives handcrafted names to the features
         # (default: None, which will use their string representation)
-        feature_namer=None,
+        feature_namer=default_feature_namer,
 
         # What optimization criteria to use in the max-sat problem
         optimization=OptimizationPolicy.TOTAL_FEATURE_COMPLEXITY,
@@ -98,7 +98,9 @@ def generate_experiment(domain_dir, domain, **kwargs):
         encoding_m=10,
 
         domain_dir=domain_dir,
-        experiment_class=Experiment,  # The Experiment class to be used
+
+        # The Experiment class to be used (e.g. standard, or incremental)
+        experiment_class=Experiment,
 
         # The max. number of states in the Flaw set when validating an incremental abstraction
         batch_refinement_size=10,
@@ -108,6 +110,9 @@ def generate_experiment(domain_dir, domain, **kwargs):
 
         # Reduce output to a minimum
         quiet=False,
+
+        # Whether to take into acount states labeled as unsolvable by whatever planner is being used
+        compute_unsolvable_states=False,
     )
 
     parameters = {**defaults, **kwargs}  # Copy defaults, overwrite with user-specified parameters
@@ -115,3 +120,7 @@ def generate_experiment(domain_dir, domain, **kwargs):
     steps = generate_pipeline(**parameters)
     exp = parameters["experiment_class"](steps, parameters)
     return exp
+
+
+def default_feature_namer(s):
+    return str(s)

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import sys
 
-from abstractions_defaults import generate_experiment
+from defaults import generate_experiment
 from sltp.util.misc import update_dict
 
 

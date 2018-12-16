@@ -4,7 +4,7 @@ import sys
 
 from sltp.incremental import IncrementalExperiment
 
-from abstractions_defaults import generate_experiment
+from defaults import generate_experiment
 from common import build_ijcai_paper_bw_concepts, add_bw_domain_parameters, ijcai_paper_bw_feature_namer, \
     add_bw_domain_parameters_2, build_on_x_y_feature_set, generate_features_n_ab, get_on_x_y_feature, \
     features_clear_x

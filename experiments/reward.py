@@ -3,7 +3,7 @@
 
 import sys
 
-from abstractions_defaults import generate_experiment
+from defaults import generate_experiment
 from sltp.util.misc import update_dict
 from tarski.dl import AndConcept, NominalConcept, PrimitiveConcept, NotConcept, ExistsConcept, InverseRole, \
     PrimitiveRole, StarRole, UniversalConcept, GoalConcept, MinDistanceFeature, ConceptCardinalityFeature, RestrictRole

@@ -373,10 +373,6 @@ class MaxsatProblemSolutionStep(Step):
         return learn_actions.run_solver
 
 
-def default_feature_namer(s):
-    return str(s)
-
-
 class ActionModelStep(Step):
     """ Generate an abstract action model from the solution of the max-sat encoding """
 
@@ -387,7 +383,7 @@ class ActionModelStep(Step):
         return []
 
     def process_config(self, config):
-        config["feature_namer"] = config.get("feature_namer", default_feature_namer) or default_feature_namer
+        config["feature_namer"] = config.get("feature_namer")
         config["qnp_abstraction_filename"] = compute_info_filename(config, "abstraction.qnp")
         return config
 
