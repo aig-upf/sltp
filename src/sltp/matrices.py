@@ -102,18 +102,21 @@ def print_feature_info(config, features):
             print("{} {}".format(feat, feat.complexity()), file=f)
 
 
-def print_sat_matrix(config, state_ids, features, models):
+def print_sat_matrix(config, state_ids, goals, features, models):
     filename = config.sat_feature_matrix_filename
     logging.info("Printing SAT feature matrix of {} features x {} states to '{}'".
                  format(len(features), len(state_ids), filename))
 
     # Separate features into binary and numeric
     binary, numeric = [], []
+    bin_costs, num_costs = [], []
     for feat in features:
         if isinstance(feat, (NullaryAtomFeature, EmpiricalBinaryConcept)):
             binary.append(feat)
+            bin_costs.append(feat.complexity())
         elif isinstance(feat, (ConceptCardinalityFeature, MinDistanceFeature)):
             numeric.append(feat)
+            num_costs.append(feat.complexity())
         else:
             assert 0, "Unknown feature type"
 
@@ -121,13 +124,21 @@ def print_sat_matrix(config, state_ids, features, models):
     npt = next_power_of_two(num_numeric)
     num_dummy = npt-num_numeric
     all_with_dummy = numeric + ["dummy()"]*num_dummy + binary
+    all_feature_costs_with_dummy = num_costs + [0]*num_dummy + bin_costs
+    ngoals = len(goals)
 
     with open(filename, 'w') as f:
-        # Header row: <#states> <#features> <1 + index-last-numerical-feature> <index-first-boolean-feature>
-        print("{} {} {} {}".format(len(state_ids), len(all_with_dummy), num_numeric, npt), file=f)
+        # Header row: <#states> <#features> <#goals> <1 + index-last-numerical-feature> <index-first-boolean-feature>
+        print("{} {} {} {} {}".format(len(state_ids), len(all_with_dummy), ngoals, num_numeric, npt), file=f)
 
-        # second line: <#features> <list of feature names>
+        # Line #2:: <#features> <list of feature names>
         print("{} {}".format(len(all_with_dummy), " ".join(str(f).replace(" ", "") for f in all_with_dummy)), file=f)
+
+        # Line #3: <#features> <list of feature costs>
+        print("{} {}".format(len(all_with_dummy), " ".join(str(x) for x in all_feature_costs_with_dummy)), file=f)
+
+        # Line #4:
+        print("{} {}".format(ngoals, " ".join(map(str, goals))), file=f)
 
         # next lines: one per each state with format: <state-index> <#features-in-state> <list-features>
         # each feature has format: <feature-index>:<value>
@@ -153,7 +164,7 @@ def generate_features(config, data, rng):
     print_feature_info(config, features)
     print_feature_matrix(config, state_ids, features, models)
     print_transition_matrix(state_ids, sample.transitions, config.transitions_filename)
-    print_sat_matrix(config, state_ids, features, models)
+    print_sat_matrix(config, state_ids, sample.goals, features, models)
     print_sat_transition_matrix(state_ids, sample.transitions, config.sat_transitions_filename)
     print_state_set(sample.goals, config.goal_states_filename)
     print_state_set(sample.unsolvable, config.unsolvable_states_filename)

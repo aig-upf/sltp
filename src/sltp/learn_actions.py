@@ -55,6 +55,16 @@ def compute_d2_index(s0, s1, t0, t1):
 
 
 def generate_maxsat_problem(config, data, rng):
+    translator = create_maxsat_translator(config, data)
+    result = translator.run(config.cnf_filename, data.enforced_feature_idxs)
+    # translator.writer.print_variables(config.maxsat_variables_file)
+
+    # TODO Serialize less stuff. Probably we don't need to serialize the full translator
+    data = dict(cnf_translator=translator) if result == ExitCode.Success else dict()
+    return result, data
+
+
+def create_maxsat_translator(config, data):
     optimization = config.optimization if hasattr(config, "optimization") else OptimizationPolicy.NUM_FEATURES
     sample = data.sample
 
@@ -71,16 +81,8 @@ def generate_maxsat_problem(config, data, rng):
         raise CriticalPipelineError("No goal state identified in the sample, SAT theory will be trivially satisfiable")
 
     translator = ModelTranslator(feat_matrix, bin_feat_matrix, feature_complexity, feature_names, feature_types,
-                                 sample,
-                                 config.cnf_filename, optimization,
-                                 config.relax_numeric_increase, config.complete_only_wrt_optimal)
-
-    result = translator.run(data.enforced_feature_idxs)
-    # translator.writer.print_variables(config.maxsat_variables_file)
-
-    # TODO Serialize less stuff. Probably we don't need to serialize the full translator
-    data = dict(cnf_translator=translator) if result == ExitCode.Success else dict()
-    return result, data
+                                 sample, optimization, config.complete_only_wrt_optimal)
+    return translator
 
 
 def run_solver(config, data, rng):
@@ -166,7 +168,7 @@ class ActionEffect(object):
 class ModelTranslator(object):
     def __init__(self, feat_matrix, bin_feat_matrix, feature_complexity, feature_names, feature_types,
                  sample: TransitionSample,
-                 cnf_filename, optimization, relax_numeric_increase, complete_only_wrt_optimal):
+                 optimization, complete_only_wrt_optimal):
 
         self.feat_matrix = feat_matrix
         self.bin_feat_matrix = bin_feat_matrix
@@ -195,8 +197,6 @@ class ModelTranslator(object):
         # Compute for each pair s and t of states which features distinguish s and t
         self.np_d1_distinguishing_features = self.compute_d1_distinguishing_features(bin_feat_matrix)
 
-        self.writer = CNFWriter(cnf_filename)
-
         self.np_var_selected = None
         self.var_d1 = None
         self.var_d2 = None
@@ -207,7 +207,7 @@ class ModelTranslator(object):
         self.n_bridge_clauses = 0
         self.n_goal_clauses = 0
         self.np_qchanges = dict()
-        self.compute_qchanges = self.relaxed_qchange if relax_numeric_increase else self.standard_qchange
+        self.compute_qchanges = self.standard_qchange
         self.compute_feature_weight = self.setup_optimization_policy(optimization)
 
     def iterate_over_d1_pairs(self):
@@ -308,9 +308,10 @@ class ModelTranslator(object):
             return min(s, t), max(s, t)
         return s, t
 
-    def run(self, enforced_feature_idxs):
+    def run(self, cnf_filename, enforced_feature_idxs):
         # allf = list(range(0, len(self.feature_names)))  # i.e. select all features
         # self.find_inconsistency(allf)
+        self.writer = CNFWriter(cnf_filename)
         self.create_variables()
 
         logging.info("Generating D1 + bridge constraints from {} D1 variables".format(len(self.var_d1)))
@@ -435,14 +436,7 @@ class ModelTranslator(object):
             state_abstraction[state] = abstract
         return abstract_states, state_abstraction
 
-    def decode_solution(self, assignment, features, namer):
-        varmapping = self.writer.mapping
-        true_variables = set(varmapping[idx] for idx, value in assignment.items() if value is True)
-        # feature_mapping = {variable: feature for feature, variable in self.var_selected.items()}
-        np_feature_mapping = {variable: feature for feature, variable in enumerate(self.np_var_selected)}
-        assert len(np_feature_mapping) == len(self.np_var_selected)
-        selected_features = sorted(np_feature_mapping[v] for v in true_variables if v in np_feature_mapping)
-
+    def compute_abstraction(self, selected_features, features, namer):
         if not selected_features:
             raise CriticalPipelineError("Zero-cost maxsat solution - "
                                         "no action model possible, the encoding has likely some error")
@@ -485,6 +479,14 @@ class ModelTranslator(object):
         logging.info("Abstract state space: {} states and {} actions".
                      format(len(abstract_states), len(abstract_actions)))
         return abstract_states, abstract_actions, selected_data
+
+    def decode_solution(self, assignment):
+        varmapping = self.writer.mapping
+        true_variables = set(varmapping[idx] for idx, value in assignment.items() if value is True)
+        np_feature_mapping = {variable: feature for feature, variable in enumerate(self.np_var_selected)}
+        assert len(np_feature_mapping) == len(self.np_var_selected)
+        selected_features = sorted(np_feature_mapping[v] for v in true_variables if v in np_feature_mapping)
+        return selected_features
 
     def report_stats(self):
 
@@ -545,8 +547,8 @@ class ModelTranslator(object):
         bin_values = self.bin_feat_matrix[state_id, features]
         return tuple(map(bool, bin_values))
 
-    def compute_action_model(self, assignment, features, config):
-        states, actions, selected_features = self.decode_solution(assignment, features, config.feature_namer)
+    def compute_action_model(self, selected_features, features, config):
+        states, actions, selected_features = self.compute_abstraction(selected_features, features, config.feature_namer)
         self.print_actions(actions, os.path.join(config.experiment_dir, 'actions.txt'), config.feature_namer)
         states, actions = optimize_abstract_action_model(states, actions)
         opt_filename = os.path.join(config.experiment_dir, 'optimized.txt')
@@ -719,6 +721,17 @@ def optimize_abstract_action_model(states, actions):
 
 def compute_action_model(config, data, rng):
     assert data.cnf_solution.solved
-    states, actions, features = data.cnf_translator.compute_action_model(data.cnf_solution.assignment, data.features, config)
+    selected_features = data.cnf_translator.decode_solution(data.cnf_solution.assignment)
+    states, actions, features = data.cnf_translator.compute_action_model(selected_features, data.features, config)
     data.cnf_translator.compute_qnp(states, actions, features, config, data)
+    return ExitCode.Success, dict(abstract_actions=actions, selected_features=features)
+
+
+def compute_action_model_from_feature_idxs(config, data, rng):
+    selected_features = data.selected_feature_idxs
+    # We create the translator just to compute the action model. TODO It'd be better to fully decouple both steps,
+    # so that we don't need to perform unnecessary initialization operations here.
+    translator = create_maxsat_translator(config, data)
+    states, actions, features = translator.compute_action_model(selected_features, data.features, config)
+    # data.cnf_translator.compute_qnp(states, actions, features, config, data)
     return ExitCode.Success, dict(abstract_actions=actions, selected_features=features)

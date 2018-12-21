@@ -44,12 +44,23 @@ def experiment(experiment_name=None):
 
     aaai_prob01_no_marking = update_dict(aaai_prob01, complete_only_wrt_optimal=False)
 
+    aaai_prob01_blai = update_dict(
+        aaai_prob01, pipeline="maxsat_poly",
+        max_concept_size=4, max_concept_grammar_iterations=2,
+        num_states=100,
+    )
+
+    aaai_prob01_blai_std = update_dict(  # Same config as Blai, but with standard pipeline
+        aaai_prob01_blai, pipeline="maxsat")
+
     parameters = {
         "sample_small": sample_small,
         "prob01": prob01,
         "prob01_rnd": prob01_rnd,
         "aaai_prob01": aaai_prob01,
-        "aaai_prob01_no_marking": aaai_prob01_no_marking
+        "aaai_prob01_no_marking": aaai_prob01_no_marking,
+        "aaai_prob01_blai": aaai_prob01_blai,
+        "aaai_prob01_blai_std": aaai_prob01_blai_std,
 
     }.get(experiment_name or "test")
 
@@ -67,6 +78,7 @@ def feature_namer(feature):
         "card[Exists(at,{roomb})]": "nballs-B",
         "card[Exists(carry,<universe>)]": "ncarried",
         "bool[And(at-robby, {roomb})]": "robot-at-B",
+        "card[Exists(at,Not(at-robby))]": "nballs-in-rooms-with-no-robot",
         "card[free]": "nfree-grippers",
     }.get(s, s)
 

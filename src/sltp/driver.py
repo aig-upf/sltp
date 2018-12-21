@@ -295,13 +295,29 @@ class MaxsatProblemGenerationStep(Step):
         return learn_actions.generate_maxsat_problem
 
 
+class MaxsatProblemSolutionStep(Step):
+    """ Run some max-sat solver on the generated encoding """
+    def get_required_attributes(self):
+        return ['maxsat_solver', 'maxsat_timeout']
+
+    def get_required_data(self):
+        return []
+
+    def description(self):
+        return "Solution of the max-sat problem"
+
+    def get_step_runner(self):
+        from . import learn_actions
+        return learn_actions.run_solver
+
+
 class SatProblemGenerationStep(Step):
     """ Call Blai's SAT-encoding generator from a given set of generated features """
     def get_required_attributes(self):
         return ["experiment_dir", "encoding_k", "encoding_m"]
 
     def process_config(self, config):
-        config["sat_theory_prefix"] = os.path.join(config["experiment_dir"], "sat")
+        config["sat_theory_prefix"] = compute_info_filename(config, "sat")
         return config
 
     def get_required_data(self):
@@ -357,22 +373,6 @@ class SatSolutionDecodingStep(Step):
         return encoder.decode
 
 
-class MaxsatProblemSolutionStep(Step):
-    """ Run some max-sat solver on the generated encoding """
-    def get_required_attributes(self):
-        return ['maxsat_solver', 'maxsat_timeout']
-
-    def get_required_data(self):
-        return []
-
-    def description(self):
-        return "Solution of the max-sat problem"
-
-    def get_step_runner(self):
-        from . import learn_actions
-        return learn_actions.run_solver
-
-
 class ActionModelStep(Step):
     """ Generate an abstract action model from the solution of the max-sat encoding """
 
@@ -398,6 +398,32 @@ class ActionModelStep(Step):
         return learn_actions.compute_action_model
 
 
+class ActionModelFromFeatureIndexesStep(Step):
+    """ Generate an abstract action model from the solution of the max-sat encoding """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def get_required_attributes(self):
+        return []
+
+    def process_config(self, config):
+        config["feature_namer"] = config.get("feature_namer")
+        config["qnp_abstraction_filename"] = compute_info_filename(config, "abstraction.qnp")
+        return config
+
+    def get_required_data(self):
+        return ["selected_feature_idxs", "features", "sample"]
+
+    def description(self):
+        return "Computation of the action model from the feature indexes"
+
+    def get_step_runner(self):
+        from . import learn_actions
+        return learn_actions.compute_action_model_from_feature_idxs
+
+
+
 class QNPGenerationStep(Step):
     """ Generate a QNP encoding from the computed abstract action model """
 
@@ -421,6 +447,27 @@ class QNPGenerationStep(Step):
         from . import qnp
         return qnp.generate_encoding
 
+
+class InhouseMaxsatSolverStep(Step):
+    """ Generate and solve the maxsat theory with Blai's solver """
+    def get_required_attributes(self):
+        return ["experiment_dir"]
+
+    def process_config(self, config):
+        config["sat_theory_prefix"] = compute_info_filename(config, "sat")
+        config["maxsat_solver_out"] = compute_info_filename(config, "maxsat.out")
+        return config
+
+    def get_required_data(self):
+        return ["sample", "enforced_feature_idxs"]
+
+    def description(self):
+        return "Generation & (approximate) solving of the max-sat problem with Blai's solver"
+
+    def get_step_runner(self):
+        from . import approxmaxsat
+        return approxmaxsat.run
+    
 
 def generate_pipeline(pipeline="maxsat", **kwargs):
     pipeline, config = generate_pipeline_from_list(PIPELINES[pipeline], **kwargs)
@@ -631,6 +678,14 @@ PIPELINES = dict(
         MaxsatProblemSolutionStep,
         ActionModelStep,
         # QNPGenerationStep,
+    ],
+    maxsat_poly=[
+        PlannerStep,
+        TransitionSamplingStep,
+        ConceptGenerationStep,
+        FeatureMatrixGenerationStep,
+        InhouseMaxsatSolverStep,  # Blai's polynomial ad-hoc maxsat algorithm
+        ActionModelFromFeatureIndexesStep,
     ],
     sat=[
         PlannerStep,
