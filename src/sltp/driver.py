@@ -413,7 +413,7 @@ class ActionModelFromFeatureIndexesStep(Step):
         return config
 
     def get_required_data(self):
-        return ["selected_feature_idxs", "features", "sample"]
+        return ["selected_feature_idxs", "features", "sample", "sat_feature_mapping"]
 
     def description(self):
         return "Computation of the action model from the feature indexes"

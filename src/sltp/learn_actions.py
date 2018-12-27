@@ -440,7 +440,7 @@ class ModelTranslator(object):
         if not selected_features:
             raise CriticalPipelineError("Zero-cost maxsat solution - "
                                         "no action model possible, the encoding has likely some error")
-
+        print(self.feature_complexity.size)
         print("Features (total complexity: {}): ".format(
             sum(self.feature_complexity[f] for f in selected_features)))
         print('\t' + '\n\t'.join("{}. {} [k={}, id={}]".format(
@@ -728,7 +728,9 @@ def compute_action_model(config, data, rng):
 
 
 def compute_action_model_from_feature_idxs(config, data, rng):
-    selected_features = data.selected_feature_idxs
+    sat_feature_mapping = data.sat_feature_mapping
+    # Remap to the old indexes, which are the ones used in the Features vector
+    selected_features = sorted(sat_feature_mapping[i] for i in data.selected_feature_idxs)
     # We create the translator just to compute the action model. TODO It'd be better to fully decouple both steps,
     # so that we don't need to perform unnecessary initialization operations here.
     translator = create_maxsat_translator(config, data)

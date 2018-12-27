@@ -46,8 +46,8 @@ def experiment(experiment_name=None):
 
     aaai_prob01_blai = update_dict(
         aaai_prob01, pipeline="maxsat_poly",
-        max_concept_size=4, max_concept_grammar_iterations=2,
-        num_states=100,
+        # max_concept_size=4, max_concept_grammar_iterations=2,
+        # num_states=100,
     )
 
     aaai_prob01_blai_std = update_dict(  # Same config as Blai, but with standard pipeline
@@ -80,6 +80,14 @@ def feature_namer(feature):
         "bool[And(at-robby, {roomb})]": "robot-at-B",
         "card[Exists(at,Not(at-robby))]": "nballs-in-rooms-with-no-robot",
         "card[free]": "nfree-grippers",
+        "bool[Exists(at-robby,{roomb})]": "robby-is-at-B",
+        "card[Exists(at,Exists(Inverse(at-robby),<universe>))]": "nballs-in-room-with-some-robot",
+        "card[And(Exists(gripper,Exists(at-robby,{roomb})),free)]": "nfree-grippers-at-B",
+        "card[Exists(at-robby,{roomb})]": "nrobots-at-B",
+        "card[Exists(gripper,Exists(at-robby,{roomb}))]": "ngrippers-at-B",
+        "card[Exists(carry,Exists(gripper,Exists(at-robby,{roomb})))]": "nballs-carried-in-B",
+        "card[Exists(at,And(Forall(Inverse(at-robby),<empty>), Not({roomb})))]": "nballs-in-some-room-notB-without-any-robot",
+        "bool[And(Exists(Inverse(at),<universe>), And({roomb}, Not(at-robby)))]": "some-ball-in-B-but-robbot-not-in-B",
     }.get(s, s)
 
 

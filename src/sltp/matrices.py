@@ -109,46 +109,41 @@ def print_sat_matrix(config, state_ids, goals, features, models):
 
     # Separate features into binary and numeric
     binary, numeric = [], []
-    bin_costs, num_costs = [], []
-    for feat in features:
+    for i, feat in enumerate(features, 0):
         if isinstance(feat, (NullaryAtomFeature, EmpiricalBinaryConcept)):
-            binary.append(feat)
-            bin_costs.append(feat.complexity())
+            binary.append(i)
         elif isinstance(feat, (ConceptCardinalityFeature, MinDistanceFeature)):
-            numeric.append(feat)
-            num_costs.append(feat.complexity())
+            numeric.append(i)
         else:
             assert 0, "Unknown feature type"
 
     num_numeric = len(numeric)
-    npt = next_power_of_two(num_numeric)
-    num_dummy = npt-num_numeric
-    all_with_dummy = numeric + ["dummy()"]*num_dummy + binary
-    all_feature_costs_with_dummy = num_costs + [0]*num_dummy + bin_costs
+    all_feature_idxs = numeric + binary
+    nfeatures = len(features)
     ngoals = len(goals)
 
     with open(filename, 'w') as f:
         # Header row: <#states> <#features> <#goals> <1 + index-last-numerical-feature> <index-first-boolean-feature>
-        print("{} {} {} {} {}".format(len(state_ids), len(all_with_dummy), ngoals, num_numeric, npt), file=f)
+        print("{} {} {} {} {}".format(len(state_ids), nfeatures, ngoals, num_numeric, num_numeric), file=f)
 
         # Line #2:: <#features> <list of feature names>
-        print("{} {}".format(len(all_with_dummy), " ".join(str(f).replace(" ", "") for f in all_with_dummy)), file=f)
+        print("{} {}".format(nfeatures, " ".join(str(features[f]).replace(" ", "") for f in all_feature_idxs)), file=f)
 
         # Line #3: <#features> <list of feature costs>
-        print("{} {}".format(len(all_with_dummy), " ".join(str(x) for x in all_feature_costs_with_dummy)), file=f)
+        print("{} {}".format(nfeatures, " ".join(str(features[f].complexity()) for f in all_feature_idxs)), file=f)
 
-        # Line #4:
+        # Line #4: <# goal states> <list of goal state IDs>
         print("{} {}".format(ngoals, " ".join(map(str, goals))), file=f)
 
         # next lines: one per each state with format: <state-index> <#features-in-state> <list-features>
         # each feature has format: <feature-index>:<value>
         for s in state_ids:
-            feature_values = ((i, models[s].denotation(f)) for i, f in enumerate(all_with_dummy, 0)
-                              if not isinstance(f, str))
+            feature_values = ((i, models[s].denotation(features[f])) for i, f in enumerate(all_feature_idxs, 0))
             nonzero_features = [(i, v) for i, v in feature_values if v != 0]
             print("{} {} {}".format(s, len(nonzero_features), " ".join(
                 "{}:{}".format(i, int(v)) for i, v in nonzero_features
             )), file=f)
+    return all_feature_idxs # A mapping between the new and the old feature indexes
 
 
 def print_state_set(goal_states, filename):
@@ -164,7 +159,7 @@ def generate_features(config, data, rng):
     print_feature_info(config, features)
     print_feature_matrix(config, state_ids, features, models)
     print_transition_matrix(state_ids, sample.transitions, config.transitions_filename)
-    print_sat_matrix(config, state_ids, sample.goals, features, models)
+    sat_feature_mapping = print_sat_matrix(config, state_ids, sample.goals, features, models)
     print_sat_transition_matrix(state_ids, sample.transitions, config.sat_transitions_filename)
     print_state_set(sample.goals, config.goal_states_filename)
     print_state_set(sample.unsolvable, config.unsolvable_states_filename)
@@ -176,7 +171,7 @@ def generate_features(config, data, rng):
     # selected = None
     # log_feature_denotations(state_ids, features, models, config.feature_denotation_filename, selected)
 
-    return ExitCode.Success, dict(features=features)
+    return ExitCode.Success, dict(features=features, sat_feature_mapping=sat_feature_mapping)
 
 
 def log_features(features, feature_filename):
