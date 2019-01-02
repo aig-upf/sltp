@@ -1,4 +1,3 @@
-#include <bitset>
 #include <cassert>
 #include <iostream>
 #include <fstream>
@@ -7,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include <theory.h>
 #include "sample.h"
 
 // TODO: * action must be applicable at some state
@@ -14,16 +14,6 @@
 //       * separate goal from non-goal states (IMPORTANT)
 
 using namespace std;
-
-// returns k-th bit in integer l
-inline bool bit(int k, int l) {
-    return l & (1 << k);
-}
-
-// returns a string with binary representation of integer k (16 bits)
-string bit_string(int k) {
-    return bitset<8>(k).to_string();
-}
 
 string filename(const string &prefix, int K, int N, const string &suffix, bool opt = true) {
     string fn(prefix);
@@ -34,86 +24,6 @@ string filename(const string &prefix, int K, int N, const string &suffix, bool o
     fn += suffix;
     return fn;
 }
-
-class Var {
-  protected:
-    int index_;
-    string str_;
-
-  public:
-    Var(int index, const string &str) : index_(index), str_(str) { }
-    virtual ~Var() { }
-    int index() const { return index_; }
-    string str() const { return str_; }
-    void print(ostream &os) const {
-        os << str();
-    }
-};
-
-class Literal {
-  protected:
-    const Var &var_;
-    bool sign_;
-
-  public:
-    Literal(const Var &var, bool sign)
-      : var_(var), sign_(sign) {
-    }
-    Literal(const Literal &L, bool negate = false)
-      : var_(L.var()), sign_(negate ? !L.sign() : L.sign()) {
-    }
-    virtual ~Literal() { }
-    const Var& var() const { return var_; }
-    bool sign() const { return sign_; }
-    int var_index() const { return var_.index(); }
-    int as_int() const { return !sign_ ? var_index() : -var_index(); }
-    string as_str() const {
-        return !sign_ ? var_.str() : string("-") + var_.str();
-    }
-    void print(ostream &os) const {
-        os << as_str();
-    }
-};
-
-class Implication {
-  protected:
-    vector<int> antecedent_; // joined by AND
-    vector<int> consequent_; // joined by OR
-
-  public:
-    Implication() { }
-    ~Implication() { }
-
-    void add_antecedent(int L) { antecedent_.push_back(L); }
-    void add_consequent(int L) { consequent_.push_back(L); }
-
-    void dump(ostream &os) const {
-        for( size_t i = 0; i < antecedent_.size(); ++i ) {
-            os << -antecedent_[i];
-            if( i + 1 < antecedent_.size() ) os << " ";
-        }
-        if( !consequent_.empty() ) os << " ";
-        for( size_t i = 0; i < consequent_.size(); ++i ) {
-            os << consequent_[i];
-            if( i + 1 < consequent_.size() ) os << " ";
-        }
-        os << " 0" << endl;
-    }
-    void print(ostream &os, const vector<const Literal*> &literals) const {
-        for( size_t i = 0; i < antecedent_.size(); ++i ) {
-            int index = (antecedent_[i] > 0 ? antecedent_[i] : (literals.size() >> 1) + -antecedent_[i]) - 1;
-            literals[index]->print(os);
-            if( i + 1 < antecedent_.size() ) os << " & ";
-        }
-        os << " => ";
-        for( size_t i = 0; i < consequent_.size(); ++i ) {
-            int index = (consequent_[i] > 0 ? consequent_[i] : (literals.size() >> 1) + -consequent_[i]) - 1;
-            literals[index]->print(os);
-            if( i + 1 < consequent_.size() ) os << " v ";
-        }
-        os << flush;
-    }
-};
 
 template<typename T>
 class Items : public set<T> {
@@ -147,7 +57,7 @@ class Items : public set<T> {
     }
 };
 
-class Theory {
+class Theory : public SAT::Theory {
   public:
     struct AbstractAction {
         string name_;
@@ -230,10 +140,10 @@ class Theory {
             }
         }
         void dump(ostream &os) const {
-            os << bit_string(selected_precondition_)
-               << " " << bit_string(precondition_)
-               << " " << bit_string(selected_effect_)
-               << " " << bit_string(effect_)
+            os << SAT::bit_string(selected_precondition_)
+               << " " << SAT::bit_string(precondition_)
+               << " " << SAT::bit_string(selected_effect_)
+               << " " << SAT::bit_string(effect_)
                << endl;
         }
     };
@@ -274,26 +184,15 @@ class Theory {
     int log_num_features_;
     int log_last_numerical_feature_;
 
-    vector<pair<int, string> > var_offsets_;
-    vector<const Var*> variables_;
-    vector<const Literal*> literals_;
-
-    vector<pair<int, const string> > comments_;
-    vector<const Implication*> implications_;
-    vector<pair<int, string> > imp_offsets_;
-
-    mutable bool satisfiable_;
-    mutable vector<bool> model_;
-
   public:
     Theory(const Sample::Sample &S, int K, int N, const Options &options)
-      : S_(S), K_(K), N_(N),
+      : SAT::Theory(options.decode_),
+        S_(S), K_(K), N_(N),
         options_(options),
         num_states_(S_.M().num_states()),
         num_features_(S_.M().num_features()),
         log_num_features_(0),
-        log_last_numerical_feature_(0),
-        satisfiable_(false) {
+        log_last_numerical_feature_(0) {
 
         while( (1 << log_num_features_) < num_features_ )
             ++log_num_features_;
@@ -314,12 +213,11 @@ class Theory {
         if( options_.add_actions_ )
             read_actions(options_.prefix_);
 
-        cout << "-------- variables + literals --------" << endl;
-        build_variables();
-        build_literals();
-        cout << "--------- base implications ----------" << endl;
-        build_base();
+        build_theory();
+    }
+    virtual ~Theory() { }
 
+    virtual void build_rest() {
         add_implications_for_features();
         add_implications_for_goals();
         add_implications_for_actions();
@@ -328,38 +226,6 @@ class Theory {
         enforce_soundness();
         if( !options_.only_soundness_ ) enforce_completeness();
         cout << "--------------------------------------" << endl;
-    }
-    virtual ~Theory() {
-        for( size_t i = 0; i < implications_.size(); ++i )
-            delete implications_[i];
-        for( size_t i = 0; i < literals_.size(); ++i )
-            delete literals_[i];
-        for( size_t i = 0; i < variables_.size(); ++i )
-            delete variables_[i];
-    }
-
-    const Var& variable(int index) const {
-        assert((0 <= index) && (index < variables_.size()));
-        return *variables_[index];
-    }
-    const Literal& literal(int index) const {
-        assert(index != 0);
-        assert((-int(literals_.size()) <= index) && (index <= int(literals_.size())));
-        return index > 0 ? *literals_[index - 1] : *literals_[variables_.size() + -index - 1];
-    }
-
-    int num_variables() const {
-        return variables_.size();
-    }
-    int num_implications() const {
-        return implications_.size();
-    }
-
-    bool satisfiable() const {
-        return satisfiable_;
-    }
-    const vector<bool>& model() const {
-        return model_;
     }
 
     int index_for_selected_feature(const vector<bool> &model, int k) const {
@@ -424,14 +290,7 @@ class Theory {
         return options_.ordering_ && !disable;
     }
 
-    void add_implication(const Implication *IP) {
-        implications_.push_back(IP);
-    }
-    void add_comment(const string &comment) {
-        comments_.push_back(make_pair(implications_.size(), comment));
-    }
-
-    void build_variables() {
+    virtual void build_variables() {
         // A variables: 4 x K x N
         var_offsets_.push_back(make_pair(0, "A"));
         for( int t = 1; t < 5; ++t ) {
@@ -439,7 +298,7 @@ class Theory {
                 for( int k = 0; k < K_; ++k ) {
                     int index = variables_.size();
                     string name = string("A(") + to_string(t) + "," + to_string(j) + "," + to_string(k) + ")";
-                    variables_.push_back(new Var(index, name));
+                    variables_.push_back(new SAT::Var(index, name));
                     assert(index == A(t, j, k));
                 }
             }
@@ -453,7 +312,7 @@ class Theory {
                 for( int t = 0; t < log_num_features_; ++t ) {
                     int index = variables_.size();
                         string name = string("F(") + to_string(k) + "," + to_string(t) + ")";
-                    variables_.push_back(new Var(index, name));
+                    variables_.push_back(new SAT::Var(index, name));
                     assert(index == F(k, t));
                 }
             }
@@ -465,7 +324,7 @@ class Theory {
                 for( int j = 0; j < num_features_; ++j ) {
                     int index = variables_.size();
                     string name = string("Fn(") + to_string(k) + "," + to_string(j) + ")";
-                    variables_.push_back(new Var(index, name));
+                    variables_.push_back(new SAT::Var(index, name));
                     assert(index == Fn(k, j));
                 }
             }
@@ -477,7 +336,7 @@ class Theory {
         for( int k = 0; k < K_; ++k ) {
             int index = variables_.size();
             string name = string("n(") + to_string(k) + ")";
-            variables_.push_back(new Var(index, name));
+            variables_.push_back(new SAT::Var(index, name));
             assert(index == n(k));
         }
         cout << "n: #variables=" << variables_.size() - var_offsets_.back().first << " (K), offset=" << var_offsets_.back().first << endl;
@@ -488,7 +347,7 @@ class Theory {
             for( int i = 0; i < num_states_; ++i ) {
                 int index = variables_.size();
                 string name = string("phi(") + to_string(k) + "," + to_string(i) + ")";
-                variables_.push_back(new Var(index, name));
+                variables_.push_back(new SAT::Var(index, name));
                 assert(index == phi(k, i, false));
             }
         }
@@ -496,7 +355,7 @@ class Theory {
             for( int i = 0; i < num_states_; ++i ) {
                 int index = variables_.size();
                 string name = string("phi*(") + to_string(k) + "," + to_string(i) + ")";
-                variables_.push_back(new Var(index, name));
+                variables_.push_back(new SAT::Var(index, name));
                 assert(index == phi(k, i, true));
             }
         }
@@ -510,7 +369,7 @@ class Theory {
                     for( int k = 0; k < K_; ++k ) {
                         int index = variables_.size();
                         string name = string("B(") + to_string(t) + "," + to_string(j) + "," + to_string(i) + "," + to_string(k) + ")";
-                        variables_.push_back(new Var(index, name));
+                        variables_.push_back(new SAT::Var(index, name));
                         assert(index == B(t, j, i, k));
                     }
                 }
@@ -525,7 +384,7 @@ class Theory {
                 for( int l = 0; l < S_.T().num_transitions(i); ++l ) {
                     int index = variables_.size();
                     string name = string("RES(") + to_string(i) + "," + to_string(l) + "," + to_string(j) + ")";
-                    variables_.push_back(new Var(index, name));
+                    variables_.push_back(new SAT::Var(index, name));
                     assert(index == RES(i, l, j));
                 }
             }
@@ -539,7 +398,7 @@ class Theory {
                 for( int l = 0; l < S_.T().num_transitions(i); ++l ) {
                     int index = variables_.size();
                     string name = string("INC(") + to_string(k) + "," + to_string(i) + "," + to_string(l) + ")";
-                    variables_.push_back(new Var(index, name));
+                    variables_.push_back(new SAT::Var(index, name));
                     assert(index == INC(k, i, l));
                 }
             }
@@ -553,7 +412,7 @@ class Theory {
                 for( int l = 0; l < S_.T().num_transitions(i); ++l ) {
                     int index = variables_.size();
                     string name = string("DEC(") + to_string(k) + "," + to_string(i) + "," + to_string(l) + ")";
-                    variables_.push_back(new Var(index, name));
+                    variables_.push_back(new SAT::Var(index, name));
                     assert(index == DEC(k, i, l));
                 }
             }
@@ -567,7 +426,7 @@ class Theory {
                 for( int l = 0; l < S_.T().num_transitions(i); ++l ) {
                     int index = variables_.size();
                     string name = string("MATCH(") + to_string(i) + "," + to_string(l) + "," + to_string(j) + ")";
-                    variables_.push_back(new Var(index, name));
+                    variables_.push_back(new SAT::Var(index, name));
                     assert(index == MATCH(i, l, j));
                 }
             }
@@ -581,7 +440,7 @@ class Theory {
                 for( int l = 0; l < S_.T().num_transitions(i); ++l ) {
                     int index = variables_.size();
                     string name = string("APPMATCH(") + to_string(i) + "," + to_string(l) + "," + to_string(j) + ")";
-                    variables_.push_back(new Var(index, name));
+                    variables_.push_back(new SAT::Var(index, name));
                     assert(index == APPMATCH(i, l, j));
                 }
             }
@@ -596,7 +455,7 @@ class Theory {
                     for( int k = 0; k < log_num_features_; ++k ) {
                         int index = variables_.size();
                         string name = string("df(") + to_string(j) + "," + to_string(k) + ")";
-                        variables_.push_back(new Var(index, name));
+                        variables_.push_back(new SAT::Var(index, name));
                         assert(index == df(j, k));
                     }
                 }
@@ -608,12 +467,6 @@ class Theory {
 
         add_variables_for_features();
         add_variables_for_goals();
-    }
-    void build_literals() {
-        for( size_t i = 0; i < variables_.size(); ++i )
-            literals_.push_back(new Literal(*variables_[i], false));
-        for( size_t i = 0; i < variables_.size(); ++i )
-            literals_.push_back(new Literal(*variables_[i], true));
     }
 
     // references to variables
@@ -745,7 +598,7 @@ class Theory {
 #if 0
     // auxiliary
     // [F^k is numeric] is equiv. to -F(k,t) for all t >= index_for_numerical
-    void add_antecedent_for_numeric_feature(Implication &IP, int k) const {
+    void add_antecedent_for_numeric_feature(SAT::Implication &IP, int k) const {
         assert(0); // HOLA
         assert((0 <= k) && (k < K_));
         if( options_.log_feature_variables_ ) {
@@ -764,20 +617,20 @@ class Theory {
         for( int j = 0; j < N_; ++j ) {
             for( int k = 0; k < K_; ++k ) {
                 // if effect on F^k, it must be selected
-                Implication *IP1 = new Implication;
+                SAT::Implication *IP1 = new SAT::Implication;
                 IP1->add_antecedent(1 + A(2, j, k));
                 IP1->add_consequent(1 + A(1, j, k));
                 add_implication(IP1);
 
                 // if prec on F^k, it must be selected
-                Implication *IP2 = new Implication;
+                SAT::Implication *IP2 = new SAT::Implication;
                 IP2->add_antecedent(1 + A(4, j, k));
                 IP2->add_consequent(1 + A(3, j, k));
                 add_implication(IP2);
 
                 // if F^k is numeric and it is decremented, precondition must be value > 0;
                 // that is, A(1,j,k) & -A(2,j,k) & [F^k is numeric] => A(4,j,k)
-                Implication *IP3 = new Implication;
+                SAT::Implication *IP3 = new SAT::Implication;
                 IP3->add_antecedent(1 + A(1, j, k));
                 IP3->add_antecedent(-(1 + A(2, j, k)));
                 IP3->add_antecedent(1 + n(k));
@@ -788,7 +641,7 @@ class Theory {
 
         // some feature must be affected (selected)
         for( int j = 0; j < N_; ++j ) {
-            Implication *IP = new Implication;
+            SAT::Implication *IP = new SAT::Implication;
             for( int k = 0; k < K_; ++k )
                 IP->add_consequent(1 + A(1, j, k));
             add_implication(IP);
@@ -797,7 +650,7 @@ class Theory {
 #if 0 // CHECK
         // selected action must be applicable at some state
         for( int j = 0; j < N_; ++j ) {
-            Implication *IP = new Implication;
+            SAT::Implication *IP = new SAT::Implication;
             for( int i = 0; i < num_states_; ++i )
                 IP->add_consequent(1 + APP(i, j));
             add_implication(IP);
@@ -808,7 +661,7 @@ class Theory {
         if( options_.ordering_ && !options_.add_actions_ ) {
             for( int j = 1; j < N_; ++j ) {
                 for( int k = 0; k < K_; ++k ) {
-                    Implication *IP = new Implication;
+                    SAT::Implication *IP = new SAT::Implication;
                     for( int t = 0; t < k; ++t )
                         IP->add_antecedent(-(1 + A(1, j, t)));
                     IP->add_antecedent(1 + A(1, j, k));
@@ -825,9 +678,9 @@ class Theory {
             // constraints: dummy features are not selected
             for( int k = 0; k < K_; ++k ) {
                 for( int index = S_.M().last_numerical_feature(); index < S_.M().first_boolean_feature(); ++index ) {
-                    Implication *IP = new Implication;
+                    SAT::Implication *IP = new SAT::Implication;
                     for( int t = 0; t < log_num_features_; ++t )
-                        IP->add_antecedent(bit(t, index) ? 1 + F(k, t) : -(1 + F(k, t)));
+                        IP->add_antecedent(SAT::bit(t, index) ? 1 + F(k, t) : -(1 + F(k, t)));
                     add_implication(IP);
                 }
             }
@@ -835,16 +688,16 @@ class Theory {
             // constraints: inexistent features are not selected
             for( int k = 0; k < K_; ++k ) {
                 for( int index = num_features_; index < (1 << log_num_features_); ++index ) {
-                    Implication *IP = new Implication;
+                    SAT::Implication *IP = new SAT::Implication;
                     for( int t = 0; t < log_num_features_; ++t )
-                        IP->add_antecedent(bit(t, index) ? 1 + F(k, t) : -(1 + F(k, t)));
+                        IP->add_antecedent(SAT::bit(t, index) ? 1 + F(k, t) : -(1 + F(k, t)));
                     add_implication(IP);
                 }
             }
         } else {
             // F^k should be some feature
             for( int k = 0; k < K_; ++k ) {
-                Implication *IP = new Implication;
+                SAT::Implication *IP = new SAT::Implication;
                 for( int j = 0; j < num_features_; ++j )
                     IP->add_consequent(1 + Fn(k, j));
                 add_implication(IP);
@@ -854,7 +707,7 @@ class Theory {
             for( int k = 0; k < K_; ++k ) {
                 for( int i = 0; i < num_features_; ++i ) {
                     for( int j = i + 1; j < num_features_; ++j ) {
-                        Implication *IP = new Implication;
+                        SAT::Implication *IP = new SAT::Implication;
                         IP->add_consequent(-(1 + Fn(k, i)));
                         IP->add_consequent(-(1 + Fn(k, j)));
                         add_implication(IP);
@@ -865,7 +718,7 @@ class Theory {
             // constraints: dummy features are not selected
             for( int k = 0; k < K_; ++k ) {
                 for( int j = S_.M().last_numerical_feature(); j < S_.M().first_boolean_feature(); ++j ) {
-                    Implication *IP = new Implication;
+                    SAT::Implication *IP = new SAT::Implication;
                     IP->add_antecedent(1 + Fn(k, j));
                     add_implication(IP);
                 }
@@ -878,21 +731,21 @@ class Theory {
 
     void build_n(int k) {
         if( options_.log_feature_variables_ ) {
-            Implication *IP1 = new Implication;
+            SAT::Implication *IP1 = new SAT::Implication;
             for( int t = log_last_numerical_feature_; t < log_num_features_; ++t )
                 IP1->add_antecedent(-(1 + F(k, t)));
             IP1->add_consequent(1 + n(k));
             add_implication(IP1);
 
             for( int t = log_last_numerical_feature_; t < log_num_features_; ++t ) {
-                Implication *IP2 = new Implication;
+                SAT::Implication *IP2 = new SAT::Implication;
                 IP2->add_antecedent(1 + F(k, t));
                 IP2->add_consequent(-(1 + n(k)));
                 add_implication(IP2);
             }
         } else {
             for( int j = 0; j < num_features_; ++j ) {
-                Implication *IP = new Implication;
+                SAT::Implication *IP = new SAT::Implication;
                 IP->add_antecedent(1 + Fn(k, j));
                 IP->add_consequent(j < S_.M().last_numerical_feature() ? 1 + n(k) : -(1 + n(k)));
                 add_implication(IP);
@@ -912,10 +765,10 @@ class Theory {
             // forward implications
             for( int l = 0; l < num_features_; ++l ) {
                 if( (!star && (S_.M()(i, l) == 0)) || (star && (S_.M()(i, l) > 0)) ) {
-                    Implication *IP = new Implication;
+                    SAT::Implication *IP = new SAT::Implication;
                     IP->add_antecedent(1 + phi(k, i, star));
                     for( int t = 0; t < log_num_features_; ++t )
-                        IP->add_consequent(bit(t, l) ? -(1 + F(k, t)) : (1 + F(k, t)));
+                        IP->add_consequent(SAT::bit(t, l) ? -(1 + F(k, t)) : (1 + F(k, t)));
                     add_implication(IP);
                 }
             }
@@ -923,10 +776,10 @@ class Theory {
             // backward implications
             for( int l = 0; l < num_features_; ++l ) {
                 if( (!star && (S_.M()(i, l) > 0)) || (star && (S_.M()(i, l) == 0)) ) {
-                    Implication *IP = new Implication;
+                    SAT::Implication *IP = new SAT::Implication;
                     IP->add_consequent(1 + phi(k, i, star));
                     for( int t = 0; t < log_num_features_; ++t )
-                        IP->add_antecedent(bit(t, l) ? (1 + F(k, t)) : -(1 + F(k, t)));
+                        IP->add_antecedent(SAT::bit(t, l) ? (1 + F(k, t)) : -(1 + F(k, t)));
                     add_implication(IP);
                 }
             }
@@ -934,7 +787,7 @@ class Theory {
             // forward implications
             for( int l = 0; l < num_features_; ++l ) {
                 if( (!star && (S_.M()(i, l) == 0)) || (star && (S_.M()(i, l) > 0)) ) {
-                    Implication *IP = new Implication;
+                    SAT::Implication *IP = new SAT::Implication;
                     IP->add_antecedent(1 + phi(k, i, star));
                     IP->add_consequent(-(1 + Fn(k, l)));
                     add_implication(IP);
@@ -944,7 +797,7 @@ class Theory {
             // backward implications
             for( int l = 0; l < num_features_; ++l ) {
                 if( (!star && (S_.M()(i, l) > 0)) || (star && (S_.M()(i, l) == 0)) ) {
-                    Implication *IP = new Implication;
+                    SAT::Implication *IP = new SAT::Implication;
                     IP->add_consequent(1 + phi(k, i, star));
                     IP->add_antecedent(1 + Fn(k, l));
                     add_implication(IP);
@@ -972,7 +825,7 @@ class Theory {
         bool star = t == 1;
 
         // forward implication: one
-        Implication *IP1 = new Implication;
+        SAT::Implication *IP1 = new SAT::Implication;
         IP1->add_antecedent(1 + B(t, j, i, k));
         if( star ) IP1->add_antecedent(1 + A(3, j, k));
         IP1->add_antecedent(star ? -(1 + A(4, j, k)) : 1 + A(4, j, k));
@@ -980,18 +833,18 @@ class Theory {
         add_implication(IP1);
 
         // backward implications: two or three
-        Implication *IP2 = new Implication;
+        SAT::Implication *IP2 = new SAT::Implication;
         IP2->add_antecedent(star ? 1 + A(4, j, k) : -(1 + A(4, j, k)));
         IP2->add_consequent(1 + B(t, j, i, k));
         add_implication(IP2);
 
-        Implication *IP3 = new Implication;
+        SAT::Implication *IP3 = new SAT::Implication;
         IP3->add_antecedent(1 + phi(k, i, star));
         IP3->add_consequent(1 + B(t, j, i, k));
         add_implication(IP3);
 
         if( star ) {
-            Implication *IP4 = new Implication;
+            SAT::Implication *IP4 = new SAT::Implication;
             IP4->add_antecedent(-(1 + A(3, j, k)));
             IP4->add_consequent(1 + B(t, j, i, k));
             add_implication(IP4);
@@ -1017,14 +870,14 @@ class Theory {
         // forward implications: 4 of them
         for( int k = 0; k < K_; ++k ) {
             // RES(i,l,j) & A(2,j,k) -> phi(k,l)
-            Implication *IP1 = new Implication;
+            SAT::Implication *IP1 = new SAT::Implication;
             IP1->add_antecedent(1 + RES(i, l, j));
             IP1->add_antecedent(1 + A(2, j, k));
             IP1->add_consequent(1 + phi(k, state_l, false));
             add_implication(IP1);
 
             // RES(i,l,j) & A(1,j,k) & -A(2,j,k) & -[F^k is numeric] -> phi*(k,l)
-            Implication *IP2 = new Implication;
+            SAT::Implication *IP2 = new SAT::Implication;
             IP2->add_antecedent(1 + RES(i, l, j));
             IP2->add_antecedent(1 + A(1, j, k));
             IP2->add_antecedent(-(1 + A(2, j, k)));
@@ -1033,7 +886,7 @@ class Theory {
             add_implication(IP2);
 
             // RES(i,l,j) & -A(1,j,k) & phi(k,i) -> phi(k,l)
-            Implication *IP3 = new Implication;
+            SAT::Implication *IP3 = new SAT::Implication;
             IP3->add_antecedent(1 + RES(i, l, j));
             IP3->add_antecedent(-(1 + A(1, j, k)));
             IP3->add_antecedent(1 + phi(k, i, false));
@@ -1041,7 +894,7 @@ class Theory {
             add_implication(IP3);
 
             // RES(i,l,j) & -A(1,j,k) & phi*(k,i) -> phi*(k,l)
-            Implication *IP4 = new Implication;
+            SAT::Implication *IP4 = new SAT::Implication;
             IP4->add_antecedent(1 + RES(i, l, j));
             IP4->add_antecedent(-(1 + A(1, j, k)));
             IP4->add_antecedent(1 + phi(k, i, true));
@@ -1068,10 +921,10 @@ class Theory {
             // forward implications
             for( int j = 0; j < num_features_; ++j ) {
                 if( S_.M()(i, j) >= S_.M()(state_l, j) ) {
-                    Implication *IP = new Implication;
+                    SAT::Implication *IP = new SAT::Implication;
                     IP->add_antecedent(1 + INC(k, i, l));
                     for( int t = 0; t < log_num_features_; ++t )
-                        IP->add_consequent(bit(t, j) ? -(1 + F(k, t)) : (1 + F(k, t)));
+                        IP->add_consequent(SAT::bit(t, j) ? -(1 + F(k, t)) : (1 + F(k, t)));
                     add_implication(IP);
                 }
             }
@@ -1079,9 +932,9 @@ class Theory {
             // backward implications
             for( int j = 0; j < num_features_; ++j ) {
                 if( S_.M()(i, j) < S_.M()(state_l, j) ) {
-                    Implication *IP = new Implication;
+                    SAT::Implication *IP = new SAT::Implication;
                     for( int t = 0; t < log_num_features_; ++t )
-                        IP->add_antecedent(bit(t, j) ? 1 + F(k, t) : -(1 + F(k, t)));
+                        IP->add_antecedent(SAT::bit(t, j) ? 1 + F(k, t) : -(1 + F(k, t)));
                     IP->add_consequent(1 + INC(k, i, l));
                     add_implication(IP);
                 }
@@ -1090,7 +943,7 @@ class Theory {
             // forward implications
             for( int j = 0; j < num_features_; ++j ) {
                 if( S_.M()(i, j) >= S_.M()(state_l, j) ) {
-                    Implication *IP = new Implication;
+                    SAT::Implication *IP = new SAT::Implication;
                     IP->add_antecedent(1 + INC(k, i, l));
                     IP->add_consequent(-(1 + Fn(k, j)));
                     add_implication(IP);
@@ -1100,7 +953,7 @@ class Theory {
             // backward implications
             for( int j = 0; j < num_features_; ++j ) {
                 if( S_.M()(i, j) < S_.M()(state_l, j) ) {
-                    Implication *IP = new Implication;
+                    SAT::Implication *IP = new SAT::Implication;
                     IP->add_antecedent(1 + Fn(k, j));
                     IP->add_consequent(1 + INC(k, i, l));
                     add_implication(IP);
@@ -1127,10 +980,10 @@ class Theory {
             // forward implications
             for( int j = 0; j < num_features_; ++j ) {
                 if( S_.M()(i, j) <= S_.M()(state_l, j) ) {
-                    Implication *IP = new Implication;
+                    SAT::Implication *IP = new SAT::Implication;
                     IP->add_antecedent(1 + DEC(k, i, l));
                     for( int t = 0; t < log_num_features_; ++t )
-                        IP->add_consequent(bit(t, j) ? -(1 + F(k, t)) : (1 + F(k, t)));
+                        IP->add_consequent(SAT::bit(t, j) ? -(1 + F(k, t)) : (1 + F(k, t)));
                     add_implication(IP);
                 }
             }
@@ -1138,9 +991,9 @@ class Theory {
             // backward implications
             for( int j = 0; j < num_features_; ++j ) {
                 if( S_.M()(i, j) > S_.M()(state_l, j) ) {
-                    Implication *IP = new Implication;
+                    SAT::Implication *IP = new SAT::Implication;
                     for( int t = 0; t < log_num_features_; ++t )
-                        IP->add_antecedent(bit(t, j) ? 1 + F(k, t) : -(1 + F(k, t)));
+                        IP->add_antecedent(SAT::bit(t, j) ? 1 + F(k, t) : -(1 + F(k, t)));
                     IP->add_consequent(1 + DEC(k, i, l));
                     add_implication(IP);
                 }
@@ -1149,7 +1002,7 @@ class Theory {
             // forward implications
             for( int j = 0; j < num_features_; ++j ) {
                 if( S_.M()(i, j) <= S_.M()(state_l, j) ) {
-                    Implication *IP = new Implication;
+                    SAT::Implication *IP = new SAT::Implication;
                     IP->add_antecedent(1 + DEC(k, i, l));
                     IP->add_consequent(-(1 + Fn(k, j)));
                     add_implication(IP);
@@ -1159,7 +1012,7 @@ class Theory {
             // backward implications
             for( int j = 0; j < num_features_; ++j ) {
                 if( S_.M()(i, j) > S_.M()(state_l, j) ) {
-                    Implication *IP = new Implication;
+                    SAT::Implication *IP = new SAT::Implication;
                     IP->add_antecedent(1 + Fn(k, j));
                     IP->add_consequent(1 + DEC(k, i, l));
                     add_implication(IP);
@@ -1183,21 +1036,21 @@ class Theory {
         //int state_l = S_.T().transition_state(i, l); // unused
 
         // forward: implication for RES
-        Implication *IP = new Implication;
+        SAT::Implication *IP = new SAT::Implication;
         IP->add_antecedent(1 + MATCH(i, l, j));
         IP->add_consequent(1 + RES(i, l, j));
         add_implication(IP);
 
         // forward: increments for INCs
         for( int k = 0; k < K_; ++k ) {
-            Implication *IP1 = new Implication;
+            SAT::Implication *IP1 = new SAT::Implication;
             IP1->add_antecedent(1 + MATCH(i, l, j));
             IP1->add_antecedent(1 + A(2, j, k));
             IP1->add_antecedent(1 + n(k));
             IP1->add_consequent(1 + INC(k, i, l));
             add_implication(IP1);
 
-            Implication *IP2 = new Implication;
+            SAT::Implication *IP2 = new SAT::Implication;
             IP2->add_antecedent(1 + MATCH(i, l, j));
             IP2->add_antecedent(1 + INC(k, i, l));
             IP2->add_antecedent(1 + n(k));
@@ -1207,7 +1060,7 @@ class Theory {
 
         // forward: increments for DECs
         for( int k = 0; k < K_; ++k ) {
-            Implication *IP1 = new Implication;
+            SAT::Implication *IP1 = new SAT::Implication;
             IP1->add_antecedent(1 + MATCH(i, l, j));
             IP1->add_antecedent(1 + A(1, j, k));
             IP1->add_antecedent(-(1 + A(2, j, k)));
@@ -1215,14 +1068,14 @@ class Theory {
             IP1->add_consequent(1 + DEC(k, i, l));
             add_implication(IP1);
 
-            Implication *IP2 = new Implication;
+            SAT::Implication *IP2 = new SAT::Implication;
             IP2->add_antecedent(1 + MATCH(i, l, j));
             IP2->add_antecedent(1 + DEC(k, i, l));
             IP2->add_antecedent(1 + n(k));
             IP2->add_consequent(1 + A(1, j, k));
             add_implication(IP2);
 
-            Implication *IP3 = new Implication;
+            SAT::Implication *IP3 = new SAT::Implication;
             IP3->add_antecedent(1 + MATCH(i, l, j));
             IP3->add_antecedent(1 + DEC(k, i, l));
             IP3->add_antecedent(1 + n(k));
@@ -1246,14 +1099,14 @@ class Theory {
         //int state_l = S_.T().transition_state(i, l); // unused
 
         // forward implications
-        Implication *IP = new Implication;
+        SAT::Implication *IP = new SAT::Implication;
         IP->add_antecedent(1 + APPMATCH(i, l, j));
         IP->add_consequent(1 + MATCH(i, l, j));
         add_implication(IP);
 
         for( int k = 0; k < K_; ++k ) {
             for( int t = 1; t < 3; ++t ) {
-                Implication *IP = new Implication;
+                SAT::Implication *IP = new SAT::Implication;
                 IP->add_antecedent(1 + APPMATCH(i, l, j));
                 IP->add_consequent(1 + B(t, j, i, k));
                 add_implication(IP);
@@ -1274,24 +1127,24 @@ class Theory {
         assert((0 <= k) && (k + 1 < K_));
         assert((0 <= t) && (t < log_num_features_));
 
-        Implication *IP1 = new Implication;
+        SAT::Implication *IP1 = new SAT::Implication;
         IP1->add_antecedent(1 + df(k, t));
         IP1->add_consequent(-(1 + F(k, t)));
         add_implication(IP1);
 
-        Implication *IP2 = new Implication;
+        SAT::Implication *IP2 = new SAT::Implication;
         IP2->add_antecedent(1 + df(k, t));
         IP2->add_consequent(1 + F(k + 1, t));
         add_implication(IP2);
 
         for( int j = t + 1; j < log_num_features_; ++j ) {
-            Implication *IQ1 = new Implication;
+            SAT::Implication *IQ1 = new SAT::Implication;
             IQ1->add_antecedent(1 + df(k, t));
             IQ1->add_antecedent(1 + F(k, j));
             IQ1->add_consequent(1 + F(k + 1, j));
             add_implication(IQ1);
 
-            Implication *IQ2 = new Implication;
+            SAT::Implication *IQ2 = new SAT::Implication;
             IQ2->add_antecedent(1 + df(k, t));
             IQ2->add_antecedent(-(1 + F(k, j)));
             IQ2->add_consequent(-(1 + F(k + 1, j)));
@@ -1305,7 +1158,7 @@ class Theory {
                     for( int t = 0; t < log_num_features_; ++t )
                         build_df(k, t);
 
-                    Implication *IP = new Implication;
+                    SAT::Implication *IP = new SAT::Implication;
                     for( int t = 0; t < log_num_features_; ++t )
                         IP->add_consequent(1 + df(k, t));
                     add_implication(IP);
@@ -1313,7 +1166,7 @@ class Theory {
             } else {
                 for( int k = 0; k + 1 < K_; ++k ) {
                     for( int i = 0; i < num_features_; ++i ) {
-                        Implication *IP = new Implication;
+                        SAT::Implication *IP = new SAT::Implication;
                         IP->add_antecedent(1 + Fn(k, i));
                         for( int j = i + 1; j < num_features_; ++j )
                             IP->add_consequent(1 + Fn(k + 1, j));
@@ -1324,7 +1177,7 @@ class Theory {
         }
     }
 
-    void build_base() {
+    virtual void build_base() {
         imp_offsets_.push_back(make_pair(0, "A"));
         add_comment("Theory for formulas A(t,j,k)");
         build_formulas_A();
@@ -1401,7 +1254,7 @@ class Theory {
     void force_feature(int j, int feature_index) {
         if( do_ordering() ) {
             // some F^k is this feature
-            Implication *IP = new Implication;
+            SAT::Implication *IP = new SAT::Implication;
             for( int k = 0; k < K_; ++k )
                 IP->add_consequent(1 + MappedBy(j, k));
             add_implication(IP);
@@ -1410,15 +1263,15 @@ class Theory {
                 // if F^k is feature, set bits F(k, t) accordingly
                 for( int k = 0; k < K_; ++k ) {
                     for( int t = 0; t < log_num_features_; ++t ) {
-                        Implication *IP = new Implication;
+                        SAT::Implication *IP = new SAT::Implication;
                         IP->add_antecedent(1 + MappedBy(j, k));
-                        IP->add_consequent(bit(t, feature_index) ? (1 + F(k, t)) : -(1 + F(k, t)));
+                        IP->add_consequent(SAT::bit(t, feature_index) ? (1 + F(k, t)) : -(1 + F(k, t)));
                         add_implication(IP);
                     }
                 }
             } else {
                 for( int k = 0; k < K_; ++k ) {
-                    Implication *IP = new Implication;
+                    SAT::Implication *IP = new SAT::Implication;
                     IP->add_antecedent(1 + MappedBy(j, k));
                     IP->add_consequent(1 + Fn(k, feature_index));
                     add_implication(IP);
@@ -1428,12 +1281,12 @@ class Theory {
             if( options_.log_feature_variables_ ) {
                 // F^j is j-th forced feature, set bits F(j, t) accordingly
                 for( int t = 0; t < log_num_features_; ++t ) {
-                    Implication *IP = new Implication;
-                    IP->add_consequent(bit(t, feature_index) ? 1 + F(j, t) : -(1 + F(j, t)));
+                    SAT::Implication *IP = new SAT::Implication;
+                    IP->add_consequent(SAT::bit(t, feature_index) ? 1 + F(j, t) : -(1 + F(j, t)));
                     add_implication(IP);
                 }
             } else {
-                Implication *IP = new Implication;
+                SAT::Implication *IP = new SAT::Implication;
                 IP->add_consequent(1 + Fn(j, feature_index));
                 add_implication(IP);
             }
@@ -1470,7 +1323,7 @@ class Theory {
                 for( int k = 0; k < K_; ++k ) {
                     int index = variables_.size();
                     string name = string("MappedBy(") + to_string(j) + "," + to_string(k) + ")";
-                    variables_.push_back(new Var(index, name));
+                    variables_.push_back(new SAT::Var(index, name));
                     assert(index == MappedBy(j, k));
                 }
             }
@@ -1524,16 +1377,16 @@ class Theory {
     void force_action(int j, const AbstractAction &action) {
         add_comment(string("Forced action ") + action.name_);
         for( int k = 0; k < K_; ++k ) {
-            Implication *IP1 = new Implication;
+            SAT::Implication *IP1 = new SAT::Implication;
             IP1->add_consequent(action.selected_effect_ & (1 << k) ? 1 + A(1, j, k) : -(1 + A(1, j, k)));
             add_implication(IP1);
-            Implication *IP2 = new Implication;
+            SAT::Implication *IP2 = new SAT::Implication;
             IP2->add_consequent(action.effect_ & (1 << k) ? 1 + A(2, j, k) : -(1 + A(2, j, k)));
             add_implication(IP2);
-            Implication *IP3 = new Implication;
+            SAT::Implication *IP3 = new SAT::Implication;
             IP3->add_consequent(action.selected_precondition_ & (1 << k) ? 1 + A(3, j, k) : -(1 + A(3, j, k)));
             add_implication(IP3);
-            Implication *IP4 = new Implication;
+            SAT::Implication *IP4 = new SAT::Implication;
             IP4->add_consequent(action.precondition_ & (1 << k) ? 1 + A(4, j, k) : -(1 + A(4, j, k)));
             add_implication(IP4);
         }
@@ -1558,7 +1411,7 @@ class Theory {
         add_comment("Theory for enforcing soundness");
         for( int i = 0; i < num_states_; ++i ) {
             for( int j = 0; j < N_; ++j ) {
-                Implication *IP = new Implication;
+                SAT::Implication *IP = new SAT::Implication;
 
                 // antecedent
                 for( int k = 0; k < K_; ++k ) {
@@ -1583,7 +1436,7 @@ class Theory {
         add_comment("Theory for enforcing completeness");
         for( int i = 0; i < num_states_; ++i ) {
             for( int l = 0; l < S_.T().num_transitions(i); ++l ) {
-                Implication *IP = new Implication;
+                SAT::Implication *IP = new SAT::Implication;
                 for( int j = 0; j < N_; ++j )
                     IP->add_consequent(1 + APPMATCH(i, l, j));
                 add_implication(IP);
@@ -1594,83 +1447,10 @@ class Theory {
     }
 
   public:
-    // readers
-    void read_minisat_output(ifstream &is) const {
-        string status;
-        is >> status;
-        satisfiable_ = status == "SAT";
-        if( satisfiable_ ) {
-            int var, lit;
-            model_ = vector<bool>(variables_.size(), false);
-            for( size_t i = 0; i < variables_.size(); ++i ) {
-                is >> lit;
-                var = lit > 0 ? lit - 1 : -lit - 1;
-                assert(var == int(i));
-                model_[var] = lit > 0;
-            }
-            is >> lit;
-            assert(lit == 0);
-        } else {
-            model_.clear();
-        }
-    }
-
-    // output
-    void dump(ostream &os) const {
-        os << "p cnf " << variables_.size() << " " << implications_.size() << endl;
-        size_t i = 0;
-        for( size_t j = 0; j < implications_.size(); ++j ) {
-            while( (i < comments_.size()) && (comments_[i].first == j) ) {
-                os << "c " << comments_[i].second << endl;
-                ++i;
-            }
-            implications_[j]->dump(os);
-        }
-        while( i < comments_.size() ) {
-            os << "c " << comments_[i].second << endl;
-            ++i;
-        }
-    }
-    void print(ostream &os) const {
-        size_t i = 0;
-        for( size_t j = 0; j < implications_.size(); ++j ) {
-            while( (i < comments_.size()) && (comments_[i].first == j) ) {
-                os << "% " << comments_[i].second << endl;
-                ++i;
-            }
-            implications_[j]->print(os, literals_);
-            os << endl;
-        }
-        while( i < comments_.size() ) {
-            os << "% " << comments_[i].second << endl;
-            ++i;
-        }
-    }
-    void print_implications(ostream &os, int start, int end) const {
-        while( start < end ) {
-            implications_[start++]->print(os, literals_);
-            os << endl;
-        }
-    }
-
-    void dump_model(ostream &os) const {
-        for( size_t var = 0; var < variables_.size(); ++var ) {
-            os << variables_[var] << " ";
-        }
-        os << "0" << endl;
-    }
-    void print_model(ostream &os) const {
-        for( size_t var = 0; var < model_.size(); ++var ) {
-            bool sign = model_[var];
-            if( sign ) {
-                assert(var < variables_.size());
-                variables_[var]->print(os);
-                os << endl;
-            }
-        }
-    }
-
     // print abstraction coded in model
+    virtual void decode_model(std::ostream &os) const {
+        decode_model("<empty>", os, true);
+    }
     void decode_model(const string &name, ostream &os, bool qnp_format) const {
         assert(satisfiable_ && (model_.size() == variables_.size()));
 
