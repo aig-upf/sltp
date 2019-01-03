@@ -226,7 +226,7 @@ def compute_feature_extensions(states, features, model_cache: DLModelCache):
         #    continue
 
         if some_infty:
-            logging.info("Feature \"{}\" has infinite denotation in at least one state".format(f))
+            logging.debug("Feature \"{}\" has infinite denotation in at least one state".format(f))
             continue
 
         if PRUNE_DUPLICATE_FEATURES:
@@ -268,4 +268,3 @@ def printer(feature, value):
 
 def int_printer(value):
     return str(int(value))
-
