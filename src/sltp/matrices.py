@@ -197,7 +197,7 @@ def compute_feature_extensions(states, features, model_cache: DLModelCache):
     features = sorted(features, key=lambda feat: feat.complexity())
 
     for f in features:
-        all_equal, all_0_or_1, all_gt_0 = True, True, True
+        all_equal, all_0_or_1, all_gt_0, some_infty = True, True, True, False
         previous = None
         all_denotations = []
         for s in states:
@@ -208,6 +208,8 @@ def compute_feature_extensions(states, features, model_cache: DLModelCache):
                 all_0_or_1 = False
             if denotation == 0:
                 all_gt_0 = False
+            if denotation == sys.maxsize:
+                some_infty = True
             previous = denotation
             all_denotations.append(denotation)
 
@@ -218,9 +220,13 @@ def compute_feature_extensions(states, features, model_cache: DLModelCache):
             continue
 
         # If the denotation of the feature is always > 0, we remove it
-        if all_gt_0:
-            logging.debug("Feature \"{}\" has denotation always > 0 over all states and will be ignored"
-                          .format(f,))
+        #if all_gt_0:
+        #    logging.debug("Feature \"{}\" has denotation always > 0 over all states and will be ignored"
+        #                  .format(f,))
+        #    continue
+
+        if some_infty:
+            logging.info("Feature \"{}\" has infinite denotation in at least one state".format(f))
             continue
 
         if PRUNE_DUPLICATE_FEATURES:
