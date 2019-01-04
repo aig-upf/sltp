@@ -188,6 +188,9 @@ def experiment(experiment_name=None):
 
     experiments["aaai_bw_on_x_y_completeness_opt_no_marking"] = update_dict(experiments["aaai_bw_on_x_y_completeness_opt"],
                                                              complete_only_wrt_optimal=False)
+    
+    experiments["aaai_bw_on_x_y_completeness_opt_no_marking_blai"] = update_dict(
+        experiments["aaai_bw_on_x_y_completeness_opt_no_marking"], pipeline="maxsat_poly",)
 
     experiments["bw_on_x_y_dt_iw"] = dict(
         instances=["on_x_y_dt_1.pddl", "holding_a_b_unclear.pddl"],
