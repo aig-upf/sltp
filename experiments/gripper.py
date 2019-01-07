@@ -11,13 +11,15 @@ def experiment(experiment_name=None):
     # domain_dir = "gripper-m"
     domain = "domain.pddl"
 
-    sample_small = dict(
+    exps = dict()
+
+    exps["sample_small"] = dict(
         instance="sample-small.pddl",
         num_states=200, max_concept_size=10, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=add_domain_parameters,
         feature_namer=feature_namer,)
 
-    prob01 = dict(
+    exps["prob01"] = dict(
         instance="prob01.pddl",
         num_states=300, num_sampled_states=None, random_seed=12,
         max_concept_size=10, max_concept_grammar_iterations=3,
@@ -25,7 +27,7 @@ def experiment(experiment_name=None):
         feature_namer=feature_namer,)
 
     #
-    prob01_rnd = dict(
+    exps["prob01_rnd"] = dict(
         instance="prob01.pddl",
         num_states=2000, num_sampled_states=50, random_seed=12,
         max_concept_size=10, max_concept_grammar_iterations=3,
@@ -33,7 +35,7 @@ def experiment(experiment_name=None):
         feature_namer=feature_namer,)
 
     #
-    aaai_prob01 = dict(
+    exps["aaai_prob01"] = dict(
         instances=["prob01.pddl", "prob02.pddl"],
         num_states=2000, max_width=[-1],
         num_sampled_states=100,
@@ -42,28 +44,18 @@ def experiment(experiment_name=None):
         concept_generator=None, parameter_generator=add_domain_parameters,
         feature_namer=feature_namer,)
 
-    aaai_prob01_no_marking = update_dict(aaai_prob01, complete_only_wrt_optimal=False)
+    exps["aaai_prob01_no_marking"] = update_dict(exps["aaai_prob01"], complete_only_wrt_optimal=False)
 
-    aaai_prob01_blai = update_dict(
-        aaai_prob01, pipeline="maxsat_poly",
+    exps["aaai_prob01_blai"] = update_dict(
+        exps["aaai_prob01"], pipeline="maxsat_poly",
         # max_concept_size=4, max_concept_grammar_iterations=2,
         # num_states=100,
     )
 
-    aaai_prob01_blai_std = update_dict(  # Same config as Blai, but with standard pipeline
-        aaai_prob01_blai, pipeline="maxsat")
+    exps["aaai_prob01_blai_std"] = update_dict(  # Same config as Blai, but with standard pipeline
+        exps["aaai_prob01_blai"], pipeline="maxsat")
 
-    parameters = {
-        "sample_small": sample_small,
-        "prob01": prob01,
-        "prob01_rnd": prob01_rnd,
-        "aaai_prob01": aaai_prob01,
-        "aaai_prob01_no_marking": aaai_prob01_no_marking,
-        "aaai_prob01_blai": aaai_prob01_blai,
-        "aaai_prob01_blai_std": aaai_prob01_blai_std,
-
-    }.get(experiment_name or "test")
-
+    parameters = exps.get(experiment_name or "test")
     return generate_experiment(domain_dir, domain, **parameters)
 
 
