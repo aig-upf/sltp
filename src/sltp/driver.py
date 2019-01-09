@@ -19,8 +19,8 @@ import copy
 import logging
 import multiprocessing
 import os
+import resource
 import sys
-import time
 from signal import signal, SIGPIPE, SIG_DFL
 import numpy as np
 
@@ -511,10 +511,20 @@ def load(basedir, items):
 class StepRunner(object):
     """ Run the given step """
     def __init__(self, step_name, target, required_data):
-        self.start = time.process_time()
+        self.start = self.elapsed_time()
         self.target = target
         self.step_name = step_name
         self.required_data = required_data
+
+    def elapsed_time(self):
+        info_children = resource.getrusage(resource.RUSAGE_CHILDREN)
+        info_self = resource.getrusage(resource.RUSAGE_SELF)
+        # print("({}) Self: {}".format(os.getpid(), info_self))
+        # print("({}) Children: {}".format(os.getpid(), info_children))
+        return info_children.ru_utime + info_children.ru_stime + info_self.ru_utime + info_self.ru_stime
+
+    def used_memory(self):
+        return performance.memory_usage()
 
     def setup(self, quiet):
         self.loglevel = logging.getLogger().getEffectiveLevel()
@@ -527,10 +537,16 @@ class StepRunner(object):
         if quiet:
             logging.getLogger().setLevel(self.loglevel)
         else:
+            current = self.elapsed_time()
             print(console.header("END OF STEP {}: {:.2f} CPU sec - {:.2f} MB".format(
-                self.step_name, time.process_time() - self.start, performance.memory_usage())))
+                self.step_name, current - self.start, self.used_memory())))
 
     def run(self, config):
+        exitcode = self._run(config)
+        self.teardown(config.quiet)
+        return exitcode
+
+    def _run(self, config):
         """ Run the StepRunner target.
             This method will also be the entry point of spawned subprocess in the case
             of SubprocessStepRunners
@@ -551,20 +567,24 @@ class StepRunner(object):
             raise CriticalPipelineError("Error: {}".format(str(exception)))
 
         save(config.experiment_dir, output)
-        self.teardown(config.quiet)
         # profiling.start()
         return exitcode
 
 
 class SubprocessStepRunner(StepRunner):
     """ Run the given step by spawning a subprocess and waiting for its finalization """
-    def run(self, config):
+    def _run(self, config):
         pool = multiprocessing.Pool(processes=1)
-        result = pool.apply_async(StepRunner.run, (), {"self": self, "config": config})
+        result = pool.apply_async(StepRunner._run, (), {"self": self, "config": config})
         exitcode = result.get()
         pool.close()
         pool.join()
         return exitcode
+
+    def used_memory(self):
+        info_children = resource.getrusage(resource.RUSAGE_CHILDREN)
+        # print("({}) Children: {}".format(os.getpid(), info_children))
+        return info_children.ru_maxrss / 1024.0
 
 
 class SATStateFactorizationStep(Step):
