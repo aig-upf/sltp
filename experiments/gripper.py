@@ -14,21 +14,28 @@ def experiment(experiment_name=None):
     exps = dict()
 
     exps["sample_small"] = dict(
-        instance="sample-small.pddl",
+        instances="sample-small.pddl",
         num_states=200, max_concept_size=10, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=add_domain_parameters,
         feature_namer=feature_namer,)
 
     exps["prob01"] = dict(
-        instance="prob01.pddl",
+        instances="prob01.pddl",
         num_states=300, num_sampled_states=None, random_seed=12,
         max_concept_size=10, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=add_domain_parameters,
         feature_namer=feature_namer,)
 
+    exps["prob01_goalc"] = dict(
+        instances=["prob01.pddl", "prob02.pddl", ],
+        num_states=300, num_sampled_states=None, random_seed=12,
+        max_concept_size=10, max_concept_grammar_iterations=3,
+        concept_generator=None, parameter_generator=None,
+        feature_namer=feature_namer,)
+
     #
     exps["prob01_rnd"] = dict(
-        instance="prob01.pddl",
+        instances="prob01.pddl",
         num_states=2000, num_sampled_states=50, random_seed=12,
         max_concept_size=10, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=add_domain_parameters,
@@ -44,7 +51,11 @@ def experiment(experiment_name=None):
         concept_generator=None, parameter_generator=add_domain_parameters,
         feature_namer=feature_namer,)
 
+    # Same but using goal-concepts instead of goal parameters:
+    exps["aaai_prob01_gc"] = update_dict(exps["aaai_prob01"], parameter_generator=None)
+
     exps["aaai_prob01_no_marking"] = update_dict(exps["aaai_prob01"], complete_only_wrt_optimal=False)
+
 
     exps["aaai_prob01_blai"] = update_dict(
         exps["aaai_prob01"], pipeline="maxsat_poly",

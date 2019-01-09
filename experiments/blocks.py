@@ -72,6 +72,9 @@ def experiment(experiment_name=None):
         feature_namer=ijcai_paper_bw_feature_namer,
     )
 
+    # Same but using goal-concepts instead of goal parameters:
+    exps["aaai_clear_x_simple_hybrid_gc"] = update_dict(exps["aaai_clear_x_simple_hybrid"], parameter_generator=None)
+
     exps["aaai_clear_x_simple_hybrid_blai"] = update_dict(
         exps["aaai_clear_x_simple_hybrid"], pipeline="maxsat_poly",)
 

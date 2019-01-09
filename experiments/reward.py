@@ -43,8 +43,10 @@ def experiment(experiment_name=None):
     domain_dir = "grid-circles"
     domain = "domain.pddl"
 
+    exps = dict()
+
     # One reason for overfitting: in a 3x3 grid, with 2 booleans per dimension you can perfectly represent any position
-    sample_1x3 = dict(
+    exps['sample_1x3'] = dict(
         instances=["sample_1x3.pddl"],
         complete_only_wrt_optimal=True,
         num_states=1500, max_concept_size=8, max_concept_grammar_iterations=3,
@@ -55,22 +57,16 @@ def experiment(experiment_name=None):
         concept_generator=None, parameter_generator=add_domain_parameters
     )
 
-    sample_2x2_1reward = update_dict(sample_1x3, instances=["sample_2x2_1reward.pddl"])
-    sample_2x2_2rewards = update_dict(sample_1x3, instances=["sample_2x2_2rewards.pddl"])
-    sample_3x3_2rewards = update_dict(sample_1x3, instances=["sample_3x3_2rewards.pddl"])
-    instance_5 = update_dict(sample_1x3, instances=["instance_5.pddl", "instance_4_blocked.pddl"])
-    instance_5_no_marking = update_dict(instance_5, complete_only_wrt_optimal=False,)
+    exps['sample_2x2_1reward'] = update_dict(exps['sample_1x3'], instances=["sample_2x2_1reward.pddl"])
+    exps['sample_2x2_2rewards'] = update_dict(exps['sample_1x3'], instances=["sample_2x2_2rewards.pddl"])
+    exps['sample_3x3_2rewards'] = update_dict(exps['sample_1x3'], instances=["sample_3x3_2rewards.pddl"])
+    exps['instance_5'] = update_dict(exps['sample_1x3'], instances=["instance_5.pddl", "instance_4_blocked.pddl"])
+    exps['instance_5_no_marking'] = update_dict(exps['instance_5'], complete_only_wrt_optimal=False,)
 
-    parameters = {
-        "sample_1x3": sample_1x3,
-        "sample_2x2_1reward": sample_2x2_1reward,
-        "sample_2x2_2rewards": sample_2x2_2rewards,  # Overfits
-        "sample_3x3_2rewards": sample_3x3_2rewards,  # Overfits
-        "instance_5": instance_5,
-        "instance_5_no_marking": instance_5_no_marking,
+    # Same but using goal-concepts instead of goal parameters:
+    exps["instance_5_gc"] = update_dict(exps["instance_5"], parameter_generator=None)
 
-    }.get(experiment_name or "test")
-
+    parameters = exps.get(experiment_name or "test")
     return generate_experiment(domain_dir, domain, **parameters)
 
 
