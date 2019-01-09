@@ -19,15 +19,20 @@ import itertools
 import sys
 
 import os
+from collections import defaultdict
+
 import tarski as tsk
 
 from bitarray import bitarray
 from models import DLModelFactory, FeatureModel
-from sltp.util.misc import compute_universe_from_pddl_model
+from sltp.util.misc import compute_universe_from_pddl_model, state_as_atoms
+from tarski.syntax.transform.errors import TransformationError
+from tarski.syntax.transform.simplifications import transform_to_ground_atoms
 
 from .language import parse_pddl, compute_goal_denotation
 from tarski.dl import Concept, Role, InverseRole, StarRole, \
     ConceptCardinalityFeature, MinDistanceFeature, SyntacticFactory, NullaryAtomFeature, compute_dl_vocabulary
+from tarski import fstrips
 
 from .extensions import DLDenotationTraceIndex
 from .returncodes import ExitCode
@@ -229,27 +234,86 @@ def run(config, data, rng):
     return extract_features(config, data.sample)
 
 
+def parse_all_instances(domain, instances):
+    logging.info("Parsing {} training instances".format(len(instances)))
+    return [parse_pddl(domain, instance) for instance in instances]
+
+
+def compute_instance_information(problem, use_goal_denotation=False):
+    static_atoms = defaultdict(list)
+    static_predicates = set()
+    goal_denotations, goal_predicates = None, set()
+
+    # Compute the universe of each instance - a bit redundant with the above, but should be OK
+    universe = compute_universe_from_pddl_model(problem.language)
+
+    # Compute a list with all of the predicate / function symbols from the problem that are static
+    # Not sure the fstrips.TaskIndex code is too reliable... static detection seems to be buggy.
+    # Let's better do that ourselves with a basic fluent detection routine.
+    init_atoms = state_as_atoms(problem.init)
+    index = fstrips.TaskIndex(problem.language.name, problem.name)
+
+    index.process_symbols(problem)
+    fluent_symbols = {x.head.symbol for x in index.fluent_symbols}
+
+    for atom in init_atoms:
+        predicate_name = atom[0]
+        if predicate_name not in fluent_symbols:
+            static_atoms[predicate_name].append(atom)
+            static_predicates.add(predicate_name)
+
+    if use_goal_denotation:
+        goal_denotations = defaultdict(list)  # Atoms indexed by their predicate name
+
+        try:
+            ground_atoms = transform_to_ground_atoms(problem.goal)
+        except TransformationError:
+            logging.error("Cannot create goal concepts when problem goal is not a conjunction of ground atoms")
+            raise
+
+        for atom in ground_atoms:
+            predicate_name = atom[0]
+            goal_denotations[predicate_name].append(atom)
+            goal_predicates.add(predicate_name)
+
+    return InstanceInformation(universe, static_atoms, static_predicates, goal_denotations, goal_predicates)
+
+
+class InstanceInformation:
+    """ A simple collection of instance data necessary to create the DL models """
+    def __init__(self, universe, static_atoms, static_predicates, goal_denotations, goal_predicates):
+        self.static_atoms = static_atoms
+        self.static_predicates = static_predicates
+        self.goal_denotations = goal_denotations
+        self.goal_predicates = goal_predicates
+        self.universe = universe
+
+
 def extract_features(config, sample):
     logging.info("Generating concepts and pruning from sample set: {}".format(sample.info()))
-    goal_predicates = set()  # The predicates and functions that appear mentioned in the goal
+
+    parsed_problems = parse_all_instances(config.domain, config.instances)  # Parse all problem instances
 
     if config.parameter_generator is not None:
         logging.info('Using user-provided domain parameters and ignoring goal representation')
+        use_goal_denotation = False
     else:
         logging.info('Using goal representation and no domain parameters')
-        assert 0
-        # TODO THIS NEEDS TO BE REFACTORED AND WON'T WORK AS IT IS NOW, SINCE WE CAN NOW HAVE MULTIPLE INSTANCES
-        # problem, language, nominals, types = parse_pddl(config.domain, config.instance)
-        # try:
-        #     goal_denotation = transform_to_ground_atoms(problem.goal)
-        #     goal_predicates = {x[0] for x in goal_denotation}
-        # except TransformationError:
-        #     logging.error("Cannot create goal concepts when problem goal is not a conjunction of ground atoms")
-        #     raise
+        use_goal_denotation = True
 
-    language, nominals, types, model_cache = create_model_cache_from_samples(sample, config)
+    infos = [compute_instance_information(problem, use_goal_denotation) for problem, _, _, _ in parsed_problems]
+
+    # We assume all problems languages are the same and simply pick the first one
+    language = parsed_problems[0][0].language
+    vocabulary = compute_dl_vocabulary(language)
+
+    nominals, types, model_cache = create_model_cache_from_samples(vocabulary, sample, config, infos)
     processor = SemanticProcessor(sample.states, model_cache)
     factory = TerminologicalFactory(language, processor)
+
+    all_goal_predicates = set(itertools.chain.from_iterable(info.goal_predicates for info in infos))
+    if any(all_goal_predicates != info.goal_predicates for info in infos):
+        logging.warning("Not all instances in the training set use the same goal predicate")
 
     if config.concept_generator is not None:
         logging.info('Using set of concepts and roles provided by the user'.format())
@@ -259,7 +323,7 @@ def extract_features(config, sample):
         atoms, concepts, roles = user_atoms, user_concepts, user_roles
     elif config.feature_generator is None:
         logging.info('Starting automatic generation of concepts'.format())
-        atoms, concepts, roles = generate_concepts(config, factory, nominals, types, goal_predicates)
+        atoms, concepts, roles = generate_concepts(config, factory, nominals, types, all_goal_predicates)
     else:
         atoms, concepts, roles = [], [], []
 
@@ -303,9 +367,6 @@ def extract_features(config, sample):
 def generate_concepts(config, factory, nominals, types, goal_predicates):
     # Construct the primitive terms from the input language, and then add the atoms
     concepts, roles, atoms = factory.syntax.generate_primitives_from_language(nominals, types, goal_predicates)
-    logging.info('Primitive (nullary) atoms : {}'.format(", ".join(map(str, atoms))))
-    logging.info('Primitive (unary) concepts: {}'.format(", ".join(map(str, concepts))))
-    logging.info('Primitive (binary) roles  : {}'.format(", ".join(map(str, roles))))
     concepts = factory.create_atomic_concepts(concepts)
     roles = factory.create_atomic_roles(roles)
     # construct derived concepts and rules obtained with grammar
@@ -365,7 +426,7 @@ def create_model_factory(domain, instance, parameter_generator):
     nominals, _ = compute_nominals(domain, parameter_generator)
 
     # Compute the whole universe of the instance
-    problem, language, _, types = parse_pddl(domain, instance)
+    problem, language, _, _ = parse_pddl(domain, instance)
     vocabulary = compute_dl_vocabulary(language)
     universe = compute_universe_from_pddl_model(language)
 
@@ -375,27 +436,19 @@ def create_model_factory(domain, instance, parameter_generator):
     return problem, DLModelFactory(universe, vocabulary, nominals, goal_denotation)
 
 
-def create_model_cache_from_samples(sample, config):
+def create_model_cache_from_samples(vocabulary, sample, config, infos):
     """  """
-    goal_denotation = None  # TODO
     nominals, types = compute_nominals(config.domain, config.parameter_generator)
-
-    # Compute the universe of each instance - a bit redundant with the above, but should be OK
-    universes = []
-    for i, instance in enumerate(config.instances, 0):
-        _, language, _, _ = parse_pddl(config.domain, instance)
-        universes.append(compute_universe_from_pddl_model(language))
-
-    model_cache = create_model_cache(language, sample.states, sample.instance, universes, nominals, goal_denotation)
-    return language, nominals, types, model_cache
+    model_cache = create_model_cache(vocabulary, sample.states, sample.instance, nominals, infos)
+    return nominals, types, model_cache
 
 
-def create_model_cache(language, states, state_instances, universes, nominals, goal_conjunction):
+def create_model_cache(vocabulary, states, state_instances, nominals, infos):
     """ Create a DLModelCache from the given parameters"""
-    vocabulary = compute_dl_vocabulary(language)
-
     # First create the model factory corresponding to each instance
-    model_factories = [DLModelFactory(universe, vocabulary, nominals, goal_conjunction) for universe in universes]
+    model_factories = []
+    for info in infos:
+        model_factories.append(DLModelFactory(vocabulary, nominals, info))
 
     # Then create the model corresponding to each state in the sample
     models = {}

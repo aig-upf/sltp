@@ -7,7 +7,7 @@ import numpy as np
 from tarski.dl import FeatureValueChange
 
 from .sampling import log_sampled_states
-from .features import create_model_cache_from_samples
+from .features import create_model_cache_from_samples, parse_all_instances
 from .returncodes import ExitCode
 from .util.misc import update_dict
 from .driver import Experiment, generate_pipeline_from_list, PlannerStep, check_int_parameter, \
@@ -34,8 +34,10 @@ def full_learning(config, sample, rng):
     working_sample_idxs, expanded_state_ids_shuffled = initial_sample_selection(sample, config, rng)
     working_sample = sample.resample(working_sample_idxs)
 
+    parsed_problems = parse_all_instances(config.domain, config.instances)
+
     # Note that the validator will validate wrt the full sample
-    _, _, _, model_cache = create_model_cache_from_samples(sample, config)
+    _, _, _, model_cache = create_model_cache_from_samples(sample, config, parsed_problems)
     validator = AbstractionValidator(model_cache, sample, expanded_state_ids_shuffled)
 
     k, k_max, k_step = config.initial_concept_bound, config.max_concept_bound, config.concept_bound_step
