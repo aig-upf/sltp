@@ -4,8 +4,9 @@ import sys
 
 from tarski.dl import ForallConcept, StarRole, NotConcept, PrimitiveRole, NominalConcept, InverseRole, AndConcept
 
-from abstractions_defaults import generate_experiment
-from common import build_ijcai_paper_bw_concepts, ijcai_paper_bw_feature_namer, no_parameter, update_dict
+from defaults import generate_experiment
+from common import build_ijcai_paper_bw_concepts, ijcai_paper_bw_feature_namer, no_parameter
+from sltp.util.misc import update_dict
 
 
 def experiment(experiment_name=None):

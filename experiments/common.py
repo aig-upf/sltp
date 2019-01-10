@@ -1,5 +1,5 @@
 from tarski.dl import NominalConcept, PrimitiveRole, InverseRole, StarRole, PrimitiveConcept, NotConcept, AndConcept, \
-    ExistsConcept, MinDistanceFeature, ConceptCardinalityFeature
+    ExistsConcept, ConceptCardinalityFeature
 
 
 def build_ijcai_paper_bw_concepts(lang):
@@ -148,6 +148,8 @@ def get_on_x_y_feature(lang):
 def ijcai_paper_bw_feature_namer(feature):
     s = str(feature)
     return {
+        "bool[And(clear, {a})]": "clear(a)",
+        "bool[holding]": "holding(·)",
         "bool[And(Exists(on,{b}), {a})]": "on(a, b)",
         "bool[And(Exists(Inverse(on),{a}), {b})]": "on(a, b)_2",
         "bool[And({a}, holding)]": "holding(a)",
@@ -210,9 +212,3 @@ def add_bw_domain_parameters_2(language):
 
 def no_parameter(lang):
     return []
-
-
-def update_dict(d, **kwargs):
-    res = d.copy()
-    res.update(kwargs)
-    return res
