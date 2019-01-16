@@ -24,7 +24,7 @@ from collections import defaultdict
 import tarski as tsk
 
 from bitarray import bitarray
-from models import DLModelFactory, FeatureModel
+from .models import DLModelFactory, FeatureModel
 from sltp.util.misc import compute_universe_from_pddl_model, state_as_atoms
 from tarski.syntax.transform.errors import TransformationError
 from tarski.syntax.transform.simplifications import transform_to_ground_atoms
