@@ -6,7 +6,6 @@ import math
 import sys
 
 import numpy as np
-from models import FeatureModel
 from sltp.features import DLModelCache
 
 from tarski.dl import EmpiricalBinaryConcept, NullaryAtomFeature, ConceptCardinalityFeature, MinDistanceFeature
