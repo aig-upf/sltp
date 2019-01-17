@@ -112,9 +112,8 @@ class DLModelFactory:
                     self.process_atom(atom, statics, _GOAL_DL_MAPPING)
 
         # Add the denotation of all static atoms
-        for dens in instance_info.static_atoms.values():
-            for atom in dens:
-                self.process_atom(atom, statics, _STANDARD_DL_MAPPING)
+        for atom in instance_info.static_atoms:
+            self.process_atom(atom, statics, _STANDARD_DL_MAPPING)
 
         return denotations, statics
 

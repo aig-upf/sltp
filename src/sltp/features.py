@@ -239,28 +239,33 @@ def parse_all_instances(domain, instances):
     return [parse_pddl(domain, instance) for instance in instances]
 
 
-def compute_instance_information(problem, use_goal_denotation=False):
-    static_atoms = defaultdict(list)
+def compute_static_atoms(problem):
+    """ Compute a list with all of the predicate / function symbols from the problem that are static """
+    init_atoms = state_as_atoms(problem.init)
+    index = fstrips.TaskIndex(problem.language.name, problem.name)
+    # Not sure the fstrips.TaskIndex code is too reliable... static detection seems to be buggy.
+    # Let's better do that ourselves with a basic fluent detection routine.
+    index.process_symbols(problem)
+    fluent_symbols = {x.head.symbol for x in index.fluent_symbols}
+
+    static_atoms = set()
     static_predicates = set()
+    for atom in init_atoms:
+        predicate_name = atom[0]
+        if predicate_name not in fluent_symbols:
+            static_atoms.add(atom)
+            static_predicates.add(predicate_name)
+
+    return static_atoms, static_predicates
+
+
+def compute_instance_information(problem, use_goal_denotation=False):
     goal_denotations, goal_predicates = None, set()
 
     # Compute the universe of each instance - a bit redundant with the above, but should be OK
     universe = compute_universe_from_pddl_model(problem.language)
 
-    # Compute a list with all of the predicate / function symbols from the problem that are static
-    # Not sure the fstrips.TaskIndex code is too reliable... static detection seems to be buggy.
-    # Let's better do that ourselves with a basic fluent detection routine.
-    init_atoms = state_as_atoms(problem.init)
-    index = fstrips.TaskIndex(problem.language.name, problem.name)
-
-    index.process_symbols(problem)
-    fluent_symbols = {x.head.symbol for x in index.fluent_symbols}
-
-    for atom in init_atoms:
-        predicate_name = atom[0]
-        if predicate_name not in fluent_symbols:
-            static_atoms[predicate_name].append(atom)
-            static_predicates.add(predicate_name)
+    static_atoms, static_predicates = compute_static_atoms(problem)
 
     if use_goal_denotation:
         goal_denotations = defaultdict(list)  # Atoms indexed by their predicate name

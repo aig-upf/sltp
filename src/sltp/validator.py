@@ -49,7 +49,7 @@ class AbstractionValidator:
         selected_features = [(f["idx"], abstraction["features"][f["idx"]]) for f in selected_feature_idxs]
         # assert all(str(f) == f2["name"] for f, f2 in zip(selected_features, selected_feature_idxs))
 
-        logging.info("Abstract action set:\n{}".format(abstract_actions))
+        # logging.info("Abstract action set:\n{}".format(abstract_actions))
 
         assert all(s in sample.expanded for s in self.state_ids)  # state_ids assumed to contain only expanded states.
         for sid in self.state_ids:

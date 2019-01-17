@@ -1,16 +1,25 @@
 #!/usr/bin/env python3
 import logging
 
+from tarski.dl import EmpiricalBinaryConcept, ConceptCardinalityFeature
+
 from .features import parse_all_instances, compute_models
 from .returncodes import ExitCode
 from .sampling import read_transitions_from_files
 from .validator import AbstractionValidator
 
 
+def process_features(features):
+    """ Transform 'empirically binary features' in the given list into standard cardinality features.
+    This is useful if we want to apply these features to unseen models, since it these models it won't
+    necessarily be the case that the features are still binary. """
+    return [ConceptCardinalityFeature(f.c) if isinstance(f, EmpiricalBinaryConcept) else f for f in features]
+
+
 def run(config, data, rng):
     abstraction = {"abstract_actions": data.abstract_actions,
                    "selected_features": data.selected_features,
-                   "features": data.features}
+                   "features": process_features(data.features)}
 
     if config.test_domain is None:
         logging.info("No testing instances were specified")
