@@ -62,19 +62,20 @@ class AbstractionValidator:
                         not any(self.action_captures(models, sid, sprime, feature_idx[action], selected_features)
                                 for sprime in sample.transitions[sid]):
                     # The abstract action is not sound
-                    print("Action {} not *sound* wrt state {}".format(action, sid))
+                    logging.info("Action {} not *sound* wrt state {}".format(action, sid))
                     unsound.add(sid)
+                    break
 
             # Check completeness
             if check_completeness:
                 if not all(self.action_set_captures(models, sid, sprime, feature_idx, selected_features)
                            for sprime in sample.transitions[sid]):
                     # The abstract action is not complete
-                    print("Action set not *complete* wrt state {}".format(sid))
+                    logging.info("Action set not *complete* wrt state {}".format(sid))
                     not_represented.add(sid)
 
-                if len(unsound) >= max_flaws:
-                    break
+            if len(unsound) >= max_flaws:
+                break
 
         return unsound if unsound else not_represented
 
