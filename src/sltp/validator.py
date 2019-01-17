@@ -34,7 +34,7 @@ class AbstractionValidator:
             models[state_id] = self.model_cache.get_feature_model(state_id)
         return models[state_id]
 
-    def find_flaws(self, abstraction, max_flaws):
+    def find_flaws(self, abstraction, max_flaws, check_completeness=True):
         """ """
         sample = self.sample
         unsound, not_represented = set(), set()
@@ -66,14 +66,15 @@ class AbstractionValidator:
                     unsound.add(sid)
 
             # Check completeness
-            if not all(self.action_set_captures(models, sid, sprime, feature_idx, selected_features)
-                       for sprime in sample.transitions[sid]):
-                # The abstract action is not complete
-                print("Action set not *complete* wrt state {}".format(sid))
-                not_represented.add(sid)
+            if check_completeness:
+                if not all(self.action_set_captures(models, sid, sprime, feature_idx, selected_features)
+                           for sprime in sample.transitions[sid]):
+                    # The abstract action is not complete
+                    print("Action set not *complete* wrt state {}".format(sid))
+                    not_represented.add(sid)
 
-            if len(unsound) >= max_flaws:
-                break
+                if len(unsound) >= max_flaws:
+                    break
 
         return unsound if unsound else not_represented
 

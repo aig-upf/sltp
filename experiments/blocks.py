@@ -64,6 +64,7 @@ def experiment(experiment_name=None):
 
     exps["aaai_clear_x_simple_hybrid"] = dict(
         instances="instance_5_clear_x_1.pddl",
+        test_domain=domain, test_instances=["instance_5_clear_x_2.pddl"],
         num_states=2000, max_width=[-1],
         num_sampled_states=300,
         complete_only_wrt_optimal=True,

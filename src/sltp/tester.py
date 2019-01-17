@@ -25,7 +25,7 @@ def run(config, data, rng):
 
     # we don't care about the order of validation
     validator = AbstractionValidator(model_cache, sample, list(sample.expanded))
-    flaws = validator.find_flaws(abstraction, 1)
+    flaws = validator.find_flaws(abstraction, 1, check_completeness=False)
     if flaws:
         logging.error("The computed abstraction is not sound & complete".format())
         return ExitCode.AbstractionFailsOnTestInstances, dict()
