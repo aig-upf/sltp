@@ -241,7 +241,9 @@ def experiment(experiment_name=None):
         concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
-    parameters = exps.get(experiment_name or "test")
+    if experiment_name not in exps:
+        raise RuntimeError('No experiment named "{}" in current experiment script'.format(experiment_name))
+    parameters = exps[experiment_name]
     parameters["domain_dir"] = parameters.get("domain_dir", domain_dir)
     parameters["domain"] = parameters.get("domain", domain)
     return generate_experiment(**parameters)

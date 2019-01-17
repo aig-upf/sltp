@@ -66,7 +66,9 @@ def experiment(experiment_name=None):
     # Same but using goal-concepts instead of goal parameters:
     exps["instance_5_gc"] = update_dict(exps["instance_5"], parameter_generator=None)
 
-    parameters = exps.get(experiment_name or "test")
+    if experiment_name not in exps:
+        raise RuntimeError('No experiment named "{}" in current experiment script'.format(experiment_name))
+    parameters = exps[experiment_name]
     return generate_experiment(domain_dir, domain, **parameters)
 
 

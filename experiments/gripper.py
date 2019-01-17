@@ -57,7 +57,6 @@ def experiment(experiment_name=None):
 
     exps["aaai_prob01_no_marking"] = update_dict(exps["aaai_prob01"], complete_only_wrt_optimal=False)
 
-
     exps["aaai_prob01_blai"] = update_dict(
         exps["aaai_prob01"], pipeline="maxsat_poly",
         # max_concept_size=4, max_concept_grammar_iterations=2,
@@ -67,8 +66,9 @@ def experiment(experiment_name=None):
     exps["aaai_prob01_blai_std"] = update_dict(  # Same config as Blai, but with standard pipeline
         exps["aaai_prob01_blai"], pipeline="maxsat")
 
-    parameters = exps.get(experiment_name or "test")
-    return generate_experiment(domain_dir, domain, **parameters)
+    if experiment_name not in exps:
+        raise RuntimeError('No experiment named "{}" in current experiment script'.format(experiment_name))
+    return generate_experiment(domain_dir, domain, **exps[experiment_name])
 
 
 def add_domain_parameters(language):
