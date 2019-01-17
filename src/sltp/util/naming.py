@@ -21,6 +21,10 @@ def compute_sample_filenames(experiment_dir, instances, max_width, **_):
     return [os.path.join(experiment_dir, compute_sample_filename(i, w)) for i, w in zip(instances, max_width)]
 
 
+def compute_test_sample_filenames(experiment_dir, test_instances, **_):
+    return [os.path.join(experiment_dir, compute_sample_filename(i, -1)) for i in test_instances]
+
+
 def compute_experiment_tag(instance_tag, max_concept_size, **_):
     ts = datetime.now().strftime("%Y%m%d%H%M")
     ts = "NONE"

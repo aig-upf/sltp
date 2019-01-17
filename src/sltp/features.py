@@ -289,12 +289,8 @@ class InstanceInformation:
         self.universe = universe
 
 
-def extract_features(config, sample):
-    logging.info("Generating concepts and pruning from sample set: {}".format(sample.info()))
-
-    parsed_problems = parse_all_instances(config.domain, config.instances)  # Parse all problem instances
-
-    if config.parameter_generator is not None:
+def compute_models(domain, sample, parsed_problems, parameter_generator):
+    if parameter_generator is not None:
         logging.info('Using user-provided domain parameters and ignoring goal representation')
         use_goal_denotation = False
     else:
@@ -307,7 +303,19 @@ def extract_features(config, sample):
     language = parsed_problems[0][0].language
     vocabulary = compute_dl_vocabulary(language)
 
-    nominals, types, model_cache = create_model_cache_from_samples(vocabulary, sample, config, infos)
+    nominals, types, model_cache = create_model_cache_from_samples(
+        vocabulary, sample, domain, parameter_generator, infos)
+    return language, nominals, types, model_cache, infos
+
+
+def extract_features(config, sample):
+    logging.info("Generating concepts and pruning from sample set: {}".format(sample.info()))
+
+    parsed_problems = parse_all_instances(config.domain, config.instances)  # Parse all problem instances
+
+    language, nominals, types, model_cache, infos = compute_models(
+        config.domain, sample, parsed_problems, config.parameter_generator)
+
     processor = SemanticProcessor(sample.states, model_cache)
     factory = TerminologicalFactory(language, processor)
 
@@ -436,9 +444,9 @@ def create_model_factory(domain, instance, parameter_generator):
     return problem, DLModelFactory(universe, vocabulary, nominals, goal_denotation)
 
 
-def create_model_cache_from_samples(vocabulary, sample, config, infos):
+def create_model_cache_from_samples(vocabulary, sample, domain, parameter_generator, infos):
     """  """
-    nominals, types = compute_nominals(config.domain, config.parameter_generator)
+    nominals, types = compute_nominals(domain, parameter_generator)
     model_cache = create_model_cache(vocabulary, sample.states, sample.instance, nominals, infos)
     return nominals, types, model_cache
 

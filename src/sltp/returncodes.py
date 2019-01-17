@@ -11,5 +11,7 @@ class ExitCode(Enum):
     MaxsatModelUnsat = 10
     NoAbstractionUnderComplexityBound = 11
 
-    OutOfMemory = 22
-    OutOfTime = 23
+    AbstractionFailsOnTestInstances = 20
+
+    OutOfMemory = 100
+    OutOfTime = 101

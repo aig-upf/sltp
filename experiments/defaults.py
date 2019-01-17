@@ -13,6 +13,13 @@ def generate_experiment(domain_dir, domain, **kwargs):
     kwargs["domain"] = os.path.join(BENCHMARK_DIR, domain_dir, domain)
     kwargs["instances"] = [os.path.join(BENCHMARK_DIR, domain_dir, i) for i in instances]
 
+    if "test_domain" in kwargs:
+        kwargs["test_domain"] = os.path.join(BENCHMARK_DIR, domain_dir, kwargs["test_domain"])
+        kwargs["test_instances"] = [os.path.join(BENCHMARK_DIR, domain_dir, i) for i in kwargs["test_instances"]]
+    else:
+        kwargs["test_domain"] = None
+        kwargs["test_instances"] = []
+
     defaults = dict(
         pipeline="maxsat",
         # pipeline="sat",
