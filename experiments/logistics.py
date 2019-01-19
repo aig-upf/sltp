@@ -14,9 +14,13 @@ def experiment(experiment_name=None):
 
     exps["sample1"] = dict(
         instances="sample1.pddl",
+        test_domain=domain, test_instances=["prob01.pddl"],
         num_states=100, max_concept_size=10, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=None,
         feature_namer=feature_namer,)
+
+    exps["sample1_tg"] = update_dict(
+        exps["sample1"], complete_only_wrt_optimal=True)
 
     exps["sample2"] = update_dict(
         exps["sample1"],

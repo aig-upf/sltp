@@ -48,6 +48,7 @@ def generate_experiment(domain_dir, domain, **kwargs):
         # - "all" (default): Use all expanded states
         # - "random": Use only a random sample of the expanded states, of size given by the option "num_sampled_states"
         # - "optimal": Use those expanded states on some optimal path (only one arbitrary optimal path)
+        # Note: ATM random sampling is deactivated
         sampling="all",
 
         # Number of states to be expanded in the sampling procedure
