@@ -29,7 +29,7 @@ from sltp.util.misc import compute_universe_from_pddl_model, state_as_atoms
 from tarski.syntax.transform.errors import TransformationError
 from tarski.syntax.transform.simplifications import transform_to_ground_atoms
 
-from .language import parse_pddl, compute_goal_denotation
+from .language import parse_pddl
 from tarski.dl import Concept, Role, InverseRole, StarRole, \
     ConceptCardinalityFeature, MinDistanceFeature, SyntacticFactory, NullaryAtomFeature, compute_dl_vocabulary
 from tarski import fstrips

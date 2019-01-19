@@ -121,7 +121,7 @@ def _run_planner(config, data, rng):
         run(config.domain, i, o, w, config.num_states)
 
     for i, o in zip(config.test_instances, config.test_sample_files):
-        run(config.test_domain, i, o, -1, 10000)
+        run(config.test_domain, i, o, -1, 1000)
 
     return ExitCode.Success, dict()
 
@@ -141,11 +141,13 @@ class PlannerStep(Step):
         if config["driver"] not in self.VALID_DRIVERS:
             raise InvalidConfigParameter('"driver" must be one of: {}'.format(self.VALID_DRIVERS))
         if any(not os.path.isfile(i) for i in config["instances"]):
-            raise InvalidConfigParameter('"instances" must be the path to existing instance files')
+            raise InvalidConfigParameter('"instances" must be the path to existing instance files. Specified: "{}"'
+                                         .format(config["instances"]))
         if not os.path.isfile(config["domain"]):
-            raise InvalidConfigParameter('"domain" must be the path to an existing domain file')
+            raise InvalidConfigParameter('Specified domain file "{}" does not exist'.format(config["domain"]))
         if not os.path.isdir(config["planner_location"]):
-            raise InvalidConfigParameter('"planner_location" must be the path to the actual planner')
+            raise InvalidConfigParameter('Specified planner location "{}" does not exist'
+                                         .format(config["planner_location"]))
         check_int_parameter(config, "num_states", positive=True)
 
         config["instance_tag"] = compute_instance_tag(**config)
