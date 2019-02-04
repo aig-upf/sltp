@@ -5,10 +5,6 @@ from codecs import open
 from os import path
 
 here = path.abspath(path.dirname(__file__))
-fsdir = path.abspath(path.join(here, '..', 'src'))
-vendordir = path.abspath(path.join(here, '..', 'vendor'))
-fs_builddir = path.abspath(path.join(here, '..', '.build'))
-
 
 # Get the long description from the README file
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
@@ -45,19 +41,12 @@ def main():
 
         install_requires=[
             'setuptools',
-            'tarski==0.1.0',
             'psutil',
             'bitarray',
             'numpy',
-            'jsonpickle'
-            # "pip @ git+ssh://git@github.com/aig-upf/tarski.git@cb92626051e79dca0439acd6b76a877adf30d497"
+            'jsonpickle',
+            "tarski @ git+ssh://git@github.com/aig-upf/tarski.git@lite#egg=tarski-dev-0.1.0"
         ],
-
-        # Git dependencies - egg names need to match whatever written in install_requires
-        dependency_links=[
-            'git+ssh://git@github.com/aig-upf/tarski.git@73fcc8b#egg=tarski-0.1.0',
-        ],
-
 
         extras_require={
             'dev': ['pytest', 'tox'],
