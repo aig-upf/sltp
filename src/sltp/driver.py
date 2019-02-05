@@ -112,7 +112,7 @@ class Step(object):
 def _run_planner(config, data, rng):
     # Run the planner on all training and test instances
     def run(d, i, o, w, n):
-        params = '-i {} --domain {} --driver {} --options="max_expansions={},width.max={}"' \
+        params = '-i {} --domain {} --driver {} --options=max_expansions={},width.max={}' \
             .format(i, d, config.driver, n, w)
         execute(command=[sys.executable, "run.py"] + params.split(' '),
                 stdout=o, cwd=config.planner_location)
