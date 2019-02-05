@@ -7,6 +7,7 @@ from .features import parse_all_instances, compute_models
 from .returncodes import ExitCode
 from .sampling import read_transitions_from_files
 from .validator import AbstractionValidator
+from .learn_actions import prettyprint_abstract_action
 
 
 def process_features(features):
@@ -34,7 +35,8 @@ def run(config, data, rng):
 
     # we don't care about the order of validation
     validator = AbstractionValidator(model_cache, sample, list(sample.expanded))
-    flaws = validator.find_flaws(abstraction, 1, check_completeness=False)
+    action_printer = lambda a: prettyprint_abstract_action(a, abstraction["features"], config.feature_namer)
+    flaws = validator.find_flaws(abstraction, 1, check_completeness=False, action_printer=action_printer)
     if flaws:
         logging.error("The computed abstraction is not sound & complete".format())
         return ExitCode.AbstractionFailsOnTestInstances, dict()
