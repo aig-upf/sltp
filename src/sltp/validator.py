@@ -1,6 +1,7 @@
 import logging
 from collections import defaultdict
 from tarski.dl import FeatureValueChange
+from tarski.dl.features import are_feature_changes_analogous
 
 
 class AbstractionValidator:
@@ -20,7 +21,7 @@ class AbstractionValidator:
             x0 = self.get_possibly_cached_model(models, s).denotation(f)
             x1 = self.get_possibly_cached_model(models, sprime).denotation(f)
             diff = f.diff(x0, x1)
-            if diff != effect_of_action_on_f:
+            if not are_feature_changes_analogous(diff, effect_of_action_on_f):
                 return False
 
         return True
@@ -63,7 +64,11 @@ class AbstractionValidator:
                         not any(self.action_captures(models, sid, sprime, feature_idx[action], selected_features)
                                 for sprime in sample.transitions[sid]):
                     # The abstract action is not sound
-                    logging.info("Action {} not *sound* wrt state {}".format(action_printer(action), sid))
+                    logging.info("Action {} *unsound* wrt state #{} of the sample".format(action_printer(action), sid))
+                    logging.info("State #{} is: {}".format(sid, sample.states[sid]))
+                    children = map(str, (sample.states[sprime] for sprime in sample.transitions[sid]))
+                    logging.info("Children of #{} are:\n\t{}".format(sid, "\n\t".join(children)))
+
                     unsound.add(sid)
                     break
 
@@ -82,6 +87,9 @@ class AbstractionValidator:
 
     @staticmethod
     def compute_feature_idx(actions):
+        """ Return a mapping from abstract actions to the qualitative effect (ADD, DEL, INC, DEC, NONE)
+        that each effect of the action has on each feature index.
+        """
         index = dict()
         for a in actions:
             effects = [(eff.feature, eff.change) for eff in a.effects]
