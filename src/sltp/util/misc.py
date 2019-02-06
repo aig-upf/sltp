@@ -67,3 +67,14 @@ def state_as_atoms(state):
         # We unwrap the tuples of Constants into tuples with their (string) names
         atoms.update((name, ) + tuple(o.symbol for o in elem) for elem in elems)
     return atoms
+
+
+def types_as_atoms(lang):
+    """ Generate a list of atoms related to the types of the language, e.g. in spanner:
+    man(bob), spanner(spanner1), spanner(spanner2), etc. would be returned as atoms """
+    atoms = set()
+    for s in lang.sorts:
+        # This takes into account type inheritance, as s.domain() contains constants of type s and of derived types.
+        if s != lang.Object and not s.builtin:
+            atoms.update((s.name, c.symbol) for c in s.domain())
+    return atoms

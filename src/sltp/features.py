@@ -25,7 +25,7 @@ import tarski as tsk
 
 from bitarray import bitarray
 from .models import DLModelFactory, FeatureModel
-from sltp.util.misc import compute_universe_from_pddl_model, state_as_atoms
+from sltp.util.misc import compute_universe_from_pddl_model, state_as_atoms, types_as_atoms
 from tarski.syntax.transform.errors import TransformationError
 from tarski.syntax.transform.simplifications import transform_to_ground_atoms
 
@@ -260,6 +260,11 @@ def compute_static_atoms(problem):
             static_atoms.add(atom)
             static_predicates.add(predicate_name)
 
+    for atom in types_as_atoms(problem.language):
+        predicate_name = atom[0]
+        static_atoms.add(atom)
+        static_predicates.add(predicate_name)
+
     return static_atoms, static_predicates
 
 
@@ -306,15 +311,14 @@ def compute_models(domain, sample, parsed_problems, parameter_generator):
         logging.info('Using goal representation and no domain parameters')
         use_goal_denotation = True
 
-    infos = [compute_instance_information(problem, use_goal_denotation) for problem, _, _, _ in parsed_problems]
+    infos = [compute_instance_information(problem, use_goal_denotation) for problem, _, _ in parsed_problems]
 
     # We assume all problems languages are the same and simply pick the first one
     language = parsed_problems[0][0].language
     vocabulary = compute_dl_vocabulary(language)
 
-    nominals, types, model_cache = create_model_cache_from_samples(
-        vocabulary, sample, domain, parameter_generator, infos)
-    return language, nominals, types, model_cache, infos
+    nominals, model_cache = create_model_cache_from_samples(vocabulary, sample, domain, parameter_generator, infos)
+    return language, nominals, model_cache, infos
 
 
 def extract_features(config, sample):
@@ -322,7 +326,7 @@ def extract_features(config, sample):
 
     parsed_problems = parse_all_instances(config.domain, config.instances)  # Parse all problem instances
 
-    language, nominals, types, model_cache, infos = compute_models(
+    language, nominals, model_cache, infos = compute_models(
         config.domain, sample, parsed_problems, config.parameter_generator)
 
     processor = SemanticProcessor(sample.states, model_cache)
@@ -340,6 +344,7 @@ def extract_features(config, sample):
         atoms, concepts, roles = user_atoms, user_concepts, user_roles
     elif config.feature_generator is None:
         logging.info('Starting automatic generation of concepts'.format())
+        types = [s for s in language.sorts if not s.builtin]
         atoms, concepts, roles = generate_concepts(config, factory, nominals, types, all_goal_predicates)
     else:
         atoms, concepts, roles = [], [], []
@@ -433,17 +438,17 @@ def log_concept_denotations(states, concepts, models, filename, selected=None):
 
 def compute_nominals(domain, parameter_generator):
     # A first parse without all constants to get exactly those constants that we want as nominals
-    _, language, nominals, types = parse_pddl(domain)
+    _, language, nominals = parse_pddl(domain)
     if parameter_generator is not None:
         nominals += parameter_generator(language)
-    return nominals, types
+    return nominals
 
 
 def create_model_factory(domain, instance, parameter_generator):
-    nominals, _ = compute_nominals(domain, parameter_generator)
+    nominals = compute_nominals(domain, parameter_generator)
 
     # Compute the whole universe of the instance
-    problem, language, _, _ = parse_pddl(domain, instance)
+    problem, language, _ = parse_pddl(domain, instance)
     vocabulary = compute_dl_vocabulary(language)
     universe = compute_universe_from_pddl_model(language)
 
@@ -455,9 +460,9 @@ def create_model_factory(domain, instance, parameter_generator):
 
 def create_model_cache_from_samples(vocabulary, sample, domain, parameter_generator, infos):
     """  """
-    nominals, types = compute_nominals(domain, parameter_generator)
+    nominals = compute_nominals(domain, parameter_generator)
     model_cache = create_model_cache(vocabulary, sample.states, sample.instance, nominals, infos)
-    return nominals, types, model_cache
+    return nominals, model_cache
 
 
 def create_model_cache(vocabulary, states, state_instances, nominals, infos):

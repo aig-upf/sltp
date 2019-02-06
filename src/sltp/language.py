@@ -11,7 +11,6 @@ def parse_pddl(domain_file, instance_file=None):
     reader = FstripsReader()
     reader.parse_domain(domain_file)
     problem = reader.problem
-    types = []
 
     # The generic constants are those which are parsed before parsing the instance file
     generic_constants = problem.language.constants()
@@ -19,7 +18,7 @@ def parse_pddl(domain_file, instance_file=None):
     if instance_file is not None:
         reader.parse_instance(instance_file)
 
-    return problem, problem.language, generic_constants, types
+    return problem, problem.language, generic_constants
 
 
 def compute_goal_denotation(problem, use_goal_denotation):

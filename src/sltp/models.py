@@ -9,6 +9,7 @@ from sltp.util.misc import try_number
 from tarski import Predicate, Function
 from tarski.dl import UniversalConcept, EmptyConcept, NullaryAtom, PrimitiveConcept, PrimitiveRole, GoalRole, \
     GoalConcept, GoalNullaryAtom, NominalConcept, EmpiricalBinaryConcept
+from tarski.syntax import Sort
 
 _STANDARD_DL_MAPPING = {0: NullaryAtom, 1: PrimitiveConcept, 2: PrimitiveRole}
 _GOAL_DL_MAPPING = {0: GoalNullaryAtom, 1: GoalConcept, 2: GoalRole}
@@ -90,16 +91,17 @@ class DLModelFactory:
         denotations = {}
         statics = {_TOP: instance_info.universe.as_extension(), _BOT: set()}
         for p in vocabulary.values():
-            ar = p.uniform_arity()
-            dl_element = _STANDARD_DL_MAPPING[ar](p)
-            if p.symbol in instance_info.static_predicates:
-                statics[dl_element] = default_denotation_by_arity(ar)
+            arity = 1 if isinstance(p, Sort) else p.uniform_arity()
+            name = p.name if isinstance(p, Sort) else p.symbol
+            dl_element = _STANDARD_DL_MAPPING[arity](p)
+            if name in instance_info.static_predicates:
+                statics[dl_element] = default_denotation_by_arity(arity)
             else:
-                denotations[dl_element] = default_denotation_by_arity(ar)
+                denotations[dl_element] = default_denotation_by_arity(arity)
 
-            if instance_info.goal_denotations is not None and p.symbol in instance_info.goal_denotations:
-                dl_element = _GOAL_DL_MAPPING[ar](p)
-                statics[dl_element] = default_denotation_by_arity(ar)
+            if instance_info.goal_denotations is not None and name in instance_info.goal_denotations:
+                dl_element = _GOAL_DL_MAPPING[arity](p)
+                statics[dl_element] = default_denotation_by_arity(arity)
 
         #
         for nominal in nominals:
@@ -137,10 +139,11 @@ class DLModelFactory:
         to the `denotations` dictionary.
         """
         assert len(atom) <= 3, "Cannot deal with arity>2 predicates or arity>1 functions yet"
-        predfun = self.vocabulary[atom[0]]
-        assert isinstance(predfun, (Predicate, Function))
-        assert predfun.uniform_arity() == len(atom) - 1
-        dl_element = dl_mapping[predfun.uniform_arity()](predfun)
+        symbol = self.vocabulary[atom[0]]
+        assert isinstance(symbol, (Predicate, Function, Sort))
+        arity = 1 if isinstance(symbol, Sort) else symbol.uniform_arity()
+        assert arity == len(atom) - 1
+        dl_element = dl_mapping[arity](symbol)
 
         if len(atom) == 1:  # i.e. a nullary predicate
             denotations[dl_element] = True
@@ -151,7 +154,7 @@ class DLModelFactory:
         else:  # i.e. a binary predicate or unary function
             t = (self.universe.index(try_number(atom[1])), self.universe.index(try_number(atom[2])))
             denotations[dl_element].add(t)
-            
+
 
 class FeatureModel:
     """ """
