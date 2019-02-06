@@ -64,6 +64,7 @@ def experiment(experiment_name=None):
 
     exps["aaai_clear_x_simple_hybrid"] = dict(
         instances="instance_5_clear_x_1.pddl",
+        test_domain=domain, test_instances=["instance_5_clear_x_2.pddl"],
         num_states=2000, max_width=[-1],
         num_sampled_states=300,
         complete_only_wrt_optimal=True,
@@ -71,6 +72,9 @@ def experiment(experiment_name=None):
         concept_generator=None, parameter_generator=add_bw_domain_parameters,
         feature_namer=ijcai_paper_bw_feature_namer,
     )
+
+    # Same but using goal-concepts instead of goal parameters:
+    exps["aaai_clear_x_simple_hybrid_gc"] = update_dict(exps["aaai_clear_x_simple_hybrid"], parameter_generator=None)
 
     exps["aaai_clear_x_simple_hybrid_blai"] = update_dict(
         exps["aaai_clear_x_simple_hybrid"], pipeline="maxsat_poly",)
@@ -238,7 +242,9 @@ def experiment(experiment_name=None):
         concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
-    parameters = exps.get(experiment_name or "test")
+    if experiment_name not in exps:
+        raise RuntimeError('No experiment named "{}" in current experiment script'.format(experiment_name))
+    parameters = exps[experiment_name]
     parameters["domain_dir"] = parameters.get("domain_dir", domain_dir)
     parameters["domain"] = parameters.get("domain", domain)
     return generate_experiment(**parameters)

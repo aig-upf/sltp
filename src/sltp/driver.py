@@ -31,7 +31,8 @@ from .util import console
 from .util.bootstrap import setup_global_parser
 from .util.command import execute
 from .util.naming import compute_instance_tag, compute_experiment_tag, compute_serialization_name, \
-    compute_maxsat_filename, compute_info_filename, compute_maxsat_variables_filename, compute_sample_filenames
+    compute_maxsat_filename, compute_info_filename, compute_maxsat_variables_filename, compute_sample_filenames, \
+    compute_test_sample_filenames
 from .util.serialization import deserialize, serialize
 from .util import performance
 
@@ -109,12 +110,19 @@ class Step(object):
 
 
 def _run_planner(config, data, rng):
-    # Run the planner on all the instances
-    for i, o, w in zip(config.instances, config.sample_files, config.max_width):
-        params = '-i {} --domain {} --driver {} --disable-static-analysis --options="max_expansions={},width.max={}"'\
-            .format(i, config.domain, config.driver, config.num_states, w)
+    # Run the planner on all training and test instances
+    def run(d, i, o, w, n):
+        params = '-i {} --domain {} --driver {} --options=max_expansions={},width.max={}' \
+            .format(i, d, config.driver, n, w)
         execute(command=[sys.executable, "run.py"] + params.split(' '),
                 stdout=o, cwd=config.planner_location)
+
+    for i, o, w in zip(config.instances, config.sample_files, config.max_width):
+        run(config.domain, i, o, w, config.num_states)
+
+    for i, o in zip(config.test_instances, config.test_sample_files):
+        run(config.test_domain, i, o, -1, 1000)
+
     return ExitCode.Success, dict()
 
 
@@ -133,11 +141,13 @@ class PlannerStep(Step):
         if config["driver"] not in self.VALID_DRIVERS:
             raise InvalidConfigParameter('"driver" must be one of: {}'.format(self.VALID_DRIVERS))
         if any(not os.path.isfile(i) for i in config["instances"]):
-            raise InvalidConfigParameter('"instances" must be the path to existing instance files')
+            raise InvalidConfigParameter('"instances" must be the path to existing instance files. Specified: "{}"'
+                                         .format(config["instances"]))
         if not os.path.isfile(config["domain"]):
-            raise InvalidConfigParameter('"domain" must be the path to an existing domain file')
+            raise InvalidConfigParameter('Specified domain file "{}" does not exist'.format(config["domain"]))
         if not os.path.isdir(config["planner_location"]):
-            raise InvalidConfigParameter('"planner_location" must be the path to the actual planner')
+            raise InvalidConfigParameter('Specified planner location "{}" does not exist'
+                                         .format(config["planner_location"]))
         check_int_parameter(config, "num_states", positive=True)
 
         config["instance_tag"] = compute_instance_tag(**config)
@@ -157,9 +167,9 @@ class PlannerStep(Step):
         config["max_width"] = mw
 
         config["sample_files"] = compute_sample_filenames(**config)
+        config["test_sample_files"] = compute_test_sample_filenames(**config)
 
-        # TODO This should prob be somewhere else:
-        os.makedirs(config["experiment_dir"], exist_ok=True)
+        os.makedirs(config["experiment_dir"], exist_ok=True)  # TODO This should prob be somewhere else
 
         return config
 
@@ -638,6 +648,34 @@ class DFAGenerationStep(Step):
         return learn_actions.generate_maxsat_problem
 
 
+class AbstractionTestingComputation(Step):
+    """  """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def get_required_attributes(self):
+        return ["experiment_dir", "test_instances", "test_domain"]
+
+    def process_config(self, config):
+        if config["test_domain"] is not None:
+            if not os.path.isfile(config["test_domain"]):
+                raise InvalidConfigParameter('"test_domain" must be either None or the path to an existing domain file')
+            if any(not os.path.isfile(i) for i in config["test_instances"]):
+                raise InvalidConfigParameter('"test_instances" must point to existing files')
+
+        return config
+
+    def get_required_data(self):
+        return ["abstract_actions", "selected_features", "features"]
+
+    def description(self):
+        return "Testing of the computed abstraction on the testing instances"
+
+    def get_step_runner(self):
+        from . import tester
+        return tester.run
+
+
 class Experiment(object):
     def __init__(self, steps, parameters):
         self.args = None
@@ -697,6 +735,7 @@ PIPELINES = dict(
         MaxsatProblemGenerationStep,
         MaxsatProblemSolutionStep,
         ActionModelStep,
+        AbstractionTestingComputation,
         # QNPGenerationStep,
     ],
     maxsat_poly=[
@@ -706,6 +745,7 @@ PIPELINES = dict(
         FeatureMatrixGenerationStep,
         InhouseMaxsatSolverStep,  # Blai's polynomial ad-hoc maxsat algorithm
         ActionModelFromFeatureIndexesStep,
+        AbstractionTestingComputation,
     ],
     sat=[
         PlannerStep,

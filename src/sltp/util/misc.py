@@ -56,3 +56,25 @@ def compute_universe_from_pddl_model(language):
     _ = [universe.add(try_number(c.symbol)) for c in language.constants()]
     universe.finish()  # No more objects possible
     return universe
+
+
+def state_as_atoms(state):
+    """ Transform any state (i.e. interpretation) into a flat set of tuples,
+    one per ground atom that is true in the state """
+    atoms = set()
+    for signature, elems in state.list_all_extensions().items():
+        name = signature[0]
+        # We unwrap the tuples of Constants into tuples with their (string) names
+        atoms.update((name, ) + tuple(o.symbol for o in elem) for elem in elems)
+    return atoms
+
+
+def types_as_atoms(lang):
+    """ Generate a list of atoms related to the types of the language, e.g. in spanner:
+    man(bob), spanner(spanner1), spanner(spanner2), etc. would be returned as atoms """
+    atoms = set()
+    for s in lang.sorts:
+        # This takes into account type inheritance, as s.domain() contains constants of type s and of derived types.
+        if s != lang.Object and not s.builtin:
+            atoms.update((s.name, c.symbol) for c in s.domain())
+    return atoms

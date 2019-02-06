@@ -27,7 +27,7 @@ import numpy as np
 
 from .sampling import TransitionSample
 from .errors import CriticalPipelineError
-from tarski.dl import FeatureValueChange
+from tarski.dl import FeatureValueChange, EmpiricalBinaryConcept
 from .util.console import header, lines
 from .util.cnfwriter import CNFWriter
 from .solvers import solve
@@ -163,6 +163,19 @@ class ActionEffect(object):
         if self.change in (FeatureValueChange.INC_OR_NIL, FeatureValueChange.ADD_OR_NIL):
             assert False, "Relaxed INC semantics not supported for QNP"
         raise RuntimeError("Unexpected effect type")
+
+
+def prettyprint_atom(feature, polarity, namer):
+    named = namer(feature)
+    if isinstance(feature, EmpiricalBinaryConcept):
+        return named if polarity else "not {}".format(named)
+    return "{} > 0".format(named) if polarity else "{} = 0".format(named)
+
+
+def prettyprint_abstract_action(action, all_features, namer):
+    precs = " and ".join(map(lambda p: prettyprint_atom(all_features[p[0]], p[1], namer), action.preconditions))
+    effs = ", ".join(map(lambda eff: eff.print_named(namer), action.effects))
+    return "AbstractAction<{}; {}>".format(precs, effs)
 
 
 class ModelTranslator(object):

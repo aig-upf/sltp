@@ -13,6 +13,13 @@ def generate_experiment(domain_dir, domain, **kwargs):
     kwargs["domain"] = os.path.join(BENCHMARK_DIR, domain_dir, domain)
     kwargs["instances"] = [os.path.join(BENCHMARK_DIR, domain_dir, i) for i in instances]
 
+    if "test_domain" in kwargs:
+        kwargs["test_domain"] = os.path.join(BENCHMARK_DIR, domain_dir, kwargs["test_domain"])
+        kwargs["test_instances"] = [os.path.join(BENCHMARK_DIR, domain_dir, i) for i in kwargs["test_instances"]]
+    else:
+        kwargs["test_domain"] = None
+        kwargs["test_instances"] = []
+
     defaults = dict(
         pipeline="maxsat",
         # pipeline="sat",
@@ -41,6 +48,7 @@ def generate_experiment(domain_dir, domain, **kwargs):
         # - "all" (default): Use all expanded states
         # - "random": Use only a random sample of the expanded states, of size given by the option "num_sampled_states"
         # - "optimal": Use those expanded states on some optimal path (only one arbitrary optimal path)
+        # Note: ATM random sampling is deactivated
         sampling="all",
 
         # Number of states to be expanded in the sampling procedure
