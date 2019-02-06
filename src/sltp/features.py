@@ -344,7 +344,7 @@ def extract_features(config, sample):
         atoms, concepts, roles = user_atoms, user_concepts, user_roles
     elif config.feature_generator is None:
         logging.info('Starting automatic generation of concepts'.format())
-        types = [s for s in language.sorts if not s.builtin]
+        types = [s for s in language.sorts if not s.builtin and s != language.Object]
         atoms, concepts, roles = generate_concepts(config, factory, nominals, types, all_goal_predicates)
     else:
         atoms, concepts, roles = [], [], []
