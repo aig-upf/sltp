@@ -207,7 +207,7 @@ def sample_generated_states(config, rng):
 
 
 def mark_optimal_transitions(selection_strategy, sample: TransitionSample, goals_by_instance):
-    """ Marks which transitions are optimal in a transition system according to some selection criterium,
+    """ Marks which transitions are optimal in a transition system according to some selection criterium,F
     such as marking *all* optimal transitions, or marking just one *single* optimal path.
      """
     if selection_strategy == "arbitrary":
@@ -296,7 +296,7 @@ def remap_sample_expanded_states(sampled_expanded, states, goal_states, transiti
 def normalize_atom_name(name):
     tmp = name.replace('()', '').replace(')', '').replace('(', ',')
     if "=" in tmp:  # We have a functional atom
-        tmp = "=," + tmp.replace("=", ',')  # Mark the string putting the "=" as the first position
+        tmp = tmp.replace("=", ',')
 
     return tmp.split(',')
 
@@ -363,7 +363,7 @@ def read_single_sample_file(filename):
     raw_file = [line.replace(' ', '') for line in read_file(filename) if line[0:6] == '{"id":']
     for raw_line in raw_file:
         j = json.loads(raw_line)
-        j['normalized_atoms'] = [normalize_atom_name(atom) for atom in j['atoms']]
+        j['normalized_atoms'] = tuple(normalize_atom_name(atom) for atom in j['atoms'])
         # j['atoms_string'] = str(j['normalized_atoms'])
 
         if j['id'] in seen:

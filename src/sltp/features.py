@@ -32,7 +32,7 @@ from tarski.syntax.transform.simplifications import transform_to_ground_atoms
 from .language import parse_pddl
 from tarski.dl import Concept, Role, InverseRole, StarRole, \
     ConceptCardinalityFeature, MinDistanceFeature, SyntacticFactory, NullaryAtomFeature, compute_dl_vocabulary
-from tarski import fstrips
+from tarski import fstrips, Function
 
 from .extensions import DLDenotationTraceIndex
 from .returncodes import ExitCode
@@ -246,7 +246,11 @@ def compute_static_atoms(problem):
     # Not sure the fstrips.TaskIndex code is too reliable... static detection seems to be buggy.
     # Let's better do that ourselves with a basic fluent detection routine.
     index.process_symbols(problem)
-    fluent_symbols = {x.head.symbol for x in index.fluent_symbols}
+
+    # TODO Fix the following hack. This will require offering a uniform interface in the tarski TaskIndex,
+    # TODO which at the moment is being refactored.
+    fluent_symbols = {x.head.symbol.symbol if isinstance(x.head.symbol, Function) else x.head.symbol
+                      for x in index.fluent_symbols}
 
     static_atoms = set()
     static_predicates = set()
