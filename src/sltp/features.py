@@ -303,13 +303,17 @@ class InstanceInformation:
         self.universe = universe
 
 
-def compute_models(domain, sample, parsed_problems, parameter_generator):
+def report_use_goal_denotation(parameter_generator):
     if parameter_generator is not None:
         logging.info('Using user-provided domain parameters and ignoring goal representation')
-        use_goal_denotation = False
+        return False
     else:
         logging.info('Using goal representation and no domain parameters')
-        use_goal_denotation = True
+        return True
+
+
+def compute_models(domain, sample, parsed_problems, parameter_generator):
+    use_goal_denotation = report_use_goal_denotation(parameter_generator)
 
     infos = [compute_instance_information(problem, use_goal_denotation) for problem, _, _ in parsed_problems]
 
@@ -447,15 +451,11 @@ def compute_nominals(domain, parameter_generator):
 def create_model_factory(domain, instance, parameter_generator):
     nominals = compute_nominals(domain, parameter_generator)
 
-    # Compute the whole universe of the instance
     problem, language, _ = parse_pddl(domain, instance)
     vocabulary = compute_dl_vocabulary(language)
-    universe = compute_universe_from_pddl_model(language)
-
-    assert parameter_generator is not None  # Need to refine this to work again when we want goal-denotation DL terms
-    goal_denotation = None  # TODO
-    # goal_denotation = compute_goal_denotation(problem, use_goal_denotation)
-    return problem, DLModelFactory(universe, vocabulary, nominals, goal_denotation)
+    use_goal_denotation = report_use_goal_denotation(parameter_generator)
+    info = compute_instance_information(problem, use_goal_denotation)
+    return problem, DLModelFactory(vocabulary, nominals, info)
 
 
 def create_model_cache_from_samples(vocabulary, sample, domain, parameter_generator, infos):
