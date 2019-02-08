@@ -16,7 +16,7 @@ def experiment(experiment_name=None):
         instances="prob-4-4-3-1540907456.pddl",
         test_domain=domain, test_instances=["prob-10-10-10-1540903568.pddl"],
         num_states=500, max_concept_size=8, max_concept_grammar_iterations=3,
-        # distance_feature_max_complexity=8,
+        distance_feature_max_complexity=8,
         concept_generator=None, parameter_generator=add_domain_parameters,  # No goal concepts!
         feature_namer=feature_namer,)
 
