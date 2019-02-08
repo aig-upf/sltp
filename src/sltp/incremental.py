@@ -36,7 +36,7 @@ def full_learning(config, sample, rng):
     parsed_problems = parse_all_instances(config.domain, config.instances)
 
     # Note that the validator will validate wrt the full sample
-    _, _, _, model_cache = create_model_cache_from_samples(sample, config, parsed_problems)
+    _, _, model_cache = create_model_cache_from_samples(sample, config, parsed_problems)
     validator = AbstractionValidator(model_cache, sample, expanded_state_ids_shuffled)
 
     k, k_max, k_step = config.initial_concept_bound, config.max_concept_bound, config.concept_bound_step

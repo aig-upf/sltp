@@ -19,8 +19,8 @@
     )
 
     (:functions
-        (loct ) - cell
-        (locp ) - cell
+        (loct ) - cell ;; The location of the taxi
+        (locp ) - cell ;; The location of the passenger
     )
 
     
@@ -48,11 +48,10 @@
     ) 
 
 
-    (:action noop
-     :parameters (?x - cell)
-     :precondition (= (loct ) ?x)
-     :effect (and
-        (assign (loct ) ?x))
-    ) 
-
+    ;; (:action noop
+    ;;  :parameters (?x - cell)
+    ;;  :precondition (= (loct ) ?x)
+    ;;  :effect (and
+    ;;     (assign (loct ) ?x))
+    ;; )
 )
