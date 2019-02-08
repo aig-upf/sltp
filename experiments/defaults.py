@@ -2,6 +2,9 @@ import os
 from sltp.driver import Experiment, generate_pipeline, BENCHMARK_DIR
 from sltp.learn_actions import OptimizationPolicy
 
+EXP_DIR = os.path.dirname(os.path.realpath(__file__))
+BASE_DIR = os.path.join(EXP_DIR, "..")
+
 
 def generate_experiment(domain_dir, domain, **kwargs):
     """ """
@@ -27,6 +30,9 @@ def generate_experiment(domain_dir, domain, **kwargs):
 
         # Location of the FS planner, used to do the state space sampling
         planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
+
+        # Location of the feature generation module binary
+        featuregen_location=os.path.join(BASE_DIR, "features"),
 
         # Type of sampling procedure. Only breadth-first search implemented ATM
         driver="bfs",

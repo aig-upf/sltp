@@ -283,6 +283,36 @@ class FeatureMatrixGenerationStep(Step):
         return generate_features
 
 
+class CPPFeatureGenerationStep(Step):
+    """ Generate exhaustively a set of all features up to a given complexity from the transition (state) sample """
+    def get_required_attributes(self):
+        return ["domain", "experiment_dir", "max_concept_size", "featuregen_location"]
+
+    def get_required_data(self):
+        return ["sample"]
+
+    def process_config(self, config):
+        check_int_parameter(config, "max_concept_size")
+
+        config["concept_dir"] = os.path.join(config["experiment_dir"], 'terms')
+        config["concept_generator"] = config.get("concept_generator", None)
+        config["feature_generator"] = config.get("feature_generator", None)
+        config["enforce_features"] = config.get("enforce_features", None)
+        config["parameter_generator"] = config.get("parameter_generator", None)
+        config["distance_feature_max_complexity"] = config.get("distance_feature_max_complexity", None)
+        config["max_concept_grammar_iterations"] = config.get("max_concept_grammar_iterations", None)
+        config["concept_denotation_filename"] = compute_info_filename(config, "concept-denotations.txt")
+
+        return config
+
+    def description(self):
+        return "C++ feature generation module"
+
+    def get_step_runner(self):
+        from . import featuregen
+        return featuregen.run
+
+
 class MaxsatProblemGenerationStep(Step):
     """ Generate the max-sat problem from a given set of generated features """
     def get_required_attributes(self):
@@ -730,7 +760,8 @@ PIPELINES = dict(
     maxsat=[
         PlannerStep,
         TransitionSamplingStep,
-        ConceptGenerationStep,
+        CPPFeatureGenerationStep,
+        # ConceptGenerationStep,
         FeatureMatrixGenerationStep,
         MaxsatProblemGenerationStep,
         MaxsatProblemSolutionStep,
@@ -741,7 +772,8 @@ PIPELINES = dict(
     maxsat_poly=[
         PlannerStep,
         TransitionSamplingStep,
-        ConceptGenerationStep,
+        CPPFeatureGenerationStep,
+        # ConceptGenerationStep,
         FeatureMatrixGenerationStep,
         InhouseMaxsatSolverStep,  # Blai's polynomial ad-hoc maxsat algorithm
         ActionModelFromFeatureIndexesStep,
