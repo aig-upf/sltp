@@ -22,16 +22,19 @@ namespace SLTP { namespace DL {
             }
 
 
-
+            assert(0); // working on this
+            return State(id);
         }
 
         std::vector<Object> parse_objects(const std::string &object_line) {
             std::vector<std::string> names;
             boost::split(names, object_line, boost::is_any_of(" \t"));
 
+            unsigned object_id = 0;  // ATM we assign consecutive IDs to objects
             std::vector<Object> objects;
             for (auto &name:names) {
-                objects.emplace_back(name);
+                objects.emplace_back(object_id, name);
+                ++object_id;
             }
 
             return objects;

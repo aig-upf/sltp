@@ -236,9 +236,10 @@ class GroundedPredicate {
 
 // A state is a collections of atoms (i.e. GroundedPredicates)
 struct State {
-    const int id_;
+    const unsigned id_;
     std::vector<const GroundedPredicate*> atoms_;
-    State(int id) : id_(id) { }
+    State(unsigned id) : id_(id) { }
+
     const std::vector<const GroundedPredicate*>& atoms() const {
         return atoms_;
     }
@@ -359,8 +360,8 @@ class PrimitiveConcept : public Concept {
         const sample_denotation_t *cached = cache.find_sample_denotation(as_str());
         if( cached == nullptr ) {
             sample_denotation_t d;
-            for( int i = 0; i < sample.num_states(); ++i ) {
-                const State &s = *sample.states()[i];
+            for( unsigned i = 0; i < sample.num_states(); ++i ) {
+                const State &s = sample.state(i);
                 d.emplace_back(denotation(cache, sample, s));
             }
             return cache.find_or_insert_sample_denotation(d, as_str());
@@ -399,7 +400,7 @@ class UniversalConcept : public Concept {
             const state_denotation_t *cached_sd = cache.find_or_insert_state_denotation(sd);
 
             sample_denotation_t nd;
-            for( int i = 0; i < sample.num_states(); ++i )
+            for( unsigned i = 0; i < sample.num_states(); ++i )
                 nd.emplace_back(cached_sd);
             return cache.find_or_insert_sample_denotation(nd, as_str());
         } else {
@@ -437,7 +438,7 @@ class AndConcept : public Concept {
             assert((d2 != nullptr) && (d2->size() == sample.num_states()));
 
             sample_denotation_t nd;
-            for( int i = 0; i < sample.num_states(); ++i ) {
+            for( unsigned i = 0; i < sample.num_states(); ++i ) {
                 const state_denotation_t *sd1 = (*d1)[i];
                 assert((sd1 != nullptr) && (sd1->size() == sample.num_objects()));
                 const state_denotation_t *sd2 = (*d2)[i];
@@ -481,7 +482,7 @@ class NotConcept : public Concept {
             assert((d != nullptr) && (d->size() == sample.num_states()));
 
             sample_denotation_t nd;
-            for( int i = 0; i < sample.num_states(); ++i ) {
+            for( unsigned i = 0; i < sample.num_states(); ++i ) {
                 const state_denotation_t *sd = (*d)[i];
                 assert((sd != nullptr) && (sd->size() == sample.num_objects()));
 
@@ -527,7 +528,7 @@ class ExistsConcept : public Concept {
             assert((r != nullptr) && (r->size() == sample.num_states()));
 
             sample_denotation_t nd;
-            for( int i = 0; i < sample.num_states(); ++i ) {
+            for( unsigned i = 0; i < sample.num_states(); ++i ) {
                 const state_denotation_t *sd = (*d)[i];
                 assert((sd != nullptr) && (sd->size() == sample.num_objects()));
                 const state_denotation_t *sr = (*r)[i];
@@ -581,7 +582,7 @@ class ForallConcept : public Concept {
             assert((r != nullptr) && (r->size() == sample.num_states()));
 
             sample_denotation_t nd;
-            for( int i = 0; i < sample.num_states(); ++i ) {
+            for( unsigned i = 0; i < sample.num_states(); ++i ) {
                 const state_denotation_t *sd = (*d)[i];
                 assert((sd != nullptr) && (sd->size() == sample.num_objects()));
                 const state_denotation_t *sr = (*r)[i];
@@ -625,8 +626,8 @@ class PrimitiveRole : public Role {
         const sample_denotation_t *cached = cache.find_sample_denotation(as_str());
         if( cached == nullptr ) {
             sample_denotation_t nr;
-            for( int i = 0; i < sample.num_states(); ++i ) {
-                const State &s = *sample.states()[i];
+            for( unsigned i = 0; i < sample.num_states(); ++i ) {
+                const State &s = sample.state(i);
                 nr.emplace_back(denotation(cache, sample, s));
             }
             return cache.find_or_insert_sample_denotation(nr, as_str());
@@ -695,7 +696,7 @@ class PlusRole : public Role {
             assert((r != nullptr) && (r->size() == sample.num_states()));
 
             sample_denotation_t nr;
-            for( int i = 0; i < sample.num_states(); ++i ) {
+            for( unsigned i = 0; i < sample.num_states(); ++i ) {
                 const state_denotation_t *sr = (*r)[i];
                 assert((sr != nullptr) && (sr->size() == sample.num_objects() * sample.num_objects()));
 
@@ -740,7 +741,7 @@ class StarRole : public Role {
             assert((pr != nullptr) && (pr->size() == sample.num_states()));
 
             sample_denotation_t nr;
-            for( int i = 0; i < sample.num_states(); ++i ) {
+            for( unsigned i = 0; i < sample.num_states(); ++i ) {
                 const state_denotation_t *sr = (*pr)[i];
                 assert((sr != nullptr) && (sr->size() == sample.num_objects() * sample.num_objects()));
 
@@ -781,7 +782,7 @@ class InverseRole : public Role {
             assert((r != nullptr) && (r->size() == sample.num_states()));
 
             sample_denotation_t nr;
-            for( int i = 0; i < sample.num_states(); ++i ) {
+            for( unsigned i = 0; i < sample.num_states(); ++i ) {
                 const state_denotation_t *sr = (*r)[i];
                 assert((sr != nullptr) && (sr->size() == sample.num_objects() * sample.num_objects()));
 
@@ -1045,8 +1046,8 @@ class Factory {
     }
 
     void output_feature_matrix(std::ostream &os, const Cache &cache, const Sample &sample) const {
-        for( int i = 0; i < sample.num_states(); ++i ) {
-            const State &state = *sample.states()[i];
+        for( unsigned i = 0; i < sample.num_states(); ++i ) {
+            const State &state = sample.state(i);
             std::vector<std::pair<int, int> > non_zero_values;
             for( int j = 0; j < int(features_.size()); ++j ) {
                 const Feature &f = *features_[j];
