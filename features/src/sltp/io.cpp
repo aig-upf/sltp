@@ -1,10 +1,12 @@
-
 #include "io.hxx"
 #include <rapidcsv.h>
 
+using namespace std;
 
-sltp::DLDenotationMatrix sltp::io::read_denotation_matrix(const std::string &filename) {
-    DLDenotationMatrix result;
+namespace SLTP {
+
+DL::DenotationMatrix IO::read_denotation_matrix(const string &filename) {
+    DL::DenotationMatrix result;
 
     // TODO: Read input CSV file with rapidcsv. Check docs at: https://github.com/d99kris/rapidcsv/
 
@@ -12,9 +14,8 @@ sltp::DLDenotationMatrix sltp::io::read_denotation_matrix(const std::string &fil
 }
 
 
-void sltp::io::write_denotation_matrix(const DLDenotationMatrix& matrix, const std::string &filename) {
-
-
+void IO::write_denotation_matrix(const DL::DenotationMatrix& matrix, const string &filename) {
 }
 
+};
 
