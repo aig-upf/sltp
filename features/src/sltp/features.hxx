@@ -1,3 +1,4 @@
+
 #ifndef FEATURES_HXX
 #define FEATURES_HXX
 
@@ -7,15 +8,18 @@
 #include <unordered_set>
 #include <vector>
 #include <cassert>
+#include <utility>
 
-//#include <utility>
-//#include <cstdint>
-//#include <vector>
-//#include <stdexcept>
+#include <sltp/utils.hxx>
 
 namespace SLTP {
 
 namespace DL {
+
+using object_id = unsigned;
+using predicate_id = unsigned;
+using atom_id = unsigned;
+using state_id = unsigned;
 
 class GroundedPredicate;
 
@@ -159,11 +163,11 @@ class Cache {
 // objects to ground the predicates.
 class Object {
   protected:
-    const unsigned id_;
+    const object_id id_;
     const std::string name_;
 
   public:
-    Object(unsigned id, const std::string& name) : id_(id), name_(name) { }
+    Object(unsigned id, std::string name) : id_(id), name_(std::move(name)) { }
     int id() const {
         return id_;
     }
@@ -179,11 +183,12 @@ class Object {
 };
 
 struct Predicate {
-    const unsigned id_;
+    const predicate_id id_;
     const std::string name_;
     const unsigned arity_;
-    Predicate(unsigned id, const std::string& name, unsigned arity) : id_(id), name_(name), arity_(arity) { }
-    std::string as_str(const std::vector<const Object*> *objects) const {
+    Predicate(unsigned id, std::string name, unsigned arity) : id_(id), name_(std::move(name)), arity_(arity) { }
+
+    std::string as_str(const std::vector<object_id> *objects) const {
         std::string str = name_ + "(";
         if( objects == nullptr ) {
             for( int i = 0; i < arity_; ++i ) {
@@ -193,12 +198,16 @@ struct Predicate {
         } else {
             assert(objects->size() == arity_);
             for( int i = 0; i < arity_; ++i ) {
-                str += (*objects)[i]->as_str();
+//                str += (*objects)[i]->as_str();
+                str += std::to_string((*objects)[i]);
                 if( 1 + i < arity_ ) str += ",";
             }
         }
         return str + ")";
     }
+
+    predicate_id id() const { return id_; }
+
     friend std::ostream& operator<<(std::ostream &os, const Predicate &pred) {
         return os << pred.as_str(nullptr) << std::flush;
     }
@@ -206,43 +215,52 @@ struct Predicate {
 
 class GroundedPredicate {
   protected:
-    const Predicate &predicate_;
-    const std::vector<const Object*> objects_;
+    const predicate_id predicate_;
+    const std::vector<object_id> objects_;
 
   public:
-    GroundedPredicate(const Predicate &predicate, const std::vector<const Object*> &objects)
-      : predicate_(predicate), objects_(objects) {
+    GroundedPredicate(const predicate_id& predicate, std::vector<object_id> objects)
+      : predicate_(predicate), objects_(std::move(objects)) {
     }
-    GroundedPredicate(const Predicate &predicate, std::vector<const Object*> &&objects)
+    GroundedPredicate(const predicate_id& predicate, std::vector<object_id> &&objects)
       : predicate_(predicate), objects_(std::move(objects)) {
     }
 
-    const Predicate& predicate() const {
-        return predicate_;
-    }
-    const std::vector<const Object*>& objects() const {
-        return objects_;
-    }
-    bool is_instance(const Predicate *predicate) const {
-        return &predicate_ == predicate;
+    predicate_id pred_id() const { return predicate_; }
+    const std::vector<object_id>& objects() const { return objects_; }
+
+    //! Return the i-th object of the current atom
+    object_id object(unsigned order) const { return objects_.at(order); }
+
+    bool is_instance(const Predicate& predicate) const {
+        return predicate_ == predicate.id();
     }
 
-    std::string as_str() const {
-        return predicate_.as_str(&objects_);
+    std::vector<unsigned> data() const {
+        std::vector<unsigned> res{predicate_};
+        for (const auto x:objects_) res.push_back(x);
+        return res;
     }
-    friend std::ostream& operator<<(std::ostream &os, const GroundedPredicate &pred) {
-        return os << pred.as_str() << std::flush;
-    }
+
+//    std::string as_str() const {
+//        return predicate_.as_str(&objects_);
+//    }
+//    friend std::ostream& operator<<(std::ostream &os, const GroundedPredicate &pred) {
+//        return os << pred.as_str() << std::flush;
+//    }
 };
 
 // A state is a collections of atoms (i.e. GroundedPredicates)
-struct State {
-    const unsigned id_;
-    std::vector<const GroundedPredicate*> atoms_;
+class State {
+public:
+    const state_id id_;
+    std::vector<atom_id> atoms_;
 
-    explicit State(unsigned id) : id_(id) { }
+    State(unsigned id, const std::vector<atom_id>& atoms) :
+        id_(id), atoms_(atoms)
+    { }
 
-    const std::vector<const GroundedPredicate*>& atoms() const {
+    const std::vector<atom_id>& atoms() const {
         return atoms_;
     }
 };
@@ -251,28 +269,50 @@ struct State {
 // sample contains the predicates used in the states, the objects,
 // and the grounded predicates (i.e. atoms).
 class Sample {
+public:
+    using ObjectIndex = std::unordered_map<std::string, object_id>;
+    using PredicateIndex = std::unordered_map<std::string, predicate_id>;
+
+    //! Map from <pred_id, oid_1, ..., oid_n> to atom ID
+    using AtomIndex = std::unordered_map<std::vector<unsigned>,
+            atom_id, utils::container_hash<std::vector<unsigned>>>;
+
   protected:
     const std::string name_;
     const std::vector<Object> objects_;
     const std::vector<Predicate> predicates_;
-    const std::vector<const GroundedPredicate*> grounded_predicates_;
+    const std::vector<GroundedPredicate> grounded_predicates_;
     const std::vector<State> states_;
 
-    Sample(std::string name, std::vector<Object> objects,
+    //! A mapping from object names to their ID in the sample
+    ObjectIndex oidx_;
+
+    //! A mapping from predicate names to their ID in the sample
+    PredicateIndex pidx_;
+
+    //! A mapping from <predicate name, obj_name, ..., obj_name> to the ID of the corresponding GroundPredicate
+    AtomIndex aidx_;
+
+    Sample(std::string name,
+           std::vector<Object> objects,
            std::vector<Predicate> predicates,
-           std::vector<const GroundedPredicate*> grounded_predicates,
-           const std::vector<State>& states) :
+           std::vector<GroundedPredicate> grounded_predicates,
+           std::vector<State> states,
+           ObjectIndex oidx,
+           PredicateIndex pidx,
+           AtomIndex aidx) :
         name_(std::move(name)),
         objects_(std::move(objects)),
         predicates_(std::move(predicates)),
         grounded_predicates_(std::move(grounded_predicates)),
-        states_(std::move(states))
+        states_(std::move(states)),
+        oidx_(std::move(oidx)),
+        pidx_(std::move(pidx)),
+        aidx_(std::move(aidx))
     { }
 
 public:
-    ~Sample() {
-      for (auto grounded_predicate : grounded_predicates_) delete grounded_predicate;
-    }
+    ~Sample() = default;
 
     const std::string& name() const {
         return name_;
@@ -295,6 +335,13 @@ public:
 
     const State& state(unsigned id) const { return states_.at(id); }
 
+    const GroundedPredicate& atom(unsigned id) const { return grounded_predicates_.at(id); }
+
+    bool is_instance(atom_id atom, const Predicate& predicate) const {
+        return grounded_predicates_.at(atom).is_instance(predicate);
+    }
+
+    //! Factory method - reads sample from serialized data
     static Sample read(std::istream &is);
 };
 
@@ -372,12 +419,12 @@ class PrimitiveConcept : public Concept {
     }
     const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
         state_denotation_t sd(sample.num_objects(), false);
-        for( int i = 0; i < int(state.atoms().size()); ++i ) {
-            const GroundedPredicate *gp = state.atoms()[i];
-            if( gp->is_instance(predicate_) ) {
-                assert(gp->objects().size() == 1);
-                int index = gp->objects()[0]->id();
-                assert((0 <= index) && (index < sample.num_objects()));
+        for (atom_id id : state.atoms()) {
+            const GroundedPredicate& atom = sample.atom(id);
+            if (atom.is_instance(*predicate_)) {
+                assert(atom.objects().size() == 1);
+                object_id index = atom.object(0);
+                assert(index < sample.num_objects());
                 sd[index] = true;
             }
         }
@@ -638,12 +685,12 @@ class PrimitiveRole : public Role {
     }
     const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
         state_denotation_t sr(sample.num_objects() * sample.num_objects(), false);
-        for( int i = 0; i < int(state.atoms().size()); ++i ) {
-            const GroundedPredicate *gp = state.atoms()[i];
-            if( gp->is_instance(predicate_) ) {
-                assert(gp->objects().size() == 2);
-                int index = gp->objects()[0]->id() * sample.num_objects() + gp->objects()[1]->id();
-                assert((0 <= index) && (index < sample.num_objects() * sample.num_objects()));
+        for (atom_id id : state.atoms()) {
+            const GroundedPredicate& atom = sample.atom(id);
+            if (atom.is_instance(*predicate_)) {
+                assert(atom.objects().size() == 2);
+                unsigned index = atom.object(0) * sample.num_objects() + atom.object(1);
+                assert(index < sample.num_objects() * sample.num_objects());
                 sr[index] = true;
             }
         }

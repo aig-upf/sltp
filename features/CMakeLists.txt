@@ -10,7 +10,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(SOURCE_FILES
         src/sltp/features
-        src/main.cpp src/sltp/io.hxx src/sltp/io.cpp)
+        src/main.cpp src/sltp/io.hxx src/sltp/io.cpp
+        src/sltp/utils.hxx
+)
 
 add_executable(featuregen ${SOURCE_FILES})
 set_target_properties(featuregen PROPERTIES LINKER_LANGUAGE CXX)
