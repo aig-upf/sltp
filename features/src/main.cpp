@@ -10,6 +10,7 @@ using namespace std;
 struct Options {
     std::string execname_;
     std::string worskspace_;
+    std::string output_file_;
     unsigned complexity_bound_;
 
     Options(int argc, const char **argv) {
@@ -28,7 +29,8 @@ struct Options {
         // read arguments
         complexity_bound_ = (unsigned) stoul(argv[1], nullptr, 10);
         worskspace_ = string(argv[2]);
-        cout << "Using workspace directory " << worskspace_ << endl;
+        output_file_ = string(argv[3]);
+        //cout << "Using workspace directory '" << worskspace_ << "' and output file '" << output_file_ << "'" << endl;
     }
 
     void print_usage(ostream& os) const {
@@ -36,11 +38,15 @@ struct Options {
            << "Usage: " << execname_ << " <K> <input-file> <output-file>" << endl
            << endl
            << "where" << endl
-           << "    <K> is the maximum feature complexity of the generated features"
-           << "    <workspace> is the path to a directory with all the necessary input files "
-              "                  from which to start the feature generation process." << endl
-           << "    <output-file> is the path to the output CSV file where the denotation matrix of all generated features "
-              "                  will be left." << endl
+           << "    <K> is the maximum feature complexity of the generated features."
+           << endl
+           << "    <workspace> is the path to a directory with all the necessary input"
+           << endl
+           << "                files from which to start the feature generation process."
+           << endl
+           << "    <output-file> is the path to the output CSV file where the denotation"
+           << endl
+           << "                  matrix of all generated features will be left."
            << endl
            ;
     }
@@ -59,9 +65,6 @@ int main(int argc, const char **argv) {
     //auto primitive_denotations = sltp::io::read_denotation_matrix(options.worskspace + "/primitives.csv");
     //auto static_denotations = sltp::io::read_denotation_matrix(options.worskspace + "/statics.csv");
 
-
-
-
     // Generate concepts based on grammar, pruning duplicate concepts
 
     // Generate Features and prune duplicates
@@ -71,11 +74,28 @@ int main(int argc, const char **argv) {
     // so that they can be reconstructed from python.
 
     SLTP::DL::Sample sample = parse_input_sample(options.worskspace_ + "/sample.io");
+    cout << "SAMPLE: #objects=" << sample.num_objects()
+         << ", #predicates=" << sample.num_predicates()
+         << ", #grounded-predicates=" << sample.num_grounded_predicates()
+         << ", #states=" << sample.num_states()
+         << endl;
     SLTP::DL::Factory factory("test", options.complexity_bound_);
 
+    //std::cout << "hola0" << std::endl;
     SLTP::DL::Cache cache;
+    //std::cout << "hola1" << std::endl;
+    factory.generate_basis(sample);
+    //std::cout << "hola2" << std::endl;
+    factory.generate_roles(cache, &sample);
+    //std::cout << "hola3" << std::endl;
     factory.generate_concepts(cache, &sample, true);
+    //std::cout << "hola4" << std::endl;
     factory.generate_features(cache, sample);
+    //std::cout << "hola5" << std::endl;
+
+    std::ofstream output_file(options.output_file_);
+    if( output_file.fail() ) throw std::runtime_error("Could not open filename '" + options.output_file_ + "'");
+    factory.output_feature_matrix(output_file, cache, sample);
 
     return 0;
 }
