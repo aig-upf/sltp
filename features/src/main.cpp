@@ -43,6 +43,12 @@ struct Options {
     }
 };
 
+SLTP::DL::Sample parse_input_sample(const std::string& filename) {
+    std::ifstream sample_file(filename);
+    if (sample_file.fail()) throw std::runtime_error("Could not open filename '" + filename + "'");
+    return SLTP::DL::Sample::read(sample_file);
+}
+
 int main(int argc, const char **argv) {
     Options options(argc, argv);
 
@@ -51,11 +57,7 @@ int main(int argc, const char **argv) {
     //auto static_denotations = sltp::io::read_denotation_matrix(options.worskspace + "/statics.csv");
 
 
-    std::string sample_filename(options.worskspace_ + "/sample.io");
-    std::ifstream sample_file(sample_filename);
-    if (sample_file.fail()) throw std::runtime_error("Could not open filename '" + sample_filename + "'");
 
-    auto sample = SLTP::DL::Sample::read(sample_file);
 
     // Generate concepts based on grammar, pruning duplicate concepts
 
@@ -65,7 +67,7 @@ int main(int argc, const char **argv) {
     // We will likely need to output somehow the structure of the (non-redundant) concepts and features,
     // so that they can be reconstructed from python.
 
-    SLTP::DL::Sample sample("mysample");
+    SLTP::DL::Sample sample = parse_input_sample(options.worskspace_ + "/sample.io");
     SLTP::DL::Factory factory("test", 5);
 
     SLTP::DL::Cache cache;
