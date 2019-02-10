@@ -57,6 +57,13 @@ int main(int argc, const char **argv) {
     // We will likely need to output somehow the structure of the (non-redundant) concepts and features,
     // so that they can be reconstructed from python.
 
+    SLTP::DL::Sample sample("mysample");
+    SLTP::DL::Factory factory("test", 5);
+
+    SLTP::DL::Cache cache;
+    factory.generate_concepts(cache, &sample, true);
+    factory.generate_features(cache, sample);
+
     return 0;
 }
 
