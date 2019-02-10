@@ -159,11 +159,11 @@ class Cache {
 // objects to ground the predicates.
 class Object {
   protected:
-    int id_;
+    const unsigned id_;
     const std::string name_;
 
   public:
-    Object(int id, const std::string name) : id_(id), name_(name) { }
+    Object(unsigned id, const std::string& name) : id_(id), name_(name) { }
     int id() const {
         return id_;
     }
@@ -179,9 +179,10 @@ class Object {
 };
 
 struct Predicate {
+    const unsigned id_;
     const std::string name_;
-    int arity_;
-    Predicate(const std::string &name, int arity) : name_(name), arity_(arity) { }
+    const unsigned arity_;
+    Predicate(unsigned id, const std::string& name, unsigned arity) : id_(id), name_(name), arity_(arity) { }
     std::string as_str(const std::vector<const Object*> *objects) const {
         std::string str = name_ + "(";
         if( objects == nullptr ) {
@@ -238,7 +239,8 @@ class GroundedPredicate {
 struct State {
     const unsigned id_;
     std::vector<const GroundedPredicate*> atoms_;
-    State(unsigned id) : id_(id) { }
+
+    explicit State(unsigned id) : id_(id) { }
 
     const std::vector<const GroundedPredicate*>& atoms() const {
         return atoms_;
@@ -252,12 +254,12 @@ class Sample {
   protected:
     const std::string name_;
     const std::vector<Object> objects_;
-    const std::vector<const Predicate*> predicates_;
+    const std::vector<Predicate> predicates_;
     const std::vector<const GroundedPredicate*> grounded_predicates_;
     const std::vector<State> states_;
 
     Sample(std::string name, std::vector<Object> objects,
-           std::vector<const Predicate*> predicates,
+           std::vector<Predicate> predicates,
            std::vector<const GroundedPredicate*> grounded_predicates,
            const std::vector<State>& states) :
         name_(std::move(name)),
@@ -270,7 +272,6 @@ class Sample {
 public:
     ~Sample() {
       for (auto grounded_predicate : grounded_predicates_) delete grounded_predicate;
-      for (auto predicate : predicates_) delete predicate;
     }
 
     const std::string& name() const {

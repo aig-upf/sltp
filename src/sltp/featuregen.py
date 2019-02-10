@@ -28,9 +28,19 @@ def run(config, data, rng):
     return extract_features(config, data.sample)
 
 
-def print_sample_info(sample, all_objects, filename):
+def print_sample_info(sample, all_predicates, all_functions, all_objects, filename):
+    logging.info("Printing all sample info at {}".format(filename))
     with open(filename, "w") as f:
-        f.write(" ".join(sorted(all_objects)))  # First line with all object names
+        print("dummy-sample-name", file=f)  # First line: sample name
+
+        print(" ".join("{}/{}".format(name, arity) for name, arity in sorted(all_predicates)),
+              file=f)  # Second line: all predicate names
+
+        print(" ".join("{}/{}".format(name, arity) for name, arity in sorted(all_functions)),
+              file=f)  # # Third line: all function names
+
+        print(" ".join(sorted(all_objects)), file=f)  # Fourth line: all object names
+
         for expected_id, (id_, state) in enumerate(sample.states.items(), 0):
             # sample.states is an ordered dict. All ids are consecutive, so no need to print them,
             # but we check just in case
@@ -55,8 +65,11 @@ def extract_features(config, sample):
         logging.warning("Not all instances in the training set use the same goal predicate")
 
     all_objects = set()
+    all_predicates, all_functions = set(), set()
     for problem, _, _ in parsed_problems:
         all_objects.update(c.symbol for c in problem.language.constants())
+        all_predicates.update(set((p.symbol, p.arity) for p in problem.language.predicates if not p.builtin))
+        all_functions.update(set((p.symbol, p.arity) for p in problem.language.functions if not p.builtin))
 
     logging.info('Invoking C++ feature generation module'.format())
 
@@ -64,7 +77,8 @@ def extract_features(config, sample):
     # TODO WORK IN PROGRESS
 
     # Write sample information
-    print_sample_info(sample, all_objects, os.path.join(config.experiment_dir, "sample.io"))
+    print_sample_info(sample, all_predicates, all_functions,
+                      all_objects, os.path.join(config.experiment_dir, "sample.io"))
 
 
     # with open(os.path.join(config.experiment_dir, "primitives.csv")) as f:
