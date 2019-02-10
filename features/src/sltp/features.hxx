@@ -35,7 +35,7 @@ struct sample_denotation_t : public std::vector<const state_denotation_t*> { };
 
 // We cache sample and state denotations. The latter are cached
 // into a simple hash (i.e. unordered_set). The former are cached
-// using to hash maps (i.e. unordered_map): one that maps sample
+// using two hash maps (i.e. unordered_map): one that maps sample
 // denotations to concept names, and the other that maps concept
 // names to sample denotations.
 //
@@ -202,40 +202,44 @@ struct State {
 class Sample {
   protected:
     const std::string name_;
-    std::vector<const Object*> objects_;
-    std::vector<const Predicate*> predicates_;
-    std::vector<const GroundedPredicate*> grounded_predicates_;
-    std::vector<const State*> states_;
+    const std::vector<Object> objects_;
+    const std::vector<const Predicate*> predicates_;
+    const std::vector<const GroundedPredicate*> grounded_predicates_;
+    const std::vector<State> states_;
 
-  public:
-    Sample(const std::string &name) : name_(name) { }
+    Sample(std::string name, std::vector<Object> objects,
+           std::vector<const Predicate*> predicates,
+           std::vector<const GroundedPredicate*> grounded_predicates,
+           const std::vector<State>& states) :
+        name_(std::move(name)),
+        objects_(std::move(objects)),
+        predicates_(std::move(predicates)),
+        grounded_predicates_(std::move(grounded_predicates)),
+        states_(std::move(states))
+    { }
+
+public:
     ~Sample() {
-      for( int i = 0; i < int(states_.size()); ++i )
-          delete states_[i];
-      for( int i = 0; i < int(grounded_predicates_.size()); ++i )
-          delete grounded_predicates_[i];
-      for( int i = 0; i < int(predicates_.size()); ++i )
-          delete predicates_[i];
-      for( int i = 0; i < int(objects_.size()); ++i )
-          delete objects_[i];
+      for (auto grounded_predicate : grounded_predicates_) delete grounded_predicate;
+      for (auto predicate : predicates_) delete predicate;
     }
 
     const std::string& name() const {
         return name_;
     }
-    int num_objects() const {
+    std::size_t num_objects() const {
         return objects_.size();
     }
-    int num_states() const {
+    std::size_t num_states() const {
         return states_.size();
     }
-    const std::vector<const State*>& states() const {
+    const std::vector<State>& states() const {
         return states_;
     }
 
-    void read_sample(std::istream &is) {
-        throw std::runtime_error("TODO: UNIMPLEMENTED: read_sample()");
-    }
+    const State& state(unsigned id) const { return states_.at(id); }
+
+    static Sample read(std::istream &is);
 };
 
 struct Denotation {
@@ -301,8 +305,8 @@ class PrimitiveConcept : public Concept {
         const sample_denotation_t *cached = cache.find_sample_denotation(as_str());
         if( cached == nullptr ) {
             sample_denotation_t d;
-            for( int i = 0; i < int(sample.num_states()); ++i ) {
-                const State &s = *sample.states()[i];
+            for( unsigned i = 0; i < sample.num_states(); ++i ) {
+                const State &s = sample.state(i);
                 d.emplace_back(denotation(cache, s));
             }
             return cache.find_or_insert_sample_denotation(d);
@@ -462,8 +466,8 @@ class ExistsConcept : public Concept {
             assert((r != nullptr) && (r->size() == sample.num_states() * sample.num_states()));
 
             sample_denotation_t nd;
-            for( int i = 0; i < int(sample.num_states()); ++i ) {
-                const State &s = *sample.states()[i];
+            for( unsigned i = 0; i < sample.num_states(); ++i ) {
+                const State &s = sample.state(i);
                 state_denotation_t sd(sample.num_objects(), false);
                 for( int j = 0; j < sample.num_objects(); ++j ) {
                     for( int k = 0; !sd[j] && (k < sample.num_objects()); ++k ) {
@@ -510,8 +514,8 @@ class ForallConcept : public Concept {
             assert((r != nullptr) && (r->size() == sample.num_states() * sample.num_states()));
 
             sample_denotation_t nd;
-            for( int i = 0; i < int(sample.num_states()); ++i ) {
-                const State &s = *sample.states()[i];
+            for( unsigned i = 0; i < sample.num_states(); ++i ) {
+                const State &s = sample.state(i);
                 state_denotation_t sd(sample.num_objects(), true);
                 for( int j = 0; j < sample.num_objects(); ++j ) {
                     for( int k = 0; sd[j] && (k < sample.num_objects()); ++k ) {
@@ -548,8 +552,8 @@ class PrimitiveRole : public Role {
         const sample_denotation_t *cached = cache.find_sample_denotation(as_str());
         if( cached == nullptr ) {
             sample_denotation_t d;
-            for( int i = 0; i < int(sample.num_states()); ++i ) {
-                const State &s = *sample.states()[i];
+            for( unsigned i = 0; i < sample.num_states(); ++i ) {
+                const State &s = sample.state(i);
                 d.emplace_back(denotation(cache, s));
             }
             return cache.find_or_insert_sample_denotation(d);
@@ -631,8 +635,8 @@ class InverseRole : public Role {
             assert((r != nullptr) && (r->size() == sample.num_states() * sample.num_states()));
 
             sample_denotation_t nd;
-            for( int i = 0; i < int(sample.num_states()); ++i ) {
-                const State &s = *sample.states()[i];
+            for( unsigned i = 0; i < sample.num_states(); ++i ) {
+                const State &s = sample.state(i);
                 state_denotation_t sd(sample.num_objects() * sample.num_objects(), false);
                 for( int j = 0; j < sample.num_objects(); ++j ) {
                     for( int k = 0; k < sample.num_objects(); ++k ) {

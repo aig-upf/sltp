@@ -28,6 +28,20 @@ def run(config, data, rng):
     return extract_features(config, data.sample)
 
 
+def print_sample_info(sample, all_objects, filename):
+    with open(filename, "w") as f:
+        f.write(" ".join(sorted(all_objects)))  # First line with all object names
+        for expected_id, (id_, state) in enumerate(sample.states.items(), 0):
+            # sample.states is an ordered dict. All ids are consecutive, so no need to print them,
+            # but we check just in case
+            assert expected_id == id_
+            # print one line per state with all state atoms, e.g. at,bob,shed;at,spanner,location;
+            print("\t".join(",".join(atom) for atom in state), file=f)
+
+
+
+
+
 def extract_features(config, sample):
     logging.info("Generating non-redundant concepts from sample set: {}".format(sample.info()))
 
@@ -40,19 +54,24 @@ def extract_features(config, sample):
     if any(all_goal_predicates != info.goal_predicates for info in infos):
         logging.warning("Not all instances in the training set use the same goal predicate")
 
+    all_objects = set()
+    for problem, _, _ in parsed_problems:
+        all_objects.update(c.symbol for c in problem.language.constants())
+
     logging.info('Invoking C++ feature generation module'.format())
 
 
     # TODO WORK IN PROGRESS
 
-    with open(os.path.join(config.experiment_dir, "problem_metadata.csv")) as f:
-        f.write("")
+    # Write sample information
+    print_sample_info(sample, all_objects, os.path.join(config.experiment_dir, "sample.io"))
 
-    with open(os.path.join(config.experiment_dir, "primitives.csv")) as f:
-        f.write("")
+
+    # with open(os.path.join(config.experiment_dir, "primitives.csv")) as f:
+    #     f.write("")
 
     cmd = os.path.join(config.featuregen_location, "featuregen")
-    retcode = execute([cmd, config.experiment_dir])
+    retcode = execute([cmd, config.experiment_dir, "dummy"])
 
 
 

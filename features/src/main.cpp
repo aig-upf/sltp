@@ -1,8 +1,9 @@
 
-
+#include <fstream>
 #include <iostream>
 #include <sltp/features.hxx>
-//#include <sltp/io.hxx>
+#include <sltp/io.hxx>
+
 
 using namespace std;
 
@@ -33,7 +34,7 @@ struct Options {
            << "Usage: " << execname_ << " <input-file> <output-file>" << endl
            << endl
            << "where" << endl
-           << "    <input-file> is the path to a CSV file containing the denotations of primitive concepts and roles "
+           << "    <workspace> is the path to a directory with all the necessary input files "
               "                  from which to start the feature generation process." << endl
            << "    <output-file> is the path to the output CSV file where the denotation matrix of all generated features "
               "                  will be left." << endl
@@ -48,6 +49,13 @@ int main(int argc, const char **argv) {
     // Read primitive concepts and files from input file
     //auto primitive_denotations = sltp::io::read_denotation_matrix(options.worskspace + "/primitives.csv");
     //auto static_denotations = sltp::io::read_denotation_matrix(options.worskspace + "/statics.csv");
+
+
+    std::string sample_filename(options.worskspace_ + "/sample.io");
+    std::ifstream sample_file(sample_filename);
+    if (sample_file.fail()) throw std::runtime_error("Could not open filename '" + sample_filename + "'");
+
+    auto sample = SLTP::DL::Sample::read(sample_file);
 
     // Generate concepts based on grammar, pruning duplicate concepts
 

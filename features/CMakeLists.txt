@@ -9,7 +9,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 
 set(SOURCE_FILES
-        src/sltp/features.hxx
+        src/sltp/features
         src/main.cpp src/sltp/io.hxx src/sltp/io.cpp)
 
 add_executable(featuregen ${SOURCE_FILES})
