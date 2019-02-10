@@ -28,7 +28,7 @@ def run(config, data, rng):
     return extract_features(config, data.sample)
 
 
-def print_sample_info(sample, all_predicates, all_functions, all_objects, filename):
+def print_sample_info(sample, all_predicates, all_functions, all_objects, all_atoms, filename):
     logging.info("Printing all sample info at {}".format(filename))
     with open(filename, "w") as f:
         print("dummy-sample-name", file=f)  # First line: sample name
@@ -41,6 +41,9 @@ def print_sample_info(sample, all_predicates, all_functions, all_objects, filena
 
         print(" ".join(sorted(all_objects)), file=f)  # Fourth line: all object names
 
+        # Fifth line: all possible atoms, i.e. grounded predicates (possibly from different problem instances):
+        print("\t".join(",".join(atom) for atom in sorted(all_atoms)), file=f)
+
         for expected_id, (id_, state) in enumerate(sample.states.items(), 0):
             # sample.states is an ordered dict. All ids are consecutive, so no need to print them,
             # but we check just in case
@@ -49,7 +52,11 @@ def print_sample_info(sample, all_predicates, all_functions, all_objects, filena
             print("\t".join(",".join(atom) for atom in state), file=f)
 
 
-
+def extract_all_atoms_from_sample(sample):
+    all_atoms = set()
+    for state in sample.states.values():
+        all_atoms.update(tuple(a) for a in state)
+    return all_atoms
 
 
 def extract_features(config, sample):
@@ -72,17 +79,11 @@ def extract_features(config, sample):
         all_functions.update(set((p.symbol, p.arity) for p in problem.language.functions if not p.builtin))
 
     logging.info('Invoking C++ feature generation module'.format())
-
-
-    # TODO WORK IN PROGRESS
+    all_atoms = extract_all_atoms_from_sample(sample)
 
     # Write sample information
     print_sample_info(sample, all_predicates, all_functions,
-                      all_objects, os.path.join(config.experiment_dir, "sample.io"))
-
-
-    # with open(os.path.join(config.experiment_dir, "primitives.csv")) as f:
-    #     f.write("")
+                      all_objects, all_atoms, os.path.join(config.experiment_dir, "sample.io"))
 
     cmd = os.path.join(config.featuregen_location, "featuregen")
     retcode = execute([cmd, config.experiment_dir, "dummy"])
