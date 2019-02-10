@@ -912,7 +912,7 @@ class Factory {
     std::vector<const Role*> basis_roles_;
     std::vector<const Concept*> basis_concepts_;
 
-    int complexity_bound_;
+    unsigned complexity_bound_;
 
     mutable int current_complexity_;
     mutable std::vector<const Role*> roles_;
@@ -921,7 +921,7 @@ class Factory {
     mutable std::vector<const Feature*> features_;
 
   public:
-    Factory(const std::string &name, int complexity_bound)
+    Factory(const std::string &name, unsigned complexity_bound)
       : name_(name),
         complexity_bound_(complexity_bound),
         current_complexity_(-1) {
@@ -1052,7 +1052,7 @@ class Factory {
                       << " current-complexity="
                       << 1 + current_complexity_
                       << ", #concepts="
-                      << concepts_.back().size()
+                      << (concepts_.empty() ? 0 : concepts_.back().size())
                       << std::endl;
 
             advance_step();

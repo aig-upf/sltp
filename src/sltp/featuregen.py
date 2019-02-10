@@ -18,6 +18,7 @@ import logging
 import itertools
 
 import os
+import stat
 
 from .features import parse_all_instances, compute_models
 from .util.command import execute
@@ -59,6 +60,29 @@ def extract_all_atoms_from_sample(sample):
     return all_atoms
 
 
+def generate_debug_scripts(target_dir, exe, arguments):
+    # If generating a debug build, create some debug script helpers
+    shebang = "#!/usr/bin/env bash"
+    args = ' '.join(arguments)
+    debug_script = "{}\n\n cgdb -ex=run --args ./{} {}".format(shebang, exe, args)
+    memleaks = "{}\n\n valgrind --leak-check=full --show-leak-kinds=all --num-callers=50 --track-origins=yes " \
+               "--log-file=\"valgrind-output.$(date '+%H%M%S').txt\" ./{} {}"\
+        .format(shebang, exe, args)
+
+    memprofile = "{}\n\n valgrind --tool=massif ./{} {}".format(shebang, exe, args)
+
+    make_script(os.path.join(target_dir, 'debug.sh'), debug_script)
+    make_script(os.path.join(target_dir, 'memleaks.sh'), memleaks)
+    make_script(os.path.join(target_dir, 'memprofile.sh'), memprofile)
+
+
+def make_script(filename, code):
+    with open(filename, 'w') as f:
+        print(code, file=f)
+    st = os.stat(filename)
+    os.chmod(filename, st.st_mode | stat.S_IEXEC)
+
+
 def extract_features(config, sample):
     logging.info("Generating non-redundant concepts from sample set: {}".format(sample.info()))
 
@@ -85,22 +109,25 @@ def extract_features(config, sample):
     print_sample_info(sample, all_predicates, all_functions,
                       all_objects, all_atoms, os.path.join(config.experiment_dir, "sample.io"))
 
+    args = [config.max_concept_size, config.experiment_dir, "dummy"]
+    generate_debug_scripts(config.experiment_dir, "featuregen", args)
     cmd = os.path.join(config.featuregen_location, "featuregen")
-    retcode = execute([cmd, config.experiment_dir, "dummy"])
+    retcode = execute([cmd] + args)
 
+    # TODO READ OUTPUT MATRIX
 
+    # types = [s for s in language.sorts if not s.builtin and s != language.Object]
+    # atoms, concepts, roles = generate_concepts(config, factory, nominals, types, all_goal_predicates)
+    #
+    # logging.info('Final number of features: {}'.format(len(features)))
+    # # log_concept_denotations(sample.states, concepts, factory.processor.models, config.concept_denotation_filename)
+    #
+    # return ExitCode.Success, dict(
+    #     features=features,
+    #     model_cache=factory.processor.model_cache,
+    #     enforced_feature_idxs=enforced_feature_idxs,
+    # )
 
-    types = [s for s in language.sorts if not s.builtin and s != language.Object]
-    atoms, concepts, roles = generate_concepts(config, factory, nominals, types, all_goal_predicates)
-
-    logging.info('Final number of features: {}'.format(len(features)))
-    # log_concept_denotations(sample.states, concepts, factory.processor.models, config.concept_denotation_filename)
-
-    return ExitCode.Success, dict(
-        features=features,
-        model_cache=factory.processor.model_cache,
-        enforced_feature_idxs=enforced_feature_idxs,
-    )
-
-
+    exitcode = ExitCode.Success if retcode == 0 else ExitCode.FeatureGenerationUnknownError
+    return exitcode, dict()
 

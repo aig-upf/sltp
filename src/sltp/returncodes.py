@@ -13,5 +13,7 @@ class ExitCode(Enum):
 
     AbstractionFailsOnTestInstances = 20
 
+    FeatureGenerationUnknownError = 30
+
     OutOfMemory = 100
     OutOfTime = 101

@@ -10,6 +10,7 @@ using namespace std;
 struct Options {
     std::string execname_;
     std::string worskspace_;
+    unsigned complexity_bound_;
 
     Options(int argc, const char **argv) {
         // Print call
@@ -19,21 +20,23 @@ struct Options {
         cout << endl;
 
         execname_ = *argv;
-        if( argc != 3 ) {
+        if( argc != 4 ) {
             print_usage(cout);
             exit(1);
         }
 
         // read arguments
-        worskspace_ = string(argv[1]);
+        complexity_bound_ = (unsigned) stoul(argv[1], nullptr, 10);
+        worskspace_ = string(argv[2]);
         cout << "Using workspace directory " << worskspace_ << endl;
     }
 
     void print_usage(ostream& os) const {
         os << endl
-           << "Usage: " << execname_ << " <input-file> <output-file>" << endl
+           << "Usage: " << execname_ << " <K> <input-file> <output-file>" << endl
            << endl
            << "where" << endl
+           << "    <K> is the maximum feature complexity of the generated features"
            << "    <workspace> is the path to a directory with all the necessary input files "
               "                  from which to start the feature generation process." << endl
            << "    <output-file> is the path to the output CSV file where the denotation matrix of all generated features "
@@ -68,7 +71,7 @@ int main(int argc, const char **argv) {
     // so that they can be reconstructed from python.
 
     SLTP::DL::Sample sample = parse_input_sample(options.worskspace_ + "/sample.io");
-    SLTP::DL::Factory factory("test", 5);
+    SLTP::DL::Factory factory("test", options.complexity_bound_);
 
     SLTP::DL::Cache cache;
     factory.generate_concepts(cache, &sample, true);
