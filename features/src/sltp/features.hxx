@@ -20,16 +20,21 @@ namespace DL {
 class GroundedPredicate;
 
 // A state denotation for concept C is a subset of objects
-// implemented as a bitmap (ie. vector<bool>). These will
-// be cached so that at most one copy of such a bitmap
-// exists.
+// implemented as a bitmap (ie. vector<bool>). These are
+// cached so that at most one copy of a bitmap exists.
 struct state_denotation_t : public std::vector<bool> {
     state_denotation_t(size_t n, bool value) : std::vector<bool>(n, value) { }
+    size_t cardinality() const {
+        size_t n = 0;
+        for( size_t i = 0; i < size(); ++i )
+            n += (*this)[i];
+        return n;
+    }
 };
 
 // A (full) sample denotation for concept C is a vector of
 // state denotations, one per each state in the sample.
-// Since we will cache state denotation, a sample denotation
+// Since we cache state denotations, a sample denotation
 // is implemented as a vector of pointers to bitmaps.
 struct sample_denotation_t : public std::vector<const state_denotation_t*> { };
 
@@ -44,6 +49,7 @@ struct sample_denotation_t : public std::vector<const state_denotation_t*> { };
 class Cache {
   public:
     struct cache_support_t {
+        // cache for sample denotations
         bool operator()(const sample_denotation_t *d1, const sample_denotation_t *d2) const {
             assert(d1->size() == d2->size());
             for( int i = 0; i < int(d1->size()); ++i ) {
@@ -56,6 +62,7 @@ class Cache {
             return 0;
         }
 
+        // cache for state denotations
         bool operator()(const state_denotation_t *sd1, const state_denotation_t *sd2) const {
             assert(sd1->size() == sd2->size());
             return *sd1 == *sd2;
@@ -92,7 +99,17 @@ class Cache {
         cache1_t::const_iterator it = cache1_.find(&d);
         return it == cache1_.end() ? nullptr : it->first;
     }
-    const sample_denotation_t* find_or_insert_sample_denotation(const sample_denotation_t &d);
+    const sample_denotation_t* find_or_insert_sample_denotation(const sample_denotation_t &d, const std::string &name) {
+        cache1_t::const_iterator it = cache1_.find(&d);
+        if( it == cache1_.end() ) {
+            const sample_denotation_t *nd = new sample_denotation_t(d);
+            cache1_.emplace(nd, name);
+            cache2_.emplace(name, nd);
+            return nd;
+        } else {
+            return it->first;
+        }
+    }
 
     // cache2: (full) sample denotations for concepts
     //
@@ -140,9 +157,19 @@ class Cache {
 // We represent states as subets of grounded predicates.
 // A grounded predicate is a predicate and a vector of
 // objects to ground the predicates.
-struct Object {
+class Object {
+  protected:
+    int id_;
     const std::string name_;
-    Object(const std::string name) : name_(name) { }
+
+  public:
+    Object(int id, const std::string name) : id_(id), name_(name) { }
+    int id() const {
+        return id_;
+    }
+    const std::string& name() const {
+        return name_;
+    }
     const std::string& as_str() const {
         return name_;
     }
@@ -176,15 +203,29 @@ struct Predicate {
     }
 };
 
-struct GroundedPredicate {
+class GroundedPredicate {
+  protected:
     const Predicate &predicate_;
     const std::vector<const Object*> objects_;
+
+  public:
     GroundedPredicate(const Predicate &predicate, const std::vector<const Object*> &objects)
       : predicate_(predicate), objects_(objects) {
     }
     GroundedPredicate(const Predicate &predicate, std::vector<const Object*> &&objects)
       : predicate_(predicate), objects_(std::move(objects)) {
     }
+
+    const Predicate& predicate() const {
+        return predicate_;
+    }
+    const std::vector<const Object*>& objects() const {
+        return objects_;
+    }
+    bool is_instance(const Predicate *predicate) const {
+        return &predicate_ == predicate;
+    }
+
     std::string as_str() const {
         return predicate_.as_str(&objects_);
     }
@@ -193,12 +234,19 @@ struct GroundedPredicate {
     }
 };
 
+// A state is a collections of atoms (i.e. GroundedPredicates)
 struct State {
     const int id_;
     std::vector<const GroundedPredicate*> atoms_;
     State(int id) : id_(id) { }
+    const std::vector<const GroundedPredicate*>& atoms() const {
+        return atoms_;
+    }
 };
 
+// A sample is a bunch of states and transitions among them. The
+// sample contains the predicates used in the states, the objects,
+// and the grounded predicates (i.e. atoms).
 class Sample {
   protected:
     const std::string name_;
@@ -229,6 +277,12 @@ public:
     }
     std::size_t num_objects() const {
         return objects_.size();
+    }
+    std::size_t num_predicates() const {
+        return predicates_.size();
+    }
+    std::size_t num_grounded_predicates() const {
+        return grounded_predicates_.size();
     }
     std::size_t num_states() const {
         return states_.size();
@@ -273,7 +327,7 @@ class Base {
 
     //virtual void denotation(Denotation &d) const = 0;
     virtual const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const = 0;
-    virtual const state_denotation_t* denotation(Cache &cache, const State &state) const = 0;
+    virtual const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const = 0;
     virtual std::string as_str() const = 0;
 
     friend std::ostream& operator<<(std::ostream &os, const Base &base) {
@@ -295,30 +349,40 @@ class Role : public Base {
 
 class PrimitiveConcept : public Concept {
   protected:
-    const std::string name_;
+    const Predicate *predicate_;
 
   public:
-    PrimitiveConcept(const std::string &name) : Concept(1), name_(name) { }
+    PrimitiveConcept(const Predicate *predicate) : Concept(1), predicate_(predicate) { }
     virtual ~PrimitiveConcept() { }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const override {
         const sample_denotation_t *cached = cache.find_sample_denotation(as_str());
         if( cached == nullptr ) {
             sample_denotation_t d;
-            for( unsigned i = 0; i < sample.num_states(); ++i ) {
-                const State &s = sample.state(i);
-                d.emplace_back(denotation(cache, s));
+            for( int i = 0; i < sample.num_states(); ++i ) {
+                const State &s = *sample.states()[i];
+                d.emplace_back(denotation(cache, sample, s));
             }
-            return cache.find_or_insert_sample_denotation(d);
+            return cache.find_or_insert_sample_denotation(d, as_str());
         } else {
             return cached;
         }
     }
-    const state_denotation_t* denotation(Cache &cache, const State &state) const override {
-        throw std::runtime_error("TODO: UNIMPLEMENTED: PrimitiveConcept::denotation()");
+    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
+        state_denotation_t sd(sample.num_objects(), false);
+        for( int i = 0; i < int(state.atoms().size()); ++i ) {
+            const GroundedPredicate *gp = state.atoms()[i];
+            if( gp->is_instance(predicate_) ) {
+                assert(gp->objects().size() == 1);
+                int index = gp->objects()[0]->id();
+                assert((0 <= index) && (index < sample.num_objects()));
+                sd[index] = true;
+            }
+        }
+        return cache.find_or_insert_state_denotation(sd);
     }
     std::string as_str() const override {
-        return name_;
+        return predicate_->name_;
     }
 };
 
@@ -334,16 +398,16 @@ class UniversalConcept : public Concept {
             state_denotation_t sd(num_objects, true);
             const state_denotation_t *cached_sd = cache.find_or_insert_state_denotation(sd);
 
-            sample_denotation_t d;
-            for( int i = 0; i < int(sample.num_states()); ++i )
-                d.emplace_back(cached_sd);
-            return cache.find_or_insert_sample_denotation(d);
+            sample_denotation_t nd;
+            for( int i = 0; i < sample.num_states(); ++i )
+                nd.emplace_back(cached_sd);
+            return cache.find_or_insert_sample_denotation(nd, as_str());
         } else {
             return cached;
         }
     }
-    const state_denotation_t* denotation(Cache &cache, const State &state) const override {
-        throw std::runtime_error("Unexpected call: UniversalConcept::denotation(Cache&, const State&)");
+    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
+        throw std::runtime_error("Unexpected call: UniversalConcept::denotation(Cache&, const Sample&, const State&)");
         return nullptr;
     }
     std::string as_str() const override {
@@ -368,33 +432,29 @@ class AndConcept : public Concept {
         const sample_denotation_t *cached = cache.find_sample_denotation(as_str());
         if( cached == nullptr ) {
             const sample_denotation_t *d1 = cache.find_sample_denotation(concept1_->as_str());
-            assert(d1 != nullptr);
+            assert((d1 != nullptr) && (d1->size() == sample.num_states()));
             const sample_denotation_t *d2 = cache.find_sample_denotation(concept2_->as_str());
-            assert(d2 != nullptr);
+            assert((d2 != nullptr) && (d2->size() == sample.num_states()));
 
-            sample_denotation_t d;
-            assert(d1->size() == d2->size());
-            for( int i = 0; i < int(d1->size()); ++i ) {
-                const state_denotation_t &sd1 = *(*d1)[i];
-                const state_denotation_t &sd2 = *(*d2)[i];
-                assert(sd1.size() == sd2.size());
+            sample_denotation_t nd;
+            for( int i = 0; i < sample.num_states(); ++i ) {
+                const state_denotation_t *sd1 = (*d1)[i];
+                assert((sd1 != nullptr) && (sd1->size() == sample.num_objects()));
+                const state_denotation_t *sd2 = (*d2)[i];
+                assert((sd2 != nullptr) && (sd2->size() == sample.num_objects()));
 
-                state_denotation_t sd(sd1.size(), false);
-                for( int j = 0; j < int(sd1.size()); ++j ) {
-                    if( sd1[j] && sd2[j] )
-                        sd[j] = true;
-                }
-
-                const state_denotation_t *cached_sd = cache.find_or_insert_state_denotation(sd);
-                d.emplace_back(cached_sd);
+                state_denotation_t nsd(sample.num_objects(), false);
+                for( int j = 0; j < sample.num_objects(); ++j )
+                    nsd[j] = (*sd1)[j] && (*sd2)[j];
+                nd.emplace_back(cache.find_or_insert_state_denotation(nsd));
             }
-            return cache.find_or_insert_sample_denotation(d);
+            return cache.find_or_insert_sample_denotation(nd, as_str());
         } else {
             return cached;
         }
     }
-    const state_denotation_t* denotation(Cache &cache, const State &state) const override {
-        throw std::runtime_error("Unexpected call: AndConcept::denotation(Cache&, const State&)");
+    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
+        throw std::runtime_error("Unexpected call: AndConcept::denotation(Cache&, const Sample&, const State&)");
         return nullptr;
     }
 
@@ -418,24 +478,25 @@ class NotConcept : public Concept {
         const sample_denotation_t *cached = cache.find_sample_denotation(as_str());
         if( cached == nullptr ) {
             const sample_denotation_t *d = cache.find_sample_denotation(concept_->as_str());
-            assert(d != nullptr);
+            assert((d != nullptr) && (d->size() == sample.num_states()));
 
             sample_denotation_t nd;
-            for( int i = 0; i < int(d->size()); ++i ) {
-                const state_denotation_t &sd = *(*d)[i];
-                state_denotation_t nsd(sd.size(), false);
-                for( int j = 0; j < int(sd.size()); ++j )
-                    nsd[j] = !sd[j];
-                const state_denotation_t *cached_sd = cache.find_or_insert_state_denotation(nsd);
-                nd.emplace_back(cached_sd);
+            for( int i = 0; i < sample.num_states(); ++i ) {
+                const state_denotation_t *sd = (*d)[i];
+                assert((sd != nullptr) && (sd->size() == sample.num_objects()));
+
+                state_denotation_t nsd(sample.num_objects(), false);
+                for( int j = 0; j < sample.num_objects(); ++j )
+                    nsd[j] = !(*sd)[j];
+                nd.emplace_back(cache.find_or_insert_state_denotation(nsd));
             }
-            return cache.find_or_insert_sample_denotation(nd);
+            return cache.find_or_insert_sample_denotation(nd, as_str());
         } else {
             return cached;
         }
     }
-    const state_denotation_t* denotation(Cache &cache, const State &state) const override {
-        throw std::runtime_error("Unexpected call: NotConcept::denotation(Cache&, const State&)");
+    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
+        throw std::runtime_error("Unexpected call: NotConcept::denotation(Cache&, const Sample&, const State&)");
         return nullptr;
     }
 
@@ -463,27 +524,33 @@ class ExistsConcept : public Concept {
             const sample_denotation_t *d = cache.find_sample_denotation(concept_->as_str());
             assert((d != nullptr) && (d->size() == sample.num_states()));
             const sample_denotation_t *r = cache.find_sample_denotation(role_->as_str());
-            assert((r != nullptr) && (r->size() == sample.num_states() * sample.num_states()));
+            assert((r != nullptr) && (r->size() == sample.num_states()));
 
             sample_denotation_t nd;
-            for( unsigned i = 0; i < sample.num_states(); ++i ) {
-                const State &s = sample.state(i);
-                state_denotation_t sd(sample.num_objects(), false);
+            for( int i = 0; i < sample.num_states(); ++i ) {
+                const state_denotation_t *sd = (*d)[i];
+                assert((sd != nullptr) && (sd->size() == sample.num_objects()));
+                const state_denotation_t *sr = (*r)[i];
+                assert((sr != nullptr) && (sr->size() == sample.num_objects() * sample.num_objects()));
+
+                state_denotation_t nsd(sample.num_objects(), false);
                 for( int j = 0; j < sample.num_objects(); ++j ) {
-                    for( int k = 0; !sd[j] && (k < sample.num_objects()); ++k ) {
+                    if( (*sd)[j] ) {
+                        for( int k = 0; !nsd[j] && (k < sample.num_objects()); ++k ) {
                         int index = j * sample.num_objects() + k;
-                        sd[j] = (*(*r)[i])[index];
+                            nsd[j] = (*(*r)[i])[index];
                     }
                 }
-                nd.emplace_back(cache.find_or_insert_state_denotation(sd));
             }
-            return cache.find_or_insert_sample_denotation(nd);
+                nd.emplace_back(cache.find_or_insert_state_denotation(nsd));
+            }
+            return cache.find_or_insert_sample_denotation(nd, as_str());
         } else {
             return cached;
         }
     }
-    const state_denotation_t* denotation(Cache &cache, const State &state) const override {
-        throw std::runtime_error("Unexpected call: ExistsConcept::denotation(Cache&, const State&)");
+    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
+        throw std::runtime_error("Unexpected call: ExistsConcept::denotation(Cache&, const Sample&, const State&)");
         return nullptr;
     }
 
@@ -511,27 +578,33 @@ class ForallConcept : public Concept {
             const sample_denotation_t *d = cache.find_sample_denotation(concept_->as_str());
             assert((d != nullptr) && (d->size() == sample.num_states()));
             const sample_denotation_t *r = cache.find_sample_denotation(role_->as_str());
-            assert((r != nullptr) && (r->size() == sample.num_states() * sample.num_states()));
+            assert((r != nullptr) && (r->size() == sample.num_states()));
 
             sample_denotation_t nd;
-            for( unsigned i = 0; i < sample.num_states(); ++i ) {
-                const State &s = sample.state(i);
-                state_denotation_t sd(sample.num_objects(), true);
+            for( int i = 0; i < sample.num_states(); ++i ) {
+                const state_denotation_t *sd = (*d)[i];
+                assert((sd != nullptr) && (sd->size() == sample.num_objects()));
+                const state_denotation_t *sr = (*r)[i];
+                assert((sr != nullptr) && (sr->size() == sample.num_objects() * sample.num_objects()));
+
+                state_denotation_t nsd(sample.num_objects(), true);
                 for( int j = 0; j < sample.num_objects(); ++j ) {
-                    for( int k = 0; sd[j] && (k < sample.num_objects()); ++k ) {
+                    if( (*sd)[j] ) {
+                        for( int k = 0; nsd[j] && (k < sample.num_objects()); ++k ) {
                         int index = j * sample.num_objects() + k;
-                        sd[j] = (*(*r)[i])[index];
+                            nsd[j] = (*(*r)[i])[index];
                     }
                 }
-                nd.emplace_back(cache.find_or_insert_state_denotation(sd));
             }
-            return cache.find_or_insert_sample_denotation(nd);
+                nd.emplace_back(cache.find_or_insert_state_denotation(nsd));
+            }
+            return cache.find_or_insert_sample_denotation(nd, as_str());
         } else {
             return cached;
         }
     }
-    const state_denotation_t* denotation(Cache &cache, const State &state) const override {
-        throw std::runtime_error("Unexpected call: ForallConcept::denotation(Cache&, const State&)");
+    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
+        throw std::runtime_error("Unexpected call: ForallConcept::denotation(Cache&, const Sample&, const State&)");
         return nullptr;
     }
 
@@ -542,31 +615,41 @@ class ForallConcept : public Concept {
 
 class PrimitiveRole : public Role {
   protected:
-    const std::string name_;
+    const Predicate *predicate_;
 
   public:
-    PrimitiveRole(const std::string &name) : Role(1), name_(name) { }
+    PrimitiveRole(const Predicate *predicate) : Role(1), predicate_(predicate) { }
     virtual ~PrimitiveRole() { }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const override {
         const sample_denotation_t *cached = cache.find_sample_denotation(as_str());
         if( cached == nullptr ) {
-            sample_denotation_t d;
-            for( unsigned i = 0; i < sample.num_states(); ++i ) {
-                const State &s = sample.state(i);
-                d.emplace_back(denotation(cache, s));
+            sample_denotation_t nr;
+            for( int i = 0; i < sample.num_states(); ++i ) {
+                const State &s = *sample.states()[i];
+                nr.emplace_back(denotation(cache, sample, s));
             }
-            return cache.find_or_insert_sample_denotation(d);
+            return cache.find_or_insert_sample_denotation(nr, as_str());
         } else {
             return cached;
         }
     }
-    const state_denotation_t* denotation(Cache &cache, const State &state) const override {
-        throw std::runtime_error("TODO: UNIMPLEMENTED: PrimitiveRole::denotation()");
+    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
+        state_denotation_t sr(sample.num_objects() * sample.num_objects(), false);
+        for( int i = 0; i < int(state.atoms().size()); ++i ) {
+            const GroundedPredicate *gp = state.atoms()[i];
+            if( gp->is_instance(predicate_) ) {
+                assert(gp->objects().size() == 2);
+                int index = gp->objects()[0]->id() * sample.num_objects() + gp->objects()[1]->id();
+                assert((0 <= index) && (index < sample.num_objects() * sample.num_objects()));
+                sr[index] = true;
+            }
+        }
+        return cache.find_or_insert_state_denotation(sr);
     }
 
     std::string as_str() const override {
-        return name_;
+        return predicate_->name_;
     }
 };
 
@@ -578,16 +661,56 @@ class PlusRole : public Role {
     PlusRole(const Role *role) : Role(1 + role->complexity()), role_(role) { }
     virtual ~PlusRole() { }
 
+    // apply Johnson's algorithm for transitive closure
+    void transitive_closure(int num_objects, state_denotation_t &sd) const {
+        // create adjacency lists
+        std::vector<std::vector<int> > adj(num_objects);
+        for( int i = 0; i < num_objects; ++i ) {
+            for( int j = 0; j < num_objects; ++j ) {
+                if( sd[i * num_objects + j] )
+                    adj[i].emplace_back(j);
+            }
+        }
+
+        // apply dfs starting from each vertex
+        for( int r = 0; r < num_objects; ++r ) {
+            std::vector<bool> visited(num_objects, false);
+            std::vector<int> q = adj[r];
+            while( !q.empty() ) {
+                int i = q.back();
+                q.pop_back();
+                sd[r * num_objects + i] = true;
+                if( !visited[i] ) {
+                    visited[i] = true;
+                    q.insert(q.end(), adj[i].begin(), adj[i].end());
+                }
+            }
+        }
+    }
+
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const override {
         const sample_denotation_t *cached = cache.find_sample_denotation(as_str());
         if( cached == nullptr ) {
-            throw std::runtime_error("TODO: UNIMPLEMENTED: PlusRole::denotation()");
+            const sample_denotation_t *r = cache.find_sample_denotation(role_->as_str());
+            assert((r != nullptr) && (r->size() == sample.num_states()));
+
+            sample_denotation_t nr;
+            for( int i = 0; i < sample.num_states(); ++i ) {
+                const state_denotation_t *sr = (*r)[i];
+                assert((sr != nullptr) && (sr->size() == sample.num_objects() * sample.num_objects()));
+
+                state_denotation_t nsr(*sr);
+                transitive_closure(sample.num_objects(), nsr);
+                nr.emplace_back(cache.find_or_insert_state_denotation(nsr));
+            }
+            return cache.find_or_insert_sample_denotation(nr, as_str());
         } else {
             return cached;
         }
     }
-    const state_denotation_t* denotation(Cache &cache, const State &state) const override {
-        throw std::runtime_error("TODO: UNIMPLEMENTED: PlusRole::denotation()");
+    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
+        throw std::runtime_error("Unexpected call: PlusRole::denotation(Cache&, const Sample&, const State&)");
+        return nullptr;
     }
 
     std::string as_str() const override {
@@ -598,21 +721,44 @@ class PlusRole : public Role {
 class StarRole : public Role {
   protected:
     const Role *role_;
+    const PlusRole *plus_role_;
 
   public:
-    StarRole(const Role *role) : Role(1 + role->complexity()), role_(role) { }
-    virtual ~StarRole() { }
+    StarRole(const Role *role)
+      : Role(1 + role->complexity()),
+        role_(role),
+        plus_role_(new PlusRole(role)) {
+    }
+    virtual ~StarRole() {
+        delete plus_role_;
+    }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const override {
         const sample_denotation_t *cached = cache.find_sample_denotation(as_str());
         if( cached == nullptr ) {
-            throw std::runtime_error("TODO: UNIMPLEMENTED: StarRole::denotation()");
+            const sample_denotation_t *pr = cache.find_sample_denotation(plus_role_->as_str());
+            assert((pr != nullptr) && (pr->size() == sample.num_states()));
+
+            sample_denotation_t nr;
+            for( int i = 0; i < sample.num_states(); ++i ) {
+                const state_denotation_t *sr = (*pr)[i];
+                assert((sr != nullptr) && (sr->size() == sample.num_objects() * sample.num_objects()));
+
+                state_denotation_t nsr(*sr);
+                for( int j = 0; j < sample.num_objects(); ++j ) {
+                    int index = j * sample.num_objects() + j;
+                    nsr[index] = true;
+                }
+                nr.emplace_back(cache.find_or_insert_state_denotation(nsr));
+            }
+            return cache.find_or_insert_sample_denotation(nr, as_str());
         } else {
             return cached;
         }
     }
-    const state_denotation_t* denotation(Cache &cache, const State &state) const override {
-        throw std::runtime_error("TODO: UNIMPLEMENTED: StarRole::denotation()");
+    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
+        throw std::runtime_error("Unexpected call: StarRole::denotation(Cache&, const Sample&, const State&)");
+        return nullptr;
     }
 
     std::string as_str() const override {
@@ -632,35 +778,82 @@ class InverseRole : public Role {
         const sample_denotation_t *cached = cache.find_sample_denotation(as_str());
         if( cached == nullptr ) {
             const sample_denotation_t *r = cache.find_sample_denotation(role_->as_str());
-            assert((r != nullptr) && (r->size() == sample.num_states() * sample.num_states()));
+            assert((r != nullptr) && (r->size() == sample.num_states()));
 
-            sample_denotation_t nd;
-            for( unsigned i = 0; i < sample.num_states(); ++i ) {
-                const State &s = sample.state(i);
-                state_denotation_t sd(sample.num_objects() * sample.num_objects(), false);
+            sample_denotation_t nr;
+            for( int i = 0; i < sample.num_states(); ++i ) {
+                const state_denotation_t *sr = (*r)[i];
+                assert((sr != nullptr) && (sr->size() == sample.num_objects() * sample.num_objects()));
+
+                state_denotation_t nsr(sample.num_objects() * sample.num_objects(), false);
                 for( int j = 0; j < sample.num_objects(); ++j ) {
                     for( int k = 0; k < sample.num_objects(); ++k ) {
                         int index = j * sample.num_objects() + k;
-                        if( (*(*r)[i])[index] ) {
+                        if( (*sr)[index] ) {
                             int inv_index = k * sample.num_objects() + j;
-                            sd[inv_index] = true;
+                            nsr[inv_index] = true;
                         }
                     }
                 }
-                nd.emplace_back(cache.find_or_insert_state_denotation(sd));
+                nr.emplace_back(cache.find_or_insert_state_denotation(nsr));
             }
-            return cache.find_or_insert_sample_denotation(nd);
+            return cache.find_or_insert_sample_denotation(nr, as_str());
         } else {
             return cached;
         }
     }
-    virtual const state_denotation_t* denotation(Cache &cache, const State &state) const override {
-        throw std::runtime_error("Unexpected call: InverseRole::denotation(Cache&, const State&)");
+    virtual const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
+        throw std::runtime_error("Unexpected call: InverseRole::denotation(Cache&, const Sample&, const State&)");
         return nullptr;
     }
 
     std::string as_str() const override {
         return std::string("Inverse[") + role_->as_str() + "]";
+    }
+};
+
+class Feature {
+  public:
+    Feature() { }
+    virtual int complexity() const = 0;
+    virtual int value(const Cache &cache, const Sample &sample, const State &state) const = 0;
+    virtual std::string as_str() const = 0;
+    friend std::ostream& operator<<(std::ostream &os, const Feature &f) {
+        return os << f.as_str() << std::flush;
+    }
+};
+
+class BooleanFeature : public Feature {
+  protected:
+    const Concept &concept_;
+
+  public:
+    BooleanFeature(const Concept &concept) : Feature(), concept_(concept) { }
+    int complexity() const override {
+        return concept_.complexity();
+    }
+    int value(const Cache &cache, const Sample &sample, const State &state) const override {
+        throw std::runtime_error("TODO: UNIMPLEMENTED: BooleanFeature::value()");
+    }
+    std::string as_str() const override {
+        return std::string("Boolean[") + concept_.as_str() + "]";
+    }
+};
+
+class NumericalFeature : public Feature {
+  protected:
+    const Concept &concept_;
+
+  public:
+    NumericalFeature(const Concept &concept) : Feature(), concept_(concept) { }
+    int complexity() const override {
+        return concept_.complexity();
+    }
+    int value(const Cache &cache, const Sample &sample, const State &state) const override {
+        throw std::runtime_error("TODO: UNIMPLEMENTED: NumericalFeature::value()");
+    }
+    std::string as_str() const override {
+        return std::string("Numerical[") + concept_.as_str() + "]";
     }
 };
 
@@ -675,6 +868,8 @@ class Factory {
     mutable int current_complexity_;
     mutable std::vector<const Role*> roles_;
     mutable std::vector<std::vector<const Concept*> > concepts_;
+
+    mutable std::vector<const Feature*> features_;
 
   public:
     Factory(const std::string &name, int complexity_bound)
@@ -798,26 +993,76 @@ class Factory {
     }
 
     int generate_concepts(Cache &cache, const Sample *sample = nullptr, bool prune = false) const {
-        while( current_complexity_ < complexity_bound_ ) {
             std::cout << "DL::Factory: name="
                       << name_
-                      << ", complexity="
+                  << ", generate_concepts()"
+                  << std::endl;
+
+        while( current_complexity_ < complexity_bound_ ) {
+            std::cout << "DL::Factory: iteration:"
+                      << " current-complexity="
                       << 1 + current_complexity_
-                      << std::flush;
+                      << ", #concepts="
+                      << concepts_.back().size()
+                      << std::endl;
 
             advance_step();
+            std::cout << "DL::Factory: advance-step:"
+                      << " #concepts="
+                      << concepts_.back().size();
             if( prune && (sample != nullptr) ) {
                 int number_pruned_concepts = prune_superfluous_concepts_in_last_layer(cache, *sample);
                 std::cout << ", #pruned-concepts="
                           << number_pruned_concepts
                           << std::flush;
             }
-
-            std::cout << ", #concepts="
-                      << concepts_.back().size()
-                      << std::endl;
+            std::cout << std::endl;
         }
         return current_complexity_;
+    }
+
+    int generate_features(const Cache &cache, const Sample &sample) const {
+        // create boolean/numerical features from concepts
+        for( int layer = 0; layer < int(concepts_.size()); ++layer ) {
+            for( int i = 0; i < int(concepts_[layer].size()); ++i ) {
+                const Concept &c = *concepts_[layer][i];
+                const sample_denotation_t *d = cache.find_sample_denotation(c.as_str());
+                assert((d != nullptr) && (d->size() == sample.num_states()));
+                bool boolean_feature = true;
+                for( int j = 0; boolean_feature && (j < sample.num_states()); ++j ) {
+                    assert(((*d)[j] != nullptr) && ((*d)[j]->size() == sample.num_objects()));
+                    int cardinality = (*d)[j]->cardinality();
+                    boolean_feature = cardinality < 2;
+                }
+                features_.emplace_back(boolean_feature ? static_cast<Feature*>(new BooleanFeature(c)) : static_cast<Feature*>(new NumericalFeature(c)));
+            }
+        }
+
+        // create distance features
+        throw std::runtime_error("TODO: UNIMPLEMENTED: Factory::generate_features()");
+
+        return features_.size();
+    }
+
+    void output_feature_matrix(std::ostream &os, const Cache &cache, const Sample &sample) const {
+        for( int i = 0; i < sample.num_states(); ++i ) {
+            const State &state = *sample.states()[i];
+            std::vector<std::pair<int, int> > non_zero_values;
+            for( int j = 0; j < int(features_.size()); ++j ) {
+                const Feature &f = *features_[j];
+                int value = f.value(cache, sample, state);
+                if( value > 0 )
+                    non_zero_values.emplace_back(j, value);
+            }
+            if( !non_zero_values.empty() ) {
+                os << i << " " << non_zero_values.size();
+                for( int j = 0; j < int(non_zero_values.size()); ++j ) {
+                    os << " " << non_zero_values[j].first
+                       << " " << non_zero_values[j].second;
+                }
+                os << std::endl;
+            }
+        }
     }
 };
 
