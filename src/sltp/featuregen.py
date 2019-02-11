@@ -64,12 +64,12 @@ def generate_debug_scripts(target_dir, exe, arguments):
     # If generating a debug build, create some debug script helpers
     shebang = "#!/usr/bin/env bash"
     args = ' '.join(arguments)
-    debug_script = "{}\n\n cgdb -ex=run --args ./{} {}".format(shebang, exe, args)
+    debug_script = "{}\n\n cgdb -ex=run --args {} {}".format(shebang, exe, args)
     memleaks = "{}\n\n valgrind --leak-check=full --show-leak-kinds=all --num-callers=50 --track-origins=yes " \
-               "--log-file=\"valgrind-output.$(date '+%H%M%S').txt\" ./{} {}"\
+               "--log-file=\"valgrind-output.$(date '+%H%M%S').txt\" {} {}"\
         .format(shebang, exe, args)
 
-    memprofile = "{}\n\n valgrind --tool=massif ./{} {}".format(shebang, exe, args)
+    memprofile = "{}\n\n valgrind --tool=massif {} {}".format(shebang, exe, args)
 
     make_script(os.path.join(target_dir, 'debug.sh'), debug_script)
     make_script(os.path.join(target_dir, 'memleaks.sh'), memleaks)
@@ -109,9 +109,9 @@ def extract_features(config, sample):
     print_sample_info(sample, all_predicates, all_functions,
                       all_objects, all_atoms, os.path.join(config.experiment_dir, "sample.io"))
 
-    args = [str(config.max_concept_size), config.experiment_dir, "dummy"]
-    generate_debug_scripts(config.experiment_dir, "featuregen", args)
-    cmd = os.path.join(config.featuregen_location, "featuregen")
+    cmd = os.path.realpath(os.path.join(config.featuregen_location, "featuregen"))
+    args = [str(config.max_concept_size), config.experiment_dir]
+    generate_debug_scripts(config.experiment_dir, cmd, args)
     retcode = execute([cmd] + args)
 
     # TODO READ OUTPUT MATRIX

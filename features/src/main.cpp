@@ -10,7 +10,6 @@ using namespace std;
 struct Options {
     std::string execname_;
     std::string worskspace_;
-    std::string output_file_;
     unsigned complexity_bound_;
 
     Options(int argc, const char **argv) {
@@ -21,7 +20,7 @@ struct Options {
         cout << endl;
 
         execname_ = *argv;
-        if( argc != 4 ) {
+        if( argc != 3 ) {
             print_usage(cout);
             exit(1);
         }
@@ -29,7 +28,6 @@ struct Options {
         // read arguments
         complexity_bound_ = (unsigned) stoul(argv[1], nullptr, 10);
         worskspace_ = string(argv[2]);
-        output_file_ = string(argv[3]);
         //cout << "Using workspace directory '" << worskspace_ << "' and output file '" << output_file_ << "'" << endl;
     }
 
@@ -43,10 +41,6 @@ struct Options {
            << "    <workspace> is the path to a directory with all the necessary input"
            << endl
            << "                files from which to start the feature generation process."
-           << endl
-           << "    <output-file> is the path to the output CSV file where the denotation"
-           << endl
-           << "                  matrix of all generated features will be left."
            << endl
            ;
     }
@@ -93,8 +87,9 @@ int main(int argc, const char **argv) {
     factory.generate_features(cache, sample);
     //std::cout << "hola5" << std::endl;
 
-    std::ofstream output_file(options.output_file_);
-    if( output_file.fail() ) throw std::runtime_error("Could not open filename '" + options.output_file_ + "'");
+    std::string output(options.worskspace_ + "/features.io");
+    std::ofstream output_file(output);
+    if( output_file.fail() ) throw std::runtime_error("Could not open filename '" + output + "'");
     factory.output_feature_matrix(output_file, cache, sample);
 
     return 0;
