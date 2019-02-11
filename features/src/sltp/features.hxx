@@ -346,32 +346,28 @@ public:
 
     const GroundedPredicate& atom(unsigned id) const { return grounded_predicates_.at(id); }
 
-    bool is_instance(atom_id atom, const Predicate& predicate) const {
-        return grounded_predicates_.at(atom).is_instance(predicate);
-    }
-
     //! Factory method - reads sample from serialized data
     static Sample read(std::istream &is);
 };
-
-struct Denotation {
-    enum class denotation_t : bool { concept_denotation_t, role_denotation_t };
-    denotation_t type_;
-    std::vector<bool> values_;
-    Denotation(denotation_t type, size_t dimension)
-      : type_(type),
-        values_(std::vector<bool>(dimension, false)) {
-    }
-};
-
-// Denotation matrix is just a matrix of DL Denotations, each state being a row, each concept / role a column
-class DenotationMatrix {
-  protected:
-    std::vector<std::vector<Denotation> > data_;
-};
-
-class Model {
-};
+//
+//struct Denotation {
+//    enum class denotation_t : bool { concept_denotation_t, role_denotation_t };
+//    denotation_t type_;
+//    std::vector<bool> values_;
+//    Denotation(denotation_t type, size_t dimension)
+//      : type_(type),
+//        values_(std::vector<bool>(dimension, false)) {
+//    }
+//};
+//
+//// Denotation matrix is just a matrix of DL Denotations, each state being a row, each concept / role a column
+//class DenotationMatrix {
+//  protected:
+//    std::vector<std::vector<Denotation> > data_;
+//};
+//
+//class Model {
+//};
 
 class Base {
   protected:
