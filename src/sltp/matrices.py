@@ -196,7 +196,7 @@ def compute_feature_extensions(states, features, model_cache: DLModelCache, prun
     features = sorted(features, key=lambda feat: feat.complexity())
 
     for f in features:
-        all_equal, all_0_or_1, all_gt_0 = True, True, True
+        all_equal, all_0_or_1, all_gt_0, some_infty = True, True, True, False
         previous = None
         all_denotations = []
         for s in states:
@@ -220,6 +220,10 @@ def compute_feature_extensions(states, features, model_cache: DLModelCache, prun
         if prune_positive_features and all_gt_0:
             logging.debug("Feature \"{}\" has denotation always > 0 over all states and will be ignored"
                           .format(f,))
+            continue
+
+        if some_infty:
+            logging.debug("Feature \"{}\" has infinite denotation in at least one state".format(f))
             continue
 
         if PRUNE_DUPLICATE_FEATURES:

@@ -381,7 +381,7 @@ def extract_features(config, sample):
         features = config.feature_generator(language)
 
     logging.info('Final number of features: {}'.format(len(features)))
-    # log_concept_denotations(sample.states, concepts, factory.processor.models, config.concept_denotation_filename)
+    # log_concept_denotations(sample.states, concepts, factory.processor.model_cache, config.concept_denotation_filename)
 
     return ExitCode.Success, dict(
         features=features,
@@ -427,14 +427,14 @@ def generate_concepts(config, factory, nominals, types, goal_predicates):
     return atoms, concepts, roles
 
 
-def log_concept_denotations(states, concepts, models, filename, selected=None):
+def log_concept_denotations(states, concepts, model_cache, filename, selected=None):
     selected = selected or concepts
     # selected = ((str(f), f) for f in selected)
     # selected = sorted(selected, key=lambda x: x[0])  # Sort features by name
 
     with open(filename, 'w') as file:
         for s, concept in itertools.product(states, selected):
-            val = models[s].uncompressed_denotation(concept)
+            val = model_cache.get_term_model(s).uncompressed_denotation(concept)
             print("s_{}[{}] = {}".format(s, concept, val), file=file)
 
     logging.info("Concept denotations logged in '{}'".format(filename))
