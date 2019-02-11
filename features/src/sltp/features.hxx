@@ -1024,10 +1024,21 @@ class Factory {
                     new_layer.push_back(new ForallConcept(c, r));
                 }
 
-                for( unsigned j = 1 + i; j < prev_layer.size(); ++j ) {
-                    const Concept *oc = prev_layer[j];
-                    new_layer.push_back(new AndConcept(c, oc));
+                // Create AND concept between current "c" and any concept in any previous layer
+
+                for (unsigned k = 0; k < concepts_.size()-2; ++k) { // we skip the previous and the current
+                    const auto& layer = concepts_[k];
+                    for (const auto cprime:layer) {
+                        new_layer.push_back(new AndConcept(c, cprime));
+                    }
                 }
+                // For the immediately previous layer, we only take concepts c' > c, to avoid symmetries
+                for( unsigned j = 1 + i; j < prev_layer.size(); ++j ) {
+                    const Concept* cprime = prev_layer[j];
+                    new_layer.push_back(new AndConcept(c, cprime));
+                }
+
+
             }
         }
     }
@@ -1173,7 +1184,6 @@ class Factory {
 
             advance_step();
             std::cout << "DL::Factory: advance-step: #concepts-in-layer=" << concepts_.back().size() << std::flush;
-
 
             // Prune concepts with complexity larger than our complexity bound
             unsigned pruned = prune_too_complex_concepts_in_last_layer();
