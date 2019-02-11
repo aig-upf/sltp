@@ -53,6 +53,26 @@ def print_sample_info(sample, all_predicates, all_functions, all_objects, all_at
             print("\t".join(",".join(atom) for atom in state), file=f)
 
 
+def transform_generator_output(matrix_filename, info_filename):
+    logging.info("Transforming generator output to numpy format...")
+    
+    logging.info("Reading generated feature matrix from {}".format(matrix_filename))
+    with open(matrix_filename, "r") as f:
+        # One line per state with state ID and pairs of feature index and feature value;
+        # only for non-zero values
+        for line in f:
+            data = line.split(' ')
+            assert len(data) % 2 == 1
+
+            # TODO
+
+    logging.info("Reading feature information from {}".format(info_filename))
+    with open(info_filename, "r") as f:
+        pass
+
+    return dict()  # TODO
+
+
 def extract_all_atoms_from_sample(sample):
     all_atoms = set()
     for state in sample.states.values():
@@ -114,7 +134,8 @@ def extract_features(config, sample):
     generate_debug_scripts(config.experiment_dir, cmd, args)
     retcode = execute([cmd] + args)
 
-    # TODO READ OUTPUT MATRIX
+    matrix = transform_generator_output(os.path.join(config.experiment_dir, "feature-matrix.io"),
+                                        os.path.join(config.experiment_dir, "feature-info.io"),)
 
     # types = [s for s in language.sorts if not s.builtin and s != language.Object]
     # atoms, concepts, roles = generate_concepts(config, factory, nominals, types, all_goal_predicates)
@@ -129,5 +150,5 @@ def extract_features(config, sample):
     # )
 
     exitcode = ExitCode.Success if retcode == 0 else ExitCode.FeatureGenerationUnknownError
-    return exitcode, dict()
+    return exitcode, dict(feature_matrix=matrix, enforced_feature_idxs=[])
 

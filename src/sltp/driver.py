@@ -303,6 +303,9 @@ class CPPFeatureGenerationStep(Step):
         config["max_concept_grammar_iterations"] = config.get("max_concept_grammar_iterations", None)
         config["concept_denotation_filename"] = compute_info_filename(config, "concept-denotations.txt")
 
+        if config["concept_denotation_filename"]:
+            raise RuntimeError("Option enforce_features not allowed when using the C++ feature generator")
+
         return config
 
     def description(self):
@@ -321,7 +324,6 @@ class MaxsatProblemGenerationStep(Step):
     def process_config(self, config):
         config["cnf_filename"] = compute_maxsat_filename(config)
         config["maxsat_variables_file"] = compute_maxsat_variables_filename(config)
-        config["relax_numeric_increase"] = config.get("relax_numeric_increase", False)
         return config
 
     def get_required_data(self):
@@ -638,7 +640,6 @@ class SATStateFactorizationStep(Step):
     def process_config(self, config):
         config["cnf_filename"] = compute_maxsat_filename(config)
         config["maxsat_variables_file"] = compute_maxsat_variables_filename(config)
-        config["relax_numeric_increase"] = config.get("relax_numeric_increase", False)
         return config
 
     def get_required_data(self):
@@ -664,7 +665,6 @@ class DFAGenerationStep(Step):
     def process_config(self, config):
         config["cnf_filename"] = compute_maxsat_filename(config)
         config["maxsat_variables_file"] = compute_maxsat_variables_filename(config)
-        config["relax_numeric_increase"] = config.get("relax_numeric_increase", False)
         return config
 
     def get_required_data(self):
@@ -760,9 +760,18 @@ PIPELINES = dict(
     maxsat=[
         PlannerStep,
         TransitionSamplingStep,
-        CPPFeatureGenerationStep,
-        # ConceptGenerationStep,
+        ConceptGenerationStep,
         FeatureMatrixGenerationStep,
+        MaxsatProblemGenerationStep,
+        MaxsatProblemSolutionStep,
+        ActionModelStep,
+        AbstractionTestingComputation,
+        # QNPGenerationStep,
+    ],
+    maxsatcpp=[
+        PlannerStep,
+        TransitionSamplingStep,
+        CPPFeatureGenerationStep,
         MaxsatProblemGenerationStep,
         MaxsatProblemSolutionStep,
         ActionModelStep,

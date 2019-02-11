@@ -937,6 +937,8 @@ class Feature {
     friend std::ostream& operator<<(std::ostream &os, const Feature &f) {
         return os << f.as_str() << std::flush;
     }
+
+    virtual unsigned type() const = 0;
 };
 
 class BooleanFeature : public Feature {
@@ -965,6 +967,8 @@ class BooleanFeature : public Feature {
     std::string as_str() const override {
         return std::string("Boolean[") + concept_.as_str() + "]";
     }
+
+    unsigned type() const override { return 0; }
 };
 
 class NumericalFeature : public Feature {
@@ -992,6 +996,8 @@ class NumericalFeature : public Feature {
     std::string as_str() const override {
         return std::string("Numerical[") + concept_.as_str() + "]";
     }
+
+    unsigned type() const override { return 1; }
 };
 
 class DistanceFeature : public Feature {
@@ -1322,7 +1328,7 @@ class Factory {
 
                 // track whether feature would be boolean or numeric, or non-informative
                 bool boolean_feature = true;
-                bool denotation_is_constant = true; 
+                bool denotation_is_constant = true;
                 bool all_values_greater_than_zero = true;
                 int previous_value = -1;
 
@@ -1433,22 +1439,40 @@ class Factory {
     void output_feature_matrix(std::ostream &os, const Cache &cache, const Sample &sample) const {
         for( int i = 0; i < int(sample.num_states()); ++i ) {
             const State &state = sample.state(i);
-            std::vector<std::pair<int, int> > non_zero_values;
-            for( int j = 0; j < int(features_.size()); ++j ) {
+
+            // One line per state with state ID and pairs of feature index and feature value;
+            // only for non-zero values
+            os << i;
+            for( unsigned j = 0; j < features_.size(); ++j ) {
                 const Feature &f = *features_[j];
-                int value = f.value(cache, sample, state);
-                if( value > 0 )
-                    non_zero_values.emplace_back(j, value);
-            }
-            if( !non_zero_values.empty() ) {
-                os << i << " " << non_zero_values.size();
-                for( int j = 0; j < int(non_zero_values.size()); ++j ) {
-                    os << " " << non_zero_values[j].first
-                       << " " << non_zero_values[j].second;
+                auto value = (unsigned) f.value(cache, sample, state);
+                if(value > 0) {
+                    os << " " << j << " " << value;
                 }
-                os << std::endl;
             }
+
+            os << std::endl;
         }
+    }
+
+    void output_feature_info(std::ostream &os, const Cache &cache, const Sample &sample) const {
+        // Line #1: feature names
+        for (const auto& f:features_) {
+            os << " " << f->as_str();
+        }
+        os << std::endl;
+
+        // Line #2: feature complexities
+        for (const auto& f:features_) {
+            os << " " << f->complexity();
+        }
+        os << std::endl;
+
+        // Line #3: feature types (0: boolean; 1: numeric)
+        for (const auto& f:features_) {
+            os << " " << f->type();
+        }
+        os << std::endl;
     }
 };
 

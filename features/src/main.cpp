@@ -51,6 +51,24 @@ SLTP::DL::Sample parse_input_sample(const std::string& filename) {
     return SLTP::DL::Sample::read(sample_file);
 }
 
+void output_results(const Options& options, const SLTP::DL::Factory& factory,
+        const SLTP::DL::Sample& sample, const SLTP::DL::Cache& cache) {
+
+    // Print feature matrix
+    std::string output(options.worskspace_ + "/feature-matrix.io");
+    std::ofstream output_file(output);
+    if( output_file.fail() ) throw std::runtime_error("Could not open filename '" + output + "'");
+    factory.output_feature_matrix(output_file, cache, sample);
+
+
+    // Print feature metadata
+    output = options.worskspace_ + "/feature-info.io";
+    std::ofstream infofile(output);
+    if( infofile.fail() ) throw std::runtime_error("Could not open filename '" + output + "'");
+    factory.output_feature_info(infofile, cache, sample);
+
+}
+
 int main(int argc, const char **argv) {
     Options options(argc, argv);
 
@@ -81,10 +99,7 @@ int main(int argc, const char **argv) {
     factory.generate_features(cache, sample);
     factory.report_dl_data(cout);
 
-    std::string output(options.worskspace_ + "/features.io");
-    std::ofstream output_file(output);
-    if( output_file.fail() ) throw std::runtime_error("Could not open filename '" + output + "'");
-    factory.output_feature_matrix(output_file, cache, sample);
+    output_results(options, factory, sample, cache);
 
     return 0;
 }
