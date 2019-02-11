@@ -2,7 +2,6 @@
 #include <fstream>
 #include <iostream>
 #include <sltp/features.hxx>
-#include <sltp/io.hxx>
 
 
 using namespace std;
