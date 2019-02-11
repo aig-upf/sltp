@@ -1437,17 +1437,16 @@ class Factory {
     }
 
     void output_feature_matrix(std::ostream &os, const Cache &cache, const Sample &sample) const {
-        for( int i = 0; i < int(sample.num_states()); ++i ) {
+        auto nfeatures = (unsigned) features_.size();
+        for( unsigned i = 0; i < sample.num_states(); ++i ) {
             const State &state = sample.state(i);
 
-            // One line per state with state ID and pairs of feature index and feature value;
-            // only for non-zero values
-            os << i;
-            for( unsigned j = 0; j < features_.size(); ++j ) {
-                const Feature &f = *features_[j];
-                auto value = (unsigned) f.value(cache, sample, state);
-                if(value > 0) {
-                    os << " " << j << " " << value;
+            // One line per state with the numeric denotation of all features
+            for (unsigned j = 0; j < nfeatures; ++j) {
+                const Feature& feature = *features_[j];
+                os << feature.value(cache, sample, state);
+                if (j < nfeatures-1) {
+                    os << " ";
                 }
             }
 
@@ -1456,21 +1455,35 @@ class Factory {
     }
 
     void output_feature_info(std::ostream &os, const Cache &cache, const Sample &sample) const {
+        auto nfeatures = (unsigned) features_.size();
+
         // Line #1: feature names
-        for (const auto& f:features_) {
-            os << " " << f->as_str();
+        for (unsigned j = 0; j < nfeatures; ++j) {
+            const Feature& feature = *features_[j];
+            os << feature.as_str();
+            if (j < nfeatures-1) {
+                os << "\t";
+            }
         }
         os << std::endl;
 
         // Line #2: feature complexities
-        for (const auto& f:features_) {
-            os << " " << f->complexity();
+        for (unsigned j = 0; j < nfeatures; ++j) {
+            const Feature& feature = *features_[j];
+            os << feature.complexity();
+            if (j < nfeatures-1) {
+                os << "\t";
+            }
         }
         os << std::endl;
 
         // Line #3: feature types (0: boolean; 1: numeric)
-        for (const auto& f:features_) {
-            os << " " << f->type();
+        for (unsigned j = 0; j < nfeatures; ++j) {
+            const Feature& feature = *features_[j];
+            os << feature.type();
+            if (j < nfeatures-1) {
+                os << "\t";
+            }
         }
         os << std::endl;
     }

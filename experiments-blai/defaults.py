@@ -25,7 +25,8 @@ def generate_experiment(domain_dir, domain, **kwargs):
         kwargs["test_instances"] = []
 
     defaults = dict(
-        pipeline="maxsat",
+        # pipeline="maxsat",
+        pipeline="maxsatcpp",
         # pipeline="sat",
         # pipeline="heuristic",
 

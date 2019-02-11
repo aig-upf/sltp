@@ -20,6 +20,8 @@ import itertools
 import os
 import stat
 
+from sltp.matrices import NP_FEAT_VALUE_TYPE, cast_feature_value_to_numpy_value
+
 from .features import parse_all_instances, compute_models
 from .util.command import execute
 from .returncodes import ExitCode
@@ -53,24 +55,49 @@ def print_sample_info(sample, all_predicates, all_functions, all_objects, all_at
             print("\t".join(",".join(atom) for atom in state), file=f)
 
 
-def transform_generator_output(matrix_filename, info_filename):
+def transform_generator_output(config, matrix_filename, info_filename):
     logging.info("Transforming generator output to numpy format...")
-    
-    logging.info("Reading generated feature matrix from {}".format(matrix_filename))
-    with open(matrix_filename, "r") as f:
-        # One line per state with state ID and pairs of feature index and feature value;
-        # only for non-zero values
-        for line in f:
-            data = line.split(' ')
-            assert len(data) % 2 == 1
-
-            # TODO
+    import numpy as np
 
     logging.info("Reading feature information from {}".format(info_filename))
     with open(info_filename, "r") as f:
-        pass
+        # Line  # 1: feature names
+        names = f.readline().rstrip().split("\t")
 
-    return dict()  # TODO
+        # Line #2: feature complexities
+        complexities = [int(x) for x in f.readline().rstrip().split("\t")]
+
+        # Line #3: feature types (0: boolean; 1: numeric)
+        types = [bool(x) for x in f.readline().rstrip().split("\t")]
+
+    num_features = len(names)
+    assert num_features == len(complexities) == len(types)
+    num_numeric = sum(types)
+    num_binary = num_features - num_numeric
+    logging.info("Read {} features: {} numeric + {} binary".format(num_features, num_numeric, num_binary))
+
+    logging.info("Reading denotation matrix from {}".format(matrix_filename))
+    # Convert features to a numpy array with n rows and m columns, where n=num states, m=num features
+
+    with open(matrix_filename, "r") as f:
+        num_states = sum(1 for _ in f)
+
+    matrix = np.empty(shape=(num_states, num_features), dtype=NP_FEAT_VALUE_TYPE)
+
+    with open(matrix_filename, "r") as f:
+        # One line per state with the numeric denotation of all features
+        for i, line in enumerate(f, start=0):
+            data = line.rstrip().split(' ')
+            matrix[i] = [cast_feature_value_to_numpy_value(int(x)) for x in data]
+
+    logging.info("Read denotation matrix with dimensions {}".format(matrix.shape))
+
+    bin_matrix = np.array(matrix, dtype=np.bool)
+    np.save(config.feature_matrix_filename, matrix)
+    np.save(config.bin_feature_matrix_filename, bin_matrix)
+    np.save(config.feature_complexity_filename, np.array(complexities, dtype=NP_FEAT_VALUE_TYPE))
+    np.save(config.feature_names_filename, np.array(names, dtype=np.unicode_))
+    # np.savez(config.feature_matrix_filename, matrix)
 
 
 def extract_all_atoms_from_sample(sample):
@@ -129,26 +156,20 @@ def extract_features(config, sample):
     print_sample_info(sample, all_predicates, all_functions,
                       all_objects, all_atoms, os.path.join(config.experiment_dir, "sample.io"))
 
+    # Invoke C++ feature generation module
     cmd = os.path.realpath(os.path.join(config.featuregen_location, "featuregen"))
     args = [str(config.max_concept_size), config.experiment_dir]
     generate_debug_scripts(config.experiment_dir, cmd, args)
     retcode = execute([cmd] + args)
 
-    matrix = transform_generator_output(os.path.join(config.experiment_dir, "feature-matrix.io"),
-                                        os.path.join(config.experiment_dir, "feature-info.io"),)
+    if retcode != 0:
+        return ExitCode.FeatureGenerationUnknownError, dict()
 
-    # types = [s for s in language.sorts if not s.builtin and s != language.Object]
-    # atoms, concepts, roles = generate_concepts(config, factory, nominals, types, all_goal_predicates)
-    #
-    # logging.info('Final number of features: {}'.format(len(features)))
-    # # log_concept_denotations(sample.states, concepts, factory.processor.models, config.concept_denotation_filename)
-    #
-    # return ExitCode.Success, dict(
-    #     features=features,
-    #     model_cache=factory.processor.model_cache,
-    #     enforced_feature_idxs=enforced_feature_idxs,
-    # )
+    # Read off the output of the module and transform it into the numpy matrices to be consumed
+    # by the next pipeline step
+    transform_generator_output(config,
+                               os.path.join(config.experiment_dir, "feature-matrix.io"),
+                               os.path.join(config.experiment_dir, "feature-info.io"),)
 
-    exitcode = ExitCode.Success if retcode == 0 else ExitCode.FeatureGenerationUnknownError
-    return exitcode, dict(feature_matrix=matrix, enforced_feature_idxs=[])
+    return ExitCode.Success, dict(enforced_feature_idxs=[])
 

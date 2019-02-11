@@ -252,17 +252,21 @@ class ConceptGenerationStep(Step):
         return features.run
 
 
+def setup_feature_generation_filenames(config):
+    config["feature_matrix_filename"] = compute_info_filename(config, "feature-matrix.dat")
+    config["bin_feature_matrix_filename"] = compute_info_filename(config, "feature-matrix-bin.dat")
+    config["feature_complexity_filename"] = compute_info_filename(config, "feature-complexity.dat")
+    config["feature_names_filename"] = compute_info_filename(config, "feature-names.dat")
+
+
 class FeatureMatrixGenerationStep(Step):
     """ Generate and output the feature and transition matrices for the problem  """
     def get_required_attributes(self):
         return ["experiment_dir"]
 
     def process_config(self, config):
+        setup_feature_generation_filenames(config)
         config["feature_filename"] = compute_info_filename(config, "features.txt")
-        config["feature_matrix_filename"] = compute_info_filename(config, "feature-matrix.dat")
-        config["bin_feature_matrix_filename"] = compute_info_filename(config, "feature-matrix-bin.dat")
-        config["feature_complexity_filename"] = compute_info_filename(config, "feature-complexity.dat")
-        config["feature_names_filename"] = compute_info_filename(config, "feature-names.dat")
         config["transitions_filename"] = compute_info_filename(config, "transition-matrix.dat")
         config["goal_states_filename"] = compute_info_filename(config, "goal-states.dat")
         config["unsolvable_states_filename"] = compute_info_filename(config, "unsolvable-states.dat")
@@ -294,6 +298,8 @@ class CPPFeatureGenerationStep(Step):
     def process_config(self, config):
         check_int_parameter(config, "max_concept_size")
 
+        setup_feature_generation_filenames(config)
+
         config["concept_dir"] = os.path.join(config["experiment_dir"], 'terms')
         config["concept_generator"] = config.get("concept_generator", None)
         config["feature_generator"] = config.get("feature_generator", None)
@@ -303,7 +309,7 @@ class CPPFeatureGenerationStep(Step):
         config["max_concept_grammar_iterations"] = config.get("max_concept_grammar_iterations", None)
         config["concept_denotation_filename"] = compute_info_filename(config, "concept-denotations.txt")
 
-        if config["concept_denotation_filename"]:
+        if config["enforce_features"]:
             raise RuntimeError("Option enforce_features not allowed when using the C++ feature generator")
 
         return config
