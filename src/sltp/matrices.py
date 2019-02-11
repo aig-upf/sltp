@@ -154,7 +154,8 @@ def generate_features(config, data, rng):
     sample = data.sample
     state_ids = data.sample.get_sorted_state_ids()
     # First keep only those features which are able to distinguish at least some pair of states
-    features, models = compute_feature_extensions(state_ids, data.features, data.model_cache, config.prune_positive_features)
+    features, models = compute_feature_extensions(state_ids, data.features, data.model_cache,
+                                                  config.prune_positive_features, config.prune_infty_features)
     print_feature_info(config, features)
     print_feature_matrix(config, state_ids, features, models)
     print_transition_matrix(state_ids, sample.transitions, config.transitions_filename)
@@ -183,7 +184,8 @@ def log_features(features, feature_filename):
             # assert deserialize_from_string(serialized) == feat
 
 
-def compute_feature_extensions(states, features, model_cache: DLModelCache, prune_positive_features):
+def compute_feature_extensions(states, features, model_cache: DLModelCache, prune_positive_features,
+                               prune_infty_features):
     """ Cache all feature denotations and prune those which have constant denotation at the same time """
     models = {sid: model_cache.get_feature_model(sid) for sid in states}
     ns, nf = len(states), len(features)
@@ -222,7 +224,7 @@ def compute_feature_extensions(states, features, model_cache: DLModelCache, prun
                           .format(f,))
             continue
 
-        if some_infty:
+        if prune_infty_features and some_infty:
             logging.debug("Feature \"{}\" has infinite denotation in at least one state".format(f))
             continue
 
