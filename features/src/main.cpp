@@ -74,17 +74,12 @@ int main(int argc, const char **argv) {
          << endl;
     SLTP::DL::Factory factory("test", options.complexity_bound_);
 
-    //std::cout << "hola0" << std::endl;
     SLTP::DL::Cache cache;
-    //std::cout << "hola1" << std::endl;
     factory.generate_basis(sample);
-    //std::cout << "hola2" << std::endl;
     factory.generate_roles(cache, &sample);
-    //std::cout << "hola3" << std::endl;
     factory.generate_concepts(cache, &sample, true);
-    //std::cout << "hola4" << std::endl;
     factory.generate_features(cache, sample);
-    //std::cout << "hola5" << std::endl;
+    factory.report_dl_data(cout);
 
     std::string output(options.worskspace_ + "/features.io");
     std::ofstream output_file(output);

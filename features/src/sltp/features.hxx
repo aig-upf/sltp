@@ -57,6 +57,7 @@ class Cache {
         // cache for sample denotations
         bool operator()(const sample_denotation_t *d1, const sample_denotation_t *d2) const {
             assert((d1 != nullptr) && (d2 != nullptr));
+            assert(d1->size() == d2->size()); // number of states is fixed in sample
             return *d1 == *d2;
         }
         size_t operator()(const sample_denotation_t *obj) const {
@@ -70,6 +71,9 @@ class Cache {
         // cache for state denotations
         bool operator()(const state_denotation_t *sd1, const state_denotation_t *sd2) const {
             assert((sd1 != nullptr) && (sd2 != nullptr));
+            // dimension of sd1 and sd2 may not be equal since they may
+            // be for states with different number of objects, or for
+            // denotation of concept/roles
             return *sd1 == *sd2;
         }
         size_t operator()(const state_denotation_t *obj) const {
@@ -79,10 +83,10 @@ class Cache {
         }
     };
 
-    typedef typename std::unordered_map<const sample_denotation_t*, std::string, cache_support_t, cache_support_t> cache1_t;
-    typedef typename std::unordered_map<std::string, const sample_denotation_t*> cache2_t;
-    typedef typename std::unordered_set<const state_denotation_t*, cache_support_t, cache_support_t> cache3_t;
-    typedef typename std::unordered_map<std::string, const GroundedPredicate*> cache4_t;
+    using cache1_t = std::unordered_map<const sample_denotation_t*, std::string, cache_support_t, cache_support_t>;
+    using cache2_t = std::unordered_map<std::string, const sample_denotation_t*>;
+    using cache3_t = std::unordered_set<const state_denotation_t*, cache_support_t, cache_support_t>;
+    using cache4_t = std::unordered_map<std::string, const GroundedPredicate*>;
 
   protected:
     cache1_t cache1_;
@@ -103,7 +107,7 @@ class Cache {
     //
     // sample denotation -> concept name
     const sample_denotation_t* find_sample_denotation(const sample_denotation_t &d) const {
-        auto it = cache1_.find(&d);
+        cache1_t::const_iterator it = cache1_.find(&d);
         return it == cache1_.end() ? nullptr : it->first;
     }
     const sample_denotation_t* find_or_insert_sample_denotation(const sample_denotation_t &d, const std::string &name) {
@@ -117,12 +121,22 @@ class Cache {
             return it->first;
         }
     }
+    const sample_denotation_t* find_or_insert_sample_denotation_by_name(const std::string &name, const sample_denotation_t &d) {
+        cache2_t::const_iterator it = cache2_.find(name);
+        if( it == cache2_.end() ) {
+            const sample_denotation_t *nd = new sample_denotation_t(d);
+            cache2_.emplace(name, nd);
+            return nd;
+        } else {
+            return it->second;
+        }
+    }
 
     // cache2: (full) sample denotations for concepts
     //
     // concept name -> sample denotation
     const sample_denotation_t* find_sample_denotation(const std::string name) const {
-        auto it = cache2_.find(name);
+        cache2_t::const_iterator it = cache2_.find(name);
         return it == cache2_.end() ? nullptr : it->second;
     }
 
@@ -136,7 +150,7 @@ class Cache {
     //
     // state denotation -> pointer
     const state_denotation_t* find_state_denotation(const state_denotation_t &sd) const {
-        auto it = cache3_.find(&sd);
+        cache3_t::const_iterator it = cache3_.find(&sd);
         return it == cache3_.end() ? nullptr : *it;
     }
 
@@ -155,7 +169,7 @@ class Cache {
     //
     // name -> grounded predicate
     const GroundedPredicate* find_grounded_predicate(const std::string &name) const {
-        auto it = cache4_.find(name);
+        cache4_t::const_iterator it = cache4_.find(name);
         return it == cache4_.end() ? nullptr : it->second;
     }
     const GroundedPredicate* find_or_insert_grounded_predicate(const GroundedPredicate &gp);
@@ -174,9 +188,6 @@ class Object {
     int id() const {
         return id_;
     }
-    const std::string& name() const {
-        return name_;
-    }
     const std::string& as_str() const {
         return name_;
     }
@@ -189,7 +200,12 @@ struct Predicate {
     const predicate_id id_;
     const std::string name_;
     const unsigned arity_;
-    Predicate(unsigned id, std::string name, unsigned arity) : id_(id), name_(std::move(name)), arity_(arity) { }
+    Predicate(unsigned id, const std::string &name, unsigned arity)
+      : id_(id), name_(name), arity_(arity) {
+    }
+    predicate_id id() const {
+        return id_;
+    }
     unsigned arity() const {
         return arity_;
     }
@@ -203,16 +219,13 @@ struct Predicate {
         } else {
             assert(objects->size() == arity_);
             for( int i = 0; i < arity_; ++i ) {
-//                str += (*objects)[i]->as_str();
+                //str += (*objects)[i]->as_str();
                 str += std::to_string((*objects)[i]);
                 if( 1 + i < arity_ ) str += ",";
             }
         }
         return str + ")";
     }
-
-    predicate_id id() const { return id_; }
-
     friend std::ostream& operator<<(std::ostream &os, const Predicate &pred) {
         return os << pred.as_str(nullptr) << std::flush;
     }
@@ -231,28 +244,37 @@ class GroundedPredicate {
       : predicate_(predicate), objects_(std::move(objects)) {
     }
 
-    predicate_id pred_id() const { return predicate_; }
-    const std::vector<object_id>& objects() const { return objects_; }
+    predicate_id pred_id() const {
+        return predicate_;
+    }
+    const std::vector<object_id>& objects() const {
+        return objects_;
+    }
 
-    //! Return the i-th object of the current atom
-    object_id object(unsigned order) const { return objects_.at(order); }
+    // Return the i-th object of the current atom
+    object_id object(int i) const {
+        return objects_.at(i);
+    }
 
     bool is_instance(const Predicate& predicate) const {
         return predicate_ == predicate.id();
     }
 
     std::vector<unsigned> data() const {
-        std::vector<unsigned> res{predicate_};
-        for (const auto x:objects_) res.push_back(x);
+        std::vector<unsigned> res(1, predicate_);
+        for( int i = 0; i < int(objects_.size()); ++i )
+            res.push_back(objects_[i]);
         return res;
     }
 
-//    std::string as_str() const {
-//        return predicate_.as_str(&objects_);
-//    }
-//    friend std::ostream& operator<<(std::ostream &os, const GroundedPredicate &pred) {
-//        return os << pred.as_str() << std::flush;
-//    }
+#if 0 // we no longer maintain a Predicate ref in the class
+    std::string as_str() const {
+        return predicate_.as_str(&objects_);
+    }
+    friend std::ostream& operator<<(std::ostream &os, const GroundedPredicate &pred) {
+        return os << pred.as_str() << std::flush;
+    }
+#endif
 };
 
 // A state is a collections of atoms (i.e. GroundedPredicates)
@@ -385,8 +407,12 @@ class Base {
     virtual const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const = 0;
     virtual std::string as_str() const = 0;
 
+    std::string as_str_with_complexity() const {
+        return std::to_string(complexity_) + "." + as_str();
+    }
+
     friend std::ostream& operator<<(std::ostream &os, const Base &base) {
-        return os << base.as_str() << std::flush;
+        return os << base.as_str_with_complexity() << std::flush;
     }
 };
 
@@ -394,12 +420,14 @@ class Concept : public Base {
   public:
     explicit Concept(unsigned complexity) : Base(complexity) { }
     virtual ~Concept() = default;
+    virtual const Concept* clone() const = 0;
 };
 
 class Role : public Base {
   public:
     explicit Role(unsigned complexity) : Base(complexity) { }
     virtual ~Role() = default;
+    virtual const Role* clone() const = 0;
 };
 
 class PrimitiveConcept : public Concept {
@@ -408,8 +436,10 @@ class PrimitiveConcept : public Concept {
 
   public:
     explicit PrimitiveConcept(const Predicate *predicate) : Concept(1), predicate_(predicate) { }
-
     ~PrimitiveConcept() override = default;
+    const Concept* clone() const override {
+        return new PrimitiveConcept(predicate_);
+    }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
         const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
@@ -445,8 +475,10 @@ class PrimitiveConcept : public Concept {
 class UniversalConcept : public Concept {
   public:
     UniversalConcept() : Concept(1) { }
-
     ~UniversalConcept() override = default;
+    const Concept* clone() const override {
+        return new UniversalConcept;
+    }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
         const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
@@ -482,8 +514,10 @@ class AndConcept : public Concept {
         concept1_(concept1),
         concept2_(concept2) {
     }
-
     ~AndConcept() override = default;
+    const Concept* clone() const override {
+        return new AndConcept(concept1_, concept2_);
+    }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
         const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
@@ -529,8 +563,10 @@ class NotConcept : public Concept {
       : Concept(1 + concept->complexity()),
         concept_(concept) {
     }
-
     ~NotConcept() override = default;
+    const Concept* clone() const override {
+        return new NotConcept(concept_);
+    }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
         const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
@@ -574,8 +610,10 @@ class ExistsConcept : public Concept {
         concept_(concept),
         role_(role) {
     }
-
     ~ExistsConcept() override = default;
+    const Concept* clone() const override {
+        return new ExistsConcept(concept_, role_);
+    }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
         const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
@@ -629,8 +667,10 @@ class ForallConcept : public Concept {
         concept_(concept),
         role_(role) {
     }
-
     ~ForallConcept() override = default;
+    const Concept* clone() const override {
+        return new ForallConcept(concept_, role_);
+    }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
         const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
@@ -679,8 +719,10 @@ class PrimitiveRole : public Role {
 
   public:
     explicit PrimitiveRole(const Predicate *predicate) : Role(1), predicate_(predicate) { }
-
     ~PrimitiveRole() override { }
+    const Role* clone() const override {
+        return new PrimitiveRole(predicate_);
+    }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
         const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
@@ -720,8 +762,10 @@ class PlusRole : public Role {
 
   public:
     explicit PlusRole(const Role *role) : Role(1 + role->complexity()), role_(role) { }
-
     ~PlusRole() override { }
+    const Role* clone() const override {
+        return new PlusRole(role_);
+    }
 
     // apply Johnson's algorithm for transitive closure
     void transitive_closure(std::size_t num_objects, state_denotation_t &sd) const {
@@ -792,9 +836,11 @@ class StarRole : public Role {
         role_(role),
         plus_role_(new PlusRole(role)) {
     }
-
     ~StarRole() override {
         delete plus_role_;
+    }
+    const Role* clone() const override {
+        return new StarRole(role_);
     }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
@@ -838,6 +884,9 @@ class InverseRole : public Role {
   public:
     explicit InverseRole(const Role *role) : Role(1 + role->complexity()), role_(role) { }
     ~InverseRole() override = default;
+    const Role* clone() const override {
+        return new InverseRole(role_);
+    }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
         const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
@@ -880,9 +929,10 @@ class InverseRole : public Role {
 class Feature {
   public:
     Feature() = default;
+    virtual ~Feature() = default;
 
     virtual int complexity() const = 0;
-    virtual std::size_t value(const Cache &cache, const Sample &sample, const State &state) const = 0;
+    virtual int value(const Cache &cache, const Sample &sample, const State &state) const = 0;
     virtual std::string as_str() const = 0;
     friend std::ostream& operator<<(std::ostream &os, const Feature &f) {
         return os << f.as_str() << std::flush;
@@ -895,10 +945,11 @@ class BooleanFeature : public Feature {
 
   public:
     explicit BooleanFeature(const Concept &concept) : Feature(), concept_(concept) { }
+    ~BooleanFeature() override = default;
     int complexity() const override {
         return concept_.complexity();
     }
-    std::size_t value(const Cache &cache, const Sample &sample, const State &state) const override {
+    int value(const Cache &cache, const Sample &sample, const State &state) const override {
         // we look into cache for sample denotation using the concept name,
         // then index sample denotation with state id to find state denotation,
         // for finally computing cardinality (this assumes that state id is
@@ -922,10 +973,11 @@ class NumericalFeature : public Feature {
 
   public:
     explicit NumericalFeature(const Concept &concept) : Feature(), concept_(concept) { }
+    ~NumericalFeature() override = default;
     int complexity() const override {
         return concept_.complexity();
     }
-    std::size_t value(const Cache &cache, const Sample &sample, const State &state) const override {
+    int value(const Cache &cache, const Sample &sample, const State &state) const override {
         // we look into cache for sample denotation using the concept name,
         // then index sample denotation with state id to find state denotation,
         // for finally computing cardinality (this assumes that state id is
@@ -942,6 +994,21 @@ class NumericalFeature : public Feature {
     }
 };
 
+class DistanceFeature : public Feature {
+  public:
+    explicit DistanceFeature() { }
+    ~DistanceFeature() override = default;
+    int complexity() const override {
+        throw std::runtime_error("TODO: UNIMPLEMENTED: DistanceFeature::complexity()");
+    }
+    int value(const Cache &cache, const Sample &sample, const State &state) const override {
+        throw std::runtime_error("TODO: UNIMPLEMENTED: DistanceFeature::value()");
+    }
+    std::string as_str() const override {
+        return std::string("Distance[") + "<filler>" + "]";
+    }
+};
+
 class Factory {
   protected:
     const std::string name_;
@@ -952,17 +1019,16 @@ class Factory {
 
     mutable std::vector<const Role*> roles_;
 
-    //! A layered set of concepts, concepts_[k] contains all concepts generated in the k-th application of
-    //! the concept grammar
-    mutable std::vector<std::vector<const Concept*>> concepts_;
-
+    // A layered set of concepts, concepts_[k] contains all concepts generated in the k-th application of
+    // the concept grammar
+    mutable std::vector<std::vector<const Concept*> > concepts_;
     mutable std::vector<const Feature*> features_;
 
   public:
     Factory(std::string name, int complexity_bound)
       : name_(std::move(name)),
-        complexity_bound_(complexity_bound)
-    {}
+        complexity_bound_(complexity_bound) {
+    }
     virtual ~Factory() = default;
 
     const std::string& name() const {
@@ -975,132 +1041,140 @@ class Factory {
     void insert_basis(const Concept *concept) {
         basis_concepts_.push_back(concept);
     }
+    void set_complexity_bound(int complexity_bound) {
+        complexity_bound_ = complexity_bound;
+    }
 
     void reset(bool remove) {
-        while(!roles_.empty()) {
-            if( remove && (roles_.size() >= basis_roles_.size()) )
-                delete roles_.back();
+        // roles can be safely deleted since the
+        // ones coming from the basis are clones
+        while( !roles_.empty() ) {
+            if( remove ) delete roles_.back();
             roles_.pop_back();
         }
 
-        while( concepts_.size() > 1 ) {
+        // concepts in all layers can be safely deleted since
+        // the ones coming from the basis are clones
+        while( !concepts_.empty() ) {
             if( remove ) {
-                for (auto &k : concepts_.back())
-                    delete k;
+                while( !concepts_.back().empty() ) {
+                    delete concepts_.back().back();
+                    concepts_.back().pop_back();
+                }
             }
             concepts_.pop_back();
         }
         concepts_.pop_back();
     }
 
-    //! Apply one iteration of the concept generation grammar
-    //! Newly-generated concepts (some of which might be redundant) will be left in the last layer
-    //! of concepts_
-    void advance_step() const {
-        if(concepts_.empty()) {
-            concepts_.emplace_back(basis_concepts_);
-        } else {
-            concepts_.emplace_back(); // Add an empty layer
-            assert (concepts_.size() >= 2);
-            const std::vector<const Concept*>& prev_layer = concepts_[concepts_.size()-2];
-            std::vector<const Concept*>& new_layer = concepts_[concepts_.size()-1];
-
-            assert(!prev_layer.empty()); // Otherwise we'd already reached a fixpoint
-
-            // For each concept C in the last layer, we generate:
-            // Not(C),
-            // Exist(R,C) and Forall(R,C), for each role R
-            // And(C, C'), for each C'>C in the last layer
-            // TODO GFM Looks like we're missing the pairings between C and concepts in the previous layers??
-            // Code in Python is:
-            // for pairings in (itertools.product(new_c, old_c), itertools.combinations(new_c, 2)):
-            // process(self.syntax.create_and_concept(c1, c2) for c1, c2 in pairings)
-            for( unsigned i = 0; i < prev_layer.size(); ++i ) {
-                const Concept *c = prev_layer[i];
-                new_layer.push_back(new NotConcept(c));
-
-                for (auto r : roles_) {
-                    new_layer.push_back(new ExistsConcept(c, r));
-                    new_layer.push_back(new ForallConcept(c, r));
-                }
-
-                // Create AND concept between current "c" and any concept in any previous layer
-
-                for (unsigned k = 0; k < concepts_.size()-2; ++k) { // we skip the previous and the current
-                    const auto& layer = concepts_[k];
-                    for (const auto cprime:layer) {
-                        new_layer.push_back(new AndConcept(c, cprime));
-                    }
-                }
-                // For the immediately previous layer, we only take concepts c' > c, to avoid symmetries
-                for( unsigned j = 1 + i; j < prev_layer.size(); ++j ) {
-                    const Concept* cprime = prev_layer[j];
-                    new_layer.push_back(new AndConcept(c, cprime));
-                }
-
-
-            }
-        }
+    void insert_new_denotation_by_name(Cache &cache, const std::string &name, const sample_denotation_t *d) const {
+        cache.find_or_insert_sample_denotation_by_name(name, *d);
+    }
+    int insert_new_concept(Cache &cache, const Concept *concept, const sample_denotation_t *d) const {
+        assert(!concepts_.empty());
+        concepts_.back().push_back(concept);
+        cache.find_or_insert_sample_denotation(*d, concept->as_str());
+        return concepts_.back().size();
+    }
+    int insert_new_role(Cache &cache, const Role *role, const sample_denotation_t *d) const {
+        roles_.push_back(role);
+        cache.find_or_insert_sample_denotation(*d, role->as_str());
+        return roles_.size();
     }
 
     bool is_superfluous(Cache &cache, const sample_denotation_t *d) const {
         return cache.find_sample_denotation(*d) != nullptr;
     }
-    void insert_new_denotation(Cache &cache, const std::string &name, const sample_denotation_t *d) const {
-        cache.find_or_insert_sample_denotation(*d, name);
+    std::pair<bool, const sample_denotation_t*> is_superfluous_or_exceeds_complexity_bound(const Base &base, Cache &cache, const Sample *sample) const {
+        if( base.complexity() > complexity_bound_ ) {
+            return std::make_pair(true, nullptr);
+        } else if( sample != nullptr ) {
+            const sample_denotation_t *d = base.denotation(cache, *sample, false);
+            return std::make_pair(is_superfluous(cache, d), d);
+        } else {
+            return std::make_pair(false, nullptr);
+        }
     }
 
-    unsigned prune_superfluous_concepts_in_last_layer(Cache &cache, const Sample &sample) const {
-        if( concepts_.empty() ) return 0;
-
-        // for each concept, check whether there is another concept with
-        // same denotation in all states. For this, create a vector of
-        // denotations, one for each state, and check whether there is
-        // another concept with same vector. We store vectors in a hash
-        // table to make the check more efficient
-
-        unsigned pruned = 0;
-        for( unsigned i = 0; i < concepts_.back().size(); ++i ) {
-            const Concept &c = *concepts_.back()[i];
-            //std::cout << "TEST-PRUNE: c=" << c.as_str() << std::endl;
-            const sample_denotation_t *d = c.denotation(cache, sample, false);
-            //std::cout << "hola0" << std::endl;
-            if( !is_superfluous(cache, d) ) {
-                //std::cout << "hola1: " << d->size() << std::endl;
-                insert_new_denotation(cache, c.as_str(), d);
-                //std::cout << "hola2" << std::endl;
-            } else {
-                //std::cout << "hola3" << std::endl;
-                // make sure we do not eliminate a basis
-                if( concepts_.size() > 1 ) delete concepts_.back()[i];
-                concepts_.back()[i] = concepts_.back().back();
-                concepts_.back().pop_back();
-                --i;
-                ++pruned;
-                //std::cout << "hola7" << std::endl;
+    // apply one iteration of the concept generation grammar
+    // new concepts are left on a new last layer in concepts_
+    // new concepts are non-redundant if sample != nullptr
+    int advance_step(Cache &cache, const Sample *sample) const {
+        int num_pruned_concepts = 0;
+        if( concepts_.empty() ) {
+            concepts_.emplace_back();
+            for( int i = 0; i < int(basis_concepts_.size()); ++i ) {
+                const Concept &concept = *basis_concepts_[i];
+                std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(concept, cache, sample);
+                if( !p.first ) insert_new_concept(cache, concept.clone(), p.second);
+                //else std::cout << "PRUNE: " + concept.as_str() << std::endl;
+                delete p.second;
             }
-            delete d;
-        }
-        return pruned;
-    }
+        } else {
+            // extract concepts in existing concept layers
+            std::vector<const Concept*> last_concept_layer = concepts_.back();
+            std::vector<const Concept*> concepts_in_all_layers_except_last;
+            for( int layer = 0; layer < int(concepts_.size()); ++layer )
+                concepts_in_all_layers_except_last.insert(concepts_in_all_layers_except_last.end(), concepts_[layer].begin(), concepts_[layer].end());
 
+            // create new concept layer
+            concepts_.emplace_back();
 
-    unsigned prune_too_complex_concepts_in_last_layer() const {
-        if( concepts_.empty() ) return 0;
+            // generate negation, exist, and forall for concepts in last layer
+            for( int i = 0; i < int(last_concept_layer.size()); ++i ) {
+                const Concept *concept = last_concept_layer[i];
+                NotConcept not_concept(concept);
+                std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(not_concept, cache, sample);
+                if( !p.first ) insert_new_concept(cache, not_concept.clone(), p.second);
+                //else std::cout << "PRUNE: " + not_concept.as_str() << std::endl;
+                delete p.second;
+                num_pruned_concepts += p.first;
 
-        std::vector<const Concept*> accepted;
+                for( int j = 0; j < int(roles_.size()); ++j ) {
+                    const Role *role = roles_[j];
+                    ExistsConcept exists_concept(concept, role);
+                    std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(exists_concept, cache, sample);
+                    if( !p.first ) insert_new_concept(cache, exists_concept.clone(), p.second);
+                    //else std::cout << "PRUNE: " + exists_concept.as_str() << std::endl;
+                    delete p.second;
+                    num_pruned_concepts += p.first;
 
-        // Prune (and delete) those concepts with complexity > than the given bound
-        for (auto& c: concepts_.back()) {
-            if (c->complexity() <= complexity_bound_) {
-                accepted.push_back(c);
-            } else {
-                delete c;
+                    ForallConcept forall_concept(concept, role);
+                    std::pair<bool, const sample_denotation_t*> q = is_superfluous_or_exceeds_complexity_bound(forall_concept, cache, sample);
+                    if( !q.first ) insert_new_concept(cache, forall_concept.clone(), q.second);
+                    //else std::cout << "PRUNE: " + forall_concept.as_str() << std::endl;
+                    delete q.second;
+                    num_pruned_concepts += q.first;
+                }
+            }
+
+            // generate conjunction of concepts in last layer with all other
+            // concepts, avoiding redudant pairs
+            for( int i = 0; i < int(last_concept_layer.size()); ++i ) {
+                const Concept *concept1 = last_concept_layer[i];
+
+                for( int j = 0; j < int(concepts_in_all_layers_except_last.size()); ++j ) {
+                    const Concept *concept2 = concepts_in_all_layers_except_last[j];
+                    AndConcept and_concept(concept1, concept2);
+                    std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(and_concept, cache, sample);
+                    if( !p.first ) insert_new_concept(cache, and_concept.clone(), p.second);
+                    //else std::cout << "PRUNE: " + and_concept.as_str() << std::endl;
+                    delete p.second;
+                    num_pruned_concepts += p.first;
+                }
+
+                for( int j = 1 + i; j < int(last_concept_layer.size()); ++j ) {
+                    const Concept *concept2 = last_concept_layer[j];
+                    AndConcept and_concept(concept1, concept2);
+                    std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(and_concept, cache, sample);
+                    if( !p.first ) insert_new_concept(cache, and_concept.clone(), p.second);
+                    //else std::cout << "PRUNE: " + and_concept.as_str() << std::endl;
+                    delete p.second;
+                    num_pruned_concepts += p.first;
+                }
             }
         }
-        unsigned pruned = concepts_.back().size() - accepted.size();
-        concepts_.back() = accepted; // Overwrite the last layer
-        return pruned;
+        return num_pruned_concepts;
     }
 
     void generate_basis(const Sample &sample) {
@@ -1118,160 +1192,158 @@ class Factory {
                   << std::endl;
     }
 
-    unsigned generate_roles(Cache &cache, const Sample *sample = nullptr) const {
+    int generate_roles(Cache &cache, const Sample *sample) const {
         if( roles_.empty() ) {
-            roles_.insert(roles_.end(), basis_roles_.begin(), basis_roles_.end());
-            for (auto role : basis_roles_) {
-                roles_.push_back(new PlusRole(role));
-                roles_.push_back(new StarRole(role));
-                roles_.push_back(new InverseRole(role));
-                const Role *irole = roles_.back();
-                roles_.push_back(new PlusRole(irole));
-                roles_.push_back(new StarRole(irole));
-            }
-        }
-
-//        report_dl_data(std::cout);
-
-        // create denotations for roles.
-        std::vector<const Role*> nonredundant;
-
-        if( sample != nullptr ) {
-            for( unsigned i = 0; i < roles_.size(); ++i ) {
-                const Role* role = roles_[i];
-                const sample_denotation_t *denotation = role->denotation(cache, *sample, false);
-                if( (denotation != nullptr) && !is_superfluous(cache, denotation) ) { // CHECK: BLAI HACK
-                    insert_new_denotation(cache, role->as_str(), denotation);
-                    nonredundant.push_back(role);
+            for( int i = 0; i < int(basis_roles_.size()); ++i ) {
+                const Role &role = *basis_roles_[i];
+                std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(role, cache, sample);
+                if( !p.first ) {
+                    insert_new_role(cache, role.clone(), p.second);
                 } else {
-                    // make sure we do not eliminate a basis
-                    if( i >= basis_roles_.size() ) {
-//                        std::cout << "Removing role: " << roles_[i]->as_str() << std::endl;
-                        // TODO We cannot delete this role here! Some of the roles in roles_, which were generated
-                        // from the base roles only, might contain pointers to non-basis roles which are deemed redundant.
-                        // e.g. Plus[Inverse[carrying]] contains a pointer to Inverse[carrying], which might be found redundant.
-                        //  delete roles_[i];
-                    }
+                    // we cannot just obviate this role since another
+                    // role denotation may depend on this denotation
+                    std::cout << "PRUNE: " + role.as_str() << std::endl;
+                    insert_new_denotation_by_name(cache, role.as_str(), p.second);
                 }
-                delete denotation;
+                delete p.second;
+            }
+
+            for( int i = 0; i < int(basis_roles_.size()); ++i ) {
+                const Role *role = basis_roles_[i];
+                PlusRole plus_role(role);
+                std::pair<bool, const sample_denotation_t*> p1 = is_superfluous_or_exceeds_complexity_bound(plus_role, cache, sample);
+                if( !p1.first ) {
+                    insert_new_role(cache, plus_role.clone(), p1.second);
+                } else {
+                    // we cannot just obviate this role since another
+                    // role denotation may depend on this denotation
+                    std::cout << "PRUNE: " + plus_role.as_str() << std::endl;
+                    insert_new_denotation_by_name(cache, plus_role.as_str(), p1.second);
+                }
+                delete p1.second;
+
+                StarRole star_role(role);
+                std::pair<bool, const sample_denotation_t*> p2 = is_superfluous_or_exceeds_complexity_bound(star_role, cache, sample);
+                if( !p2.first ) {
+                    insert_new_role(cache, star_role.clone(), p2.second);
+                } else {
+                    // we cannot just obviate this role since another
+                    // role denotation may depend on this denotation
+                    std::cout << "PRUNE: " + star_role.as_str() << std::endl;
+                    insert_new_denotation_by_name(cache, star_role.as_str(), p2.second);
+                }
+                delete p2.second;
+
+                InverseRole inverse_role(role);
+                std::pair<bool, const sample_denotation_t*> p3 = is_superfluous_or_exceeds_complexity_bound(inverse_role, cache, sample);
+                if( !p3.first ) {
+                    const Role *clone = inverse_role.clone();
+                    insert_new_role(cache, clone, p3.second);
+
+                    PlusRole plus_inverse_role(clone);
+                    std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(plus_inverse_role, cache, sample);
+                    if( !p.first ) {
+                        insert_new_role(cache, plus_inverse_role.clone(), p.second);
+                    } else {
+                        // we cannot just obviate this role since another
+                        // role denotation may depend on this denotation
+                        std::cout << "PRUNE: " + plus_inverse_role.as_str() << std::endl;
+                        insert_new_denotation_by_name(cache, plus_inverse_role.as_str(), p.second);
+                    }
+                    delete p.second;
+
+                    StarRole star_inverse_role(clone);
+                    std::pair<bool, const sample_denotation_t*> q = is_superfluous_or_exceeds_complexity_bound(star_inverse_role, cache, sample);
+                    if( !q.first ) {
+                        insert_new_role(cache, star_inverse_role.clone(), q.second);
+                    } else {
+                        // we cannot just obviate this role since another
+                        // role denotation may depend on this denotation
+                        std::cout << "PRUNE: " + star_inverse_role.as_str() << std::endl;
+                        insert_new_denotation_by_name(cache, star_inverse_role.as_str(), q.second);
+                    }
+                    delete q.second;
+                } else {
+                    // we cannot just obviate this role since another
+                    // role denotation may depend on this denotation
+                    std::cout << "PRUNE: " + inverse_role.as_str() << std::endl;
+                    insert_new_denotation_by_name(cache, inverse_role.as_str(), p3.second);
+                }
+                delete p3.second;
             }
         }
-
-        std::cout << "ROLES: #roles=" << roles_.size() << ", #pruned-roles=" << roles_.size()-nonredundant.size() << std::endl;
-        roles_ = nonredundant;
-
-//        report_dl_data(std::cout);
-
-        return (unsigned) roles_.size();
+        std::cout << "ROLES: #roles=" << roles_.size() << std::endl;
+        return roles_.size();
     }
 
-    unsigned generate_concepts(Cache &cache, const Sample *sample = nullptr, bool prune = false) const {
-        unsigned num_concepts = 0, step = 0;
-
-        std::cout << "DL::Factory: name=" << name_
-                  << ", generate_concepts()"
-                  << ", step=" << step
-                  << ", complexity-bound=" << complexity_bound_
-                  << std::endl;
-
-
-        while(true) {
-            std::cout << "DL::Factory: iteration:"
-                      << ", step=" << step
-                      << ", #concepts-in-layer="
-                      << (concepts_.empty() ? 0 : concepts_.back().size())
+    int generate_concepts(Cache &cache, const Sample *sample = nullptr, bool prune = false) const {
+        int num_concepts = 0;
+        bool some_new_concepts = true;
+        for( int iteration = 0; some_new_concepts; ++iteration ) {
+            std::cout << "DL::Factory: iteration=" << iteration
+                      << ", #concepts=" << num_concepts
+                      << ", #concepts-in-last-layer=" << (concepts_.empty() ? 0 : concepts_.back().size())
                       << std::endl;
 
-            advance_step();
-            std::cout << "DL::Factory: advance-step: #concepts-in-layer=" << concepts_.back().size() << std::flush;
+            int num_concepts_before_step = num_concepts;
+            int num_pruned_concepts = advance_step(cache, prune ? sample : nullptr);
+            num_concepts += concepts_.empty() ? 0 : concepts_.back().size();
+            some_new_concepts = num_concepts > num_concepts_before_step;
 
-//            std::cout << "** Before complexity-pruning **" << std::endl;
-//            report_dl_data(std::cout);
-
-            // Prune concepts with complexity larger than our complexity bound
-            unsigned pruned = prune_too_complex_concepts_in_last_layer();
-            std::cout << ", #pruned-because-complexity-bound=" << pruned << std::flush;
-
-//            std::cout << "** Before redundancy-pruning **" << std::endl;
-//            report_dl_data(std::cout);
-
-            // Prune redundant concepts
-            if( prune && (sample != nullptr) ) {
-                pruned = prune_superfluous_concepts_in_last_layer(cache, *sample);
-                std::cout << ", #pruned-because-redundant=" << pruned << std::flush;
-            }
-            std::cout << std::endl;
-
-
-//            std::cout << "** End of layer **" << std::endl;
-//            report_dl_data(std::cout);
-
-            auto num_new_concepts = (unsigned) concepts_.back().size();
-            if (num_new_concepts == 0) {
-                std::cout << "No more concepts generated at generation step #" << step << std::endl;
-                concepts_.pop_back();  // Remove the last, empty layer
-                break;
-            }
-            num_concepts += num_new_concepts;
-            ++step;
+            std::cout << "DL::Factory: advance-step:"
+                      << " #concepts-in-layer=" << concepts_.back().size()
+                      << ", #pruned-concepts=" << num_pruned_concepts
+                      << std::endl;
         }
+        assert(concepts_.back().empty());
+        concepts_.pop_back();
+
         std::cout << "DL::Factory: name=" << name_ << ", #concepts=" << num_concepts << std::endl;
-        report_dl_data(std::cout);
-        return step;
+        return num_concepts;
     }
 
-    unsigned generate_features(const Cache &cache, const Sample &sample) const {
-
-        using feature_denotation_t = unsigned;
+    int generate_features(const Cache &cache, const Sample &sample) const {
+        using feature_denotation_t = int;
         using feature_sample_denotation_t = std::vector<feature_denotation_t>;
-        std::unordered_map<feature_sample_denotation_t, const Feature*, utils::container_hash<feature_sample_denotation_t>> seen_denotations;
+        using cache_t = std::unordered_map<feature_sample_denotation_t, const Feature*, utils::container_hash<feature_sample_denotation_t> >;
+        cache_t seen_denotations;
 
         // create boolean/numerical features from concepts
         int num_boolean_features = 0;
-        for (auto &layer : concepts_) {
-            for (auto& concept : layer) {
-                const sample_denotation_t *denotation = cache.find_sample_denotation(concept->as_str());
-                assert((denotation != nullptr) && (denotation->size() == sample.num_states()));
+        for( int layer = 0; layer < int(concepts_.size()); ++layer ) {
+            for( int i = 0; i < int(concepts_[layer].size()); ++i ) {
+                const Concept &c = *concepts_[layer][i];
+                const sample_denotation_t *d = cache.find_sample_denotation(c.as_str());
+                assert((d != nullptr) && (d->size() == sample.num_states()));
 
+                // generate feature denotation associated to concept's sample denotation
+                feature_sample_denotation_t fd;
+                fd.reserve(sample.num_states());
 
-                feature_sample_denotation_t feat_denotation;
-                feat_denotation.reserve(denotation->size());
-
-                unsigned previous_value = std::numeric_limits<unsigned int>::max();
+                // track whether feature would be boolean or numeric, or non-informative
                 bool boolean_feature = true;
-                bool denotation_is_constant = true;  // Track of whether the denotation of the feature is constant
-                bool all_denotations_gt_0 = true; // Track whether the feature has always denotation > 0
+                bool denotation_is_constant = true; 
+                bool all_values_greater_than_zero = true;
+                int previous_value = -1;
 
-                for(const auto& den: *denotation) {
-                    assert((den != nullptr) && (den->size() == sample.num_objects()));
+                for( int j = 0; j < int(d->size()); ++j ) {
+                    const state_denotation_t *sd = (*d)[j];
+                    assert((sd != nullptr) && (sd->size() == sample.num_objects()));
+                    int value = sd->cardinality();
+                    boolean_feature = boolean_feature && (value < 2);
+                    denotation_is_constant = (previous_value == -1) || (denotation_is_constant && (previous_value == value));
+                    all_values_greater_than_zero = all_values_greater_than_zero && (value > 0);
+                    previous_value = value;
+                    fd.push_back(value);
+                }
 
-                    auto cardinality = (unsigned) den->cardinality();
-                    feat_denotation.push_back(cardinality);
-                    boolean_feature = boolean_feature && cardinality < 2;
-
-                    if (cardinality == 0) {
-                        all_denotations_gt_0 = false;
+                if( !denotation_is_constant && !all_values_greater_than_zero ) {
+                    cache_t::const_iterator it = seen_denotations.find(fd);
+                    if( it == seen_denotations.end() ) {
+                        num_boolean_features += boolean_feature;
+                        const Feature *feature = boolean_feature ? static_cast<Feature*>(new BooleanFeature(c)) : static_cast<Feature*>(new NumericalFeature(c));
+                        features_.emplace_back(feature);
                     }
-
-                    if (previous_value != std::numeric_limits<unsigned int>::max() && previous_value != cardinality) {
-                        denotation_is_constant = false;
-                    }
-                    previous_value = cardinality;
-                }
-
-                if (denotation_is_constant) {
-                    continue;
-                }
-
-                if (all_denotations_gt_0) {
-                    continue;
-                }
-
-                auto it = seen_denotations.find(feat_denotation);
-                if (it == seen_denotations.end()) {  // No feature seen yet with this sample denotation
-                    num_boolean_features += boolean_feature;
-                    auto feature = boolean_feature ? static_cast<Feature*>(new BooleanFeature(*concept)) : static_cast<Feature*>(new NumericalFeature(*concept));
-                    features_.emplace_back(feature);
                 }
             }
         }
@@ -1286,51 +1358,93 @@ class Factory {
                   << ", #distance-features=" << num_distance_features
                   << std::endl;
 
-        return (unsigned) features_.size();
+        return features_.size();
     }
 
     std::ostream& report_dl_data(std::ostream& os) const {
         os << "Base concepts: ";
-        for (auto c:basis_concepts_) os << c->as_str() << ", ";
-        os << std::endl;
-
-
-        os << "Base roles: ";
-        for (auto r:basis_roles_) os << r->as_str() << ", ";
-        os << std::endl;
-
-        os << "All concepts and roles (max. complexity " << complexity_bound_ << "): " << std::endl;
-
-        os << "Concepts, by layer: " << std::endl;
-        for (unsigned i = 0; i < concepts_.size(); ++i) {
-            os << "\tLayer #" << i <<": " << std::endl;
-            for (auto c:concepts_[i]) os << "\t\t" << c->as_str() << std::endl;
-            os << std::endl;
+        for( int i = 0; i < int(basis_concepts_.size()); ++i ) {
+            os << basis_concepts_[i]->as_str();
+            if( 1 + i < int(basis_concepts_.size()) ) os << ", ";
         }
         os << std::endl;
 
+        os << "Base roles: ";
+        for( int i = 0; i < int(basis_roles_.size()); ++i ) {
+            os << basis_roles_[i]->as_str();
+            if( 1 + i < int(basis_roles_.size()) ) os << ", ";
+        }
+        os << std::endl;
+
+        os << "All concepts and roles (max. complexity " << complexity_bound_ << "): " << std::endl;
+        os << "Concepts (by layer): " << std::endl;
+        for( int layer = 0; layer < concepts_.size(); ++layer ) {
+            os << "    Layer #" << layer <<": ";
+            for( int i = 0; i < int(concepts_[layer].size()); ++i ) {
+                os << concepts_[layer][i]->as_str_with_complexity();
+                if( 1 + i < int(concepts_[layer].size()) ) os << ", ";
+            }
+            os << std::endl;
+        }
+
         os << "Roles: ";
-        for (auto r:roles_) os << r->as_str() << ", ";
+        for( int i = 0; i < int(roles_.size()); ++i ) {
+            os << roles_[i]->as_str_with_complexity();
+            if( 1 + i < int(roles_.size()) ) os << ", ";
+        }
+        os << std::endl;
+
+        os << "Boolean features: ";
+        bool need_comma = false;
+        for( int i = 0; i < int(features_.size()); ++i ) {
+            if( dynamic_cast<const BooleanFeature*>(features_[i]) != nullptr ) {
+                if( need_comma ) os << ", ";
+                os << features_[i]->as_str();
+                need_comma = true;
+            }
+        }
+        os << std::endl;
+
+        os << "Numerical features: ";
+        need_comma = false;
+        for( int i = 0; i < int(features_.size()); ++i ) {
+            if( dynamic_cast<const NumericalFeature*>(features_[i]) != nullptr ) {
+                if( need_comma ) os << ", ";
+                os << features_[i]->as_str();
+                need_comma = true;
+            }
+        }
+        os << std::endl;
+
+        os << "Distance features: ";
+        need_comma = false;
+        for( int i = 0; i < int(features_.size()); ++i ) {
+            if( dynamic_cast<const DistanceFeature*>(features_[i]) != nullptr ) {
+                if( need_comma ) os << ", ";
+                os << features_[i]->as_str();
+                need_comma = true;
+            }
+        }
         os << std::endl;
 
         return os;
     }
 
     void output_feature_matrix(std::ostream &os, const Cache &cache, const Sample &sample) const {
-        for( unsigned i = 0; i < sample.num_states(); ++i ) {
+        for( int i = 0; i < int(sample.num_states()); ++i ) {
             const State &state = sample.state(i);
             std::vector<std::pair<int, int> > non_zero_values;
             for( int j = 0; j < int(features_.size()); ++j ) {
                 const Feature &f = *features_[j];
-                auto value = (unsigned) f.value(cache, sample, state);
+                int value = f.value(cache, sample, state);
                 if( value > 0 )
                     non_zero_values.emplace_back(j, value);
             }
             if( !non_zero_values.empty() ) {
                 os << i << " " << non_zero_values.size();
-                for (auto &non_zero_value : non_zero_values) {
-                    os << " " << non_zero_value.first
-                       << " " << non_zero_value.second;
+                for( int j = 0; j < int(non_zero_values.size()); ++j ) {
+                    os << " " << non_zero_values[j].first
+                       << " " << non_zero_values[j].second;
                 }
                 os << std::endl;
             }
