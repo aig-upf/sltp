@@ -950,21 +950,19 @@ class Factory {
 
     int complexity_bound_;
 
-    mutable int current_complexity_;
     mutable std::vector<const Role*> roles_;
 
     //! A layered set of concepts, concepts_[k] contains all concepts generated in the k-th application of
     //! the concept grammar
-    mutable std::vector<std::vector<const Concept*> > concepts_;
+    mutable std::vector<std::vector<const Concept*>> concepts_;
 
     mutable std::vector<const Feature*> features_;
 
   public:
     Factory(std::string name, int complexity_bound)
       : name_(std::move(name)),
-        complexity_bound_(complexity_bound),
-        current_complexity_(-1) {
-    }
+        complexity_bound_(complexity_bound)
+    {}
     virtual ~Factory() = default;
 
     const std::string& name() const {
@@ -978,14 +976,7 @@ class Factory {
         basis_concepts_.push_back(concept);
     }
 
-    int current_complexity() const {
-        return current_complexity_;
-    }
-    void set_complexity_bound(int complexity_bound) {
-        complexity_bound_ = complexity_bound;
-    }
-
-    int reset(bool remove) {
+    void reset(bool remove) {
         while(!roles_.empty()) {
             if( remove && (roles_.size() >= basis_roles_.size()) )
                 delete roles_.back();
@@ -1000,18 +991,21 @@ class Factory {
             concepts_.pop_back();
         }
         concepts_.pop_back();
-
-        current_complexity_ = -1;
-        return current_complexity_;
     }
 
-    int advance_step() const {
-        if( current_complexity_ == -1 ) {
-            assert(concepts_.empty());
+    //! Apply one iteration of the concept generation grammar
+    //! Newly-generated concepts (some of which might be redundant) will be left in the last layer
+    //! of concepts_
+    void advance_step() const {
+        if(concepts_.empty()) {
             concepts_.emplace_back(basis_concepts_);
         } else {
-            std::vector<const Concept*> concepts;
-            auto last_layer = concepts_.back();
+            concepts_.emplace_back(); // Add an empty layer
+            assert (concepts_.size() >= 2);
+            const std::vector<const Concept*>& prev_layer = concepts_[concepts_.size()-2];
+            std::vector<const Concept*>& new_layer = concepts_[concepts_.size()-1];
+
+            assert(!prev_layer.empty()); // Otherwise we'd already reached a fixpoint
 
             // For each concept C in the last layer, we generate:
             // Not(C),
@@ -1021,24 +1015,21 @@ class Factory {
             // Code in Python is:
             // for pairings in (itertools.product(new_c, old_c), itertools.combinations(new_c, 2)):
             // process(self.syntax.create_and_concept(c1, c2) for c1, c2 in pairings)
-            for( unsigned i = 0; i < last_layer.size(); ++i ) {
-                const Concept *c = last_layer[i];
-                concepts.push_back(new NotConcept(c));
+            for( unsigned i = 0; i < prev_layer.size(); ++i ) {
+                const Concept *c = prev_layer[i];
+                new_layer.push_back(new NotConcept(c));
 
                 for (auto r : roles_) {
-                    concepts.push_back(new ExistsConcept(c, r));
-                    concepts.push_back(new ForallConcept(c, r));
+                    new_layer.push_back(new ExistsConcept(c, r));
+                    new_layer.push_back(new ForallConcept(c, r));
                 }
 
-                for( unsigned j = 1 + i; j < last_layer.size(); ++j ) {
-                    const Concept *oc = last_layer[j];
-                    concepts.push_back(new AndConcept(c, oc));
+                for( unsigned j = 1 + i; j < prev_layer.size(); ++j ) {
+                    const Concept *oc = prev_layer[j];
+                    new_layer.push_back(new AndConcept(c, oc));
                 }
             }
-            concepts_.emplace_back(std::move(concepts));
         }
-        ++current_complexity_;
-        return current_complexity_;
     }
 
     bool is_superfluous(Cache &cache, const sample_denotation_t *d) const {
@@ -1048,7 +1039,7 @@ class Factory {
         cache.find_or_insert_sample_denotation(*d, name);
     }
 
-    int prune_superfluous_concepts_in_last_layer(Cache &cache, const Sample &sample) const {
+    unsigned prune_superfluous_concepts_in_last_layer(Cache &cache, const Sample &sample) const {
         if( concepts_.empty() ) return 0;
 
         // for each concept, check whether there is another concept with
@@ -1057,8 +1048,8 @@ class Factory {
         // another concept with same vector. We store vectors in a hash
         // table to make the check more efficient
 
-        int num_pruned_concepts = 0;
-        for( int i = 0; i < int(concepts_.back().size()); ++i ) {
+        unsigned pruned = 0;
+        for( unsigned i = 0; i < concepts_.back().size(); ++i ) {
             const Concept &c = *concepts_.back()[i];
             //std::cout << "TEST-PRUNE: c=" << c.as_str() << std::endl;
             const sample_denotation_t *d = c.denotation(cache, sample, false);
@@ -1074,12 +1065,31 @@ class Factory {
                 concepts_.back()[i] = concepts_.back().back();
                 concepts_.back().pop_back();
                 --i;
-                ++num_pruned_concepts;
+                ++pruned;
                 //std::cout << "hola7" << std::endl;
             }
             delete d;
         }
-        return num_pruned_concepts;
+        return pruned;
+    }
+
+
+    unsigned prune_too_complex_concepts_in_last_layer() const {
+        if( concepts_.empty() ) return 0;
+
+        std::vector<const Concept*> accepted;
+
+        // Prune (and delete) those concepts with complexity > than the given bound
+        for (auto& c: concepts_.back()) {
+            if (c->complexity() <= complexity_bound_) {
+                accepted.push_back(c);
+            } else {
+                delete c;
+            }
+        }
+        unsigned pruned = concepts_.back().size() - accepted.size();
+        concepts_.back() = accepted; // Overwrite the last layer
+        return pruned;
     }
 
     void generate_basis(const Sample &sample) {
@@ -1144,40 +1154,49 @@ class Factory {
         return (unsigned) roles_.size();
     }
 
-    int generate_concepts(Cache &cache, const Sample *sample = nullptr, bool prune = false) const {
-        std::cout << "DL::Factory: name="
-                  << name_
+    unsigned generate_concepts(Cache &cache, const Sample *sample = nullptr, bool prune = false) const {
+        unsigned num_concepts = 0, step = 0;
+
+        std::cout << "DL::Factory: name=" << name_
                   << ", generate_concepts()"
-                  << ", current-complexity=" << current_complexity_
+                  << ", step=" << step
                   << ", complexity-bound=" << complexity_bound_
                   << std::endl;
 
-        unsigned num_concepts = 0;
-        while( current_complexity_ < complexity_bound_ ) {
+
+        while(true) {
             std::cout << "DL::Factory: iteration:"
-                      << " current-complexity="
-                      << current_complexity_
+                      << ", step=" << step
                       << ", #concepts-in-layer="
                       << (concepts_.empty() ? 0 : concepts_.back().size())
                       << std::endl;
 
             advance_step();
-            std::cout << "DL::Factory: advance-step:"
-                      << " #concepts-in-layer="
-                      << concepts_.back().size()
-                      << std::flush;
+            std::cout << "DL::Factory: advance-step: #concepts-in-layer=" << concepts_.back().size() << std::flush;
+
+
+            // Prune concepts with complexity larger than our complexity bound
+            unsigned pruned = prune_too_complex_concepts_in_last_layer();
+            std::cout << ", #pruned-because-complexity-bound=" << pruned << std::flush;
+
+            // Prune redundant concepts
             if( prune && (sample != nullptr) ) {
-                int number_pruned_concepts = prune_superfluous_concepts_in_last_layer(cache, *sample);
-                std::cout << ", #pruned-concepts-in-layer="
-                          << number_pruned_concepts
-                          << std::flush;
+                pruned = prune_superfluous_concepts_in_last_layer(cache, *sample);
+                std::cout << ", #pruned-because-redundant=" << pruned << std::flush;
             }
             std::cout << std::endl;
-            num_concepts += concepts_.empty() ? 0 : concepts_.back().size();
+            auto num_new_concepts = (unsigned) concepts_.back().size();
+            if (num_new_concepts == 0) {
+                std::cout << "No more concepts generated at generation step #" << step << std::endl;
+                concepts_.pop_back();  // Remove the last, empty layer
+                break;
+            }
+            num_concepts += num_new_concepts;
+            ++step;
         }
         std::cout << "DL::Factory: name=" << name_ << ", #concepts=" << num_concepts << std::endl;
         report_dl_data(std::cout);
-        return current_complexity_;
+        return step;
     }
 
     unsigned generate_features(const Cache &cache, const Sample &sample) const {
@@ -1205,7 +1224,7 @@ class Factory {
                 for(const auto& den: *denotation) {
                     assert((den != nullptr) && (den->size() == sample.num_objects()));
 
-                    unsigned cardinality = (unsigned)den->cardinality();
+                    auto cardinality = (unsigned) den->cardinality();
                     feat_denotation.push_back(cardinality);
                     boolean_feature = boolean_feature && cardinality < 2;
 
@@ -1259,8 +1278,7 @@ class Factory {
         for (auto r:basis_roles_) os << r->as_str() << ", ";
         os << std::endl;
 
-        os << "All concepts and roles (up to complexity " << current_complexity_ <<
-        ", out of max. complexity " << complexity_bound_ << "): " << std::endl;
+        os << "All concepts and roles (max. complexity " << complexity_bound_ << "): " << std::endl;
 
         os << "Concepts, by layer: " << std::endl;
         for (unsigned i = 0; i < concepts_.size(); ++i) {
