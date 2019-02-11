@@ -11,6 +11,7 @@
 #include <utility>
 
 #include <sltp/utils.hxx>
+#include <limits>
 
 namespace SLTP {
 
@@ -1175,25 +1176,63 @@ class Factory {
             num_concepts += concepts_.empty() ? 0 : concepts_.back().size();
         }
         std::cout << "DL::Factory: name=" << name_ << ", #concepts=" << num_concepts << std::endl;
+        report_dl_data(std::cout);
         return current_complexity_;
     }
 
     unsigned generate_features(const Cache &cache, const Sample &sample) const {
+
+        using feature_denotation_t = unsigned;
+        using feature_sample_denotation_t = std::vector<feature_denotation_t>;
+        std::unordered_map<feature_sample_denotation_t, const Feature*, utils::container_hash<feature_sample_denotation_t>> seen_denotations;
+
         // create boolean/numerical features from concepts
         int num_boolean_features = 0;
-        for (auto &concept : concepts_) {
-            for( unsigned i = 0; i < concept.size(); ++i ) {
-                const Concept &c = *concept[i];
-                const sample_denotation_t *d = cache.find_sample_denotation(c.as_str());
-                assert((d != nullptr) && (d->size() == sample.num_states()));
+        for (auto &layer : concepts_) {
+            for (auto& concept : layer) {
+                const sample_denotation_t *denotation = cache.find_sample_denotation(concept->as_str());
+                assert((denotation != nullptr) && (denotation->size() == sample.num_states()));
+
+
+                feature_sample_denotation_t feat_denotation;
+                feat_denotation.reserve(denotation->size());
+
+                unsigned previous_value = std::numeric_limits<unsigned int>::max();
                 bool boolean_feature = true;
-                for( int j = 0; boolean_feature && (j < sample.num_states()); ++j ) {
-                    assert(((*d)[j] != nullptr) && ((*d)[j]->size() == sample.num_objects()));
-                    std::size_t cardinality = (*d)[j]->cardinality();
-                    boolean_feature = cardinality < 2;
+                bool denotation_is_constant = true;  // Track of whether the denotation of the feature is constant
+                bool all_denotations_gt_0 = true; // Track whether the feature has always denotation > 0
+
+                for(const auto& den: *denotation) {
+                    assert((den != nullptr) && (den->size() == sample.num_objects()));
+
+                    unsigned cardinality = (unsigned)den->cardinality();
+                    feat_denotation.push_back(cardinality);
+                    boolean_feature = boolean_feature && cardinality < 2;
+
+                    if (cardinality == 0) {
+                        all_denotations_gt_0 = false;
+                    }
+
+                    if (previous_value != std::numeric_limits<unsigned int>::max() && previous_value != cardinality) {
+                        denotation_is_constant = false;
+                    }
+                    previous_value = cardinality;
                 }
-                num_boolean_features += boolean_feature;
-                features_.emplace_back(boolean_feature ? static_cast<Feature*>(new BooleanFeature(c)) : static_cast<Feature*>(new NumericalFeature(c)));
+
+                if (denotation_is_constant) {
+                    continue;
+                }
+
+                if (all_denotations_gt_0) {
+                    continue;
+                }
+
+                auto it = seen_denotations.find(feat_denotation);
+                if (it == seen_denotations.end()) {  // No feature seen yet with this sample denotation
+                    num_boolean_features += boolean_feature;
+                    auto feature = boolean_feature ? static_cast<Feature*>(new BooleanFeature(*concept)) : static_cast<Feature*>(new NumericalFeature(*concept));
+                    features_.emplace_back(feature);
+                }
             }
         }
 
@@ -1225,8 +1264,8 @@ class Factory {
 
         os << "Concepts, by layer: " << std::endl;
         for (unsigned i = 0; i < concepts_.size(); ++i) {
-            os << "\tLayer #" << i <<": ";
-            for (auto c:concepts_[i]) os << c->as_str() << ", ";
+            os << "\tLayer #" << i <<": " << std::endl;
+            for (auto c:concepts_[i]) os << "\t\t" << c->as_str() << std::endl;
             os << std::endl;
         }
         os << std::endl;

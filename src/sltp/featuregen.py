@@ -110,7 +110,8 @@ def extract_features(config, sample):
                       all_objects, all_atoms, os.path.join(config.experiment_dir, "sample.io"))
 
     cmd = os.path.realpath(os.path.join(config.featuregen_location, "featuregen"))
-    args = [str(config.max_concept_size), config.experiment_dir]
+    # args = [str(config.max_concept_size), config.experiment_dir]
+    args = [str(config.max_concept_grammar_iterations), config.experiment_dir]
     generate_debug_scripts(config.experiment_dir, cmd, args)
     retcode = execute([cmd] + args)
 
