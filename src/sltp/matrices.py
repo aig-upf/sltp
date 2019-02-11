@@ -209,6 +209,8 @@ def compute_feature_extensions(states, features, model_cache: DLModelCache, prun
                 all_0_or_1 = False
             if denotation == 0:
                 all_gt_0 = False
+            if denotation == sys.maxsize:
+                some_infty = True
             previous = denotation
             all_denotations.append(denotation)
 
@@ -267,4 +269,3 @@ def printer(feature, value):
 
 def int_printer(value):
     return str(int(value))
-
