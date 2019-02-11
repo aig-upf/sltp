@@ -1113,35 +1113,37 @@ class Factory {
             }
         }
 
-        report_dl_data(std::cout);
+//        report_dl_data(std::cout);
 
-        // create denotations for roles
-        int num_pruned_roles = 0;
+        // create denotations for roles.
+        std::vector<const Role*> nonredundant;
+
         if( sample != nullptr ) {
-            for( int i = 0; i < int(roles_.size()); ++i ) {
-                const Role &role = *roles_[i];
-                const sample_denotation_t *r = role.denotation(cache, *sample, false);
-                if( (r != nullptr) && !is_superfluous(cache, r) ) { // CHECK: BLAI HACK
-                    insert_new_denotation(cache, role.as_str(), r);
+            for( unsigned i = 0; i < roles_.size(); ++i ) {
+                const Role* role = roles_[i];
+                const sample_denotation_t *denotation = role->denotation(cache, *sample, false);
+                if( (denotation != nullptr) && !is_superfluous(cache, denotation) ) { // CHECK: BLAI HACK
+                    insert_new_denotation(cache, role->as_str(), denotation);
+                    nonredundant.push_back(role);
                 } else {
                     // make sure we do not eliminate a basis
                     if( i >= basis_roles_.size() ) {
                         std::cout << "Removing role: " << roles_[i]->as_str() << std::endl;
-                        delete roles_[i];
+                        // TODO We cannot delete this role here! Some of the roles in roles_, which were generated
+                        // from the base roles only, might contain pointers to non-basis roles which are deemed redundant.
+                        // e.g. Plus[Inverse[carrying]] contains a pointer to Inverse[carrying], which might be found redundant.
+                        //  delete roles_[i];
                     }
-                    for( int j = i; 1 + j < int(roles_.size()); ++j )
-                        roles_[j] = roles_[1 + j];
-                    roles_.pop_back();
-                    //roles_[i] = roles_.back();
-                    //roles_.pop_back();
-                    --i;
-                    ++num_pruned_roles;
                 }
-                delete r;
+                delete denotation;
             }
         }
 
-        std::cout << "ROLES: #roles=" << roles_.size() << ", #pruned-roles=" << num_pruned_roles << std::endl;
+        std::cout << "ROLES: #roles=" << roles_.size() << ", #pruned-roles=" << roles_.size()-nonredundant.size() << std::endl;
+        roles_ = nonredundant;
+
+//        report_dl_data(std::cout);
+
         return (unsigned) roles_.size();
     }
 
