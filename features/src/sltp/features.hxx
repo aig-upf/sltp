@@ -1146,7 +1146,7 @@ class Factory {
                 } else {
                     // make sure we do not eliminate a basis
                     if( i >= basis_roles_.size() ) {
-                        std::cout << "Removing role: " << roles_[i]->as_str() << std::endl;
+//                        std::cout << "Removing role: " << roles_[i]->as_str() << std::endl;
                         // TODO We cannot delete this role here! Some of the roles in roles_, which were generated
                         // from the base roles only, might contain pointers to non-basis roles which are deemed redundant.
                         // e.g. Plus[Inverse[carrying]] contains a pointer to Inverse[carrying], which might be found redundant.
@@ -1185,9 +1185,15 @@ class Factory {
             advance_step();
             std::cout << "DL::Factory: advance-step: #concepts-in-layer=" << concepts_.back().size() << std::flush;
 
+//            std::cout << "** Before complexity-pruning **" << std::endl;
+//            report_dl_data(std::cout);
+
             // Prune concepts with complexity larger than our complexity bound
             unsigned pruned = prune_too_complex_concepts_in_last_layer();
             std::cout << ", #pruned-because-complexity-bound=" << pruned << std::flush;
+
+//            std::cout << "** Before redundancy-pruning **" << std::endl;
+//            report_dl_data(std::cout);
 
             // Prune redundant concepts
             if( prune && (sample != nullptr) ) {
@@ -1195,6 +1201,11 @@ class Factory {
                 std::cout << ", #pruned-because-redundant=" << pruned << std::flush;
             }
             std::cout << std::endl;
+
+
+//            std::cout << "** End of layer **" << std::endl;
+//            report_dl_data(std::cout);
+
             auto num_new_concepts = (unsigned) concepts_.back().size();
             if (num_new_concepts == 0) {
                 std::cout << "No more concepts generated at generation step #" << step << std::endl;
