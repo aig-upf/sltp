@@ -955,6 +955,9 @@ class Factory {
 
     mutable int current_complexity_;
     mutable std::vector<const Role*> roles_;
+
+    //! A layered set of concepts, concepts_[k] contains all concepts generated in the k-th application of
+    //! the concept grammar
     mutable std::vector<std::vector<const Concept*> > concepts_;
 
     mutable std::vector<const Feature*> features_;
@@ -1011,16 +1014,27 @@ class Factory {
             concepts_.emplace_back(basis_concepts_);
         } else {
             std::vector<const Concept*> concepts;
-            for( int i = 0; i < int(concepts_.back().size()); ++i ) {
-                const Concept *c = concepts_.back()[i];
+            auto last_layer = concepts_.back();
+
+            // For each concept C in the last layer, we generate:
+            // Not(C),
+            // Exist(R,C) and Forall(R,C), for each role R
+            // And(C, C'), for each C'>C in the last layer
+            // TODO GFM Looks like we're missing the pairings between C and concepts in the previous layers??
+            // Code in Python is:
+            // for pairings in (itertools.product(new_c, old_c), itertools.combinations(new_c, 2)):
+            // process(self.syntax.create_and_concept(c1, c2) for c1, c2 in pairings)
+            for( unsigned i = 0; i < last_layer.size(); ++i ) {
+                const Concept *c = last_layer[i];
                 concepts.push_back(new NotConcept(c));
-                for( int j = 0; j < int(roles_.size()); ++j ) {
-                    const Role *r = roles_[j];
+
+                for (auto r : roles_) {
                     concepts.push_back(new ExistsConcept(c, r));
                     concepts.push_back(new ForallConcept(c, r));
                 }
-                for( int j = 1 + i; j < int(concepts_.back().size()); ++j ) {
-                    const Concept *oc = concepts_.back()[j];
+
+                for( unsigned j = 1 + i; j < last_layer.size(); ++j ) {
+                    const Concept *oc = last_layer[j];
                     concepts.push_back(new AndConcept(c, oc));
                 }
             }
@@ -1099,6 +1113,8 @@ class Factory {
             }
         }
 
+        report_dl_data(std::cout);
+
         // create denotations for roles
         int num_pruned_roles = 0;
         if( sample != nullptr ) {
@@ -1137,7 +1153,7 @@ class Factory {
                   << ", complexity-bound=" << complexity_bound_
                   << std::endl;
 
-        int num_concepts = 0;
+        unsigned num_concepts = 0;
         while( current_complexity_ < complexity_bound_ ) {
             std::cout << "DL::Factory: iteration:"
                       << " current-complexity="
@@ -1196,13 +1212,41 @@ class Factory {
         return (unsigned) features_.size();
     }
 
+    std::ostream& report_dl_data(std::ostream& os) const {
+        os << "Base concepts: ";
+        for (auto c:basis_concepts_) os << c->as_str() << ", ";
+        os << std::endl;
+
+
+        os << "Base roles: ";
+        for (auto r:basis_roles_) os << r->as_str() << ", ";
+        os << std::endl;
+
+        os << "All concepts and roles (up to complexity " << current_complexity_ <<
+        ", out of max. complexity " << complexity_bound_ << "): " << std::endl;
+
+        os << "Concepts, by layer: " << std::endl;
+        for (unsigned i = 0; i < concepts_.size(); ++i) {
+            os << "\tLayer #" << i <<": ";
+            for (auto c:concepts_[i]) os << c->as_str() << ", ";
+            os << std::endl;
+        }
+        os << std::endl;
+
+        os << "Roles: ";
+        for (auto r:roles_) os << r->as_str() << ", ";
+        os << std::endl;
+
+        return os;
+    }
+
     void output_feature_matrix(std::ostream &os, const Cache &cache, const Sample &sample) const {
         for( unsigned i = 0; i < sample.num_states(); ++i ) {
             const State &state = sample.state(i);
             std::vector<std::pair<int, int> > non_zero_values;
             for( int j = 0; j < int(features_.size()); ++j ) {
                 const Feature &f = *features_[j];
-                int value = f.value(cache, sample, state);
+                auto value = (unsigned) f.value(cache, sample, state);
                 if( value > 0 )
                     non_zero_values.emplace_back(j, value);
             }
