@@ -1047,7 +1047,7 @@ class Factory {
         cache.find_or_insert_sample_denotation(*d, name);
     }
 
-    int prune_superfluous_concepts_in_last_layer(Cache &cache, const Sample &sample) const {
+    unsigned prune_superfluous_concepts_in_last_layer(Cache &cache, const Sample &sample) const {
         if( concepts_.empty() ) return 0;
 
         // for each concept, check whether there is another concept with
@@ -1056,9 +1056,10 @@ class Factory {
         // another concept with same vector. We store vectors in a hash
         // table to make the check more efficient
 
-        int num_pruned_concepts = 0;
-        for( int i = 0; i < int(concepts_.back().size()); ++i ) {
-            const Concept &c = *concepts_.back()[i];
+        auto last_layer = concepts_.back();
+        unsigned num_pruned_concepts = 0;
+        for( unsigned i = 0; i < last_layer.size(); ++i ) {
+            const Concept &c = *last_layer[i];
             //std::cout << "TEST-PRUNE: c=" << c.as_str() << std::endl;
             const sample_denotation_t *d = c.denotation(cache, sample, false);
             //std::cout << "hola0" << std::endl;
@@ -1069,9 +1070,9 @@ class Factory {
             } else {
                 //std::cout << "hola3" << std::endl;
                 // make sure we do not eliminate a basis
-                if( concepts_.size() > 1 ) delete concepts_.back()[i];
-                concepts_.back()[i] = concepts_.back().back();
-                concepts_.back().pop_back();
+                if( concepts_.size() > 1 ) delete last_layer[i];
+                last_layer[i] = last_layer.back();
+                last_layer.pop_back();
                 --i;
                 ++num_pruned_concepts;
                 //std::cout << "hola7" << std::endl;
@@ -1166,10 +1167,8 @@ class Factory {
                       << concepts_.back().size()
                       << std::flush;
             if( prune && (sample != nullptr) ) {
-                int number_pruned_concepts = prune_superfluous_concepts_in_last_layer(cache, *sample);
-                std::cout << ", #pruned-concepts-in-layer="
-                          << number_pruned_concepts
-                          << std::flush;
+                unsigned number_pruned_concepts = prune_superfluous_concepts_in_last_layer(cache, *sample);
+                std::cout << ", #pruned-concepts-in-last-layer=" << number_pruned_concepts << std::flush;
             }
             std::cout << std::endl;
             num_concepts += concepts_.empty() ? 0 : concepts_.back().size();
