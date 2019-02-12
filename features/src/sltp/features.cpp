@@ -7,12 +7,11 @@
 
 using namespace std;
 
-
 namespace SLTP { namespace DL {
 
-    DL::GroundedPredicate parse_atom(const std::string &line,
-                                     const Instance::ObjectIndex &object_index,
-                                     const Sample::PredicateIndex &predicate_index) {
+    DL::Atom parse_atom(const std::string &line,
+                        const Instance::ObjectIndex &object_index,
+                        const Sample::PredicateIndex &predicate_index) {
         std::vector<std::string> atom;
         boost::split(atom, line, boost::is_any_of(","));  // Split e.g. "at,bob,shed" into a vector
         if( atom.empty() ) throw std::runtime_error("Wrong atom format: " + line);
@@ -22,17 +21,17 @@ namespace SLTP { namespace DL {
         for( int i = 1; i < atom.size(); ++i ) { // Start iterating at 1 to skip the predicate name
             objects.push_back(object_index.at(atom[i]));
         }
-        return GroundedPredicate(predicate_index.at(atom[0]), std::move(objects));
+        return Atom(predicate_index.at(atom[0]), std::move(objects));
     }
 
-    std::vector<DL::GroundedPredicate> parse_atoms(const std::string &line,
-                                                   const Instance::ObjectIndex &object_index,
-                                                   const Sample::PredicateIndex &predicate_index,
-                                                   Instance::AtomIndex &atom_index) {
+    std::vector<DL::Atom> parse_atoms(const std::string &line,
+                                      const Instance::ObjectIndex &object_index,
+                                      const Sample::PredicateIndex &predicate_index,
+                                      Instance::AtomIndex &atom_index) {
         std::vector<std::string> atom_list;
         boost::split(atom_list, line, boost::is_any_of("\t"));
 
-        std::vector<DL::GroundedPredicate> atoms;
+        std::vector<DL::Atom> atoms;
         atoms.reserve(atom_list.size());
 
         for( auto &atom_str : atom_list ) {
@@ -56,8 +55,8 @@ namespace SLTP { namespace DL {
         assert(!state_parts.empty());  // At least we'll have the ID of the instance
 
         const Instance& instance = instances.at((unsigned) std::stoi(state_parts[0]));
-        const auto& object_index = instance.oidx();
-        const auto& atom_index = instance.aidx();
+        const auto& object_index = instance.object_index();
+        const auto& atom_index = instance.atom_index();
 
         std::vector<atom_id_t> atom_ids;
         atom_ids.reserve(state_parts.size());
@@ -140,10 +139,10 @@ namespace SLTP { namespace DL {
             std::getline(is, object_line);
             std::vector<Object> objects = parse_objects(object_line, object_index);
 
-            // Read all possible atoms in instance, i.e. grounded predicates
+            // Read all possible atoms in instance
             std::string atom_line;
             std::getline(is, atom_line);
-            std::vector<GroundedPredicate> atoms = parse_atoms(atom_line, object_index, predicate_index, atom_index);
+            std::vector<Atom> atoms = parse_atoms(atom_line, object_index, predicate_index, atom_index);
 
             // Create and store the instance
             instances.emplace_back(instance_name, std::move(objects), std::move(atoms),
