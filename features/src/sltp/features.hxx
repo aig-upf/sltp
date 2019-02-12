@@ -23,7 +23,8 @@ using predicate_id_t = unsigned;
 using atom_id_t = unsigned;
 using state_id_t = unsigned;
 
-class GroundedPredicate;
+class Atom;
+class Sample;
 
 // A state denotation for concept C is a subset of objects
 // implemented as a bitmap (ie. vector<bool>). These are
@@ -53,8 +54,7 @@ using feature_sample_denotation_t = std::vector<feature_state_denotation_t>;
 // denotations to concept names, and the other that maps concept
 // names to sample denotations.
 //
-// We also cache grounded predicates that are used to 
-// represent states in the sample.
+// We also cache atoms that are used to represent states in the sample.
 class Cache {
   public:
     struct cache_support_t {
@@ -90,7 +90,7 @@ class Cache {
     using cache1_t = std::unordered_map<const sample_denotation_t*, std::string, cache_support_t, cache_support_t>;
     using cache2_t = std::unordered_map<std::string, const sample_denotation_t*>;
     using cache3_t = std::unordered_set<const state_denotation_t*, cache_support_t, cache_support_t>;
-    using cache4_t = std::unordered_map<std::string, const GroundedPredicate*>;
+    using cache4_t = std::unordered_map<std::string, const Atom*>;
 
   protected:
     cache1_t cache1_;
@@ -143,7 +143,7 @@ class Cache {
     // cache2: (full) sample denotations for concepts
     //
     // concept name -> sample denotation
-    const sample_denotation_t* find_sample_denotation(const std::string& name) const {
+    const sample_denotation_t* find_sample_denotation(const std::string &name) const {
         cache2_t::const_iterator it = cache2_.find(name);
         return it == cache2_.end() ? nullptr : it->second;
     }
@@ -173,19 +173,18 @@ class Cache {
         }
     }
 
-    // cache4: grounded predicates
+    // cache4: atoms
     //
-    // name -> grounded predicate
-    const GroundedPredicate* find_grounded_predicate(const std::string &name) const {
+    // name -> atom
+    const Atom* find_atom(const std::string &name) const {
         cache4_t::const_iterator it = cache4_.find(name);
         return it == cache4_.end() ? nullptr : it->second;
     }
-    const GroundedPredicate* find_or_insert_grounded_predicate(const GroundedPredicate &gp);
+    const Atom* find_or_insert_atom(const Atom &atom);
 };
 
-// We represent states as subets of grounded predicates.
-// A grounded predicate is a predicate and a vector of
-// objects to ground the predicates.
+// We represent states as subets of atoms
+// An atom is a predicate and a vector of objects to ground the predicates.
 class Object {
   protected:
     const object_id_t id_;
@@ -239,13 +238,13 @@ struct Predicate {
     }
 };
 
-class GroundedPredicate {
+class Atom {
   protected:
     const predicate_id_t predicate_;
     const std::vector<object_id_t> objects_;
 
   public:
-    GroundedPredicate(const predicate_id_t &predicate, std::vector<object_id_t> &&objects)
+    Atom(const predicate_id_t &predicate, std::vector<object_id_t> &&objects)
       : predicate_(predicate), objects_(std::move(objects)) {
     }
 
@@ -267,24 +266,15 @@ class GroundedPredicate {
 
     std::vector<unsigned> data() const {
         std::vector<unsigned> res(1, predicate_);
-        for( int i = 0; i < int(objects_.size()); ++i )
-            res.push_back(objects_[i]);
+        res.insert(res.end(), objects_.begin(), objects_.end());
         return res;
     }
 
-#if 0 // we no longer maintain a Predicate ref in the class
-    std::string as_str() const {
-        return predicate_.as_str(&objects_);
-    }
-    friend std::ostream& operator<<(std::ostream &os, const GroundedPredicate &pred) {
-        return os << pred.as_str() << std::flush;
-    }
-#endif
+    std::string as_str(const Sample &sample) const;
 };
 
 // An instance stores information shared by the states that
-// belong to the instance: objects and grounded predicates,
-// mostly
+// belong to the instance: objects and atoms mostly
 class Instance {
   public:
     // map from object name to object id in instance
@@ -295,7 +285,7 @@ class Instance {
   protected:
     const std::string name_;
     const std::vector<Object> objects_;
-    const std::vector<GroundedPredicate> grounded_predicates_;
+    const std::vector<Atom> atoms_;
 
     // mapping from object names to their ID in the sample
     ObjectIndex object_index_;
@@ -306,16 +296,15 @@ class Instance {
   public:
     Instance(const std::string &name,
              std::vector<Object> &&objects,
-             std::vector<GroundedPredicate> &&grounded_predicates,
+             std::vector<Atom> &&atoms,
              ObjectIndex &&object_index,
-             AtomIndex &&atom_index) :
-      name_(name),
-      objects_(std::move(objects)),
-      grounded_predicates_(std::move(grounded_predicates)),
-      object_index_(std::move(object_index)),
-      atom_index_(std::move(atom_index)) {
+             AtomIndex &&atom_index)
+      : name_(name),
+        objects_(std::move(objects)),
+        atoms_(std::move(atoms)),
+        object_index_(std::move(object_index)),
+        atom_index_(std::move(atom_index)) {
     }
-
     Instance(const Instance& ins) = default;
     Instance(Instance &&ins) = default;
     ~Instance() = default;
@@ -326,18 +315,25 @@ class Instance {
     int num_objects() const {
         return objects_.size();
     }
-    int num_grounded_predicates() const {
-        return grounded_predicates_.size();
+    int num_atoms() const {
+        return atoms_.size();
     }
-    const GroundedPredicate& atom(unsigned id) const {
-        return grounded_predicates_.at(id);
+    const Atom& atom(unsigned id) const {
+        return atoms_.at(id);
     }
 
-    const ObjectIndex& oidx() const { return object_index_; }
-    const AtomIndex& aidx() const { return atom_index_; }
+    const std::vector<Atom>& atoms() const {
+        return atoms_;
+    }
+    const ObjectIndex& object_index() const {
+        return object_index_;
+    }
+    const AtomIndex& atom_index() const {
+        return atom_index_;
+    }
 };
 
-// A state is a collections of atoms (i.e. GroundedPredicates)
+// A state is a collections of atoms
 class State {
   protected:
     const Instance &instance_;
@@ -345,9 +341,12 @@ class State {
     std::vector<atom_id_t> atoms_;
 
   public:
-    explicit State(const Instance &instance, unsigned id, std::vector<atom_id_t>&& atoms)
+    explicit State(const Instance &instance, unsigned id, std::vector<atom_id_t> &&atoms)
       : instance_(instance), id_(id), atoms_(std::move(atoms)) {
     }
+    State(const State &state) = default;
+    State(State &&state) = default;
+
     unsigned id() const {
         return id_;
     }
@@ -358,14 +357,17 @@ class State {
         return instance_.num_objects();
     }
 
-    const GroundedPredicate& atom(unsigned id) const {
+    const Instance& instance() const {
+        return instance_;
+    }
+    const Atom& atom(unsigned id) const {
         return instance_.atom(id);
     }
 };
 
 // A sample is a bunch of states and transitions among them. The
 // sample contains the predicates used in the states, the objects,
-// and the grounded predicates (i.e. atoms).
+// and the atoms
 class Sample {
   public:
     using PredicateIndex = std::unordered_map<std::string, predicate_id_t>;
@@ -383,33 +385,30 @@ class Sample {
            std::vector<Predicate> &&predicates,
            std::vector<Instance> &&instances,
            std::vector<State> &&states,
-           PredicateIndex &&predicate_index) :
-        name_(name),
+           PredicateIndex &&predicate_index)
+      : name_(name),
         predicates_(std::move(predicates)),
         instances_(std::move(instances)),
         states_(std::move(states)),
         predicate_index_(std::move(predicate_index)) {
+        std::cout << "SAMPLE:"
+                  << " #predicates=" << predicates_.size()
+                  << ", #instances=" << instances_.size() 
+                  << ", #states=" << states_.size() 
+                  << std::endl;
     }
 
   public:
+    Sample(const Sample &sample) = default;
+    Sample(Sample &&sample) = default;
     ~Sample() = default;
 
     const std::string& name() const {
         return name_;
     }
-#if 0
-    int num_objects() const {
-        return objects_.size();
-    }
-#endif
     int num_predicates() const {
         return predicates_.size();
     }
-#if 0
-    int num_grounded_predicates() const {
-        return grounded_predicates_.size();
-    }
-#endif
     int num_states() const {
         return states_.size();
     }
@@ -417,24 +416,30 @@ class Sample {
     const std::vector<Predicate>& predicates() const {
         return predicates_;
     }
+    const std::vector<Instance>& instances() const {
+        return instances_;
+    }
     const std::vector<State>& states() const {
         return states_;
     }
 
+    const Instance& instance(int i) const {
+        return instances_.at(i);
+    }
+    const Predicate& predicate(unsigned id) const {
+        return predicates_.at(id);
+    }
     const State& state(unsigned id) const {
         return states_.at(id);
     }
-
-#if 0
-    const GroundedPredicate& atom(unsigned id) const {
-        return grounded_predicates_.at(id);
-    }
-#endif
 
     // factory method - reads sample from serialized data
     static const Sample read(std::istream &is);
 };
 
+inline std::string Atom::as_str(const Sample &sample) const {
+    return sample.predicate(predicate_).as_str(&objects_);
+}
 
 //struct Denotation {
 //    enum class denotation_t : bool { concept_denotation_t, role_denotation_t };
@@ -521,7 +526,7 @@ class PrimitiveConcept : public Concept {
         state_denotation_t sd(state.num_objects(), false);
         for( int i = 0; i < int(state.atoms().size()); ++i ) {
             atom_id_t id = state.atoms()[i];
-            const GroundedPredicate &atom = state.atom(id);
+            const Atom &atom = state.atom(id);
             if( atom.is_instance(*predicate_) ) {
                 assert(atom.objects().size() == 1);
                 object_id_t index = atom.object(0);
@@ -816,7 +821,7 @@ class PrimitiveRole : public Role {
         state_denotation_t sr(state.num_objects() * state.num_objects(), false);
         for( int i = 0; i < int(state.atoms().size()); ++i ) {
             atom_id_t id = state.atoms()[i];
-            const GroundedPredicate &atom = state.atom(id);
+            const Atom &atom = state.atom(id);
             if( atom.is_instance(*predicate_) ) {
                 assert(atom.objects().size() == 2);
                 int index = atom.object(0) * state.num_objects() + atom.object(1);
