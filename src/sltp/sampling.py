@@ -173,9 +173,6 @@ def sample_generated_states(config, rng):
     logging.info('Loading state space samples...')
     sample, goals_by_instance = read_transitions_from_files(config.sample_files)
 
-    if not config.compute_unsolvable_states:
-        sample.unsolvable = set()
-
     if not sample.goals:
         raise RuntimeError("No goal found in the sample - increase # expanded states!")
 

@@ -26,8 +26,7 @@ def compute_test_sample_filenames(experiment_dir, test_instances, **_):
 
 
 def compute_experiment_tag(instance_tag, max_concept_size, **_):
-    ts = datetime.now().strftime("%Y%m%d%H%M")
-    ts = "NONE"
+    ts = datetime.now().strftime("%Y%m%d%H")
     return "{}.{}.cs-{}".format(ts, instance_tag, max_concept_size)
 
 

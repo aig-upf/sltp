@@ -128,6 +128,12 @@ def generate_experiment(domain_dir, domain, **kwargs):
 
         # Whether to take into acount states labeled as unsolvable by whatever planner is being used
         compute_unsolvable_states=False,
+
+        # Whether to prune features that have denotation > 0 over *all states*
+        prune_positive_features=True,
+
+        # Whether to prune features that have infinity denotation *in some state*
+        prune_infty_features=False,
     )
 
     parameters = {**defaults, **kwargs}  # Copy defaults, overwrite with user-specified parameters

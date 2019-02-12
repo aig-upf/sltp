@@ -262,7 +262,7 @@ def setup_feature_generation_filenames(config):
 class FeatureMatrixGenerationStep(Step):
     """ Generate and output the feature and transition matrices for the problem  """
     def get_required_attributes(self):
-        return ["experiment_dir"]
+        return ["experiment_dir", "prune_positive_features", "prune_infty_features"]
 
     def process_config(self, config):
         setup_feature_generation_filenames(config)
