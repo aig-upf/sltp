@@ -45,22 +45,21 @@ namespace SLTP { namespace DL {
         return atoms;
     }
 
-    DL::State parse_state(const std::vector<Instance>& instances,
+    DL::State parse_state(const std::vector<Instance> &instances,
                           unsigned id,
                           const std::string &line,
                           const Sample::PredicateIndex &predicate_index) {
         std::vector<std::string> state_parts;
         boost::split(state_parts, line, boost::is_any_of("\t"));
-
         assert(!state_parts.empty());  // At least we'll have the ID of the instance
 
-        const Instance& instance = instances.at((unsigned) std::stoi(state_parts[0]));
-        const auto& object_index = instance.object_index();
-        const auto& atom_index = instance.atom_index();
+        const Instance &instance = instances.at((unsigned) std::stoi(state_parts[0]));
+        const auto &object_index = instance.object_index();
+        const auto &atom_index = instance.atom_index();
 
         std::vector<atom_id_t> atom_ids;
         atom_ids.reserve(state_parts.size());
-        for (unsigned i = 1; i < state_parts.size(); ++i) {
+        for( unsigned i = 1; i < state_parts.size(); ++i ) {
             const auto &atom_str = state_parts[i];
             auto atom = parse_atom(atom_str, object_index, predicate_index);
             atom_ids.push_back(atom_index.at(atom.data()));
@@ -138,32 +137,32 @@ namespace SLTP { namespace DL {
             std::string object_line;
             std::getline(is, object_line);
             std::vector<Object> objects = parse_objects(object_line, object_index);
+            //std::cout << "instance: #objects=" << objects.size() << std::endl;
 
             // Read all possible atoms in instance
             std::string atom_line;
             std::getline(is, atom_line);
             std::vector<Atom> atoms = parse_atoms(atom_line, object_index, predicate_index, atom_index);
+            //std::cout << "instance: #atoms=" << atoms.size() << std::endl;
 
             // Create and store the instance
-            instances.emplace_back(instance_name, std::move(objects), std::move(atoms),
-                    std::move(object_index), std::move(atom_index));
+            instances.emplace_back(instance_name, std::move(objects), std::move(atoms), std::move(object_index), std::move(atom_index));
         }
 
         // Finally, we have one line per state. Each line consists of one integer that denotes to which instance
         // the state belongs to, plus all the atoms in that state, including static and type-based atoms
         std::vector<State> states;
         std::string state_line;
-        for (unsigned id = 0; std::getline(is, state_line); ++id) {
+        for( unsigned id = 0; std::getline(is, state_line); ++id ) {
             states.emplace_back(std::move(parse_state(instances, id, state_line, predicate_index)));
         }
 
-        // create and return sample - GFM: No need to use pointers, this will get dealt with through Return Value
-        // Optimization, so no extra copy will be performed
+        // create and return sample
         return Sample(sample_name,
                       std::move(predicates),
                       std::move(instances),
                       std::move(states),
-                      std::move(predicate_index));;
+                      std::move(predicate_index));
     }
 
 } }; // namespaces
