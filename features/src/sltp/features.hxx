@@ -245,9 +245,6 @@ class GroundedPredicate {
     const std::vector<object_id> objects_;
 
   public:
-    GroundedPredicate(const predicate_id& predicate, std::vector<object_id> objects)
-      : predicate_(predicate), objects_(std::move(objects)) {
-    }
     GroundedPredicate(const predicate_id& predicate, std::vector<object_id> &&objects)
       : predicate_(predicate), objects_(std::move(objects)) {
     }
@@ -285,14 +282,22 @@ class GroundedPredicate {
 #endif
 };
 
+// An instance stores information shared by the states that
+// belong to the instance: objects and grounded predicates,
+// mostly
+class Instance;
+
 // A state is a collections of atoms (i.e. GroundedPredicates)
 class State {
   protected:
+    const Instance &instance_;
     const state_id id_;
     std::vector<atom_id> atoms_;
 
   public:
-    State(unsigned id, const std::vector<atom_id>& atoms) : id_(id), atoms_(atoms) { }
+    explicit State(const Instance &instance, unsigned id, const std::vector<atom_id> &&atoms)
+      : instance_(instance), id_(id), atoms_(std::move(atoms)) {
+    }
     unsigned id() const {
         return id_;
     }
@@ -301,15 +306,62 @@ class State {
     }
 };
 
+class Instance {
+  public:
+    // map from object name to object id in instance
+    using ObjectIndex = std::unordered_map<std::string, object_id>;
+    // map from atom of the form <pred_id, oid_1, ..., oid_n> to atom id in instance
+    using AtomIndex = std::unordered_map<std::vector<unsigned>, atom_id, utils::container_hash<std::vector<unsigned> > >;
+
+  protected:
+    const std::string name_;
+    const std::vector<Object> objects_;
+    const std::vector<GroundedPredicate> grounded_predicates_;
+
+    // mapping from object names to their ID in the sample
+    ObjectIndex object_index_;
+
+    // mapping from <predicate name, obj_name, ..., obj_name> to the ID of the corresponding GroundPredicate
+    AtomIndex atom_index_;
+
+  public:
+    Instance() { } // REMOVE
+    Instance(const std::string &name,
+             std::vector<Object> &&objects,
+             std::vector<GroundedPredicate> &&grounded_predicates,
+             ObjectIndex &&object_index,
+             AtomIndex &&atom_index) :
+      name_(name),
+      objects_(std::move(objects)),
+      grounded_predicates_(std::move(grounded_predicates)),
+      object_index_(std::move(object_index)),
+      atom_index_(std::move(atom_index)) {
+    }
+    ~Instance() = default;
+
+    const std::string& name() const {
+        return name_;
+    }
+    int num_objects() const {
+        return objects_.size();
+    }
+    int num_grounded_predicates() const {
+        return grounded_predicates_.size();
+    }
+    const GroundedPredicate& atom(unsigned id) const {
+        return grounded_predicates_.at(id);
+    }
+};
+
 // A sample is a bunch of states and transitions among them. The
 // sample contains the predicates used in the states, the objects,
 // and the grounded predicates (i.e. atoms).
 class Sample {
-public:
+  public:
     using ObjectIndex = std::unordered_map<std::string, object_id>;
     using PredicateIndex = std::unordered_map<std::string, predicate_id>;
 
-    // Map from <pred_id, oid_1, ..., oid_n> to atom ID
+    // Index from <pred_id, oid_1, ..., oid_n> to atom ID
     using AtomIndex = std::unordered_map<std::vector<unsigned>, atom_id, utils::container_hash<std::vector<unsigned> > >;
 
   protected:
@@ -319,34 +371,34 @@ public:
     const std::vector<GroundedPredicate> grounded_predicates_;
     const std::vector<State> states_;
 
-    // A mapping from object names to their ID in the sample
-    ObjectIndex oidx_;
+    // mapping from object names to their ID in the sample
+    ObjectIndex object_index_;
 
-    // A mapping from predicate names to their ID in the sample
-    PredicateIndex pidx_;
+    // mapping from predicate names to their ID in the sample
+    PredicateIndex predicate_index_;
 
-    // A mapping from <predicate name, obj_name, ..., obj_name> to the ID of the corresponding GroundPredicate
-    AtomIndex aidx_;
+    // mapping from <predicate name, obj_name, ..., obj_name> to the ID of the corresponding GroundPredicate
+    AtomIndex atom_index_;
 
-    Sample(std::string name,
-           std::vector<Object> objects,
-           std::vector<Predicate> predicates,
-           std::vector<GroundedPredicate> grounded_predicates,
-           std::vector<State> states,
-           ObjectIndex oidx,
-           PredicateIndex pidx,
-           AtomIndex aidx) :
-        name_(std::move(name)),
+    Sample(std::string &name,
+           std::vector<Object> &&objects,
+           std::vector<Predicate> &&predicates,
+           std::vector<GroundedPredicate> &&grounded_predicates,
+           std::vector<State> &&states,
+           ObjectIndex &&object_index,
+           PredicateIndex &&predicate_index,
+           AtomIndex &&atom_index) :
+        name_(name),
         objects_(std::move(objects)),
         predicates_(std::move(predicates)),
         grounded_predicates_(std::move(grounded_predicates)),
         states_(std::move(states)),
-        oidx_(std::move(oidx)),
-        pidx_(std::move(pidx)),
-        aidx_(std::move(aidx))
-    { }
+        object_index_(std::move(object_index)),
+        predicate_index_(std::move(predicate_index)),
+        atom_index_(std::move(atom_index)) {
+    }
 
-public:
+  public:
     ~Sample() = default;
 
     const std::string& name() const {
@@ -372,14 +424,19 @@ public:
         return states_;
     }
 
-    const State& state(unsigned id) const { return states_.at(id); }
+    const State& state(unsigned id) const {
+        return states_.at(id);
+    }
 
-    const GroundedPredicate& atom(unsigned id) const { return grounded_predicates_.at(id); }
+    const GroundedPredicate& atom(unsigned id) const {
+        return grounded_predicates_.at(id);
+    }
 
-    // Factory method - reads sample from serialized data
-    static Sample read(std::istream &is);
+    // factory method - reads sample from serialized data
+    static const Sample* read(std::istream &is);
 };
-//
+
+
 //struct Denotation {
 //    enum class denotation_t : bool { concept_denotation_t, role_denotation_t };
 //    denotation_t type_;
@@ -1282,21 +1339,19 @@ class Factory {
         return cache.find_sample_denotation(*d) != nullptr;
     }
     std::pair<bool, const sample_denotation_t*>
-      is_superfluous_or_exceeds_complexity_bound(const Base &base, Cache &cache, const Sample *sample, bool do_not_check_complexity = false) const {
+      is_superfluous_or_exceeds_complexity_bound(const Base &base, Cache &cache, const Sample &sample, bool do_not_check_complexity = false) const {
         if( !do_not_check_complexity && (base.complexity() > complexity_bound_) ) {
             return std::make_pair(true, nullptr);
-        } else if( sample != nullptr ) {
-            const sample_denotation_t *d = base.denotation(cache, *sample, false);
-            return std::make_pair(is_superfluous(cache, d), d);
         } else {
-            return std::make_pair(false, nullptr);
+            const sample_denotation_t *d = base.denotation(cache, sample, false);
+            return std::make_pair(is_superfluous(cache, d), d);
         }
     }
 
     // apply one iteration of the concept generation grammar
     // new concepts are left on a new last layer in concepts_
     // new concepts are non-redundant if sample != nullptr
-    int advance_step(Cache &cache, const Sample *sample) const {
+    int advance_step(Cache &cache, const Sample &sample) const {
         int num_pruned_concepts = 0;
         if( concepts_.empty() ) {
             concepts_.emplace_back();
@@ -1389,7 +1444,7 @@ class Factory {
                   << std::endl;
     }
 
-    int generate_roles(Cache &cache, const Sample *sample) const {
+    int generate_roles(Cache &cache, const Sample &sample) const {
         if( roles_.empty() ) {
             for( int i = 0; i < int(basis_roles_.size()); ++i ) {
                 const Role &role = *basis_roles_[i];
@@ -1473,7 +1528,7 @@ class Factory {
         return roles_.size();
     }
 
-    int generate_concepts(Cache &cache, const Sample *sample = nullptr, bool prune = false) const {
+    int generate_concepts(Cache &cache, const Sample &sample) const {
         int num_concepts = 0;
         bool some_new_concepts = true;
         for( int iteration = 0; some_new_concepts; ++iteration ) {
@@ -1483,7 +1538,7 @@ class Factory {
                       << std::endl;
 
             int num_concepts_before_step = num_concepts;
-            int num_pruned_concepts = advance_step(cache, prune ? sample : nullptr);
+            int num_pruned_concepts = advance_step(cache, sample);
             num_concepts += concepts_.empty() ? 0 : concepts_.back().size();
             some_new_concepts = num_concepts > num_concepts_before_step;
 
