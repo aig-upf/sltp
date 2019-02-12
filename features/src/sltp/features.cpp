@@ -1,7 +1,5 @@
 
 #include <sltp/features.hxx>
-
-//#include <rapidcsv.h>
 #include <boost/algorithm/string.hpp>
 #include <fstream>
 
@@ -119,7 +117,7 @@ namespace SLTP { namespace DL {
         std::getline(is, function_line);
         // Note: Not supporting functions yet - we don't do anything with this line
 
-        // Fourth line: number of instances in file
+        // Next: number of instances in file
         std::string num_instances_line;
         std::getline(is, num_instances_line);
         int num_instances = atoi(num_instances_line.c_str());

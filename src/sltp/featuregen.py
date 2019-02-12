@@ -85,7 +85,7 @@ def serialize_static_info(model: DLModel, info: InstanceInformation):
     return serialized
 
 
-def print_sample_info(sample, infos, model_cache, all_predicates, all_functions, all_objects, workspace):
+def print_sample_info(sample, infos, model_cache, all_predicates, all_functions, nominals, all_objects, workspace):
 
     sample_fn = os.path.join(workspace, "sample.io")
     state_info = []
@@ -127,6 +127,12 @@ def print_sample_info(sample, infos, model_cache, all_predicates, all_functions,
         for stinfo in state_info:
             # print one line per state with all state atoms, e.g. at,bob,shed   at,spanner,location;
             print("\t".join(stinfo), file=f)
+
+    nominals_fn = os.path.join(workspace, "nominals.io")
+    logging.info("Printing sample information to {}".format(nominals_fn))
+    with open(nominals_fn, "w") as f:
+        # Print off the desired nominals
+        print(" ".join("{}".format(name) for name in sorted(x.symbol for x in nominals)), file=f)
 
 
 def transform_generator_output(config, matrix_filename, info_filename):
@@ -222,7 +228,7 @@ def extract_features(config, sample):
     logging.info('Invoking C++ feature generation module'.format())
 
     # Write sample information
-    print_sample_info(sample, infos, model_cache, all_predicates, all_functions,
+    print_sample_info(sample, infos, model_cache, all_predicates, all_functions, nominals,
                       all_objects, config.experiment_dir)
 
     # Invoke C++ feature generation module

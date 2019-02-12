@@ -542,6 +542,47 @@ class PrimitiveConcept : public Concept {
     }
 };
 
+
+class NominalConcept : public Concept {
+protected:
+    const std::string& name_;
+
+public:
+    explicit NominalConcept(const std::string &name) : Concept(1), name_(name) {}
+    ~NominalConcept() override = default;
+
+    const Concept* clone() const override {
+        return new NominalConcept(*this);
+    }
+
+    const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
+        const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
+        if( cached == nullptr ) {
+            sample_denotation_t d;
+            for( int i = 0; i < sample.num_states(); ++i ) {
+                const State &s = sample.state(i);
+                d.emplace_back(denotation(cache, sample, s));
+            }
+            return use_cache ? cache.find_or_insert_sample_denotation(d, as_str()) : new sample_denotation_t(d);
+        } else {
+            return cached;
+        }
+    }
+    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
+        const Instance::ObjectIndex& oidx = state.instance().object_index();
+        object_id_t id = oidx.at(name_);
+        assert(id < state.num_objects());
+
+        state_denotation_t sd(state.num_objects(), false);
+        sd[id] = true;
+
+        return cache.find_or_insert_state_denotation(sd);
+    }
+    std::string as_str() const override {
+        return std::string("{") + name_ + "}";
+    }
+};
+
 class UniversalConcept : public Concept {
   public:
     UniversalConcept() : Concept(1) { }
@@ -1326,6 +1367,7 @@ class DistanceFeature : public Feature {
 class Factory {
   protected:
     const std::string name_;
+    const std::vector<std::string> nominals_;
     std::vector<const Role*> basis_roles_;
     std::vector<const Concept*> basis_concepts_;
 
@@ -1339,8 +1381,9 @@ class Factory {
     mutable std::vector<const Feature*> features_;
 
   public:
-    Factory(std::string name, int complexity_bound)
+    Factory(std::string name, const std::vector<std::string>& nominals, int complexity_bound)
       : name_(std::move(name)),
+        nominals_(nominals),
         complexity_bound_(complexity_bound) {
     }
     virtual ~Factory() = default;
@@ -1499,6 +1542,10 @@ class Factory {
             } else if( predicate->arity() == 2 ) {
                 insert_basis(new PrimitiveRole(predicate));
             }
+        }
+
+        for (const auto& nominal:nominals_) {
+            insert_basis(new NominalConcept(nominal));
         }
         std::cout << "BASIS: #concepts=" << basis_concepts_.size()
                   << ", #roles=" << basis_roles_.size()

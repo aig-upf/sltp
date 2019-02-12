@@ -1,6 +1,10 @@
+
 #include <iostream>
 #include <fstream>
 #include <string>
+
+#include <boost/algorithm/string.hpp>
+
 #include <sltp/features.hxx>
 
 using namespace std;
@@ -50,6 +54,17 @@ SLTP::DL::Sample parse_input_sample(const string &filename) {
     return SLTP::DL::Sample::read(sample_file);
 }
 
+std::vector<std::string> parse_nominals(const string &filename) {
+    ifstream file(filename);
+    if( file.fail() ) throw runtime_error("Could not open filename '" + filename + "'");
+
+    std::string nominals_line;
+    std::getline(file, nominals_line);
+    std::vector<std::string> nominals;
+    boost::split(nominals, nominals_line, boost::is_any_of(" \t"));
+    return nominals;
+}
+
 void output_results(const Options &options,
                     const SLTP::DL::Factory &factory,
                     const SLTP::DL::Sample &sample,
@@ -84,6 +99,7 @@ int main(int argc, const char **argv) {
     // so that they can be reconstructed from python.
 
     const SLTP::DL::Sample sample = parse_input_sample(options.worskspace_ + "/sample.io");
+    const std::vector<std::string> nominals = parse_nominals(options.worskspace_ + "/nominals.io");
 #if 0
     cout << "SAMPLE: #objects=" << sample->num_objects()
          << ", #predicates=" << sample->num_predicates()
@@ -91,7 +107,7 @@ int main(int argc, const char **argv) {
          << ", #states=" << sample->num_states()
          << endl;
 #endif
-    SLTP::DL::Factory factory("test", options.complexity_bound_);
+    SLTP::DL::Factory factory("test", nominals, options.complexity_bound_);
 
     SLTP::DL::Cache cache;
     factory.generate_basis(sample);
