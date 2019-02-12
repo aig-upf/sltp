@@ -84,11 +84,13 @@ int main(int argc, const char **argv) {
     // so that they can be reconstructed from python.
 
     const SLTP::DL::Sample *sample = parse_input_sample(options.worskspace_ + "/sample.io");
+#if 0
     cout << "SAMPLE: #objects=" << sample->num_objects()
          << ", #predicates=" << sample->num_predicates()
          << ", #grounded-predicates=" << sample->num_grounded_predicates()
          << ", #states=" << sample->num_states()
          << endl;
+#endif
     SLTP::DL::Factory factory("test", options.complexity_bound_);
 
     SLTP::DL::Cache cache;

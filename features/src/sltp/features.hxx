@@ -18,10 +18,10 @@ namespace SLTP {
 
 namespace DL {
 
-using object_id = unsigned;
-using predicate_id = unsigned;
-using atom_id = unsigned;
-using state_id = unsigned;
+using object_id_t = unsigned;
+using predicate_id_t = unsigned;
+using atom_id_t = unsigned;
+using state_id_t = unsigned;
 
 class GroundedPredicate;
 
@@ -188,7 +188,7 @@ class Cache {
 // objects to ground the predicates.
 class Object {
   protected:
-    const object_id id_;
+    const object_id_t id_;
     const std::string name_;
 
   public:
@@ -205,19 +205,19 @@ class Object {
 };
 
 struct Predicate {
-    const predicate_id id_;
+    const predicate_id_t id_;
     const std::string name_;
     const int arity_;
     Predicate(unsigned id, const std::string &name, int arity)
       : id_(id), name_(name), arity_(arity) {
     }
-    predicate_id id() const {
+    predicate_id_t id() const {
         return id_;
     }
     int arity() const {
         return arity_;
     }
-    std::string as_str(const std::vector<object_id> *objects) const {
+    std::string as_str(const std::vector<object_id_t> *objects) const {
         std::string str = name_ + "(";
         if( objects == nullptr ) {
             for( int i = 0; i < arity_; ++i ) {
@@ -241,27 +241,27 @@ struct Predicate {
 
 class GroundedPredicate {
   protected:
-    const predicate_id predicate_;
-    const std::vector<object_id> objects_;
+    const predicate_id_t predicate_;
+    const std::vector<object_id_t> objects_;
 
   public:
-    GroundedPredicate(const predicate_id& predicate, std::vector<object_id> &&objects)
+    GroundedPredicate(const predicate_id_t &predicate, std::vector<object_id_t> &&objects)
       : predicate_(predicate), objects_(std::move(objects)) {
     }
 
-    predicate_id pred_id() const {
+    predicate_id_t pred_id() const {
         return predicate_;
     }
-    const std::vector<object_id>& objects() const {
+    const std::vector<object_id_t>& objects() const {
         return objects_;
     }
 
     // Return the i-th object of the current atom
-    object_id object(int i) const {
+    object_id_t object(int i) const {
         return objects_.at(i);
     }
 
-    bool is_instance(const Predicate& predicate) const {
+    bool is_instance(const Predicate &predicate) const {
         return predicate_ == predicate.id();
     }
 
@@ -285,33 +285,12 @@ class GroundedPredicate {
 // An instance stores information shared by the states that
 // belong to the instance: objects and grounded predicates,
 // mostly
-class Instance;
-
-// A state is a collections of atoms (i.e. GroundedPredicates)
-class State {
-  protected:
-    const Instance &instance_;
-    const state_id id_;
-    std::vector<atom_id> atoms_;
-
-  public:
-    explicit State(const Instance &instance, unsigned id, const std::vector<atom_id> &&atoms)
-      : instance_(instance), id_(id), atoms_(std::move(atoms)) {
-    }
-    unsigned id() const {
-        return id_;
-    }
-    const std::vector<atom_id>& atoms() const {
-        return atoms_;
-    }
-};
-
 class Instance {
   public:
     // map from object name to object id in instance
-    using ObjectIndex = std::unordered_map<std::string, object_id>;
+    using ObjectIndex = std::unordered_map<std::string, object_id_t>;
     // map from atom of the form <pred_id, oid_1, ..., oid_n> to atom id in instance
-    using AtomIndex = std::unordered_map<std::vector<unsigned>, atom_id, utils::container_hash<std::vector<unsigned> > >;
+    using AtomIndex = std::unordered_map<std::vector<unsigned>, atom_id_t, utils::container_hash<std::vector<unsigned> > >;
 
   protected:
     const std::string name_;
@@ -325,7 +304,6 @@ class Instance {
     AtomIndex atom_index_;
 
   public:
-    Instance() { } // REMOVE
     Instance(const std::string &name,
              std::vector<Object> &&objects,
              std::vector<GroundedPredicate> &&grounded_predicates,
@@ -336,6 +314,9 @@ class Instance {
       grounded_predicates_(std::move(grounded_predicates)),
       object_index_(std::move(object_index)),
       atom_index_(std::move(atom_index)) {
+    }
+    Instance(Instance &&ins) {
+        throw std::runtime_error("Not yet implemented: move operator for Instance class");
     }
     ~Instance() = default;
 
@@ -353,49 +334,58 @@ class Instance {
     }
 };
 
+// A state is a collections of atoms (i.e. GroundedPredicates)
+class State {
+  protected:
+    const Instance &instance_;
+    const state_id_t id_;
+    std::vector<atom_id_t> atoms_;
+
+  public:
+    explicit State(const Instance &instance, unsigned id, const std::vector<atom_id_t> &&atoms)
+      : instance_(instance), id_(id), atoms_(std::move(atoms)) {
+    }
+    unsigned id() const {
+        return id_;
+    }
+    const std::vector<atom_id_t>& atoms() const {
+        return atoms_;
+    }
+    int num_objects() const {
+        return instance_.num_objects();
+    }
+
+    const GroundedPredicate& atom(unsigned id) const {
+        return instance_.atom(id);
+    }
+};
+
 // A sample is a bunch of states and transitions among them. The
 // sample contains the predicates used in the states, the objects,
 // and the grounded predicates (i.e. atoms).
 class Sample {
   public:
-    using ObjectIndex = std::unordered_map<std::string, object_id>;
-    using PredicateIndex = std::unordered_map<std::string, predicate_id>;
-
-    // Index from <pred_id, oid_1, ..., oid_n> to atom ID
-    using AtomIndex = std::unordered_map<std::vector<unsigned>, atom_id, utils::container_hash<std::vector<unsigned> > >;
+    using PredicateIndex = std::unordered_map<std::string, predicate_id_t>;
 
   protected:
     const std::string name_;
-    const std::vector<Object> objects_;
     const std::vector<Predicate> predicates_;
-    const std::vector<GroundedPredicate> grounded_predicates_;
+    const std::vector<Instance> instances_;
     const std::vector<State> states_;
-
-    // mapping from object names to their ID in the sample
-    ObjectIndex object_index_;
 
     // mapping from predicate names to their ID in the sample
     PredicateIndex predicate_index_;
 
-    // mapping from <predicate name, obj_name, ..., obj_name> to the ID of the corresponding GroundPredicate
-    AtomIndex atom_index_;
-
     Sample(std::string &name,
-           std::vector<Object> &&objects,
            std::vector<Predicate> &&predicates,
-           std::vector<GroundedPredicate> &&grounded_predicates,
+           std::vector<Instance> &&instances,
            std::vector<State> &&states,
-           ObjectIndex &&object_index,
-           PredicateIndex &&predicate_index,
-           AtomIndex &&atom_index) :
+           PredicateIndex &&predicate_index) :
         name_(name),
-        objects_(std::move(objects)),
         predicates_(std::move(predicates)),
-        grounded_predicates_(std::move(grounded_predicates)),
+        instances_(std::move(instances)),
         states_(std::move(states)),
-        object_index_(std::move(object_index)),
-        predicate_index_(std::move(predicate_index)),
-        atom_index_(std::move(atom_index)) {
+        predicate_index_(std::move(predicate_index)) {
     }
 
   public:
@@ -404,15 +394,19 @@ class Sample {
     const std::string& name() const {
         return name_;
     }
+#if 0
     int num_objects() const {
         return objects_.size();
     }
+#endif
     int num_predicates() const {
         return predicates_.size();
     }
+#if 0
     int num_grounded_predicates() const {
         return grounded_predicates_.size();
     }
+#endif
     int num_states() const {
         return states_.size();
     }
@@ -428,9 +422,11 @@ class Sample {
         return states_.at(id);
     }
 
+#if 0
     const GroundedPredicate& atom(unsigned id) const {
         return grounded_predicates_.at(id);
     }
+#endif
 
     // factory method - reads sample from serialized data
     static const Sample* read(std::istream &is);
@@ -519,13 +515,14 @@ class PrimitiveConcept : public Concept {
         }
     }
     const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
-        state_denotation_t sd(sample.num_objects(), false);
-        for (atom_id id : state.atoms()) {
-            const GroundedPredicate& atom = sample.atom(id);
-            if (atom.is_instance(*predicate_)) {
+        state_denotation_t sd(state.num_objects(), false);
+        for( int i = 0; i < int(state.atoms().size()); ++i ) {
+            atom_id_t id = state.atoms()[i];
+            const GroundedPredicate &atom = state.atom(id);
+            if( atom.is_instance(*predicate_) ) {
                 assert(atom.objects().size() == 1);
-                object_id index = atom.object(0);
-                assert(index < sample.num_objects());
+                object_id_t index = atom.object(0);
+                assert(index < state.num_objects());
                 sd[index] = true;
             }
         }
@@ -547,12 +544,15 @@ class UniversalConcept : public Concept {
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
         const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
         if( cached == nullptr ) {
-            state_denotation_t sd(sample.num_objects(), true);
-            const state_denotation_t *cached_sd = cache.find_or_insert_state_denotation(sd);
-
             sample_denotation_t nd;
-            for( int i = 0; i < sample.num_states(); ++i )
+            nd.reserve(sample.num_states());
+            for( int i = 0; i < sample.num_states(); ++i ) {
+                const State &state = sample.state(i);
+                assert(state.id() == i);
+                state_denotation_t sd(state.num_objects(), true);
+                const state_denotation_t *cached_sd = cache.find_or_insert_state_denotation(sd);
                 nd.emplace_back(cached_sd);
+            }
             return use_cache ? cache.find_or_insert_sample_denotation(nd, as_str()) : new sample_denotation_t(nd);
         } else {
             return cached;
@@ -593,13 +593,15 @@ class AndConcept : public Concept {
 
             sample_denotation_t nd;
             for( int i = 0; i < sample.num_states(); ++i ) {
+                const State &state = sample.state(i);
+                assert(state.id() == i);
                 const state_denotation_t *sd1 = (*d1)[i];
-                assert((sd1 != nullptr) && (sd1->size() == sample.num_objects()));
+                assert((sd1 != nullptr) && (sd1->size() == state.num_objects()));
                 const state_denotation_t *sd2 = (*d2)[i];
-                assert((sd2 != nullptr) && (sd2->size() == sample.num_objects()));
+                assert((sd2 != nullptr) && (sd2->size() == state.num_objects()));
 
-                state_denotation_t nsd(sample.num_objects(), false);
-                for( int j = 0; j < sample.num_objects(); ++j )
+                state_denotation_t nsd(state.num_objects(), false);
+                for( int j = 0; j < state.num_objects(); ++j )
                     nsd[j] = (*sd1)[j] && (*sd2)[j];
                 nd.emplace_back(cache.find_or_insert_state_denotation(nsd));
             }
@@ -640,11 +642,13 @@ class NotConcept : public Concept {
 
             sample_denotation_t nd;
             for( int i = 0; i < sample.num_states(); ++i ) {
+                const State &state = sample.state(i);
+                assert(state.id() == i);
                 const state_denotation_t *sd = (*d)[i];
-                assert((sd != nullptr) && (sd->size() == sample.num_objects()));
+                assert((sd != nullptr) && (sd->size() == state.num_objects()));
 
-                state_denotation_t nsd(sample.num_objects(), false);
-                for( int j = 0; j < sample.num_objects(); ++j )
+                state_denotation_t nsd(state.num_objects(), false);
+                for( int j = 0; j < state.num_objects(); ++j )
                     nsd[j] = !(*sd)[j];
                 nd.emplace_back(cache.find_or_insert_state_denotation(nsd));
             }
@@ -689,16 +693,18 @@ class ExistsConcept : public Concept {
 
             sample_denotation_t nd;
             for( int i = 0; i < sample.num_states(); ++i ) {
+                const State &state = sample.state(i);
+                assert(state.id() == i);
                 const state_denotation_t *sd = (*d)[i];
-                assert((sd != nullptr) && (sd->size() == sample.num_objects()));
+                assert((sd != nullptr) && (sd->size() == state.num_objects()));
                 const state_denotation_t *sr = (*r)[i];
-                assert((sr != nullptr) && (sr->size() == sample.num_objects() * sample.num_objects()));
+                assert((sr != nullptr) && (sr->size() == state.num_objects() * state.num_objects()));
 
-                state_denotation_t nsd(sample.num_objects(), false);
-                for( int j = 0; j < sample.num_objects(); ++j ) {
+                state_denotation_t nsd(state.num_objects(), false);
+                for( int j = 0; j < state.num_objects(); ++j ) {
                     if( (*sd)[j] ) {
-                        for( int k = 0; !nsd[j] && (k < sample.num_objects()); ++k ) {
-                            int index = j * sample.num_objects() + k;
+                        for( int k = 0; !nsd[j] && (k < state.num_objects()); ++k ) {
+                            int index = j * state.num_objects() + k;
                             nsd[j] = (*(*r)[i])[index];
                         }
                     }
@@ -746,16 +752,18 @@ class ForallConcept : public Concept {
 
             sample_denotation_t nd;
             for( int i = 0; i < sample.num_states(); ++i ) {
+                const State &state = sample.state(i);
+                assert(state.id() == i);
                 const state_denotation_t *sd = (*d)[i];
-                assert((sd != nullptr) && (sd->size() == sample.num_objects()));
+                assert((sd != nullptr) && (sd->size() == state.num_objects()));
                 const state_denotation_t *sr = (*r)[i];
-                assert((sr != nullptr) && (sr->size() == sample.num_objects() * sample.num_objects()));
+                assert((sr != nullptr) && (sr->size() == state.num_objects() * state.num_objects()));
 
-                state_denotation_t nsd(sample.num_objects(), true);
-                for( int j = 0; j < sample.num_objects(); ++j ) {
+                state_denotation_t nsd(state.num_objects(), true);
+                for( int j = 0; j < state.num_objects(); ++j ) {
                     if( (*sd)[j] ) {
-                        for( int k = 0; nsd[j] && (k < sample.num_objects()); ++k ) {
-                            int index = j * sample.num_objects() + k;
+                        for( int k = 0; nsd[j] && (k < state.num_objects()); ++k ) {
+                            int index = j * state.num_objects() + k;
                             nsd[j] = (*(*r)[i])[index];
                         }
                     }
@@ -802,13 +810,14 @@ class PrimitiveRole : public Role {
         }
     }
     const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
-        state_denotation_t sr(sample.num_objects() * sample.num_objects(), false);
-        for (atom_id id : state.atoms()) {
-            const GroundedPredicate& atom = sample.atom(id);
-            if (atom.is_instance(*predicate_)) {
+        state_denotation_t sr(state.num_objects() * state.num_objects(), false);
+        for( int i = 0; i < int(state.atoms().size()); ++i ) {
+            atom_id_t id = state.atoms()[i];
+            const GroundedPredicate &atom = state.atom(id);
+            if( atom.is_instance(*predicate_) ) {
                 assert(atom.objects().size() == 2);
-                int index = atom.object(0) * sample.num_objects() + atom.object(1);
-                assert(index < sample.num_objects() * sample.num_objects());
+                int index = atom.object(0) * state.num_objects() + atom.object(1);
+                assert(index < state.num_objects() * state.num_objects());
                 sr[index] = true;
             }
         }
@@ -867,11 +876,13 @@ class PlusRole : public Role {
 
             sample_denotation_t nr;
             for( int i = 0; i < sample.num_states(); ++i ) {
+                const State &state = sample.state(i);
+                assert(state.id() == i);
                 const state_denotation_t *sr = (*r)[i];
-                assert((sr != nullptr) && (sr->size() == sample.num_objects() * sample.num_objects()));
+                assert((sr != nullptr) && (sr->size() == state.num_objects() * state.num_objects()));
 
                 state_denotation_t nsr(*sr);
-                transitive_closure(sample.num_objects(), nsr);
+                transitive_closure(state.num_objects(), nsr);
                 nr.emplace_back(cache.find_or_insert_state_denotation(nsr));
             }
             return use_cache ? cache.find_or_insert_sample_denotation(nr, as_str()) : new sample_denotation_t(nr);
@@ -916,12 +927,14 @@ class StarRole : public Role {
 
             sample_denotation_t nr;
             for( int i = 0; i < sample.num_states(); ++i ) {
+                const State &state = sample.state(i);
+                assert(state.id() == i);
                 const state_denotation_t *sr = (*pr)[i];
-                assert((sr != nullptr) && (sr->size() == sample.num_objects() * sample.num_objects()));
+                assert((sr != nullptr) && (sr->size() == state.num_objects() * state.num_objects()));
 
                 state_denotation_t nsr(*sr);
-                for( int j = 0; j < sample.num_objects(); ++j ) {
-                    int index = j * sample.num_objects() + j;
+                for( int j = 0; j < state.num_objects(); ++j ) {
+                    int index = j * state.num_objects() + j;
                     nsr[index] = true;
                 }
                 nr.emplace_back(cache.find_or_insert_state_denotation(nsr));
@@ -960,15 +973,17 @@ class InverseRole : public Role {
 
             sample_denotation_t nr;
             for( int i = 0; i < sample.num_states(); ++i ) {
+                const State &state = sample.state(i);
+                assert(state.id() == i);
                 const state_denotation_t *sr = (*r)[i];
-                assert((sr != nullptr) && (sr->size() == sample.num_objects() * sample.num_objects()));
+                assert((sr != nullptr) && (sr->size() == state.num_objects() * state.num_objects()));
 
-                state_denotation_t nsr(sample.num_objects() * sample.num_objects(), false);
-                for( int j = 0; j < sample.num_objects(); ++j ) {
-                    for( int k = 0; k < sample.num_objects(); ++k ) {
-                        int index = j * sample.num_objects() + k;
+                state_denotation_t nsr(state.num_objects() * state.num_objects(), false);
+                for( int j = 0; j < state.num_objects(); ++j ) {
+                    for( int k = 0; k < state.num_objects(); ++k ) {
+                        int index = j * state.num_objects() + k;
                         if( (*sr)[index] ) {
-                            int inv_index = k * sample.num_objects() + j;
+                            int inv_index = k * state.num_objects() + j;
                             nsr[inv_index] = true;
                         }
                     }
@@ -1018,16 +1033,18 @@ class RoleRestriction : public Role {
 
             sample_denotation_t nr;
             for( int i = 0; i < sample.num_states(); ++i ) {
+                const State &state = sample.state(i);
+                assert(state.id() == i);
                 const state_denotation_t *sr = (*r)[i];
-                assert((sr != nullptr) && (sr->size() == sample.num_objects() * sample.num_objects()));
+                assert((sr != nullptr) && (sr->size() == state.num_objects() * state.num_objects()));
                 const state_denotation_t *sd = (*d)[i];
-                assert((sd != nullptr) && (sd->size() == sample.num_objects()));
+                assert((sd != nullptr) && (sd->size() == state.num_objects()));
 
                 state_denotation_t nsr(*sr);
-                for( int j = 0; j < sample.num_objects() * sample.num_objects(); ++j ) {
+                for( int j = 0; j < state.num_objects() * state.num_objects(); ++j ) {
                     if( nsr[j] ) {
-                        //int src = j / sample.num_objects();
-                        int dst = j % sample.num_objects();
+                        //int src = j / state.num_objects();
+                        int dst = j % state.num_objects();
                         nsr[j] = (*sd)[dst];
                     }
                 }
@@ -1090,7 +1107,7 @@ class BooleanFeature : public Feature {
         const sample_denotation_t *d = cache.find_sample_denotation(concept_->as_str());
         assert((d != nullptr) && (d->size() == sample.num_states()));
         const state_denotation_t *sd = (*d)[state.id()];
-        assert((sd != nullptr) && (sd->size() == sample.num_objects()));
+        assert((sd != nullptr) && (sd->size() == state.num_objects()));
         assert(sd->cardinality() < 2);
         return sd->cardinality();
     }
@@ -1122,7 +1139,7 @@ class NumericalFeature : public Feature {
         const sample_denotation_t *d = cache.find_sample_denotation(concept_->as_str());
         assert((d != nullptr) && (d->size() == sample.num_states()));
         const state_denotation_t *sd = (*d)[state.id()];
-        assert((sd != nullptr) && (sd->size() == sample.num_objects()));
+        assert((sd != nullptr) && (sd->size() == state.num_objects()));
         return sd->cardinality();
     }
     std::string as_str() const override {
@@ -1178,13 +1195,15 @@ class DistanceFeature : public Feature {
             all_values_greater_than_zero_ = true;
             cached_distances_ = std::vector<int>(sample.num_states(), std::numeric_limits<int>::max());
             for( int i = 0; i < sample.num_states(); ++i ) {
+                const State &state = sample.state(i);
+                assert(state.id() == i);
                 const state_denotation_t *start_sd = (*start_d)[i];
-                assert((start_sd != nullptr) && (start_sd->size() == sample.num_objects()));
+                assert((start_sd != nullptr) && (start_sd->size() == state.num_objects()));
                 const state_denotation_t *end_sd = (*end_d)[i];
-                assert((end_sd != nullptr) && (end_sd->size() == sample.num_objects()));
+                assert((end_sd != nullptr) && (end_sd->size() == state.num_objects()));
                 const state_denotation_t *role_sd = (*role_d)[i];
-                assert((role_sd != nullptr) && (role_sd->size() == sample.num_objects() * sample.num_objects()));
-                int distance = compute_distance(sample.num_objects(), *start_sd, *end_sd, *role_sd);
+                assert((role_sd != nullptr) && (role_sd->size() == state.num_objects() * state.num_objects()));
+                int distance = compute_distance(state.num_objects(), *start_sd, *end_sd, *role_sd);
                 denotation_is_constant_ = denotation_is_constant_ && ((i == 0) || (cached_distances_[i - 1] == distance));
                 all_values_greater_than_zero_ = all_values_greater_than_zero_ && (distance > 0);
                 cached_distances_[i] = distance;
@@ -1577,8 +1596,10 @@ class Factory {
                 int previous_value = -1;
 
                 for( int j = 0; j < sample.num_states(); ++j ) {
+                    const State &state = sample.state(j);
+                    assert(state.id() == j);
                     const state_denotation_t *sd = (*d)[j];
-                    assert((sd != nullptr) && (sd->size() == sample.num_objects()));
+                    assert((sd != nullptr) && (sd->size() == state.num_objects()));
                     int value = sd->cardinality();
                     boolean_feature = boolean_feature && (value < 2);
                     denotation_is_constant = (previous_value == -1) || (denotation_is_constant && (previous_value == value));
@@ -1709,7 +1730,7 @@ class Factory {
         return num_distance_features;;
     }
 
-    std::ostream& report_dl_data(std::ostream& os) const {
+    std::ostream& report_dl_data(std::ostream &os) const {
         os << "Base concepts (sz=" << basis_concepts_.size() << "): ";
         for( int i = 0; i < int(basis_concepts_.size()); ++i ) {
             os << basis_concepts_[i]->as_str();
@@ -1785,7 +1806,7 @@ class Factory {
 
             // one line per state with the numeric denotation of all features
             for( int j = 0; j < num_features; ++j ) {
-                const Feature& feature = *features_[j];
+                const Feature &feature = *features_[j];
                 os << feature.value(cache, sample, state);
                 if( 1 + j < num_features ) os << " ";
             }
@@ -1798,7 +1819,7 @@ class Factory {
 
         // Line #1: feature names
         for( int i = 0; i < num_features; ++i ) {
-            const Feature& feature = *features_[i];
+            const Feature &feature = *features_[i];
             os << feature.as_str();
             if( 1 + i < num_features ) os << "\t";
         }
@@ -1806,7 +1827,7 @@ class Factory {
 
         // Line #2: feature complexities
         for( int i = 0; i < num_features; ++i ) {
-            const Feature& feature = *features_[i];
+            const Feature &feature = *features_[i];
             os << feature.complexity();
             if( 1 + i < num_features ) os << "\t";
         }
