@@ -260,6 +260,7 @@ def compute_static_atoms(problem):
             static_atoms.add(atom)
             static_predicates.add(predicate_name)
 
+    static_predicates.add('object')  # The object predicate is always static
     for atom in types_as_atoms(problem.language):
         predicate_name = atom[0]
         static_atoms.add(atom)

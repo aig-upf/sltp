@@ -44,9 +44,9 @@ struct Options {
     }
 };
 
-const SLTP::DL::Sample* parse_input_sample(const string &filename) {
-    ifstream sample_file(filename);
-    if( sample_file.fail() ) throw runtime_error("Could not open filename '" + filename + "'");
+SLTP::DL::Sample parse_input_sample(const std::string& filename) {
+    std::ifstream sample_file(filename);
+    if (sample_file.fail()) throw std::runtime_error("Could not open filename '" + filename + "'");
     return SLTP::DL::Sample::read(sample_file);
 }
 

@@ -21,8 +21,10 @@ import os
 import stat
 
 from sltp.matrices import NP_FEAT_VALUE_TYPE, cast_feature_value_to_numpy_value
+from sltp.models import DLModel
+from tarski.dl import PrimitiveConcept, UniversalConcept
 
-from .features import parse_all_instances, compute_models
+from .features import parse_all_instances, compute_models, InstanceInformation
 from .util.command import execute
 from .returncodes import ExitCode
 
@@ -31,9 +33,72 @@ def run(config, data, rng):
     return extract_features(config, data.sample)
 
 
-def print_sample_info(sample, all_predicates, all_functions, all_objects, all_atoms, filename):
-    logging.info("Printing all sample info at {}".format(filename))
-    with open(filename, "w") as f:
+def convert_tuple(universe, name, values):
+    return (name, ) + tuple(universe.value(i) for i in (values if isinstance(values, tuple) else (values, )))
+
+
+def serialize_dl_model(model: DLModel, info: InstanceInformation):
+    serialized = []
+    universe = info.universe
+
+    # Add fluent information
+    for k, v in model.primitive_denotations.items():
+        for point in v:
+            serialized.append(convert_tuple(universe, k.name, point))
+
+    # Add static information
+    for k, v in model.statics.items():
+        if (isinstance(k, PrimitiveConcept) and k.name == 'object') or isinstance(k, UniversalConcept):
+            continue
+
+        for point in v:
+            serialized.append(convert_tuple(universe, k.name, point))
+
+    return serialized
+
+
+def serialize_static_info(model: DLModel, info: InstanceInformation):
+    serialized = []
+    universe = info.universe
+
+    # Add fluent information
+    for k, v in model.primitive_denotations.items():
+        for point in v:
+            serialized.append(convert_tuple(universe, k.name, point))
+
+    # Add static information
+    for k, v in model.statics.items():
+        if (isinstance(k, PrimitiveConcept) and k.name == 'object') or isinstance(k, UniversalConcept):
+            continue
+
+        for point in v:
+            serialized.append(convert_tuple(universe, k.name, point))
+
+    return serialized
+
+
+def print_sample_info(sample, infos, model_cache, all_predicates, all_functions, all_objects, workspace):
+
+    state_fn = os.path.join(workspace, "states.io")
+    sample_fn = os.path.join(workspace, "sample.io")
+
+    logging.info("Printing state data to {}".format(state_fn))
+    all_atoms = set()  # We will accumulate all possible atoms here
+    with open(state_fn, "w") as f:
+        for expected_id, (id_, state) in enumerate(sample.states.items(), 0):
+            # sample.states is an ordered dict. All ids are consecutive, so no need to print them,
+            # but we check just in case
+            assert expected_id == id_
+            state_instance = sample.instance[id_]  # The instance to which the state belongs
+            full_state = serialize_dl_model(model_cache.models[id_], infos[state_instance])
+
+            # print one line per state with all state atoms, e.g. at,bob,shed   at,spanner,location;
+            print("\t".join(",".join(atom) for atom in full_state), file=f)
+
+            all_atoms.update(full_state)
+
+    logging.info("Printing sample information to {}".format(sample_fn))
+    with open(sample_fn, "w") as f:
         print("dummy-sample-name", file=f)  # First line: sample name
 
         print(" ".join("{}/{}".format(name, arity) for name, arity in sorted(all_predicates)),
@@ -46,13 +111,6 @@ def print_sample_info(sample, all_predicates, all_functions, all_objects, all_at
 
         # Fifth line: all possible atoms, i.e. grounded predicates (possibly from different problem instances):
         print("\t".join(",".join(atom) for atom in sorted(all_atoms)), file=f)
-
-        for expected_id, (id_, state) in enumerate(sample.states.items(), 0):
-            # sample.states is an ordered dict. All ids are consecutive, so no need to print them,
-            # but we check just in case
-            assert expected_id == id_
-            # print one line per state with all state atoms, e.g. at,bob,shed;at,spanner,location;
-            print("\t".join(",".join(atom) for atom in state), file=f)
 
 
 def transform_generator_output(config, matrix_filename, info_filename):
@@ -100,13 +158,6 @@ def transform_generator_output(config, matrix_filename, info_filename):
     # np.savez(config.feature_matrix_filename, matrix)
 
 
-def extract_all_atoms_from_sample(sample):
-    all_atoms = set()
-    for state in sample.states.values():
-        all_atoms.update(tuple(a) for a in state)
-    return all_atoms
-
-
 def generate_debug_scripts(target_dir, exe, arguments):
     # If generating a debug build, create some debug script helpers
     shebang = "#!/usr/bin/env bash"
@@ -144,17 +195,19 @@ def extract_features(config, sample):
 
     all_objects = set()
     all_predicates, all_functions = set(), set()
-    for problem, _, _ in parsed_problems:
-        all_objects.update(c.symbol for c in problem.language.constants())
-        all_predicates.update(set((p.symbol, p.arity) for p in problem.language.predicates if not p.builtin))
-        all_functions.update(set((p.symbol, p.arity) for p in problem.language.functions if not p.builtin))
+    for problem, lang, _ in parsed_problems:
+        all_objects.update(c.symbol for c in lang.constants())
+        all_predicates.update(set((p.symbol, p.arity) for p in lang.predicates if not p.builtin))
+        all_functions.update(set((p.symbol, p.arity) for p in lang.functions if not p.builtin))
+
+        # Add type predicates as well
+        all_predicates.update(set((p.name, 1) for p in lang.sorts if not p.builtin and p != lang.Object))
 
     logging.info('Invoking C++ feature generation module'.format())
-    all_atoms = extract_all_atoms_from_sample(sample)
 
     # Write sample information
-    print_sample_info(sample, all_predicates, all_functions,
-                      all_objects, all_atoms, os.path.join(config.experiment_dir, "sample.io"))
+    print_sample_info(sample, infos, model_cache, all_predicates, all_functions,
+                      all_objects, config.experiment_dir)
 
     # Invoke C++ feature generation module
     cmd = os.path.realpath(os.path.join(config.featuregen_location, "featuregen"))
