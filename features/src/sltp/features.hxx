@@ -2,13 +2,14 @@
 #ifndef FEATURES_HXX
 #define FEATURES_HXX
 
+#include <cassert>
+#include <deque>
 #include <iostream>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-#include <vector>
-#include <cassert>
 #include <utility>
+#include <vector>
 
 #include <sltp/utils.hxx>
 #include <limits>
@@ -41,7 +42,10 @@ struct state_denotation_t : public std::vector<bool> {
 // state denotations, one per each state in the sample.
 // Since we cache state denotations, a sample denotation
 // is implemented as a vector of pointers to bitmaps.
-struct sample_denotation_t : public std::vector<const state_denotation_t*> { };
+using sample_denotation_t = std::vector<const state_denotation_t*>;
+
+using feature_state_denotation_t = int;
+using feature_sample_denotation_t = std::vector<feature_state_denotation_t>;
 
 // We cache sample and state denotations. The latter are cached
 // into a simple hash (i.e. unordered_set). The former are cached
@@ -106,6 +110,9 @@ class Cache {
     // to concept names, and the other is the inverse
     //
     // sample denotation -> concept name
+    const cache1_t& cache1() const {
+        return cache1_;
+    }
     const sample_denotation_t* find_sample_denotation(const sample_denotation_t &d) const {
         cache1_t::const_iterator it = cache1_.find(&d);
         return it == cache1_.end() ? nullptr : it->first;
@@ -113,6 +120,7 @@ class Cache {
     const sample_denotation_t* find_or_insert_sample_denotation(const sample_denotation_t &d, const std::string &name) {
         cache1_t::const_iterator it = cache1_.find(&d);
         if( it == cache1_.end() ) {
+            assert(cache2_.find(name) == cache2_.end());
             const sample_denotation_t *nd = new sample_denotation_t(d);
             cache1_.emplace(nd, name);
             cache2_.emplace(name, nd);
@@ -184,7 +192,7 @@ class Object {
     const std::string name_;
 
   public:
-    Object(unsigned id, std::string name) : id_(id), name_(std::move(name)) { }
+    Object(unsigned id, const std::string &name) : id_(id), name_(name) { }
     int id() const {
         return id_;
     }
@@ -199,14 +207,14 @@ class Object {
 struct Predicate {
     const predicate_id id_;
     const std::string name_;
-    const unsigned arity_;
-    Predicate(unsigned id, const std::string &name, unsigned arity)
+    const int arity_;
+    Predicate(unsigned id, const std::string &name, int arity)
       : id_(id), name_(name), arity_(arity) {
     }
     predicate_id id() const {
         return id_;
     }
-    unsigned arity() const {
+    int arity() const {
         return arity_;
     }
     std::string as_str(const std::vector<object_id> *objects) const {
@@ -301,9 +309,8 @@ public:
     using ObjectIndex = std::unordered_map<std::string, object_id>;
     using PredicateIndex = std::unordered_map<std::string, predicate_id>;
 
-    //! Map from <pred_id, oid_1, ..., oid_n> to atom ID
-    using AtomIndex = std::unordered_map<std::vector<unsigned>,
-            atom_id, utils::container_hash<std::vector<unsigned>>>;
+    // Map from <pred_id, oid_1, ..., oid_n> to atom ID
+    using AtomIndex = std::unordered_map<std::vector<unsigned>, atom_id, utils::container_hash<std::vector<unsigned> > >;
 
   protected:
     const std::string name_;
@@ -312,13 +319,13 @@ public:
     const std::vector<GroundedPredicate> grounded_predicates_;
     const std::vector<State> states_;
 
-    //! A mapping from object names to their ID in the sample
+    // A mapping from object names to their ID in the sample
     ObjectIndex oidx_;
 
-    //! A mapping from predicate names to their ID in the sample
+    // A mapping from predicate names to their ID in the sample
     PredicateIndex pidx_;
 
-    //! A mapping from <predicate name, obj_name, ..., obj_name> to the ID of the corresponding GroundPredicate
+    // A mapping from <predicate name, obj_name, ..., obj_name> to the ID of the corresponding GroundPredicate
     AtomIndex aidx_;
 
     Sample(std::string name,
@@ -345,16 +352,16 @@ public:
     const std::string& name() const {
         return name_;
     }
-    std::size_t num_objects() const {
+    int num_objects() const {
         return objects_.size();
     }
-    std::size_t num_predicates() const {
+    int num_predicates() const {
         return predicates_.size();
     }
-    std::size_t num_grounded_predicates() const {
+    int num_grounded_predicates() const {
         return grounded_predicates_.size();
     }
-    std::size_t num_states() const {
+    int num_states() const {
         return states_.size();
     }
 
@@ -369,7 +376,7 @@ public:
 
     const GroundedPredicate& atom(unsigned id) const { return grounded_predicates_.at(id); }
 
-    //! Factory method - reads sample from serialized data
+    // Factory method - reads sample from serialized data
     static Sample read(std::istream &is);
 };
 //
@@ -395,12 +402,12 @@ public:
 class Base {
   protected:
     // unsigned id_;
-    unsigned complexity_;
+    int complexity_;
 
   public:
-    explicit Base(unsigned complexity) : complexity_(complexity) { }
+    explicit Base(int complexity) : complexity_(complexity) { }
     // const unsigned id() const { return id_; }
-    const unsigned complexity() const { return complexity_; }
+    const int complexity() const { return complexity_; }
 
     //virtual void denotation(Denotation &d) const = 0;
     virtual const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const = 0;
@@ -418,14 +425,14 @@ class Base {
 
 class Concept : public Base {
   public:
-    explicit Concept(unsigned complexity) : Base(complexity) { }
+    explicit Concept(int complexity) : Base(complexity) { }
     virtual ~Concept() = default;
     virtual const Concept* clone() const = 0;
 };
 
 class Role : public Base {
   public:
-    explicit Role(unsigned complexity) : Base(complexity) { }
+    explicit Role(int complexity) : Base(complexity) { }
     virtual ~Role() = default;
     virtual const Role* clone() const = 0;
 };
@@ -445,7 +452,7 @@ class PrimitiveConcept : public Concept {
         const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
         if( cached == nullptr ) {
             sample_denotation_t d;
-            for( unsigned i = 0; i < sample.num_states(); ++i ) {
+            for( int i = 0; i < sample.num_states(); ++i ) {
                 const State &s = sample.state(i);
                 d.emplace_back(denotation(cache, sample, s));
             }
@@ -487,7 +494,7 @@ class UniversalConcept : public Concept {
             const state_denotation_t *cached_sd = cache.find_or_insert_state_denotation(sd);
 
             sample_denotation_t nd;
-            for( unsigned i = 0; i < sample.num_states(); ++i )
+            for( int i = 0; i < sample.num_states(); ++i )
                 nd.emplace_back(cached_sd);
             return use_cache ? cache.find_or_insert_sample_denotation(nd, as_str()) : new sample_denotation_t(nd);
         } else {
@@ -528,7 +535,7 @@ class AndConcept : public Concept {
             assert((d2 != nullptr) && (d2->size() == sample.num_states()));
 
             sample_denotation_t nd;
-            for( unsigned i = 0; i < sample.num_states(); ++i ) {
+            for( int i = 0; i < sample.num_states(); ++i ) {
                 const state_denotation_t *sd1 = (*d1)[i];
                 assert((sd1 != nullptr) && (sd1->size() == sample.num_objects()));
                 const state_denotation_t *sd2 = (*d2)[i];
@@ -575,7 +582,7 @@ class NotConcept : public Concept {
             assert((d != nullptr) && (d->size() == sample.num_states()));
 
             sample_denotation_t nd;
-            for( unsigned i = 0; i < sample.num_states(); ++i ) {
+            for( int i = 0; i < sample.num_states(); ++i ) {
                 const state_denotation_t *sd = (*d)[i];
                 assert((sd != nullptr) && (sd->size() == sample.num_objects()));
 
@@ -624,7 +631,7 @@ class ExistsConcept : public Concept {
             assert((r != nullptr) && (r->size() == sample.num_states()));
 
             sample_denotation_t nd;
-            for( unsigned i = 0; i < sample.num_states(); ++i ) {
+            for( int i = 0; i < sample.num_states(); ++i ) {
                 const state_denotation_t *sd = (*d)[i];
                 assert((sd != nullptr) && (sd->size() == sample.num_objects()));
                 const state_denotation_t *sr = (*r)[i];
@@ -681,7 +688,7 @@ class ForallConcept : public Concept {
             assert((r != nullptr) && (r->size() == sample.num_states()));
 
             sample_denotation_t nd;
-            for( unsigned i = 0; i < sample.num_states(); ++i ) {
+            for( int i = 0; i < sample.num_states(); ++i ) {
                 const state_denotation_t *sd = (*d)[i];
                 assert((sd != nullptr) && (sd->size() == sample.num_objects()));
                 const state_denotation_t *sr = (*r)[i];
@@ -728,7 +735,7 @@ class PrimitiveRole : public Role {
         const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
         if( cached == nullptr ) {
             sample_denotation_t nr;
-            for( unsigned i = 0; i < sample.num_states(); ++i ) {
+            for( int i = 0; i < sample.num_states(); ++i ) {
                 const State &s = sample.state(i);
                 nr.emplace_back(denotation(cache, sample, s));
             }
@@ -743,7 +750,7 @@ class PrimitiveRole : public Role {
             const GroundedPredicate& atom = sample.atom(id);
             if (atom.is_instance(*predicate_)) {
                 assert(atom.objects().size() == 2);
-                unsigned index = atom.object(0) * sample.num_objects() + atom.object(1);
+                int index = atom.object(0) * sample.num_objects() + atom.object(1);
                 assert(index < sample.num_objects() * sample.num_objects());
                 sr[index] = true;
             }
@@ -768,7 +775,7 @@ class PlusRole : public Role {
     }
 
     // apply Johnson's algorithm for transitive closure
-    void transitive_closure(std::size_t num_objects, state_denotation_t &sd) const {
+    void transitive_closure(int num_objects, state_denotation_t &sd) const {
         // create adjacency lists
         std::vector<std::vector<int> > adj(num_objects);
         for( int i = 0; i < num_objects; ++i ) {
@@ -802,7 +809,7 @@ class PlusRole : public Role {
             assert((r != nullptr) && (r->size() == sample.num_states()));
 
             sample_denotation_t nr;
-            for( unsigned i = 0; i < sample.num_states(); ++i ) {
+            for( int i = 0; i < sample.num_states(); ++i ) {
                 const state_denotation_t *sr = (*r)[i];
                 assert((sr != nullptr) && (sr->size() == sample.num_objects() * sample.num_objects()));
 
@@ -851,7 +858,7 @@ class StarRole : public Role {
             assert((pr != nullptr) && (pr->size() == sample.num_states()));
 
             sample_denotation_t nr;
-            for( unsigned i = 0; i < sample.num_states(); ++i ) {
+            for( int i = 0; i < sample.num_states(); ++i ) {
                 const state_denotation_t *sr = (*pr)[i];
                 assert((sr != nullptr) && (sr->size() == sample.num_objects() * sample.num_objects()));
 
@@ -895,7 +902,7 @@ class InverseRole : public Role {
             assert((r != nullptr) && (r->size() == sample.num_states()));
 
             sample_denotation_t nr;
-            for( unsigned i = 0; i < sample.num_states(); ++i ) {
+            for( int i = 0; i < sample.num_states(); ++i ) {
                 const state_denotation_t *sr = (*r)[i];
                 assert((sr != nullptr) && (sr->size() == sample.num_objects() * sample.num_objects()));
 
@@ -926,38 +933,104 @@ class InverseRole : public Role {
     }
 };
 
+// RoleRestriction are only used for distance features
+// and thus they are generated when generating such features
+class RoleRestriction : public Role {
+  protected:
+    const Role *role_;
+    const Concept *restriction_;
+
+  public:
+    RoleRestriction(const Role *role, const Concept *restriction)
+      : Role(1 + role->complexity() + restriction->complexity()),
+        role_(role),
+        restriction_(restriction) {
+    }
+    ~RoleRestriction() override = default;
+    const Role* clone() const override {
+        return new RoleRestriction(role_, restriction_);
+    }
+
+    const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
+        const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
+        if( cached == nullptr ) {
+            const sample_denotation_t *r = cache.find_sample_denotation(role_->as_str());
+            assert((r != nullptr) && (r->size() == sample.num_states()));
+            const sample_denotation_t *d = cache.find_sample_denotation(restriction_->as_str());
+            assert((d != nullptr) && (d->size() == sample.num_states()));
+
+            sample_denotation_t nr;
+            for( int i = 0; i < sample.num_states(); ++i ) {
+                const state_denotation_t *sr = (*r)[i];
+                assert((sr != nullptr) && (sr->size() == sample.num_objects() * sample.num_objects()));
+                const state_denotation_t *sd = (*d)[i];
+                assert((sd != nullptr) && (sd->size() == sample.num_objects()));
+
+                state_denotation_t nsr(*sr);
+                for( int j = 0; j < sample.num_objects() * sample.num_objects(); ++j ) {
+                    if( nsr[j] ) {
+                        //int src = j / sample.num_objects();
+                        int dst = j % sample.num_objects();
+                        nsr[j] = (*sd)[dst];
+                    }
+                }
+                nr.emplace_back(cache.find_or_insert_state_denotation(nsr));
+            }
+            return use_cache ? cache.find_or_insert_sample_denotation(nr, as_str()) : new sample_denotation_t(nr);
+        } else {
+            return cached;
+        }
+    }
+    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
+        throw std::runtime_error("Unexpected call: RoleRestriction::denotation(Cache&, const Sample&, const State&)");
+        return nullptr;
+    }
+
+    std::string as_str() const override {
+        return role_->as_str() + "#" + restriction_->as_str();
+    }
+};
+
 class Feature {
   public:
     Feature() = default;
     virtual ~Feature() = default;
+    virtual const Feature* clone() const = 0;
 
     virtual int complexity() const = 0;
     virtual int value(const Cache &cache, const Sample &sample, const State &state) const = 0;
     virtual std::string as_str() const = 0;
+
+    std::string as_str_with_complexity() const {
+        return std::to_string(complexity()) + "." + as_str();
+    }
+
     friend std::ostream& operator<<(std::ostream &os, const Feature &f) {
         return os << f.as_str() << std::flush;
     }
-
-    virtual unsigned type() const = 0;
 };
 
 class BooleanFeature : public Feature {
   protected:
-    const Concept &concept_;
+    const Concept *concept_;
 
   public:
-    explicit BooleanFeature(const Concept &concept) : Feature(), concept_(concept) { }
+    explicit BooleanFeature(const Concept *concept) : Feature(), concept_(concept) { }
     ~BooleanFeature() override = default;
+    const Feature* clone() const override {
+        return new BooleanFeature(concept_);
+    }
+
     int complexity() const override {
-        return concept_.complexity();
+        return concept_->complexity();
     }
     int value(const Cache &cache, const Sample &sample, const State &state) const override {
         // we look into cache for sample denotation using the concept name,
         // then index sample denotation with state id to find state denotation,
         // for finally computing cardinality (this assumes that state id is
         // index of state into sample.states())
-        assert(sample.states()[state.id()].id() == state.id());
-        const sample_denotation_t *d = cache.find_sample_denotation(concept_.as_str());
+        assert(sample.state(state.id()).id() == state.id());
+        const sample_denotation_t *d = cache.find_sample_denotation(concept_->as_str());
         assert((d != nullptr) && (d->size() == sample.num_states()));
         const state_denotation_t *sd = (*d)[state.id()];
         assert((sd != nullptr) && (sd->size() == sample.num_objects()));
@@ -965,53 +1038,170 @@ class BooleanFeature : public Feature {
         return sd->cardinality();
     }
     std::string as_str() const override {
-        return std::string("Boolean[") + concept_.as_str() + "]";
+        return std::string("Boolean[") + concept_->as_str() + "]";
     }
-
-    unsigned type() const override { return 0; }
 };
 
 class NumericalFeature : public Feature {
   protected:
-    const Concept &concept_;
+    const Concept *concept_;
 
   public:
-    explicit NumericalFeature(const Concept &concept) : Feature(), concept_(concept) { }
+    explicit NumericalFeature(const Concept *concept) : Feature(), concept_(concept) { }
     ~NumericalFeature() override = default;
+    const Feature* clone() const override {
+        return new NumericalFeature(concept_);
+    }
+
     int complexity() const override {
-        return concept_.complexity();
+        return concept_->complexity();
     }
     int value(const Cache &cache, const Sample &sample, const State &state) const override {
         // we look into cache for sample denotation using the concept name,
         // then index sample denotation with state id to find state denotation,
         // for finally computing cardinality (this assumes that state id is
         // index of state into sample.states())
-        assert(sample.states()[state.id()].id() == state.id());
-        const sample_denotation_t *d = cache.find_sample_denotation(concept_.as_str());
+        assert(sample.state(state.id()).id() == state.id());
+        const sample_denotation_t *d = cache.find_sample_denotation(concept_->as_str());
         assert((d != nullptr) && (d->size() == sample.num_states()));
         const state_denotation_t *sd = (*d)[state.id()];
         assert((sd != nullptr) && (sd->size() == sample.num_objects()));
         return sd->cardinality();
     }
     std::string as_str() const override {
-        return std::string("Numerical[") + concept_.as_str() + "]";
+        return std::string("Numerical[") + concept_->as_str() + "]";
     }
-
-    unsigned type() const override { return 1; }
 };
 
 class DistanceFeature : public Feature {
+  protected:
+    const Concept *start_;
+    const Concept *end_;
+    const RoleRestriction *role_;
+
+    mutable bool valid_cache_;
+    mutable std::vector<int> cached_distances_;
+    mutable bool denotation_is_constant_;
+    mutable bool all_values_greater_than_zero_;
+
   public:
-    explicit DistanceFeature() { }
+    explicit DistanceFeature(const Concept *start, const Concept *end, const RoleRestriction *role)
+      : Feature(),
+        start_(start),
+        end_(end),
+        role_(role),
+        valid_cache_(false),
+        denotation_is_constant_(false),
+        all_values_greater_than_zero_(false) {
+    }
     ~DistanceFeature() override = default;
+    const Feature* clone() const override {
+        DistanceFeature *f = new DistanceFeature(start_, end_, role_);
+        f->valid_cache_ = valid_cache_;
+        f->cached_distances_ = cached_distances_;
+        f->denotation_is_constant_ = denotation_is_constant_;
+        f->all_values_greater_than_zero_ = all_values_greater_than_zero_;
+        return f;
+    }
+
     int complexity() const override {
-        throw std::runtime_error("TODO: UNIMPLEMENTED: DistanceFeature::complexity()");
+        return 1 + start_->complexity() + end_->complexity() + role_->complexity();
     }
     int value(const Cache &cache, const Sample &sample, const State &state) const override {
-        throw std::runtime_error("TODO: UNIMPLEMENTED: DistanceFeature::value()");
+        assert(sample.state(state.id()).id() == state.id());
+        if( !valid_cache_ ) {
+            const sample_denotation_t *start_d = cache.find_sample_denotation(start_->as_str());
+            assert((start_d != nullptr) && (start_d->size() == sample.num_states()));
+            const sample_denotation_t *end_d = cache.find_sample_denotation(end_->as_str());
+            assert((end_d != nullptr) && (end_d->size() == sample.num_states()));
+            const sample_denotation_t *role_d = cache.find_sample_denotation(role_->as_str());
+            assert((role_d != nullptr) && (role_d->size() == sample.num_states()));
+
+            denotation_is_constant_ = true;
+            all_values_greater_than_zero_ = true;
+            cached_distances_ = std::vector<int>(sample.num_states(), std::numeric_limits<int>::max());
+            for( int i = 0; i < sample.num_states(); ++i ) {
+                const state_denotation_t *start_sd = (*start_d)[i];
+                assert((start_sd != nullptr) && (start_sd->size() == sample.num_objects()));
+                const state_denotation_t *end_sd = (*end_d)[i];
+                assert((end_sd != nullptr) && (end_sd->size() == sample.num_objects()));
+                const state_denotation_t *role_sd = (*role_d)[i];
+                assert((role_sd != nullptr) && (role_sd->size() == sample.num_objects() * sample.num_objects()));
+                int distance = compute_distance(sample.num_objects(), *start_sd, *end_sd, *role_sd);
+                denotation_is_constant_ = denotation_is_constant_ && ((i == 0) || (cached_distances_[i - 1] == distance));
+                all_values_greater_than_zero_ = all_values_greater_than_zero_ && (distance > 0);
+                cached_distances_[i] = distance;
+            }
+            valid_cache_ = true;
+        }
+        return cached_distances_[state.id()];
     }
     std::string as_str() const override {
-        return std::string("Distance[") + "<filler>" + "]";
+        return std::string("Distance[") + start_->as_str() + ";" + role_->as_str() + ";" + end_->as_str() + "]";
+    }
+
+    bool valid_cache() const {
+        return valid_cache_;
+    }
+    bool denotation_is_constant() const {
+        return denotation_is_constant_;
+    }
+    bool all_values_greater_than_zero() const {
+        return all_values_greater_than_zero_;
+    }
+
+    int compute_distance(int num_objects,
+                         const state_denotation_t &start_sd,
+                         const state_denotation_t &end_sd,
+                         const state_denotation_t &role_sd) const {
+        // create adjacency lists
+        std::vector<std::vector<int> > adj(num_objects);
+        for( int i = 0; i < num_objects; ++i ) {
+            for( int j = 0; j < num_objects; ++j ) {
+                if( role_sd[i * num_objects + j] )
+                    adj[i].emplace_back(j);
+            }
+        }
+
+        // locate start vertex
+        int start = -1;
+        for( int i = 0; i < num_objects; ++i ) {
+            if( start_sd[i] ) {
+                start = i;
+                break;
+            }
+        }
+        assert(start != -1);
+
+        // check whether distance is 0
+        if( end_sd[start] ) return 0;
+
+        // apply breadth-first search from start vertex
+        std::vector<int> distances(num_objects, -1);
+        distances[start] = 0;
+
+        std::deque<std::pair<int, int> > q;
+        for( int i = 0; i < adj[start].size(); ++i ) {
+            if( end_sd[adj[start][i]] )
+                return 1;
+            else
+                q.emplace_back(adj[start][i], 1);
+        }
+
+        while( !q.empty() ) {
+            std::pair<int, int> p = q.front();
+            q.pop_front();
+            if( distances[p.first] == -1 ) {
+                distances[p.first] = p.second;
+                for( int i = 0; i < adj[p.first].size(); ++i ) {
+                    if( end_sd[adj[p.first][i]] )
+                        return 1 + p.second;
+                    else
+                        q.emplace_back(adj[p.first][i], 1 + p.second);
+                }
+            }
+        }
+        return std::numeric_limits<int>::max();
     }
 };
 
@@ -1091,8 +1281,9 @@ class Factory {
     bool is_superfluous(Cache &cache, const sample_denotation_t *d) const {
         return cache.find_sample_denotation(*d) != nullptr;
     }
-    std::pair<bool, const sample_denotation_t*> is_superfluous_or_exceeds_complexity_bound(const Base &base, Cache &cache, const Sample *sample) const {
-        if( base.complexity() > complexity_bound_ ) {
+    std::pair<bool, const sample_denotation_t*>
+      is_superfluous_or_exceeds_complexity_bound(const Base &base, Cache &cache, const Sample *sample, bool do_not_check_complexity = false) const {
+        if( !do_not_check_complexity && (base.complexity() > complexity_bound_) ) {
             return std::make_pair(true, nullptr);
         } else if( sample != nullptr ) {
             const sample_denotation_t *d = base.denotation(cache, *sample, false);
@@ -1208,7 +1399,7 @@ class Factory {
                 } else {
                     // we cannot just obviate this role since another
                     // role denotation may depend on this denotation
-                    std::cout << "PRUNE: " + role.as_str() << std::endl;
+                    //std::cout << "PRUNE: " + role.as_str() << std::endl;
                     insert_new_denotation_by_name(cache, role.as_str(), p.second);
                 }
                 delete p.second;
@@ -1223,7 +1414,7 @@ class Factory {
                 } else {
                     // we cannot just obviate this role since another
                     // role denotation may depend on this denotation
-                    std::cout << "PRUNE: " + plus_role.as_str() << std::endl;
+                    //std::cout << "PRUNE: " + plus_role.as_str() << std::endl;
                     insert_new_denotation_by_name(cache, plus_role.as_str(), p1.second);
                 }
                 delete p1.second;
@@ -1235,7 +1426,7 @@ class Factory {
                 } else {
                     // we cannot just obviate this role since another
                     // role denotation may depend on this denotation
-                    std::cout << "PRUNE: " + star_role.as_str() << std::endl;
+                    //std::cout << "PRUNE: " + star_role.as_str() << std::endl;
                     insert_new_denotation_by_name(cache, star_role.as_str(), p2.second);
                 }
                 delete p2.second;
@@ -1253,7 +1444,7 @@ class Factory {
                     } else {
                         // we cannot just obviate this role since another
                         // role denotation may depend on this denotation
-                        std::cout << "PRUNE: " + plus_inverse_role.as_str() << std::endl;
+                        //std::cout << "PRUNE: " + plus_inverse_role.as_str() << std::endl;
                         insert_new_denotation_by_name(cache, plus_inverse_role.as_str(), p.second);
                     }
                     delete p.second;
@@ -1265,14 +1456,14 @@ class Factory {
                     } else {
                         // we cannot just obviate this role since another
                         // role denotation may depend on this denotation
-                        std::cout << "PRUNE: " + star_inverse_role.as_str() << std::endl;
+                        //std::cout << "PRUNE: " + star_inverse_role.as_str() << std::endl;
                         insert_new_denotation_by_name(cache, star_inverse_role.as_str(), q.second);
                     }
                     delete q.second;
                 } else {
                     // we cannot just obviate this role since another
                     // role denotation may depend on this denotation
-                    std::cout << "PRUNE: " + inverse_role.as_str() << std::endl;
+                    //std::cout << "PRUNE: " + inverse_role.as_str() << std::endl;
                     insert_new_denotation_by_name(cache, inverse_role.as_str(), p3.second);
                 }
                 delete p3.second;
@@ -1308,9 +1499,7 @@ class Factory {
         return num_concepts;
     }
 
-    int generate_features(const Cache &cache, const Sample &sample) const {
-        using feature_denotation_t = int;
-        using feature_sample_denotation_t = std::vector<feature_denotation_t>;
+    int generate_features(Cache &cache, const Sample &sample) const {
         using cache_t = std::unordered_map<feature_sample_denotation_t, const Feature*, utils::container_hash<feature_sample_denotation_t> >;
         cache_t seen_denotations;
 
@@ -1332,7 +1521,7 @@ class Factory {
                 bool all_values_greater_than_zero = true;
                 int previous_value = -1;
 
-                for( int j = 0; j < int(d->size()); ++j ) {
+                for( int j = 0; j < sample.num_states(); ++j ) {
                     const state_denotation_t *sd = (*d)[j];
                     assert((sd != nullptr) && (sd->size() == sample.num_objects()));
                     int value = sd->cardinality();
@@ -1347,16 +1536,20 @@ class Factory {
                     cache_t::const_iterator it = seen_denotations.find(fd);
                     if( it == seen_denotations.end() ) {
                         num_boolean_features += boolean_feature;
-                        const Feature *feature = boolean_feature ? static_cast<Feature*>(new BooleanFeature(c)) : static_cast<Feature*>(new NumericalFeature(c));
+                        const Feature *feature = boolean_feature ? static_cast<Feature*>(new BooleanFeature(&c)) : static_cast<Feature*>(new NumericalFeature(&c));
                         features_.emplace_back(feature);
+                        seen_denotations.emplace(fd, feature);
+                        //std::cout << "ACCEPT: " << feature->as_str_with_complexity() << std::endl;
+                    } else {
+                        //std::cout << "REJECT: " << c.as_str() << std::endl;
+                        //std::cout << "PRUNED-BY: " << it->second->as_str() << std::endl;
                     }
                 }
             }
         }
 
         // create distance features
-        int num_distance_features = 0;
-        //throw std::runtime_error("TODO: UNIMPLEMENTED: Factory::generate_features()");
+        int num_distance_features = generate_distance_features(cache, sample);
 
         std::cout << "FEATURES: #features=" << features_.size()
                   << ", #boolean-features=" << num_boolean_features
@@ -1367,15 +1560,109 @@ class Factory {
         return features_.size();
     }
 
+    int generate_distance_features(Cache &cache, const Sample &sample) const {
+        using cache_t = std::unordered_map<feature_sample_denotation_t, const Feature*, utils::container_hash<feature_sample_denotation_t> >;
+        cache_t seen_denotations;
+
+        // identify concepts with singleton denotation across all states
+        // as these are the candidates for start concepts
+        std::vector<const Concept*> start_concepts;
+        for( int layer = 0; layer < int(concepts_.size()); ++layer ) {
+            for( int i = 0; i < int(concepts_[layer].size()); ++i ) {
+                const Concept &c = *concepts_[layer][i];
+                const sample_denotation_t *d = cache.find_sample_denotation(c.as_str());
+                assert((d != nullptr) && (d->size() == sample.num_states()));
+                bool singleton_denotations = true;
+                for( int j = 0; singleton_denotations && (j < sample.num_states()); ++j )
+                    singleton_denotations = (*d)[j]->cardinality() == 1;
+                if( singleton_denotations ) {
+                    //std::cout << "GOOD (START) CONCEPT: " << c.as_str_with_complexity() << std::endl;
+                    start_concepts.push_back(&c);
+                }
+            }
+        }
+
+        // create role restrictions to be used in distance features
+        Cache cache_for_role_restrictions;
+        std::vector<const RoleRestriction*> role_restrictions;
+        for( int i = 0; i < int(roles_.size()); ++i ) {
+            const Role &r = *roles_[i];
+            for( int layer = 0; layer < int(concepts_.size()); ++layer ) {
+                for( int j = 0; j < int(concepts_[layer].size()); ++j ) {
+                    const Concept &c = *concepts_[layer][j];
+                    RoleRestriction role_restriction(&r, &c);
+                    if( 3 + role_restriction.complexity() > complexity_bound_ ) continue;
+                    const sample_denotation_t *d = role_restriction.denotation(cache, sample, false);
+                    if( !is_superfluous(cache_for_role_restrictions, d) ) {
+                        assert(cache_for_role_restrictions.cache1().find(d) == cache_for_role_restrictions.cache1().end());
+                        role_restrictions.push_back(static_cast<const RoleRestriction*>(role_restriction.clone()));
+                        cache_for_role_restrictions.find_or_insert_sample_denotation(*d, role_restriction.as_str());
+                        assert(cache_for_role_restrictions.cache1().find(d) != cache_for_role_restrictions.cache1().end());
+                        //std::cout << "ACCEPT RR(sz=" << cache_for_role_restrictions.cache1().size() << "): " + role_restriction.as_str_with_complexity() << std::endl;
+                    } else {
+                        //std::cout << "PRUNE RR: " + role_restriction.as_str() << std::endl;
+                    }
+                    delete d;
+                }
+            }
+        }
+
+        // create distance features
+        int num_distance_features = 0;
+        for( int i = 0; i < int(start_concepts.size()); ++i ) {
+            const Concept &start = *start_concepts[i];
+            for( int layer = 0; layer < int(concepts_.size()); ++layer ) {
+                for( int j = 0; j < int(concepts_[layer].size()); ++j ) {
+                    const Concept &end = *concepts_[layer][j];
+                    for( int k = 0; k < int(role_restrictions.size()); ++k ) {
+                        const RoleRestriction &role = *role_restrictions[k];
+                        DistanceFeature df(&start, &end, &role);
+                        if( df.complexity() > complexity_bound_ ) continue;
+                        //std::cout << "TESTING: " << df.as_str_with_complexity() << std::endl;
+
+                        // fill cache with denotations for start and end concepts
+                        const sample_denotation_t *ds = cache.find_sample_denotation(start.as_str());
+                        assert((ds != nullptr) && (ds->size() == sample.num_states()));
+                        cache_for_role_restrictions.find_or_insert_sample_denotation(*ds, start.as_str());
+                        const sample_denotation_t *de = cache.find_sample_denotation(end.as_str());
+                        assert((de != nullptr) && (de->size() == sample.num_states()));
+                        cache_for_role_restrictions.find_or_insert_sample_denotation(*de, end.as_str());
+
+                        // check whether df is novel
+                        feature_sample_denotation_t fd(sample.num_states());
+                        for( int index = 0; index < sample.num_states(); ++index ) {
+                            assert(sample.state(index).id() == index);
+                            const State &state = sample.state(index);
+                            int value = df.value(cache_for_role_restrictions, sample, state);
+                            fd[index] = value;
+                        }
+
+                        cache_t::const_iterator it = seen_denotations.find(fd);
+                        if( it == seen_denotations.end() ) {
+                            ++num_distance_features;
+                            features_.emplace_back(df.clone());
+                            seen_denotations.emplace(fd, features_.back());
+                            //std::cout << "ACCEPT: " + df.as_str_with_complexity() << std::endl;
+                        } else {
+                            //std::cout << "REJECT: " + df.as_str() << std::endl;
+                            //std::cout << "PRUNED-BY: " << it->second->as_str() << std::endl;
+                        }
+                    }
+                }
+            }
+        }
+        return num_distance_features;;
+    }
+
     std::ostream& report_dl_data(std::ostream& os) const {
-        os << "Base concepts: ";
+        os << "Base concepts (sz=" << basis_concepts_.size() << "): ";
         for( int i = 0; i < int(basis_concepts_.size()); ++i ) {
             os << basis_concepts_[i]->as_str();
             if( 1 + i < int(basis_concepts_.size()) ) os << ", ";
         }
         os << std::endl;
 
-        os << "Base roles: ";
+        os << "Base roles (sz=" << basis_roles_.size() << "): ";
         for( int i = 0; i < int(basis_roles_.size()); ++i ) {
             os << basis_roles_[i]->as_str();
             if( 1 + i < int(basis_roles_.size()) ) os << ", ";
@@ -1385,7 +1672,7 @@ class Factory {
         os << "All concepts and roles (max. complexity " << complexity_bound_ << "): " << std::endl;
         os << "Concepts (by layer): " << std::endl;
         for( int layer = 0; layer < concepts_.size(); ++layer ) {
-            os << "    Layer #" << layer <<": ";
+            os << "    Layer " << layer << " (sz=" << concepts_[layer].size() << "): ";
             for( int i = 0; i < int(concepts_[layer].size()); ++i ) {
                 os << concepts_[layer][i]->as_str_with_complexity();
                 if( 1 + i < int(concepts_[layer].size()) ) os << ", ";
@@ -1393,7 +1680,7 @@ class Factory {
             os << std::endl;
         }
 
-        os << "Roles: ";
+        os << "Roles (sz=" << roles_.size() << "): ";
         for( int i = 0; i < int(roles_.size()); ++i ) {
             os << roles_[i]->as_str_with_complexity();
             if( 1 + i < int(roles_.size()) ) os << ", ";
@@ -1437,53 +1724,44 @@ class Factory {
     }
 
     void output_feature_matrix(std::ostream &os, const Cache &cache, const Sample &sample) const {
-        auto nfeatures = (unsigned) features_.size();
-        for( unsigned i = 0; i < sample.num_states(); ++i ) {
+        int num_features = features_.size();
+        for( int i = 0; i < sample.num_states(); ++i ) {
             const State &state = sample.state(i);
 
-            // One line per state with the numeric denotation of all features
-            for (unsigned j = 0; j < nfeatures; ++j) {
+            // one line per state with the numeric denotation of all features
+            for( int j = 0; j < num_features; ++j ) {
                 const Feature& feature = *features_[j];
                 os << feature.value(cache, sample, state);
-                if (j < nfeatures-1) {
-                    os << " ";
-                }
+                if( 1 + j < num_features ) os << " ";
             }
-
             os << std::endl;
         }
     }
 
     void output_feature_info(std::ostream &os, const Cache &cache, const Sample &sample) const {
-        auto nfeatures = (unsigned) features_.size();
+        int num_features = features_.size();
 
         // Line #1: feature names
-        for (unsigned j = 0; j < nfeatures; ++j) {
-            const Feature& feature = *features_[j];
+        for( int i = 0; i < num_features; ++i ) {
+            const Feature& feature = *features_[i];
             os << feature.as_str();
-            if (j < nfeatures-1) {
-                os << "\t";
-            }
+            if( 1 + i < num_features ) os << "\t";
         }
         os << std::endl;
 
         // Line #2: feature complexities
-        for (unsigned j = 0; j < nfeatures; ++j) {
-            const Feature& feature = *features_[j];
+        for( int i = 0; i < num_features; ++i ) {
+            const Feature& feature = *features_[i];
             os << feature.complexity();
-            if (j < nfeatures-1) {
-                os << "\t";
-            }
+            if( 1 + i < num_features ) os << "\t";
         }
         os << std::endl;
 
         // Line #3: feature types (0: boolean; 1: numeric)
-        for (unsigned j = 0; j < nfeatures; ++j) {
-            const Feature& feature = *features_[j];
-            os << feature.type();
-            if (j < nfeatures-1) {
-                os << "\t";
-            }
+        for( int i = 0; i < num_features; ++i ) {
+            const Feature* feature = features_[i];
+            os << (dynamic_cast<const BooleanFeature*>(feature) != nullptr ? 0 : 1);
+            if( 1 + i < num_features ) os << "\t";
         }
         os << std::endl;
     }
