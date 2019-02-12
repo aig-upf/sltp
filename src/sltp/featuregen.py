@@ -23,7 +23,7 @@ from collections import defaultdict
 
 from sltp.matrices import NP_FEAT_VALUE_TYPE, cast_feature_value_to_numpy_value
 from sltp.models import DLModel
-from tarski.dl import PrimitiveConcept, UniversalConcept
+from tarski.dl import PrimitiveConcept, UniversalConcept, NullaryAtom, NominalConcept
 
 from .features import parse_all_instances, compute_models, InstanceInformation
 from .util.command import execute
@@ -38,22 +38,29 @@ def convert_tuple(universe, name, values):
     return (name, ) + tuple(universe.value(i) for i in (values if isinstance(values, tuple) else (values, )))
 
 
+def process_predicate_atoms(universe, p, extension, atoms):
+    if (isinstance(p, PrimitiveConcept) and p.name == 'object') or \
+            isinstance(p, UniversalConcept) or isinstance(p, NominalConcept):
+        return
+
+    if isinstance(p, NullaryAtom):
+        atoms.append((p.name, ))
+    else:
+        for point in extension:
+            atoms.append(convert_tuple(universe, p.name, point))
+
+
 def serialize_dl_model(model: DLModel, info: InstanceInformation):
     serialized = []
     universe = info.universe
 
     # Add fluent information
     for k, v in model.primitive_denotations.items():
-        for point in v:
-            serialized.append(convert_tuple(universe, k.name, point))
+        process_predicate_atoms(universe, k, v, serialized)
 
     # Add static information
     for k, v in model.statics.items():
-        if (isinstance(k, PrimitiveConcept) and k.name == 'object') or isinstance(k, UniversalConcept):
-            continue
-
-        for point in v:
-            serialized.append(convert_tuple(universe, k.name, point))
+        process_predicate_atoms(universe, k, v, serialized)
 
     return serialized
 

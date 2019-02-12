@@ -13,6 +13,7 @@
 
 #include <sltp/utils.hxx>
 #include <limits>
+#include <algorithm>
 
 namespace SLTP {
 
@@ -1092,6 +1093,39 @@ class Feature {
     }
 };
 
+class NullaryAtomFeature : public Feature {
+protected:
+    const Predicate* predicate_;
+
+public:
+    explicit NullaryAtomFeature(const Predicate* predicate) : predicate_(predicate) { }
+    ~NullaryAtomFeature() override = default;
+
+    const Feature* clone() const override {
+        return new NullaryAtomFeature(*this);
+    }
+
+    int complexity() const override { // Nullary atoms have complexity 0 by definition
+        return 0;
+    }
+
+    int value(const Cache &cache, const Sample &sample, const State &state) const override {
+        // Return true (1) iff some atom in the state has the coindiding predicate ID with the predicate of the
+        // nullary atom, since there can only be one single atom with this predicate
+        // TODO: This is unnecessarily expensive, and it is not cached anywhere
+        for (const auto& atom_id:state.atoms()) {
+            const GroundedPredicate &atom = state.atom(atom_id);
+            if( atom.is_instance(*predicate_)) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+    std::string as_str() const override {
+        return std::string("Atom[") + predicate_->name_ + "]";
+    }
+};
+
 class BooleanFeature : public Feature {
   protected:
     const Concept *concept_;
@@ -1585,6 +1619,13 @@ class Factory {
         using cache_t = std::unordered_map<feature_sample_denotation_t, const Feature*, utils::container_hash<feature_sample_denotation_t> >;
         cache_t seen_denotations;
 
+        // create features that derive from nullary predicates
+        for (const auto& predicate:sample.predicates()) {
+            if (predicate.arity() == 0) {
+                features_.push_back(new NullaryAtomFeature(&predicate));
+            }
+        }
+
         // create boolean/numerical features from concepts
         int num_boolean_features = 0;
         for( int layer = 0; layer < int(concepts_.size()); ++layer ) {
@@ -1771,8 +1812,19 @@ class Factory {
         }
         os << std::endl;
 
-        os << "Boolean features: ";
+        os << "Nullary-atom features: ";
         bool need_comma = false;
+        for( int i = 0; i < int(features_.size()); ++i ) {
+            if( dynamic_cast<const NullaryAtomFeature*>(features_[i]) != nullptr ) {
+                if( need_comma ) os << ", ";
+                os << features_[i]->as_str();
+                need_comma = true;
+            }
+        }
+        os << std::endl;
+
+        os << "Boolean features: ";
+        need_comma = false;
         for( int i = 0; i < int(features_.size()); ++i ) {
             if( dynamic_cast<const BooleanFeature*>(features_[i]) != nullptr ) {
                 if( need_comma ) os << ", ";
