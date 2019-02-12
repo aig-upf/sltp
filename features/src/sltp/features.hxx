@@ -143,7 +143,7 @@ class Cache {
     // cache2: (full) sample denotations for concepts
     //
     // concept name -> sample denotation
-    const sample_denotation_t* find_sample_denotation(const std::string name) const {
+    const sample_denotation_t* find_sample_denotation(const std::string& name) const {
         cache2_t::const_iterator it = cache2_.find(name);
         return it == cache2_.end() ? nullptr : it->second;
     }
