@@ -1114,7 +1114,7 @@ public:
         // nullary atom, since there can only be one single atom with this predicate
         // TODO: This is unnecessarily expensive, and it is not cached anywhere
         for (const auto& atom_id:state.atoms()) {
-            const GroundedPredicate &atom = state.atom(atom_id);
+            const Atom &atom = state.atom(atom_id);
             if( atom.is_instance(*predicate_)) {
                 return 1;
             }
