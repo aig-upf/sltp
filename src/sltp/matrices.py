@@ -54,7 +54,7 @@ def cast_feature_value_to_numpy_value(value):
     """ Cast a given feature value into a suitable numpy value, if possible, or raise error if not """
     assert value >= 0
     max_ = np.iinfo(NP_FEAT_VALUE_TYPE).max
-    if value == sys.maxsize:
+    if value == sys.maxsize or value == 2147483647:  # std::numeric_limits<int>::max(). Yes, this is not portable :-)
         return max_
 
     if value >= max_:  # Max value reserved to denote infty.
