@@ -19,6 +19,7 @@ import itertools
 
 import os
 import stat
+from collections import defaultdict
 
 from sltp.matrices import NP_FEAT_VALUE_TYPE, cast_feature_value_to_numpy_value
 from sltp.models import DLModel
@@ -112,6 +113,40 @@ def print_sample_info(sample, infos, model_cache, all_predicates, all_functions,
         # Fifth line: all possible atoms, i.e. grounded predicates (possibly from different problem instances):
         print("\t".join(",".join(atom) for atom in sorted(all_atoms)), file=f)
 
+    #
+    #
+    state_info = []
+    atoms_per_instance = defaultdict(set)
+    for expected_id, (id_, state) in enumerate(sample.states.items(), 0):
+        # Check all ids are consecutive, as expected
+        assert expected_id == id_
+        instance_id = sample.instance[id_]  # The instance to which the state belongs
+        full_state = serialize_dl_model(model_cache.models[id_], infos[instance_id])
+        state_info.append((instance_id, full_state))
+        atoms_per_instance[instance_id].update(full_state)
+
+    logging.info("Printing sample information to {}".format(sample_fn))
+    with open(sample_fn, "w") as f:
+        # numero de instancias
+        # objetos instancia 1
+        # objetos instancia 2
+        # ...
+        # objetos instancia n
+        # atomos instancia 1
+        # atomos instancia 2
+        # ...
+        # atomos instancia n
+
+        print(len(infos), file=f)  # number of instances
+
+        assert len(infos) == len(all_objects) == len(atoms_per_instance)
+        for instance_id, objects in enumerate(all_objects, start=0):
+            print(" ".join(sorted(objects)), file=f)  # all object names in that instance
+
+            # all possible atoms in the instance
+            print("\t".join(",".join(atom) for atom in sorted(atoms_per_instance[instance_id])), file=f)
+
+
 
 def transform_generator_output(config, matrix_filename, info_filename):
     logging.info("Transforming generator output to numpy format...")
@@ -193,10 +228,10 @@ def extract_features(config, sample):
     if any(all_goal_predicates != info.goal_predicates for info in infos):
         logging.warning("Not all instances in the training set use the same goal predicate")
 
-    all_objects = set()
+    all_objects = []
     all_predicates, all_functions = set(), set()
     for problem, lang, _ in parsed_problems:
-        all_objects.update(c.symbol for c in lang.constants())
+        all_objects.append(set(c.symbol for c in lang.constants()))
         all_predicates.update(set((p.symbol, p.arity) for p in lang.predicates if not p.builtin))
         all_functions.update(set((p.symbol, p.arity) for p in lang.functions if not p.builtin))
 
