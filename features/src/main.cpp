@@ -83,7 +83,7 @@ int main(int argc, const char **argv) {
     // We will likely need to output somehow the structure of the (non-redundant) concepts and features,
     // so that they can be reconstructed from python.
 
-    const SLTP::DL::Sample *sample = parse_input_sample(options.worskspace_ + "/sample.io");
+    const SLTP::DL::Sample sample = parse_input_sample(options.worskspace_ + "/sample.io");
 #if 0
     cout << "SAMPLE: #objects=" << sample->num_objects()
          << ", #predicates=" << sample->num_predicates()
@@ -94,15 +94,14 @@ int main(int argc, const char **argv) {
     SLTP::DL::Factory factory("test", options.complexity_bound_);
 
     SLTP::DL::Cache cache;
-    factory.generate_basis(*sample);
-    factory.generate_roles(cache, *sample);
-    factory.generate_concepts(cache, *sample);
-    factory.generate_features(cache, *sample);
+    factory.generate_basis(sample);
+    factory.generate_roles(cache, sample);
+    factory.generate_concepts(cache, sample);
+    factory.generate_features(cache, sample);
     factory.report_dl_data(cout);
 
-    output_results(options, factory, *sample, cache);
+    output_results(options, factory, sample, cache);
 
-    delete sample;
     return 0;
 }
 

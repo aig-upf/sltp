@@ -80,72 +80,46 @@ def serialize_static_info(model: DLModel, info: InstanceInformation):
 
 def print_sample_info(sample, infos, model_cache, all_predicates, all_functions, all_objects, workspace):
 
-    state_fn = os.path.join(workspace, "states.io")
     sample_fn = os.path.join(workspace, "sample.io")
-
-    logging.info("Printing state data to {}".format(state_fn))
-    all_atoms = set()  # We will accumulate all possible atoms here
-    with open(state_fn, "w") as f:
-        for expected_id, (id_, state) in enumerate(sample.states.items(), 0):
-            # sample.states is an ordered dict. All ids are consecutive, so no need to print them,
-            # but we check just in case
-            assert expected_id == id_
-            state_instance = sample.instance[id_]  # The instance to which the state belongs
-            full_state = serialize_dl_model(model_cache.models[id_], infos[state_instance])
-
-            # print one line per state with all state atoms, e.g. at,bob,shed   at,spanner,location;
-            print("\t".join(",".join(atom) for atom in full_state), file=f)
-
-            all_atoms.update(full_state)
-
-    logging.info("Printing sample information to {}".format(sample_fn))
-    with open(sample_fn, "w") as f:
-        print("dummy-sample-name", file=f)  # First line: sample name
-
-        print(" ".join("{}/{}".format(name, arity) for name, arity in sorted(all_predicates)),
-              file=f)  # Second line: all predicate names
-
-        print(" ".join("{}/{}".format(name, arity) for name, arity in sorted(all_functions)),
-              file=f)  # # Third line: all function names
-
-        print(" ".join(sorted(all_objects)), file=f)  # Fourth line: all object names
-
-        # Fifth line: all possible atoms, i.e. grounded predicates (possibly from different problem instances):
-        print("\t".join(",".join(atom) for atom in sorted(all_atoms)), file=f)
-
-    #
-    #
     state_info = []
     atoms_per_instance = defaultdict(set)
+    # Iterate over all states and collect the necessary information
     for expected_id, (id_, state) in enumerate(sample.states.items(), 0):
         # Check all ids are consecutive, as expected
         assert expected_id == id_
         instance_id = sample.instance[id_]  # The instance to which the state belongs
         full_state = serialize_dl_model(model_cache.models[id_], infos[instance_id])
-        state_info.append((instance_id, full_state))
         atoms_per_instance[instance_id].update(full_state)
+        state_info.append([str(instance_id)] + [",".join(atom) for atom in full_state])
 
     logging.info("Printing sample information to {}".format(sample_fn))
     with open(sample_fn, "w") as f:
-        # numero de instancias
-        # objetos instancia 1
-        # objetos instancia 2
-        # ...
-        # objetos instancia n
-        # atomos instancia 1
-        # atomos instancia 2
-        # ...
-        # atomos instancia n
+        # First line: sample name
+        print("dummy-sample-name", file=f)
 
-        print(len(infos), file=f)  # number of instances
+        # Second line: all predicate names
+        print(" ".join("{}/{}".format(name, arity) for name, arity in sorted(all_predicates)), file=f)
+
+        # Third line: all function names
+        print(" ".join("{}/{}".format(name, arity) for name, arity in sorted(all_functions)), file=f)
+
+        # Next: per-instance information.
+        # Number of instances:
+        print(len(infos), file=f)
 
         assert len(infos) == len(all_objects) == len(atoms_per_instance)
         for instance_id, objects in enumerate(all_objects, start=0):
-            print(" ".join(sorted(objects)), file=f)  # all object names in that instance
+            # all object names in instance i
+            print(" ".join(sorted(objects)), file=f)
 
-            # all possible atoms in the instance
+            # all possible atoms in instance i
             print("\t".join(",".join(atom) for atom in sorted(atoms_per_instance[instance_id])), file=f)
 
+        # Next: all states. One state per line. first column is instance_id of state, rest are all atoms in that state,
+        # including static atoms and type-predicate atoms
+        for stinfo in state_info:
+            # print one line per state with all state atoms, e.g. at,bob,shed   at,spanner,location;
+            print("\t".join(stinfo), file=f)
 
 
 def transform_generator_output(config, matrix_filename, info_filename):

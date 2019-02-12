@@ -315,9 +315,9 @@ class Instance {
       object_index_(std::move(object_index)),
       atom_index_(std::move(atom_index)) {
     }
-    Instance(Instance &&ins) {
-        throw std::runtime_error("Not yet implemented: move operator for Instance class");
-    }
+
+    Instance(const Instance& ins) = default;
+    Instance(Instance &&ins) = default;
     ~Instance() = default;
 
     const std::string& name() const {
@@ -332,6 +332,9 @@ class Instance {
     const GroundedPredicate& atom(unsigned id) const {
         return grounded_predicates_.at(id);
     }
+
+    const ObjectIndex& oidx() const { return object_index_; }
+    const AtomIndex& aidx() const { return atom_index_; }
 };
 
 // A state is a collections of atoms (i.e. GroundedPredicates)
@@ -342,7 +345,7 @@ class State {
     std::vector<atom_id_t> atoms_;
 
   public:
-    explicit State(const Instance &instance, unsigned id, const std::vector<atom_id_t> &&atoms)
+    explicit State(const Instance &instance, unsigned id, std::vector<atom_id_t>&& atoms)
       : instance_(instance), id_(id), atoms_(std::move(atoms)) {
     }
     unsigned id() const {
@@ -429,7 +432,7 @@ class Sample {
 #endif
 
     // factory method - reads sample from serialized data
-    static const Sample* read(std::istream &is);
+    static const Sample read(std::istream &is);
 };
 
 
