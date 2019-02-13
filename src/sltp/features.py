@@ -25,7 +25,7 @@ import tarski as tsk
 
 from bitarray import bitarray
 from .models import DLModelFactory, FeatureModel
-from sltp.util.misc import compute_universe_from_pddl_model, state_as_atoms, types_as_atoms
+from sltp.util.misc import compute_universe_from_pddl_model, state_as_atoms, types_as_atoms, print_relation, print_set
 from tarski.syntax.transform.errors import TransformationError
 from tarski.syntax.transform.simplifications import transform_to_ground_atoms
 
@@ -356,17 +356,16 @@ def extract_features(config, sample):
 
         # profiling.print_snapshot()
 
-    # store_terms(concepts, roles, config)
+    store_terms(concepts, roles, config)
     logging.info('Final output: {} concept(s) and {} role(s)'.format(len(concepts), len(roles)))
     logging.info('Number of states in the sample: {}'.format(len(sample.states)))
     logging.info('Number of concepts with singleton extensions over all states: {}'.format(
         len(factory.processor.singleton_extension_concepts)))
 
+    rest = []
     if config.distance_feature_max_complexity:  # If we use Use distance features, we'll want role restrictions
         rest = list(factory.create_role_restrictions(concepts, roles))
         # store_role_restrictions(rest, config)
-    else:
-        rest = roles
 
     if config.feature_generator is not None and config.enforce_features:
         raise RuntimeError("Cannot use at the same time options 'feature_generator' and 'enforce_features'")
@@ -382,7 +381,8 @@ def extract_features(config, sample):
         features = config.feature_generator(language)
 
     logging.info('Final number of features: {}'.format(len(features)))
-    # log_concept_denotations(sample.states, concepts, factory.processor.model_cache, config.concept_denotation_filename)
+    log_concept_denotations(sample.states, concepts, roles + rest, infos, factory.processor.model_cache,
+                            config.concept_denotation_filename, config.role_denotation_filename)
 
     return ExitCode.Success, dict(
         features=features,
@@ -428,17 +428,25 @@ def generate_concepts(config, factory, nominals, types, goal_predicates):
     return atoms, concepts, roles
 
 
-def log_concept_denotations(states, concepts, model_cache, filename, selected=None):
+def log_concept_denotations(states, concepts, roles, infos, model_cache, cfilename, rfilename, selected=None):
     selected = selected or concepts
     # selected = ((str(f), f) for f in selected)
     # selected = sorted(selected, key=lambda x: x[0])  # Sort features by name
 
-    with open(filename, 'w') as file:
+    with open(cfilename, 'w') as file:
         for s, concept in itertools.product(states, selected):
-            val = model_cache.get_term_model(s).uncompressed_denotation(concept)
-            print("s_{}[{}] = {}".format(s, concept, val), file=file)
+            mod = model_cache.get_term_model(s)
+            val = mod.uncompressed_denotation(concept)
+            print("s_{}[{}] = {}".format(s, concept, print_set(val, mod.universe_idx)), file=file)
 
-    logging.info("Concept denotations logged in '{}'".format(filename))
+    logging.info("Concept denotations logged in '{}'".format(cfilename))
+
+    with open(rfilename, 'w') as file:
+        for s, role in itertools.product(states, roles):
+            mod = model_cache.get_term_model(s)
+            val = mod.uncompressed_denotation(role)
+            print("s_{}[{}] = {}".format(s, role, print_relation(val, mod.universe_idx)), file=file)
+    logging.info("Role denotations logged in '{}'".format(rfilename))
 
 
 def compute_nominals(domain, parameter_generator):

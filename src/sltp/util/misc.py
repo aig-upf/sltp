@@ -78,3 +78,15 @@ def types_as_atoms(lang):
         if s != lang.Object and not s.builtin:
             atoms.update((s.name, c.symbol) for c in s.domain())
     return atoms
+
+
+def print_set(data, index):
+    return "{{{}}}".format(", ".join(index.value(x) for x in data))
+
+
+def print_relation(data, index):
+    return "{{{}}}".format(", ".join(print_tuple(x, index) for x in data))
+
+
+def print_tuple(tup, index):
+    return "({})".format(", ".join(index.value(x) for x in tup))

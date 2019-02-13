@@ -2,6 +2,8 @@
 #include <sltp/features.hxx>
 #include <boost/algorithm/string.hpp>
 #include <fstream>
+#include "features.hxx"
+
 
 using namespace std;
 
@@ -17,7 +19,7 @@ namespace SLTP { namespace DL {
         std::vector<object_id_t> objects;
         objects.reserve(atom.size() - 1);
         for( int i = 1; i < atom.size(); ++i ) { // Start iterating at 1 to skip the predicate name
-            objects.push_back(object_index.at(atom[i]));
+            objects.push_back(object_index.left.at(atom[i]));
         }
         return Atom(predicate_index.at(atom[0]), std::move(objects));
     }
@@ -74,7 +76,7 @@ namespace SLTP { namespace DL {
         for( auto &name : names ) {
             auto oid = (object_id_t) object_index.size();
             objects.emplace_back(oid, name);
-            object_index.insert(std::make_pair(name, oid));
+            object_index.insert({name, oid});
         }
 
         return objects;
@@ -163,5 +165,73 @@ namespace SLTP { namespace DL {
                       std::move(predicate_index));
     }
 
+
+    const state_denotation_t& Cache::retrieve_concept_denotation(const Concept &element, const State &state) const {
+        const sample_denotation_t *d = find_sample_denotation(element.as_str());
+        assert(d);
+        const state_denotation_t *sd = (*d)[state.id()];
+        assert(sd && (sd->size() == state.num_objects()));
+        return *sd;
+    }
+
+
+    const state_denotation_t& Cache::retrieve_role_denotation(const Role &element, const State &state) const {
+        unsigned nobjects = state.num_objects();
+        const sample_denotation_t *d = find_sample_denotation(element.as_str());
+        assert(d);
+        const state_denotation_t *sd = (*d)[state.id()];
+        assert(sd && (sd->size() == nobjects*nobjects));
+        return *sd;
+    }
+
+    void Factory::log_all_concepts_and_features(const Cache &cache, const Sample &sample, const string &workspace) {
+        // Print concept denotations
+        std::string output(workspace + "/concept-denotations.io.txt");
+        std::ofstream of(output);
+        if( of.fail() ) throw std::runtime_error("Could not open filename '" + output + "'");
+
+        for(unsigned i = 0; i < sample.num_states(); ++i) {
+            const State &state = sample.state(i);
+            const Instance::ObjectIndex& oidx = state.instance().object_index();
+
+            for (const Concept* c:all_concepts()) {
+                const state_denotation_t& denotation = cache.retrieve_concept_denotation(*c, state);
+                of << "s_" << i << "[" << c->as_str() << "] = {";
+                for (unsigned atom = 0; atom < denotation.size(); ++atom) {
+                    if (denotation[atom]) {
+                        of << oidx.right.at(atom) << ", ";
+                    }
+                }
+                of << "}" << std::endl;
+            }
+        }
+        of.close();
+
+
+        // Print role denotations
+        output = workspace + "/role-denotations.io.txt";
+        of = std::ofstream(output);
+        if( of.fail() ) throw std::runtime_error("Could not open filename '" + output + "'");
+
+        for(unsigned i = 0; i < sample.num_states(); ++i) {
+            const State &state = sample.state(i);
+            const Instance::ObjectIndex& oidx = state.instance().object_index();
+            unsigned m = state.num_objects();
+
+            for (const Role* r:roles_) {
+                const state_denotation_t& denotation = cache.retrieve_role_denotation(*r, state);
+                of << "s_" << i << "[" << r->as_str() << "] = {";
+                for (unsigned idx = 0; idx < denotation.size(); ++idx) {
+                    if (denotation[idx]) {
+                        unsigned o1 = idx / m;
+                        unsigned o2 = idx % m;
+                        of << "(" << oidx.right.at(o1) << ", " << oidx.right.at(o2) << "), ";
+                    }
+                }
+                of << "}" << std::endl;
+            }
+        }
+        of.close();
+    }
 } }; // namespaces
 

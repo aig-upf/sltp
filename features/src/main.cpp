@@ -11,7 +11,7 @@ using namespace std;
 
 struct Options {
     string execname_;
-    string worskspace_;
+    string workspace_;
     unsigned complexity_bound_;
 
     Options(int argc, const char **argv) {
@@ -29,8 +29,8 @@ struct Options {
 
         // read arguments
         complexity_bound_ = (unsigned) stoul(argv[1], nullptr, 10);
-        worskspace_ = string(argv[2]);
-        //cout << "Using workspace directory '" << worskspace_ << "' and output file '" << output_file_ << "'" << endl;
+        workspace_ = string(argv[2]);
+        //cout << "Using workspace directory '" << workspace_ << "' and output file '" << output_file_ << "'" << endl;
     }
 
     void print_usage(ostream &os) const {
@@ -72,13 +72,13 @@ void output_results(const Options &options,
                     const SLTP::DL::Cache &cache) {
 
     // Print feature matrix
-    string output(options.worskspace_ + "/feature-matrix.io");
+    string output(options.workspace_ + "/feature-matrix.io");
     ofstream output_file(output);
     if( output_file.fail() ) throw runtime_error("Could not open filename '" + output + "'");
     factory.output_feature_matrix(output_file, cache, sample);
 
     // Print feature metadata
-    output = options.worskspace_ + "/feature-info.io";
+    output = options.workspace_ + "/feature-info.io";
     ofstream infofile(output);
     if( infofile.fail() ) throw runtime_error("Could not open filename '" + output + "'");
     factory.output_feature_info(infofile, cache, sample);
@@ -99,8 +99,8 @@ int main(int argc, const char **argv) {
     // We will likely need to output somehow the structure of the (non-redundant) concepts and features,
     // so that they can be reconstructed from python.
 
-    const SLTP::DL::Sample sample = parse_input_sample(options.worskspace_ + "/sample.io");
-    const std::vector<std::string> nominals = parse_nominals(options.worskspace_ + "/nominals.io");
+    const SLTP::DL::Sample sample = parse_input_sample(options.workspace_ + "/sample.io");
+    const std::vector<std::string> nominals = parse_nominals(options.workspace_ + "/nominals.io");
 #if 0
     cout << "SAMPLE: #objects=" << sample->num_objects()
          << ", #predicates=" << sample->num_predicates()
@@ -116,6 +116,7 @@ int main(int argc, const char **argv) {
     factory.generate_concepts(cache, sample);
     factory.generate_features(cache, sample);
     factory.report_dl_data(cout);
+    factory.log_all_concepts_and_features(cache, sample, options.workspace_);
 
     output_results(options, factory, sample, cache);
 

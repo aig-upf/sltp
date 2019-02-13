@@ -29,10 +29,11 @@ class DLModel:
       - The denotation of nominal concepts
       - Compound concepts and roles involving only the above elements [TODO: STILL NEEDS TO BE IMPLEMENTED]
     """
-    def __init__(self, primitive_denotations, statics, cache=None):
+    def __init__(self, primitive_denotations, statics, universe_idx, cache=None):
         self.primitive_denotations = primitive_denotations
         self.statics = statics
         self.cache = cache
+        self.universe_idx = universe_idx
         self._universe = self.primitive_denotation(_TOP)
 
     def universe(self):
@@ -132,7 +133,7 @@ class DLModelFactory:
         denotations = self.base_model()
         _ = [self.process_atom(atom, denotations, _STANDARD_DL_MAPPING) for atom in state
              if atom[0] not in self.instance_info.static_predicates]
-        return DLModel(denotations, self.statics)
+        return DLModel(denotations, self.statics, self.universe)
 
     def process_atom(self, atom, denotations, dl_mapping):
         """ Process an atom represented in format e.g. ("on", "a", "b") and add the corresponding modifications

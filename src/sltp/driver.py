@@ -245,6 +245,7 @@ class ConceptGenerationStep(Step):
         config["distance_feature_max_complexity"] = config.get("distance_feature_max_complexity", None)
         config["max_concept_grammar_iterations"] = config.get("max_concept_grammar_iterations", None)
         config["concept_denotation_filename"] = compute_info_filename(config, "concept-denotations.txt")
+        config["role_denotation_filename"] = compute_info_filename(config, "role-denotations.txt")
 
         return config
 

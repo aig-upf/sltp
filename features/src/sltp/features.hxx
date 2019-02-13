@@ -10,10 +10,13 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-
-#include <sltp/utils.hxx>
 #include <limits>
 #include <algorithm>
+#include <fstream>
+#include <boost/bimap.hpp>
+
+
+#include <sltp/utils.hxx>
 
 namespace SLTP {
 
@@ -26,6 +29,9 @@ using state_id_t = unsigned;
 
 class Atom;
 class Sample;
+class Concept;
+class Role;
+class State;
 
 // A state denotation for concept C is a subset of objects
 // implemented as a bitmap (ie. vector<bool>). These are
@@ -182,6 +188,9 @@ class Cache {
         return it == cache4_.end() ? nullptr : it->second;
     }
     const Atom* find_or_insert_atom(const Atom &atom);
+
+    const state_denotation_t& retrieve_concept_denotation(const Concept &element, const State &state) const;
+    const state_denotation_t& retrieve_role_denotation(const Role &element, const State &state) const;
 };
 
 // We represent states as subets of atoms
@@ -279,7 +288,8 @@ class Atom {
 class Instance {
   public:
     // map from object name to object id in instance
-    using ObjectIndex = std::unordered_map<std::string, object_id_t>;
+//    using ObjectIndex = std::unordered_map<std::string, object_id_t>;
+    using ObjectIndex = boost::bimap<std::string, object_id_t>;
     // map from atom of the form <pred_id, oid_1, ..., oid_n> to atom id in instance
     using AtomIndex = std::unordered_map<std::vector<unsigned>, atom_id_t, utils::container_hash<std::vector<unsigned> > >;
 
@@ -570,7 +580,7 @@ public:
     }
     const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
         const Instance::ObjectIndex& oidx = state.instance().object_index();
-        object_id_t id = oidx.at(name_);
+        object_id_t id = oidx.left.at(name_);
         assert(id < state.num_objects());
 
         state_denotation_t sd(state.num_objects(), false);
@@ -613,7 +623,7 @@ class UniversalConcept : public Concept {
         return nullptr;
     }
     std::string as_str() const override {
-        return "<universal>";
+        return "<universe>";
     }
 };
 
@@ -666,7 +676,7 @@ class AndConcept : public Concept {
     }
 
     std::string as_str() const override {
-        return std::string("And[") +  concept1_->as_str() + "," + concept2_->as_str() + "]";
+        return std::string("And(") +  concept1_->as_str() + "," + concept2_->as_str() + ")";
     }
 };
 
@@ -713,7 +723,7 @@ class NotConcept : public Concept {
     }
 
     std::string as_str() const override {
-        return std::string("Not[") + concept_->as_str() + "]";
+        return std::string("Not(") + concept_->as_str() + ")";
     }
 };
 
@@ -772,7 +782,7 @@ class ExistsConcept : public Concept {
     }
 
     std::string as_str() const override {
-        return std::string("Exists[") + concept_->as_str() + "," + role_->as_str() + "]";
+        return std::string("Exists(") + concept_->as_str() + "," + role_->as_str() + ")";
     }
 };
 
@@ -831,7 +841,7 @@ class ForallConcept : public Concept {
     }
 
     std::string as_str() const override {
-        return std::string("Forall[") + concept_->as_str() + "," + role_->as_str() + "]";
+        return std::string("Forall(") + concept_->as_str() + "," + role_->as_str() + ")";
     }
 };
 
@@ -946,7 +956,7 @@ class PlusRole : public Role {
     }
 
     std::string as_str() const override {
-        return std::string("Plus[") + role_->as_str() + "]";
+        return std::string("Plus(") + role_->as_str() + ")";
     }
 };
 
@@ -1000,7 +1010,7 @@ class StarRole : public Role {
     }
 
     std::string as_str() const override {
-        return std::string("Star[") + role_->as_str() + "]";
+        return std::string("Star(") + role_->as_str() + ")";
     }
 };
 
@@ -1051,7 +1061,7 @@ class InverseRole : public Role {
     }
 
     std::string as_str() const override {
-        return std::string("Inverse[") + role_->as_str() + "]";
+        return std::string("Inverse(") + role_->as_str() + ")";
     }
 };
 
@@ -1111,7 +1121,7 @@ class RoleRestriction : public Role {
     }
 
     std::string as_str() const override {
-        return role_->as_str() + "#" + restriction_->as_str();
+        return role_->as_str() + ":" + restriction_->as_str();
     }
 };
 
@@ -1580,6 +1590,7 @@ class Factory {
 
             for( int i = 0; i < int(basis_roles_.size()); ++i ) {
                 const Role *role = basis_roles_[i];
+//#if 0  // ATM we deactivate Plus roles
                 PlusRole plus_role(role);
                 std::pair<bool, const sample_denotation_t*> p1 = is_superfluous_or_exceeds_complexity_bound(plus_role, cache, sample);
                 if( !p1.first ) {
@@ -1591,7 +1602,7 @@ class Factory {
                     insert_new_denotation_by_name(cache, plus_role.as_str(), p1.second);
                 }
                 delete p1.second;
-
+//#endif
                 StarRole star_role(role);
                 std::pair<bool, const sample_denotation_t*> p2 = is_superfluous_or_exceeds_complexity_bound(star_role, cache, sample);
                 if( !p2.first ) {
@@ -1837,6 +1848,12 @@ class Factory {
     }
 
     std::ostream& report_dl_data(std::ostream &os) const {
+
+        unsigned nconcepts = 0;
+        for (const auto& layer:concepts_) nconcepts += layer.size();
+        auto nroles = roles_.size();
+        os << "Total number of concepts / roles: " << nconcepts << "/" << nroles << std::endl;
+
         os << "Base concepts (sz=" << basis_concepts_.size() << "): ";
         for( int i = 0; i < int(basis_concepts_.size()); ++i ) {
             os << basis_concepts_[i]->as_str();
@@ -1851,8 +1868,14 @@ class Factory {
         }
         os << std::endl;
 
-        os << "All concepts and roles (max. complexity " << complexity_bound_ << "): " << std::endl;
-        os << "Concepts (by layer): " << std::endl;
+        os << "All Roles under complexity " << complexity_bound_ << "(sz=" << roles_.size() << "): ";
+        for( int i = 0; i < int(roles_.size()); ++i ) {
+            os << roles_[i]->as_str_with_complexity();
+            if( 1 + i < int(roles_.size()) ) os << ", ";
+        }
+        os << std::endl;
+
+        os << "All concepts (by layer) under complexity " << complexity_bound_ << ": " << std::endl;
         for( int layer = 0; layer < concepts_.size(); ++layer ) {
             os << "    Layer " << layer << " (sz=" << concepts_[layer].size() << "): ";
             for( int i = 0; i < int(concepts_[layer].size()); ++i ) {
@@ -1862,19 +1885,12 @@ class Factory {
             os << std::endl;
         }
 
-        os << "Roles (sz=" << roles_.size() << "): ";
-        for( int i = 0; i < int(roles_.size()); ++i ) {
-            os << roles_[i]->as_str_with_complexity();
-            if( 1 + i < int(roles_.size()) ) os << ", ";
-        }
-        os << std::endl;
-
         os << "Nullary-atom features: ";
         bool need_comma = false;
-        for( int i = 0; i < int(features_.size()); ++i ) {
-            if( dynamic_cast<const NullaryAtomFeature*>(features_[i]) != nullptr ) {
+        for (auto &feature : features_) {
+            if( dynamic_cast<const NullaryAtomFeature*>(feature) ) {
                 if( need_comma ) os << ", ";
-                os << features_[i]->as_str();
+                os << feature->as_str();
                 need_comma = true;
             }
         }
@@ -1882,10 +1898,10 @@ class Factory {
 
         os << "Boolean features: ";
         need_comma = false;
-        for( int i = 0; i < int(features_.size()); ++i ) {
-            if( dynamic_cast<const BooleanFeature*>(features_[i]) != nullptr ) {
+        for (auto &feature : features_) {
+            if( dynamic_cast<const BooleanFeature*>(feature) ) {
                 if( need_comma ) os << ", ";
-                os << features_[i]->as_str();
+                os << feature->as_str();
                 need_comma = true;
             }
         }
@@ -1893,10 +1909,10 @@ class Factory {
 
         os << "Numerical features: ";
         need_comma = false;
-        for( int i = 0; i < int(features_.size()); ++i ) {
-            if( dynamic_cast<const NumericalFeature*>(features_[i]) != nullptr ) {
+        for (auto &feature : features_) {
+            if( dynamic_cast<const NumericalFeature*>(feature) ) {
                 if( need_comma ) os << ", ";
-                os << features_[i]->as_str();
+                os << feature->as_str();
                 need_comma = true;
             }
         }
@@ -1904,10 +1920,10 @@ class Factory {
 
         os << "Distance features: ";
         need_comma = false;
-        for( int i = 0; i < int(features_.size()); ++i ) {
-            if( dynamic_cast<const DistanceFeature*>(features_[i]) != nullptr ) {
+        for (auto &feature : features_) {
+            if( dynamic_cast<const DistanceFeature*>(feature) ) {
                 if( need_comma ) os << ", ";
-                os << features_[i]->as_str();
+                os << feature->as_str();
                 need_comma = true;
             }
         }
@@ -1957,6 +1973,16 @@ class Factory {
             if( 1 + i < num_features ) os << "\t";
         }
         os << std::endl;
+    }
+
+    void log_all_concepts_and_features(const SLTP::DL::Cache &cache, const SLTP::DL::Sample &sample,
+            const std::string& workspace);
+
+    //! Return all generated concepts in a single, *unlayered* vector
+    std::vector<const Concept*> all_concepts() const {
+        std::vector<const Concept*> all;
+        for (const auto& layer:concepts_) all.insert(all.end(), layer.begin(), layer.end());
+        return all;
     }
 };
 
