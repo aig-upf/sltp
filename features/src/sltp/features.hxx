@@ -1381,7 +1381,7 @@ class DistanceFeature : public Feature {
     mutable bool all_values_greater_than_zero_;
 
   public:
-    explicit DistanceFeature(const Concept *start, const Concept *end, const RoleRestriction *role)
+    DistanceFeature(const Concept *start, const Concept *end, const RoleRestriction *role)
       : Feature(),
         start_(start),
         end_(end),
@@ -1843,16 +1843,17 @@ class Factory {
     int generate_features(Cache &cache, const Sample &sample) const {
         using cache_t = std::unordered_map<feature_sample_denotation_t, const Feature*, utils::container_hash<feature_sample_denotation_t> >;
         cache_t seen_denotations;
+        int num_boolean_features = 0;
 
         // create features that derive from nullary predicates
         for (const auto& predicate:sample.predicates()) {
             if (predicate.arity() == 0) {
                 features_.push_back(new NullaryAtomFeature(&predicate));
+                num_boolean_features++;
             }
         }
 
         // create boolean/numerical features from concepts
-        int num_boolean_features = 0;
         for( int layer = 0; layer < int(concepts_.size()); ++layer ) {
             for( int i = 0; i < int(concepts_[layer].size()); ++i ) {
                 const Concept &c = *concepts_[layer][i];
@@ -1899,7 +1900,8 @@ class Factory {
         }
 
         // create distance features
-        int num_distance_features = generate_distance_features(cache, sample);
+//        int num_distance_features = generate_distance_features(cache, sample);
+        int num_distance_features = 0;
 
         std::cout << "FEATURES: #features=" << features_.size()
                   << ", #boolean-features=" << num_boolean_features
