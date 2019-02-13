@@ -52,7 +52,8 @@ def process_predicate_atoms(universe, p, extension, atoms):
         if isinstance(p, (GoalConcept, GoalRole, GoalNullaryAtom)) else p.name  # HACK HACK HACK
 
     if isinstance(p, NullaryAtom):
-        atoms.append((name, ))
+        if extension is True:
+            atoms.append((name, ))
     else:
         for point in extension:
             atoms.append(convert_tuple(universe, name, point))
