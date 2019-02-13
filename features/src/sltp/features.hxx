@@ -371,7 +371,7 @@ class State {
     const Instance& instance() const {
         return instance_;
     }
-    const Atom& atom(unsigned id) const {
+    const Atom& atom(atom_id_t id) const {
         return instance_.atom(id);
     }
 };

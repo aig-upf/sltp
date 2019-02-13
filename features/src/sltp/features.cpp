@@ -39,7 +39,7 @@ namespace SLTP { namespace DL {
             atoms.emplace_back(std::move(parse_atom(atom_str, object_index, predicate_index)));
 
             // Update the atom index
-            atom_index.insert(std::make_pair(atoms.back().data(), aid));
+            atom_index.emplace(atoms.back().data(), aid);
         }
 
         return atoms;
@@ -236,6 +236,20 @@ namespace SLTP { namespace DL {
                     }
                 }
                 of << "}" << std::endl;
+            }
+        }
+        of.close();
+
+        // Print feature denotations
+        output = workspace + "/feature-denotations.io.txt";
+        of = std::ofstream(output);
+        if( of.fail() ) throw std::runtime_error("Could not open filename '" + output + "'");
+
+        for(unsigned i = 0; i < sample.num_states(); ++i) {
+            const State &state = sample.state(i);
+
+            for (const Feature* f:features_) {
+                of << "s_" << i << "[" << f->as_str() << "] = " << f->value(cache, sample, state) << std::endl;
             }
         }
         of.close();
