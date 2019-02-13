@@ -594,8 +594,8 @@ public:
 };
 
 class UniversalConcept : public Concept {
-  public:
-    UniversalConcept() : Concept(1) { }
+public:
+    UniversalConcept() : Concept(0) { }
     ~UniversalConcept() override = default;
     const Concept* clone() const override {
         return new UniversalConcept;
@@ -624,6 +624,41 @@ class UniversalConcept : public Concept {
     }
     std::string as_str() const override {
         return "<universe>";
+    }
+};
+
+
+class EmptyConcept : public Concept {
+  public:
+    EmptyConcept() : Concept(0) { }
+    ~EmptyConcept() override = default;
+    const Concept* clone() const override {
+        return new EmptyConcept;
+    }
+
+    const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
+        const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
+        if( cached == nullptr ) {
+            sample_denotation_t nd;
+            nd.reserve(sample.num_states());
+            for( int i = 0; i < sample.num_states(); ++i ) {
+                const State &state = sample.state(i);
+                assert(state.id() == i);
+                state_denotation_t sd(state.num_objects(), false);
+                const state_denotation_t *cached_sd = cache.find_or_insert_state_denotation(sd);
+                nd.emplace_back(cached_sd);
+            }
+            return use_cache ? cache.find_or_insert_sample_denotation(nd, as_str()) : new sample_denotation_t(nd);
+        } else {
+            return cached;
+        }
+    }
+    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
+        throw std::runtime_error("Unexpected call: EmptyConcept::denotation(Cache&, const Sample&, const State&)");
+        return nullptr;
+    }
+    std::string as_str() const override {
+        return "<empty>";
     }
 };
 
@@ -1667,6 +1702,7 @@ class Factory {
 
     void generate_basis(const Sample &sample) {
         insert_basis(new UniversalConcept);
+        insert_basis(new EmptyConcept);
         for( int i = 0; i < int(sample.num_predicates()); ++i ) {
             const Predicate *predicate = &sample.predicates()[i];
             if( predicate->arity() == 1 ) {
