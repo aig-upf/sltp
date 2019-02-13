@@ -845,6 +845,76 @@ class ForallConcept : public Concept {
     }
 };
 
+
+class EqualConcept : public Concept {
+protected:
+    const Role *r1_;
+    const Role *r2_;
+
+public:
+    EqualConcept(const Role *r1, const Role *r2)
+            : Concept(1 + r1->complexity() + r2->complexity()),
+              r1_(r1),
+              r2_(r2) {
+    }
+    ~EqualConcept() override = default;
+    const Concept* clone() const override { return new EqualConcept(*this); }
+
+    const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
+        const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
+        if( cached == nullptr ) {
+            const sample_denotation_t *r1_den = cache.find_sample_denotation(r1_->as_str());
+            assert(r1_den && (r1_den->size() == sample.num_states()));
+            const sample_denotation_t *r2_den = cache.find_sample_denotation(r2_->as_str());
+            assert(r2_den && (r2_den->size() == sample.num_states()));
+
+            sample_denotation_t nd;
+            for( int i = 0; i < sample.num_states(); ++i ) {
+                const State &state = sample.state(i);
+                unsigned m = state.num_objects();
+                assert(state.id() == i);
+                const state_denotation_t *sd1 = (*r1_den)[i];
+                assert((sd1 != nullptr) && (sd1->size() == m*m));
+                const state_denotation_t *sd2 = (*r2_den)[i];
+                assert((sd2 != nullptr) && (sd2->size() == m*m));
+
+                state_denotation_t nsd(m, false);
+
+                for(int x = 0; x < state.num_objects(); ++x) {
+                    // If the set of y such that (x, y) in sd1 is equal to the set of z such that (x, z) in sd2,
+                    // then x makes it into the denotation of this concept
+                    bool in_denotation = true;
+                    for (int z = 0; z < m; ++z) {
+                        auto idx = x*m + z;
+                        if ((*sd1)[idx] != (*sd2)[idx]) {
+                            in_denotation = false;
+                            break;
+                        }
+                    }
+
+                    if (in_denotation) {
+                        nsd[x] = true;
+                    }
+                }
+
+                nd.emplace_back(cache.find_or_insert_state_denotation(nsd));
+            }
+            return use_cache ? cache.find_or_insert_sample_denotation(nd, as_str()) : new sample_denotation_t(nd);
+        } else {
+            return cached;
+        }
+    }
+
+    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
+        throw std::runtime_error("Unexpected call: EqualConcept::denotation(Cache&, const Sample&, const State&)");
+        return nullptr;
+    }
+    std::string as_str() const override {
+        return std::string("Equal(") + r1_->as_str() + "," + r2_->as_str() + ")";
+    }
+};
+
+
 class PrimitiveRole : public Role {
   protected:
     const Predicate *predicate_;
@@ -1498,6 +1568,19 @@ class Factory {
                 num_pruned_concepts += p.first;
             }
 
+
+            // Insert equal concepts based on the already-fixed set of roles.
+            for (unsigned i = 0; i < roles_.size(); ++i) {
+                for (unsigned j = i+1; j < roles_.size(); ++j) {
+                    EqualConcept eq_concept(roles_[i], roles_[j]);
+                    auto p = is_superfluous_or_exceeds_complexity_bound(eq_concept, cache, sample);
+                    if( !p.first ) insert_new_concept(cache, eq_concept.clone(), p.second);
+                    delete p.second;
+                    num_pruned_concepts += p.first;
+                }
+            }
+
+
         } else {
             // extract concepts in existing concept layers
             std::vector<const Concept*> last_concept_layer = concepts_.back();
@@ -1587,89 +1670,88 @@ class Factory {
     }
 
     int generate_roles(Cache &cache, const Sample &sample) const {
-        if( roles_.empty() ) {
-            for( int i = 0; i < int(basis_roles_.size()); ++i ) {
-                const Role &role = *basis_roles_[i];
-                std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(role, cache, sample);
+        assert(roles_.empty());
+        for( int i = 0; i < int(basis_roles_.size()); ++i ) {
+            const Role &role = *basis_roles_[i];
+            std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(role, cache, sample);
+            if( !p.first ) {
+                insert_new_role(cache, role.clone(), p.second);
+            } else {
+                // we cannot just obviate this role since another
+                // role denotation may depend on this denotation
+                //std::cout << "PRUNE: " + role.as_str() << std::endl;
+                insert_new_denotation_by_name(cache, role.as_str(), p.second);
+            }
+            delete p.second;
+        }
+
+        for( int i = 0; i < int(basis_roles_.size()); ++i ) {
+            const Role *role = basis_roles_[i];
+
+            PlusRole plus_role(role);
+            std::pair<bool, const sample_denotation_t*> p1 = is_superfluous_or_exceeds_complexity_bound(plus_role, cache, sample);
+            if( !p1.first ) {
+                insert_new_role(cache, plus_role.clone(), p1.second);
+            } else {
+                // we cannot just obviate this role since another
+                // role denotation may depend on this denotation
+                //std::cout << "PRUNE: " + plus_role.as_str() << std::endl;
+                insert_new_denotation_by_name(cache, plus_role.as_str(), p1.second);
+            }
+            delete p1.second;
+#if 0  // ATM we deactivate these roles
+            StarRole star_role(role);
+            std::pair<bool, const sample_denotation_t*> p2 = is_superfluous_or_exceeds_complexity_bound(star_role, cache, sample);
+            if( !p2.first ) {
+                insert_new_role(cache, star_role.clone(), p2.second);
+            } else {
+                // we cannot just obviate this role since another
+                // role denotation may depend on this denotation
+                //std::cout << "PRUNE: " + star_role.as_str() << std::endl;
+                insert_new_denotation_by_name(cache, star_role.as_str(), p2.second);
+            }
+            delete p2.second;
+#endif
+            InverseRole inverse_role(role);
+            std::pair<bool, const sample_denotation_t*> p3 = is_superfluous_or_exceeds_complexity_bound(inverse_role, cache, sample);
+            if( !p3.first ) {
+                const Role *clone = inverse_role.clone();
+                insert_new_role(cache, clone, p3.second);
+
+                PlusRole plus_inverse_role(clone);
+                std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(plus_inverse_role, cache, sample);
                 if( !p.first ) {
-                    insert_new_role(cache, role.clone(), p.second);
+                    insert_new_role(cache, plus_inverse_role.clone(), p.second);
                 } else {
                     // we cannot just obviate this role since another
                     // role denotation may depend on this denotation
-                    //std::cout << "PRUNE: " + role.as_str() << std::endl;
-                    insert_new_denotation_by_name(cache, role.as_str(), p.second);
+                    //std::cout << "PRUNE: " + plus_inverse_role.as_str() << std::endl;
+                    insert_new_denotation_by_name(cache, plus_inverse_role.as_str(), p.second);
                 }
                 delete p.second;
-            }
-
-            for( int i = 0; i < int(basis_roles_.size()); ++i ) {
-                const Role *role = basis_roles_[i];
-
-                PlusRole plus_role(role);
-                std::pair<bool, const sample_denotation_t*> p1 = is_superfluous_or_exceeds_complexity_bound(plus_role, cache, sample);
-                if( !p1.first ) {
-                    insert_new_role(cache, plus_role.clone(), p1.second);
-                } else {
-                    // we cannot just obviate this role since another
-                    // role denotation may depend on this denotation
-                    //std::cout << "PRUNE: " + plus_role.as_str() << std::endl;
-                    insert_new_denotation_by_name(cache, plus_role.as_str(), p1.second);
-                }
-                delete p1.second;
-#if 0  // ATM we deactivate these roles
-                StarRole star_role(role);
-                std::pair<bool, const sample_denotation_t*> p2 = is_superfluous_or_exceeds_complexity_bound(star_role, cache, sample);
-                if( !p2.first ) {
-                    insert_new_role(cache, star_role.clone(), p2.second);
-                } else {
-                    // we cannot just obviate this role since another
-                    // role denotation may depend on this denotation
-                    //std::cout << "PRUNE: " + star_role.as_str() << std::endl;
-                    insert_new_denotation_by_name(cache, star_role.as_str(), p2.second);
-                }
-                delete p2.second;
-#endif
-                InverseRole inverse_role(role);
-                std::pair<bool, const sample_denotation_t*> p3 = is_superfluous_or_exceeds_complexity_bound(inverse_role, cache, sample);
-                if( !p3.first ) {
-                    const Role *clone = inverse_role.clone();
-                    insert_new_role(cache, clone, p3.second);
-
-                    PlusRole plus_inverse_role(clone);
-                    std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(plus_inverse_role, cache, sample);
-                    if( !p.first ) {
-                        insert_new_role(cache, plus_inverse_role.clone(), p.second);
-                    } else {
-                        // we cannot just obviate this role since another
-                        // role denotation may depend on this denotation
-                        //std::cout << "PRUNE: " + plus_inverse_role.as_str() << std::endl;
-                        insert_new_denotation_by_name(cache, plus_inverse_role.as_str(), p.second);
-                    }
-                    delete p.second;
 
 #if 0  // ATM we deactivate these roles
 
-                    PlusRole star_inverse_role(clone);
-                    std::pair<bool, const sample_denotation_t*> q = is_superfluous_or_exceeds_complexity_bound(star_inverse_role, cache, sample);
-                    if( !q.first ) {
-                        insert_new_role(cache, star_inverse_role.clone(), q.second);
-                    } else {
-                        // we cannot just obviate this role since another
-                        // role denotation may depend on this denotation
-                        //std::cout << "PRUNE: " + star_inverse_role.as_str() << std::endl;
-                        insert_new_denotation_by_name(cache, star_inverse_role.as_str(), q.second);
-                    }
-                    delete q.second;
-#endif
-
+                PlusRole star_inverse_role(clone);
+                std::pair<bool, const sample_denotation_t*> q = is_superfluous_or_exceeds_complexity_bound(star_inverse_role, cache, sample);
+                if( !q.first ) {
+                    insert_new_role(cache, star_inverse_role.clone(), q.second);
                 } else {
                     // we cannot just obviate this role since another
                     // role denotation may depend on this denotation
-                    //std::cout << "PRUNE: " + inverse_role.as_str() << std::endl;
-                    insert_new_denotation_by_name(cache, inverse_role.as_str(), p3.second);
+                    //std::cout << "PRUNE: " + star_inverse_role.as_str() << std::endl;
+                    insert_new_denotation_by_name(cache, star_inverse_role.as_str(), q.second);
                 }
-                delete p3.second;
+                delete q.second;
+#endif
+
+            } else {
+                // we cannot just obviate this role since another
+                // role denotation may depend on this denotation
+                //std::cout << "PRUNE: " + inverse_role.as_str() << std::endl;
+                insert_new_denotation_by_name(cache, inverse_role.as_str(), p3.second);
             }
+            delete p3.second;
         }
         std::cout << "ROLES: #roles=" << roles_.size() << std::endl;
         return roles_.size();
