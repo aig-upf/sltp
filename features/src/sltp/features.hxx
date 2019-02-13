@@ -762,7 +762,6 @@ class ExistsConcept : public Concept {
                 assert((r_den != nullptr) && (r_den->size() == m*m));
 
                 state_denotation_t nsd(m, false);
-
                 for(unsigned x = 0; x < m; ++x) {
 
                     // x makes it into the denotation if there is an y such that y in c_den and (x,y) in r_den
@@ -821,21 +820,29 @@ class ForallConcept : public Concept {
             sample_denotation_t nd;
             for( int i = 0; i < sample.num_states(); ++i ) {
                 const State &state = sample.state(i);
+                unsigned m = state.num_objects();
                 assert(state.id() == i);
-                const state_denotation_t *sd = (*d)[i];
-                assert((sd != nullptr) && (sd->size() == state.num_objects()));
-                const state_denotation_t *sr = (*r)[i];
-                assert((sr != nullptr) && (sr->size() == state.num_objects() * state.num_objects()));
+                const state_denotation_t *c_den = (*d)[i];
+                assert((c_den != nullptr) && (c_den->size() == m));
+                const state_denotation_t *r_den = (*r)[i];
+                assert((r_den != nullptr) && (r_den->size() == m*m));
 
-                state_denotation_t nsd(state.num_objects(), true);
-                for( int j = 0; j < state.num_objects(); ++j ) {
-                    if( (*sd)[j] ) {
-                        for( int k = 0; nsd[j] && (k < state.num_objects()); ++k ) {
-                            int index = j * state.num_objects() + k;
-                            nsd[j] = (*(*r)[i])[index];
+                state_denotation_t nsd(m, true);
+                for(unsigned x = 0; x < m; ++x) {
+
+                    // x does *not* make it into the denotation if there is an y
+                    // such that y not in c_den and (x,y) in r_den
+                    for(unsigned y = 0; y < m; ++y) {
+                        if(!(*c_den)[y]) {
+                            auto x_y = x * m + y;
+                            if ((*r_den)[x_y]) {
+                                nsd[x] = false;
+                                break;
+                            }
                         }
                     }
                 }
+
                 nd.emplace_back(cache.find_or_insert_state_denotation(nsd));
             }
             return use_cache ? cache.find_or_insert_sample_denotation(nd, as_str()) : new sample_denotation_t(nd);
