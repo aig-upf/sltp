@@ -782,7 +782,7 @@ class ExistsConcept : public Concept {
     }
 
     std::string as_str() const override {
-        return std::string("Exists(") + concept_->as_str() + "," + role_->as_str() + ")";
+        return std::string("Exists(") + role_->as_str() + "," + concept_->as_str() + ")";
     }
 };
 
@@ -841,7 +841,7 @@ class ForallConcept : public Concept {
     }
 
     std::string as_str() const override {
-        return std::string("Forall(") + concept_->as_str() + "," + role_->as_str() + ")";
+        return std::string("Forall(") + role_->as_str() + "," + concept_->as_str() + ")";
     }
 };
 
@@ -956,7 +956,8 @@ class PlusRole : public Role {
     }
 
     std::string as_str() const override {
-        return std::string("Plus(") + role_->as_str() + ")";
+        // ATM let us call these Star(X) to get the same output than the Python module
+        return std::string("Star(") + role_->as_str() + ")";
     }
 };
 
@@ -1479,13 +1480,24 @@ class Factory {
         int num_pruned_concepts = 0;
         if( concepts_.empty() ) {
             concepts_.emplace_back();
-            for( int i = 0; i < int(basis_concepts_.size()); ++i ) {
-                const Concept &concept = *basis_concepts_[i];
-                std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(concept, cache, sample);
-                if( !p.first ) insert_new_concept(cache, concept.clone(), p.second);
+            for (auto concept : basis_concepts_) {
+                std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(*concept, cache, sample);
+                if( !p.first ) insert_new_concept(cache, concept->clone(), p.second);
                 //else std::cout << "PRUNE: " + concept.as_str() << std::endl;
                 delete p.second;
+                num_pruned_concepts += p.first;
             }
+
+            // Insert the negation of all primitive concepts
+            for (auto concept:concepts_.back()) {
+                NotConcept not_concept(concept);
+                auto p = is_superfluous_or_exceeds_complexity_bound(not_concept, cache, sample);
+                if( !p.first ) insert_new_concept(cache, not_concept.clone(), p.second);
+                //else std::cout << "PRUNE: " + not_concept.as_str() << std::endl;
+                delete p.second;
+                num_pruned_concepts += p.first;
+            }
+
         } else {
             // extract concepts in existing concept layers
             std::vector<const Concept*> last_concept_layer = concepts_.back();
@@ -1499,12 +1511,14 @@ class Factory {
             // generate negation, exist, and forall for concepts in last layer
             for( int i = 0; i < int(last_concept_layer.size()); ++i ) {
                 const Concept *concept = last_concept_layer[i];
+#if 0 // Don't negate in layers > 0
                 NotConcept not_concept(concept);
                 std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(not_concept, cache, sample);
                 if( !p.first ) insert_new_concept(cache, not_concept.clone(), p.second);
                 //else std::cout << "PRUNE: " + not_concept.as_str() << std::endl;
                 delete p.second;
                 num_pruned_concepts += p.first;
+#endif
 
                 for( int j = 0; j < int(roles_.size()); ++j ) {
                     const Role *role = roles_[j];
@@ -1590,7 +1604,7 @@ class Factory {
 
             for( int i = 0; i < int(basis_roles_.size()); ++i ) {
                 const Role *role = basis_roles_[i];
-//#if 0  // ATM we deactivate Plus roles
+
                 PlusRole plus_role(role);
                 std::pair<bool, const sample_denotation_t*> p1 = is_superfluous_or_exceeds_complexity_bound(plus_role, cache, sample);
                 if( !p1.first ) {
@@ -1602,7 +1616,7 @@ class Factory {
                     insert_new_denotation_by_name(cache, plus_role.as_str(), p1.second);
                 }
                 delete p1.second;
-//#endif
+#if 0  // ATM we deactivate these roles
                 StarRole star_role(role);
                 std::pair<bool, const sample_denotation_t*> p2 = is_superfluous_or_exceeds_complexity_bound(star_role, cache, sample);
                 if( !p2.first ) {
@@ -1614,7 +1628,7 @@ class Factory {
                     insert_new_denotation_by_name(cache, star_role.as_str(), p2.second);
                 }
                 delete p2.second;
-
+#endif
                 InverseRole inverse_role(role);
                 std::pair<bool, const sample_denotation_t*> p3 = is_superfluous_or_exceeds_complexity_bound(inverse_role, cache, sample);
                 if( !p3.first ) {
@@ -1633,7 +1647,9 @@ class Factory {
                     }
                     delete p.second;
 
-                    StarRole star_inverse_role(clone);
+#if 0  // ATM we deactivate these roles
+
+                    PlusRole star_inverse_role(clone);
                     std::pair<bool, const sample_denotation_t*> q = is_superfluous_or_exceeds_complexity_bound(star_inverse_role, cache, sample);
                     if( !q.first ) {
                         insert_new_role(cache, star_inverse_role.clone(), q.second);
@@ -1644,6 +1660,8 @@ class Factory {
                         insert_new_denotation_by_name(cache, star_inverse_role.as_str(), q.second);
                     }
                     delete q.second;
+#endif
+
                 } else {
                     // we cannot just obviate this role since another
                     // role denotation may depend on this denotation

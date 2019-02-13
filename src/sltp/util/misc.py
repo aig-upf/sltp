@@ -85,7 +85,7 @@ def print_set(data, index):
 
 
 def print_relation(data, index):
-    return "{{{}}}".format(", ".join(print_tuple(x, index) for x in data))
+    return "{{{}}}".format(", ".join(sorted(print_tuple(x, index) for x in data)))
 
 
 def print_tuple(tup, index):

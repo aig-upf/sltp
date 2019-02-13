@@ -197,9 +197,12 @@ namespace SLTP { namespace DL {
             for (const Concept* c:all_concepts()) {
                 const state_denotation_t& denotation = cache.retrieve_concept_denotation(*c, state);
                 of << "s_" << i << "[" << c->as_str() << "] = {";
+                bool need_comma = false;
                 for (unsigned atom = 0; atom < denotation.size(); ++atom) {
                     if (denotation[atom]) {
-                        of << oidx.right.at(atom) << ", ";
+                        if( need_comma ) of << ", ";
+                        of << oidx.right.at(atom);
+                        need_comma = true;
                     }
                 }
                 of << "}" << std::endl;
@@ -221,11 +224,15 @@ namespace SLTP { namespace DL {
             for (const Role* r:roles_) {
                 const state_denotation_t& denotation = cache.retrieve_role_denotation(*r, state);
                 of << "s_" << i << "[" << r->as_str() << "] = {";
+                bool need_comma = false;
+
                 for (unsigned idx = 0; idx < denotation.size(); ++idx) {
                     if (denotation[idx]) {
+                        if( need_comma ) of << ", ";
                         unsigned o1 = idx / m;
                         unsigned o2 = idx % m;
-                        of << "(" << oidx.right.at(o1) << ", " << oidx.right.at(o2) << "), ";
+                        of << "(" << oidx.right.at(o1) << ", " << oidx.right.at(o2) << ")";
+                        need_comma = true;
                     }
                 }
                 of << "}" << std::endl;
