@@ -23,7 +23,8 @@ from collections import defaultdict
 
 from sltp.matrices import NP_FEAT_VALUE_TYPE, cast_feature_value_to_numpy_value
 from sltp.models import DLModel
-from tarski.dl import PrimitiveConcept, UniversalConcept, NullaryAtom, NominalConcept
+from tarski.dl import PrimitiveConcept, UniversalConcept, NullaryAtom, NominalConcept, GoalConcept, GoalRole, \
+    EmptyConcept, GoalNullaryAtom
 
 from .features import parse_all_instances, compute_models, InstanceInformation
 from .util.command import execute
@@ -38,16 +39,23 @@ def convert_tuple(universe, name, values):
     return (name, ) + tuple(universe.value(i) for i in (values if isinstance(values, tuple) else (values, )))
 
 
+def goal_predicate_name(name):
+    return "{}_g".format(name)
+
+
 def process_predicate_atoms(universe, p, extension, atoms):
     if (isinstance(p, PrimitiveConcept) and p.name == 'object') or \
-            isinstance(p, UniversalConcept) or isinstance(p, NominalConcept):
+            isinstance(p, (UniversalConcept, EmptyConcept)) or isinstance(p, NominalConcept):
         return
 
+    name = goal_predicate_name(p.name) \
+        if isinstance(p, (GoalConcept, GoalRole, GoalNullaryAtom)) else p.name  # HACK HACK HACK
+
     if isinstance(p, NullaryAtom):
-        atoms.append((p.name, ))
+        atoms.append((name, ))
     else:
         for point in extension:
-            atoms.append(convert_tuple(universe, p.name, point))
+            atoms.append(convert_tuple(universe, name, point))
 
 
 def serialize_dl_model(model: DLModel, info: InstanceInformation):
@@ -129,10 +137,13 @@ def print_sample_info(sample, infos, model_cache, all_predicates, all_functions,
             print("\t".join(stinfo), file=f)
 
     nominals_fn = os.path.join(workspace, "nominals.io")
-    logging.info("Printing sample information to {}".format(nominals_fn))
-    with open(nominals_fn, "w") as f:
-        # Print off the desired nominals
-        print(" ".join("{}".format(name) for name in sorted(x.symbol for x in nominals)), file=f)
+    if nominals:
+        logging.info("Printing information on nominal concepts to {}".format(nominals_fn))
+        with open(nominals_fn, "w") as f:
+            # Print off the desired nominals
+            print(" ".join("{}".format(name) for name in sorted(x.symbol for x in nominals)), file=f)
+    else:
+        open(nominals_fn, 'w').close()  # Just write an empty file
 
 
 def transform_generator_output(config, sample, matrix_filename, info_filename):
@@ -228,6 +239,10 @@ def extract_features(config, sample):
         all_objects.append(set(c.symbol for c in lang.constants()))
         all_predicates.update(set((p.symbol, p.arity) for p in lang.predicates if not p.builtin))
         all_functions.update(set((p.symbol, p.arity) for p in lang.functions if not p.builtin))
+
+        # Add goal predicates
+        all_predicates.update(set((goal_predicate_name(p.symbol), p.arity)
+                                  for p in lang.predicates if not p.builtin and p.symbol in all_goal_predicates))
 
         # Add type predicates as well
         all_predicates.update(set((p.name, 1) for p in lang.sorts if not p.builtin and p != lang.Object))

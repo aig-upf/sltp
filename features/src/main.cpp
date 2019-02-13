@@ -60,6 +60,7 @@ std::vector<std::string> parse_nominals(const string &filename) {
 
     std::string nominals_line;
     std::getline(file, nominals_line);
+    if (nominals_line.empty()) return {};
     std::vector<std::string> nominals;
     boost::split(nominals, nominals_line, boost::is_any_of(" \t"));
     return nominals;

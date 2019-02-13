@@ -34,6 +34,9 @@ def experiment(experiment_name=None):
         concept_generator=None, parameter_generator=add_bw_domain_parameters,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
+    exps["simple_clear_3_gc"] = update_dict(exps["simple_clear_3"], parameter_generator=None)
+
+
     # This example shows that with 4 blocks, even if we expand all states, the model is still overfit to the 4 blocks
     exps["simple_clear_4"] = dict(
         instances="instance_4_clear_x.pddl",
