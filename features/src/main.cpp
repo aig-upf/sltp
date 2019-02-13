@@ -115,7 +115,7 @@ int main(int argc, const char **argv) {
     factory.generate_roles(cache, sample);
     factory.generate_concepts(cache, sample);
     factory.generate_features(cache, sample);
-    factory.report_dl_data(cout);
+//    factory.report_dl_data(cout);
     factory.log_all_concepts_and_features(cache, sample, options.workspace_);
 
     output_results(options, factory, sample, cache);
