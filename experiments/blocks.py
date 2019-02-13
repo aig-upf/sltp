@@ -30,7 +30,7 @@ def experiment(experiment_name=None):
     # and not sound in general
     exps["simple_clear_3"] = dict(
         instances="instance_3_clear_x.pddl",
-        num_states=100, max_concept_size=6, max_concept_grammar_iterations=None,
+        num_states=100, max_concept_size=3, max_concept_grammar_iterations=None,
         concept_generator=None, parameter_generator=add_bw_domain_parameters,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
