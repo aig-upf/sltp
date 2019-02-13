@@ -1619,18 +1619,6 @@ class Factory {
             }
 
 
-            // Insert equal concepts based on the already-fixed set of roles.
-            for (unsigned i = 0; i < roles_.size(); ++i) {
-                for (unsigned j = i+1; j < roles_.size(); ++j) {
-                    EqualConcept eq_concept(roles_[i], roles_[j]);
-                    auto p = is_superfluous_or_exceeds_complexity_bound(eq_concept, cache, sample);
-                    if( !p.first ) insert_new_concept(cache, eq_concept.clone(), p.second);
-                    delete p.second;
-                    num_pruned_concepts += p.first;
-                }
-            }
-
-
         } else {
             // extract concepts in existing concept layers
             std::vector<const Concept*> last_concept_layer = concepts_.back();
@@ -1653,21 +1641,39 @@ class Factory {
                 num_pruned_concepts += p.first;
 #endif
 
-                for( int j = 0; j < int(roles_.size()); ++j ) {
-                    const Role *role = roles_[j];
+                // TODO: Merge the two loops below (for exist- and forall- concepts) into one single loop.
+                // TODO: We are keeping the separate ATM to be able to compare better with the Python version
+                for (auto role : roles_) {
                     ExistsConcept exists_concept(concept, role);
                     std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(exists_concept, cache, sample);
                     if( !p.first ) insert_new_concept(cache, exists_concept.clone(), p.second);
                     //else std::cout << "PRUNE: " + exists_concept.as_str() << std::endl;
                     delete p.second;
                     num_pruned_concepts += p.first;
+                }
 
+                for (auto role : roles_) {
                     ForallConcept forall_concept(concept, role);
                     std::pair<bool, const sample_denotation_t*> q = is_superfluous_or_exceeds_complexity_bound(forall_concept, cache, sample);
                     if( !q.first ) insert_new_concept(cache, forall_concept.clone(), q.second);
                     //else std::cout << "PRUNE: " + forall_concept.as_str() << std::endl;
                     delete q.second;
                     num_pruned_concepts += q.first;
+                }
+            }
+
+            // Insert equal concepts based on the already-fixed set of roles. We only do this once, and it'd thus be
+            // more sensible to put this code elsewhere, but we want to generate concepts in the same order than
+            // the python code for easier comparability
+            if (concepts_.size() == 2) { // size needs to be 2, as we have already inserted an empty layer
+                for (unsigned i = 0; i < roles_.size(); ++i) {
+                    for (unsigned j = i + 1; j < roles_.size(); ++j) {
+                        EqualConcept eq_concept(roles_[i], roles_[j]);
+                        auto p = is_superfluous_or_exceeds_complexity_bound(eq_concept, cache, sample);
+                        if (!p.first) insert_new_concept(cache, eq_concept.clone(), p.second);
+                        delete p.second;
+                        num_pruned_concepts += p.first;
+                    }
                 }
             }
 
