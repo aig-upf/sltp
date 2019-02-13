@@ -193,6 +193,10 @@ class TransitionSamplingStep(Step):
         config["num_sampled_states"] = config.get("num_sampled_states", None)
         config["complete_only_wrt_optimal"] = config.get("complete_only_wrt_optimal", False)
         config["sampling"] = config.get("sampling", "all")
+        config["sat_transitions_filename"] = compute_info_filename(config, "sat_transitions.dat")
+        config["goal_states_filename"] = compute_info_filename(config, "goal-states.dat")
+        config["unsolvable_states_filename"] = compute_info_filename(config, "unsolvable-states.dat")
+        config["transitions_filename"] = compute_info_filename(config, "transition-matrix.dat")
 
         ns = config["num_sampled_states"]
         if ns is not None:
@@ -267,10 +271,6 @@ class FeatureMatrixGenerationStep(Step):
     def process_config(self, config):
         setup_feature_generation_filenames(config)
         config["feature_filename"] = compute_info_filename(config, "features.txt")
-        config["transitions_filename"] = compute_info_filename(config, "transition-matrix.dat")
-        config["goal_states_filename"] = compute_info_filename(config, "goal-states.dat")
-        config["unsolvable_states_filename"] = compute_info_filename(config, "unsolvable-states.dat")
-        config["sat_transitions_filename"] = compute_info_filename(config, "sat_transitions.dat")
         config["sat_feature_matrix_filename"] = compute_info_filename(config, "sat_matrix.dat")
         config["feature_info_filename"] = compute_info_filename(config, "feature-info.dat")
         config["feature_denotation_filename"] = compute_info_filename(config, "feature-denotations.txt")
@@ -306,8 +306,9 @@ class CPPFeatureGenerationStep(Step):
         config["enforce_features"] = config.get("enforce_features", None)
         config["parameter_generator"] = config.get("parameter_generator", None)
         config["distance_feature_max_complexity"] = config.get("distance_feature_max_complexity", None)
-        config["max_concept_grammar_iterations"] = config.get("max_concept_grammar_iterations", None)
         config["concept_denotation_filename"] = compute_info_filename(config, "concept-denotations.txt")
+        config["sat_feature_matrix_filename"] = compute_info_filename(config, "sat_matrix.dat")
+        config["feature_denotation_filename"] = compute_info_filename(config, "feature-denotations.txt")
 
         if config["enforce_features"]:
             raise RuntimeError("Option enforce_features not allowed when using the C++ feature generator")
@@ -789,7 +790,7 @@ PIPELINES = dict(
         TransitionSamplingStep,
         CPPFeatureGenerationStep,
         # ConceptGenerationStep,
-        FeatureMatrixGenerationStep,
+        # FeatureMatrixGenerationStep,
         InhouseMaxsatSolverStep,  # Blai's polynomial ad-hoc maxsat algorithm
         ActionModelFromFeatureIndexesStep,
         AbstractionTestingComputation,

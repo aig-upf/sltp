@@ -135,7 +135,7 @@ def print_sample_info(sample, infos, model_cache, all_predicates, all_functions,
         print(" ".join("{}".format(name) for name in sorted(x.symbol for x in nominals)), file=f)
 
 
-def transform_generator_output(config, matrix_filename, info_filename):
+def transform_generator_output(config, sample, matrix_filename, info_filename):
     logging.info("Transforming generator output to numpy format...")
     import numpy as np
 
@@ -148,7 +148,7 @@ def transform_generator_output(config, matrix_filename, info_filename):
         complexities = [int(x) for x in f.readline().rstrip().split("\t")]
 
         # Line #3: feature types (0: boolean; 1: numeric)
-        types = [bool(x) for x in f.readline().rstrip().split("\t")]
+        types = [int(x) for x in f.readline().rstrip().split("\t")]
 
     num_features = len(names)
     assert num_features == len(complexities) == len(types)
@@ -178,6 +178,13 @@ def transform_generator_output(config, matrix_filename, info_filename):
     np.save(config.feature_complexity_filename, np.array(complexities, dtype=NP_FEAT_VALUE_TYPE))
     np.save(config.feature_names_filename, np.array(names, dtype=np.unicode_))
     # np.savez(config.feature_matrix_filename, matrix)
+
+    state_ids = sample.get_sorted_state_ids()
+    sat_feature_mapping = print_sat_feature_matrix(config.sat_feature_matrix_filename,
+                                                   matrix,
+                                                   state_ids, sample.goals,
+                                                   names, complexities, types)
+    return sat_feature_mapping
 
 
 def generate_debug_scripts(target_dir, exe, arguments):
@@ -242,9 +249,52 @@ def extract_features(config, sample):
 
     # Read off the output of the module and transform it into the numpy matrices to be consumed
     # by the next pipeline step
-    transform_generator_output(config,
-                               os.path.join(config.experiment_dir, "feature-matrix.io"),
-                               os.path.join(config.experiment_dir, "feature-info.io"),)
+    sat_feature_mapping = transform_generator_output(config, sample,
+                                                     os.path.join(config.experiment_dir, "feature-matrix.io"),
+                                                     os.path.join(config.experiment_dir, "feature-info.io"),)
 
-    return ExitCode.Success, dict(enforced_feature_idxs=[])
+    return ExitCode.Success, dict(enforced_feature_idxs=[], sat_feature_mapping=sat_feature_mapping)
 
+
+def print_sat_feature_matrix(filename, matrix, state_ids, goals, names, complexities, types):
+    ngoals = len(goals)
+    nfeatures = len(names)
+    num_numeric = sum(types)
+
+    logging.info("Printing SAT feature matrix of {} features x {} states to '{}'".
+                 format(nfeatures, len(state_ids), filename))
+
+    # Separate features into binary and numeric
+    binary, numeric = [], []
+    for i, t in enumerate(types, 0):
+        if t == 0:
+            binary.append(i)
+        elif t == 1:
+            numeric.append(i)
+        else:
+            assert 0, "Unknown feature type"
+
+    all_feature_idxs = numeric + binary  # Shuffle the idxs so that all numeric features come first
+
+    with open(filename, 'w') as f:
+        # Header row: <#states> <#features> <#goals> <1 + index-last-numerical-feature> <index-first-boolean-feature>
+        print("{} {} {} {} {}".format(len(state_ids), nfeatures, ngoals, num_numeric, num_numeric), file=f)
+
+        # Line #2:: <#features> <list of feature names>
+        print("{} {}".format(nfeatures, " ".join(names[f].replace(" ", "") for f in all_feature_idxs)), file=f)
+
+        # Line #3: <#features> <list of feature costs>
+        print("{} {}".format(nfeatures, " ".join(str(complexities[f]) for f in all_feature_idxs)), file=f)
+
+        # Line #4: <# goal states> <list of goal state IDs>
+        print("{} {}".format(ngoals, " ".join(map(str, goals))), file=f)
+
+        # next lines: one per each state with format: <state-index> <#features-in-state> <list-features>
+        # each feature has format: <feature-index>:<value>
+        for s in state_ids:
+            feature_values = ((i, matrix[s][f]) for i, f in enumerate(all_feature_idxs, 0))
+            nonzero_features = [(i, v) for i, v in feature_values if v != 0]
+            print("{} {} {}".format(s, len(nonzero_features), " ".join(
+                "{}:{}".format(i, int(v)) for i, v in nonzero_features)), file=f)
+
+    return all_feature_idxs  # A mapping between the new and the old feature indexes

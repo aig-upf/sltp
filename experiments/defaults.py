@@ -27,7 +27,7 @@ def generate_experiment(domain_dir, domain, **kwargs):
         # pipeline="maxsat",
         pipeline="maxsatcpp",
         # pipeline="sat",
-        # pipeline="heuristic",
+        # pipeline="maxsat_poly",
 
         # Location of the FS planner, used to do the state space sampling
         planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),

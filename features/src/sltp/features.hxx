@@ -1132,6 +1132,8 @@ class Feature {
     friend std::ostream& operator<<(std::ostream &os, const Feature &f) {
         return os << f.as_str() << std::flush;
     }
+
+    virtual bool is_boolean() const = 0;
 };
 
 class NullaryAtomFeature : public Feature {
@@ -1165,6 +1167,8 @@ public:
     std::string as_str() const override {
         return std::string("Atom[") + predicate_->name_ + "]";
     }
+
+    bool is_boolean() const override { return true; }
 };
 
 class BooleanFeature : public Feature {
@@ -1197,6 +1201,8 @@ class BooleanFeature : public Feature {
     std::string as_str() const override {
         return std::string("Boolean[") + concept_->as_str() + "]";
     }
+
+    bool is_boolean() const override { return true; }
 };
 
 class NumericalFeature : public Feature {
@@ -1228,6 +1234,8 @@ class NumericalFeature : public Feature {
     std::string as_str() const override {
         return std::string("Numerical[") + concept_->as_str() + "]";
     }
+
+    bool is_boolean() const override { return false; }
 };
 
 class DistanceFeature : public Feature {
@@ -1362,6 +1370,8 @@ class DistanceFeature : public Feature {
         }
         return std::numeric_limits<int>::max();
     }
+
+    bool is_boolean() const override { return false; }
 };
 
 class Factory {
@@ -1943,7 +1953,7 @@ class Factory {
         // Line #3: feature types (0: boolean; 1: numeric)
         for( int i = 0; i < num_features; ++i ) {
             const Feature* feature = features_[i];
-            os << (dynamic_cast<const BooleanFeature*>(feature) != nullptr ? 0 : 1);
+            os << (feature->is_boolean() ? 0 : 1);
             if( 1 + i < num_features ) os << "\t";
         }
         os << std::endl;

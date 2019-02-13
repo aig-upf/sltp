@@ -24,32 +24,6 @@ def next_power_of_two(x):
     return 2 ** (math.ceil(math.log2(x)))
 
 
-def print_transition_matrix(state_ids, transitions, transitions_filename):
-    num_transitions = sum(len(targets) for targets in transitions.values())
-    logging.info("Printing transition matrix with {} states and {} transitions to '{}'".
-                 format(len(state_ids), num_transitions, transitions_filename))
-    with open(transitions_filename, 'w') as f:
-        for s, succ in transitions.items():
-            print("{} {}".format(s, " ".join("{}".format(sprime) for sprime in succ)), file=f)
-
-
-def print_sat_transition_matrix(state_ids, transitions, transitions_filename):
-    num_transitions = sum(len(targets) for targets in transitions.values())
-    num_states = len(state_ids)
-    num_states = len(transitions.keys())
-    logging.info("Printing SAT transition matrix with {} states, {} expanded states and {} transitions to '{}'".
-                 format(len(state_ids), num_states, num_transitions, transitions_filename))
-    with open(transitions_filename, 'w') as f:
-        # first line: <#states> <#transitions>
-        print("{} {}".format(num_states, num_transitions), file=f)
-
-        # second line: <#expanded states>
-        print("{}".format(num_states), file=f)
-
-        for s, succ in transitions.items():
-            print("{} {} {}".format(s, len(succ), " ".join("{}".format(sprime) for sprime in sorted(succ))), file=f)
-
-
 def cast_feature_value_to_numpy_value(value):
     """ Cast a given feature value into a suitable numpy value, if possible, or raise error if not """
     assert value >= 0
@@ -101,7 +75,7 @@ def print_feature_info(config, features):
             print("{} {}".format(feat, feat.complexity()), file=f)
 
 
-def print_sat_matrix(config, state_ids, goals, features, models):
+def print_sat_feature_matrix(config, state_ids, goals, features, models):
     filename = config.sat_feature_matrix_filename
     logging.info("Printing SAT feature matrix of {} features x {} states to '{}'".
                  format(len(features), len(state_ids), filename))
@@ -142,12 +116,8 @@ def print_sat_matrix(config, state_ids, goals, features, models):
             print("{} {} {}".format(s, len(nonzero_features), " ".join(
                 "{}:{}".format(i, int(v)) for i, v in nonzero_features
             )), file=f)
-    return all_feature_idxs # A mapping between the new and the old feature indexes
 
-
-def print_state_set(goal_states, filename):
-    with open(filename, 'w') as f:
-        print(" ".join(str(s) for s in goal_states), file=f)
+    return all_feature_idxs  # A mapping between the new and the old feature indexes
 
 
 def generate_features(config, data, rng):
@@ -158,19 +128,12 @@ def generate_features(config, data, rng):
                                                   config.prune_positive_features, config.prune_infty_features)
     print_feature_info(config, features)
     print_feature_matrix(config, state_ids, features, models)
-    print_transition_matrix(state_ids, sample.transitions, config.transitions_filename)
-    sat_feature_mapping = print_sat_matrix(config, state_ids, sample.goals, features, models)
-    print_sat_transition_matrix(state_ids, sample.transitions, config.sat_transitions_filename)
-    print_state_set(sample.goals, config.goal_states_filename)
-    print_state_set(sample.unsolvable, config.unsolvable_states_filename)
-    log_features(features, config.feature_filename)
 
-    # selected = [translator.features[i] for i in [8, 9, 25, 26, 1232]]
-    # selected = [features[1], features[35], ]
-    # selected = [features[11]]
+    log_features(features, config.feature_filename)
     # selected = None
     # log_feature_denotations(state_ids, features, models, config.feature_denotation_filename, selected)
 
+    sat_feature_mapping = print_sat_feature_matrix(config, state_ids, sample.goals, features, models)
     return ExitCode.Success, dict(features=features, sat_feature_mapping=sat_feature_mapping)
 
 
