@@ -1608,18 +1608,8 @@ class Factory {
                 num_pruned_concepts += p.first;
             }
 
-            // Insert the negation of all primitive concepts
-            for (auto concept:concepts_.back()) {
-                NotConcept not_concept(concept);
-                auto p = is_superfluous_or_exceeds_complexity_bound(not_concept, cache, sample);
-                if( !p.first ) insert_new_concept(cache, not_concept.clone(), p.second);
-                //else std::cout << "PRUNE: " + not_concept.as_str() << std::endl;
-                delete p.second;
-                num_pruned_concepts += p.first;
-            }
-
-
         } else {
+            bool is_first_non_basis_iteration = (concepts_.size() == 1);
             // extract concepts in existing concept layers
             std::vector<const Concept*> last_concept_layer = concepts_.back();
             std::vector<const Concept*> concepts_in_all_layers_except_last;
@@ -1629,7 +1619,20 @@ class Factory {
             // create new concept layer
             concepts_.emplace_back();
 
-            // generate negation, exist, and forall for concepts in last layer
+
+            // Insert the negation of all primitive concepts only (not applied in later iterations)
+            if (is_first_non_basis_iteration) {
+                for (auto concept:last_concept_layer) {
+                    NotConcept not_concept(concept);
+                    auto p = is_superfluous_or_exceeds_complexity_bound(not_concept, cache, sample);
+                    if (!p.first) insert_new_concept(cache, not_concept.clone(), p.second);
+                    //else std::cout << "PRUNE: " + not_concept.as_str() << std::endl;
+                    delete p.second;
+                    num_pruned_concepts += p.first;
+                }
+            }
+
+            // generate exist, and forall for concepts in last layer
             for( int i = 0; i < int(last_concept_layer.size()); ++i ) {
                 const Concept *concept = last_concept_layer[i];
 #if 0 // Don't negate in layers > 0
@@ -1665,7 +1668,7 @@ class Factory {
             // Insert equal concepts based on the already-fixed set of roles. We only do this once, and it'd thus be
             // more sensible to put this code elsewhere, but we want to generate concepts in the same order than
             // the python code for easier comparability
-            if (concepts_.size() == 2) { // size needs to be 2, as we have already inserted an empty layer
+            if (is_first_non_basis_iteration) {
                 for (unsigned i = 0; i < roles_.size(); ++i) {
                     for (unsigned j = i + 1; j < roles_.size(); ++j) {
                         EqualConcept eq_concept(roles_[i], roles_[j]);
@@ -1857,6 +1860,7 @@ class Factory {
         for( int layer = 0; layer < int(concepts_.size()); ++layer ) {
             for( int i = 0; i < int(concepts_[layer].size()); ++i ) {
                 const Concept &c = *concepts_[layer][i];
+                //std::cout << c.as_str() << std::endl;
                 const sample_denotation_t *d = cache.find_sample_denotation(c.as_str());
                 assert((d != nullptr) && (d->size() == sample.num_states()));
 
