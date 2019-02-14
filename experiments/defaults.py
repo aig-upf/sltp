@@ -30,7 +30,8 @@ def generate_experiment(domain_dir, domain, **kwargs):
         # pipeline="maxsat_poly",
 
         # Location of the FS planner, used to do the state space sampling
-        planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
+        #planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
+        planner_location=os.getenv("FS_PATH", os.path.expanduser("~/software/github/fs-planner")),
 
         # Type of sampling procedure. Only breadth-first search implemented ATM
         driver="bfs",
@@ -131,6 +132,9 @@ def generate_experiment(domain_dir, domain, **kwargs):
 
         # Whether to prune features that have infinity denotation *in some state*
         prune_infty_features=False,
+
+        # Whether ad-hoc solve runs with verbose option
+        wsat_solver_verbose=False,
     )
 
     parameters = {**defaults, **kwargs}  # Copy defaults, overwrite with user-specified parameters
