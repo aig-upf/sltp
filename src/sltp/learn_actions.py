@@ -449,7 +449,7 @@ class ModelTranslator(object):
             state_abstraction[state] = abstract
         return abstract_states, state_abstraction
 
-    def compute_abstraction(self, selected_features, features, namer):
+    def compute_abstraction(self, selected_features, namer):
         if not selected_features:
             raise CriticalPipelineError("Zero-cost maxsat solution - "
                                         "no action model possible, the encoding has likely some error")
@@ -459,7 +459,7 @@ class ModelTranslator(object):
         print('\t' + '\n\t'.join("{}. {} [k={}, id={}]".format(
             i, namer(self.feature_names[f]), self.feature_complexity[f], f) for i, f in enumerate(selected_features, 1)))
 
-        logging.debug("Only for the machine:\n{}".format(serialize_to_string([features[i] for i in selected_features])))
+        # logging.debug("Features:\n{}".format(serialize_to_string([features[i] for i in selected_features])))
         selected_data = [dict(idx=f,
                               name=namer(self.feature_names[f]),
                               type=int(not self.feature_types[f]))
@@ -560,8 +560,8 @@ class ModelTranslator(object):
         bin_values = self.bin_feat_matrix[state_id, features]
         return tuple(map(bool, bin_values))
 
-    def compute_action_model(self, selected_features, features, config):
-        states, actions, selected_features = self.compute_abstraction(selected_features, features, config.feature_namer)
+    def compute_action_model(self, selected_features, config):
+        states, actions, selected_features = self.compute_abstraction(selected_features, config.feature_namer)
         self.print_actions(actions, os.path.join(config.experiment_dir, 'actions.txt'), config.feature_namer)
         states, actions = optimize_abstract_action_model(states, actions)
         opt_filename = os.path.join(config.experiment_dir, 'optimized.txt')
@@ -735,7 +735,7 @@ def optimize_abstract_action_model(states, actions):
 def compute_action_model(config, data, rng):
     assert data.cnf_solution.solved
     selected_features = data.cnf_translator.decode_solution(data.cnf_solution.assignment)
-    states, actions, features = data.cnf_translator.compute_action_model(selected_features, data.features, config)
+    states, actions, features = data.cnf_translator.compute_action_model(selected_features, config)
     data.cnf_translator.compute_qnp(states, actions, features, config, data)
     return ExitCode.Success, dict(abstract_actions=actions, selected_features=features)
 
@@ -747,6 +747,6 @@ def compute_action_model_from_feature_idxs(config, data, rng):
     # We create the translator just to compute the action model. TODO It'd be better to fully decouple both steps,
     # so that we don't need to perform unnecessary initialization operations here.
     translator = create_maxsat_translator(config, data)
-    states, actions, features = translator.compute_action_model(selected_features, data.features, config)
+    states, actions, features = translator.compute_action_model(selected_features, config)
     # data.cnf_translator.compute_qnp(states, actions, features, config, data)
     return ExitCode.Success, dict(abstract_actions=actions, selected_features=features)
