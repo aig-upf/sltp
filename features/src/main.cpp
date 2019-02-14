@@ -113,10 +113,10 @@ int main(int argc, const char **argv) {
     SLTP::DL::Cache cache;
     factory.generate_basis(sample);
     factory.generate_roles(cache, sample);
-    factory.generate_concepts(cache, sample);
-    factory.generate_features(cache, sample);
+    auto concepts = factory.generate_concepts(cache, sample);
+    factory.generate_features(concepts, cache, sample);
 //    factory.report_dl_data(cout);
-    factory.log_all_concepts_and_features(cache, sample, options.workspace_);
+    factory.log_all_concepts_and_features(concepts, cache, sample, options.workspace_);
 
     output_results(options, factory, sample, cache);
 

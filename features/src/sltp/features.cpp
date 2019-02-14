@@ -184,7 +184,8 @@ namespace SLTP { namespace DL {
         return *sd;
     }
 
-    void Factory::log_all_concepts_and_features(const Cache &cache, const Sample &sample, const string &workspace) {
+    void Factory::log_all_concepts_and_features(const std::vector<const Concept*>& concepts,
+            const Cache &cache, const Sample &sample, const string &workspace) {
         // Print concept denotations
         std::string output(workspace + "/concept-denotations.io.txt");
         std::ofstream of(output);
@@ -194,7 +195,7 @@ namespace SLTP { namespace DL {
             const State &state = sample.state(i);
             const Instance::ObjectIndex& oidx = state.instance().object_index();
 
-            for (const Concept* c:all_concepts()) {
+            for (const Concept* c:concepts) {
                 const state_denotation_t& denotation = cache.retrieve_concept_denotation(*c, state);
                 of << "s_" << i << "[" << c->as_str() << "] = {";
                 bool need_comma = false;
