@@ -204,7 +204,7 @@ def sample_generated_states(config, rng):
     log_sampled_states(sample, config.resampled_states_filename)
 
     state_ids = sample.get_sorted_state_ids()
-    print_sat_transition_matrix(state_ids, sample.transitions, config.sat_transitions_filename)
+    print_sat_transition_matrix(state_ids, sample.transitions, sample.optimal_transitions, config.sat_transitions_filename)
     print_transition_matrix(state_ids, sample.transitions, config.transitions_filename)
     print_state_set(sample.goals, config.goal_states_filename)
     print_state_set(sample.unsolvable, config.unsolvable_states_filename)

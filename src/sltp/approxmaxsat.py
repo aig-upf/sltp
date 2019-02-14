@@ -26,21 +26,22 @@ from .returncodes import ExitCode
 
 
 def run(config, data, rng):
-    logging.info("Translating feature matrix into WSAT format".format())
+    logging.info("Solving implicit WSAT problem using ad-hoc solver".format())
 
     # We assume that blai's translator and solver are on the path and called 'wsat-translator' and  'wsat-solver'
-    command = "wsat-translator {}".format(config.sat_theory_prefix)
-    # retcode = execute(command=command.split(' '),
-                      # stdout=config.sample_file,
-                      # cwd=config.planner_location
-                      # )
-    # if retcode:
-    #     raise CriticalPipelineError("Error running MAXSAT translator. Check the logs. Return code: {}".format(retcode))
+    wsat_solver_command = "wsat-solver"
+    wsat_translator_command = "wsat-translator"
 
-    command = "wsat-solver --implicit {}".format(config.sat_theory_prefix)
-    # command = "wsat-solver /home/frances/projects/code/weighted-max-sat/examples/blocks04_theory.wsat".format()
+    # Fill in arguments
+    wsat_solver_command += " --implicit"
+    if config.complete_only_wrt_optimal: wsat_solver_command += " --complete-only-for-marked-transitions"
+    if config.wsat_solver_verbose: wsat_solver_command += " --verbose"
 
-    retcode = execute(command=command.split(' '),
+    # Finalize command
+    wsat_solver_command += " {}".format(config.sat_theory_prefix)
+
+    # Execute
+    retcode = execute(command=wsat_solver_command.split(' '),
                       stdout=config.maxsat_solver_out,
                       )
     if retcode:
