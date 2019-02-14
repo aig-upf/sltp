@@ -29,7 +29,7 @@ from .returncodes import ExitCode
 from .errors import CriticalPipelineError
 from .util import console
 from .util.bootstrap import setup_global_parser
-from .util.command import execute
+from .util.command import execute, create_experiment_workspace
 from .util.naming import compute_instance_tag, compute_experiment_tag, compute_serialization_name, \
     compute_maxsat_filename, compute_info_filename, compute_maxsat_variables_filename, compute_sample_filenames, \
     compute_test_sample_filenames
@@ -169,7 +169,8 @@ class PlannerStep(Step):
         config["sample_files"] = compute_sample_filenames(**config)
         config["test_sample_files"] = compute_test_sample_filenames(**config)
 
-        os.makedirs(config["experiment_dir"], exist_ok=True)  # TODO This should prob be somewhere else
+        # TODO This should prob be somewhere else
+        create_experiment_workspace(config["experiment_dir"], rm_if_existed=False)
 
         return config
 
@@ -438,7 +439,7 @@ class ActionModelStep(Step):
         return config
 
     def get_required_data(self):
-        return ["cnf_translator", "cnf_solution", "features", "sample"]
+        return ["cnf_translator", "cnf_solution", "sample"]
 
     def description(self):
         return "Computation of the action model"
@@ -463,7 +464,7 @@ class ActionModelFromFeatureIndexesStep(Step):
         return config
 
     def get_required_data(self):
-        return ["selected_feature_idxs", "features", "sample", "sat_feature_mapping"]
+        return ["selected_feature_idxs", "sample", "sat_feature_mapping"]
 
     def description(self):
         return "Computation of the action model from the feature indexes"
@@ -471,7 +472,6 @@ class ActionModelFromFeatureIndexesStep(Step):
     def get_step_runner(self):
         from . import learn_actions
         return learn_actions.compute_action_model_from_feature_idxs
-
 
 
 class QNPGenerationStep(Step):

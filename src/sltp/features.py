@@ -180,7 +180,6 @@ class SemanticProcessor(object):
 
 
 def store_terms(concepts, roles, args):
-    os.makedirs(args.experiment_dir, exist_ok=True)
     with open(os.path.join(args.experiment_dir, 'concepts.txt'), 'w') as f:
         # f.write("\n".join(map(str, concepts)))
         f.write("\n".join("{} [{}]".format(c, c.size) for c in concepts))
@@ -190,7 +189,6 @@ def store_terms(concepts, roles, args):
 
 
 def store_role_restrictions(roles, args):
-    os.makedirs(args.experiment_dir, exist_ok=True)
     with open(os.path.join(args.experiment_dir, 'role-restrictions.txt'), 'w') as f:
         f.write("\n".join(map(str, roles)))
 

@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 import subprocess
 
 
@@ -46,3 +47,9 @@ def execute(command, **kwargs):
         os.remove(stderr.name)
 
     return retcode
+
+
+def create_experiment_workspace(dirname, rm_if_existed=False):
+    if rm_if_existed and os.path.isdir(dirname):
+        shutil.rmtree(dirname)
+    os.makedirs(dirname, exist_ok=True)
