@@ -35,7 +35,7 @@ def experiment(experiment_name=None):
         feature_namer=ijcai_paper_bw_feature_namer,)
 
     exps["simple_clear_3_gc"] = update_dict(exps["simple_clear_3"], parameter_generator=None)
-
+    exps["simple_clear_3_gc_blai"] = update_dict(exps["simple_clear_3_gc"], pipeline="maxsat_poly")
 
     # This example shows that with 4 blocks, even if we expand all states, the model is still overfit to the 4 blocks
     exps["simple_clear_4"] = dict(
@@ -75,12 +75,10 @@ def experiment(experiment_name=None):
         concept_generator=None, parameter_generator=add_bw_domain_parameters,
         feature_namer=ijcai_paper_bw_feature_namer,
     )
-
+    exps["aaai_clear_x_blai"] = update_dict(exps["aaai_clear_x_simple_hybrid"], pipeline="maxsat_poly")
+    
     # Same but using goal-concepts instead of goal parameters:
     exps["aaai_clear_x_simple_hybrid_gc"] = update_dict(exps["aaai_clear_x_simple_hybrid"], parameter_generator=None)
-
-    exps["aaai_clear_x_simple_hybrid_blai"] = update_dict(
-        exps["aaai_clear_x_simple_hybrid"], pipeline="maxsat_poly",)
 
     exps["aaai_clear_x_8blocks"] = update_dict(exps["aaai_clear_x_simple_hybrid"],
                                        instances="instance_8_clear_x_0.pddl", )
@@ -192,6 +190,9 @@ def experiment(experiment_name=None):
                                                   concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
                                                   feature_namer=ijcai_paper_bw_feature_namer,
                                                   )
+
+    exps["aaai_bw_on_x_y_completeness_opt_blai"] = update_dict(exps["aaai_bw_on_x_y_completeness_opt"],
+                                                               pipeline="maxsat_poly")
 
     exps["aaai_bw_on_x_y_completeness_opt_no_marking"] = update_dict(exps["aaai_bw_on_x_y_completeness_opt"],
                                                              complete_only_wrt_optimal=False)
