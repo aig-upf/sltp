@@ -75,7 +75,7 @@ def experiment(experiment_name=None):
         concept_generator=None, parameter_generator=add_bw_domain_parameters,
         feature_namer=ijcai_paper_bw_feature_namer,
     )
-    exps["aaai_clear_x_blai"] = update_dict(exps["aaai_clear_x_simple_hybrid"], pipeline="maxsat_poly")
+    exps["aaai_clear_x_blai"] = update_dict(exps["aaai_clear_x_simple_hybrid"], wsat_solver_verbose=True, pipeline="maxsat_poly")
     
     # Same but using goal-concepts instead of goal parameters:
     exps["aaai_clear_x_simple_hybrid_gc"] = update_dict(exps["aaai_clear_x_simple_hybrid"], parameter_generator=None)
