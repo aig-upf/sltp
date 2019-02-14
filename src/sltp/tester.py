@@ -30,7 +30,7 @@ def run(config, data, rng):
     sample, goals_by_instance = read_transitions_from_files(config.test_sample_files)
 
     parsed_problems = parse_all_instances(config.test_domain, config.test_instances)
-    language, nominals, types, model_cache, infos = compute_models(
+    language, nominals, model_cache, infos = compute_models(
         config.domain, sample, parsed_problems, config.parameter_generator)
 
     # we don't care about the order of validation
