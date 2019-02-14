@@ -30,6 +30,7 @@ class CNFWriter(object):
 
     def clause(self, literals, weight=None):
         assert self.closed
+        assert weight is None or weight > 0
         # self.clauses.add(Clause(literals=literals, weight=weight)) # Keeping the set in memory is expensive!
         self.num_clauses += 1
         self.accumulated_weight += weight if weight is not None else 0

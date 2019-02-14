@@ -1280,7 +1280,7 @@ public:
     }
 
     int complexity() const override { // Nullary atoms have complexity 0 by definition
-        return 0;
+        return 1;
     }
 
     int value(const Cache &cache, const Sample &sample, const State &state) const override {
