@@ -32,9 +32,6 @@ def generate_experiment(domain_dir, domain, **kwargs):
         # Location of the FS planner, used to do the state space sampling
         planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
 
-        # Location of the feature generation module binary
-        featuregen_location=os.path.join(BASE_DIR, "features"),
-
         # Type of sampling procedure. Only breadth-first search implemented ATM
         driver="bfs",
 

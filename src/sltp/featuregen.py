@@ -21,8 +21,9 @@ import os
 import stat
 from collections import defaultdict
 
-from sltp.matrices import NP_FEAT_VALUE_TYPE, cast_feature_value_to_numpy_value
-from sltp.models import DLModel
+from . import BASE_DIR
+from .matrices import NP_FEAT_VALUE_TYPE, cast_feature_value_to_numpy_value
+from .models import DLModel
 from tarski.dl import PrimitiveConcept, UniversalConcept, NullaryAtom, NominalConcept, GoalConcept, GoalRole, \
     EmptyConcept, GoalNullaryAtom
 
@@ -255,7 +256,8 @@ def extract_features(config, sample):
                       all_objects, config.experiment_dir)
 
     # Invoke C++ feature generation module
-    cmd = os.path.realpath(os.path.join(config.featuregen_location, "featuregen"))
+    featuregen_location = os.path.join(BASE_DIR, "..", "..", "features")
+    cmd = os.path.realpath(os.path.join(featuregen_location, "featuregen"))
     args = [str(config.max_concept_size), config.experiment_dir]
     generate_debug_scripts(config.experiment_dir, cmd, args)
     retcode = execute([cmd] + args)

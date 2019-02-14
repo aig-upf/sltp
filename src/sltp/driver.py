@@ -292,7 +292,7 @@ class FeatureMatrixGenerationStep(Step):
 class CPPFeatureGenerationStep(Step):
     """ Generate exhaustively a set of all features up to a given complexity from the transition (state) sample """
     def get_required_attributes(self):
-        return ["domain", "experiment_dir", "max_concept_size", "featuregen_location"]
+        return ["domain", "experiment_dir", "max_concept_size"]
 
     def get_required_data(self):
         return ["sample"]
