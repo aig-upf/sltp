@@ -1242,7 +1242,7 @@ class RoleRestriction : public Role {
     }
 
     std::string as_str() const override {
-        return role_->as_str() + ":" + restriction_->as_str();
+        return std::string("Restriction(") + role_->as_str() + "," + restriction_->as_str() + ")";
     }
 };
 
@@ -1508,6 +1508,7 @@ class DistanceFeature : public Feature {
 class Factory {
   protected:
     const std::string name_;
+    const std::vector<std::string> goal_concepts_;
     const std::vector<std::string> nominals_;
     std::vector<const Role*> basis_roles_;
     std::vector<const Concept*> basis_concepts_;
@@ -1524,6 +1525,7 @@ class Factory {
   public:
     Factory(std::string name, const std::vector<std::string>& nominals, int complexity_bound)
       : name_(std::move(name)),
+//        goal_concepts_(goal_concepts),
         nominals_(nominals),
         complexity_bound_(complexity_bound) {
     }
@@ -1729,6 +1731,26 @@ class Factory {
                   << std::endl;
     }
 
+    void generate_goal_concepts(const Sample &sample) {
+        /*
+        insert_basis(new UniversalConcept);
+        insert_basis(new EmptyConcept);
+        for( int i = 0; i < int(sample.num_predicates()); ++i ) {
+            const Predicate *predicate = &sample.predicates()[i];
+            if( predicate->arity() == 1 ) {
+                insert_basis(new PrimitiveConcept(predicate));
+            } else if( predicate->arity() == 2 ) {
+                insert_basis(new PrimitiveRole(predicate));
+            }
+        }
+
+        for (const auto& gc:goal_concepts_) {
+            if (sample.predicates())
+            insert_basis(new NominalConcept(nominal));
+        }
+        */
+    }
+
     int generate_roles(Cache &cache, const Sample &sample) const {
         assert(roles_.empty());
         for( int i = 0; i < int(basis_roles_.size()); ++i ) {
@@ -1910,7 +1932,7 @@ class Factory {
         }
 
         // create distance features - temporarily deactivated
-        // num_distance_features = generate_distance_features(concepts, cache, sample);
+         num_distance_features = generate_distance_features(concepts, cache, sample);
 
         assert(num_nullary_features+num_boolean_features+num_numeric_features+num_distance_features == features_.size());
         std::cout << "FEATURES: #features=" << features_.size()

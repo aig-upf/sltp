@@ -87,20 +87,8 @@ void output_results(const Options &options,
 int main(int argc, const char **argv) {
     Options options(argc, argv);
 
-    // Read primitive concepts and files from input file
-    //auto primitive_denotations = sltp::io::read_denotation_matrix(options.worskspace + "/primitives.csv");
-    //auto static_denotations = sltp::io::read_denotation_matrix(options.worskspace + "/statics.csv");
-
-    // Generate concepts based on grammar, pruning duplicate concepts
-
-    // Generate Features and prune duplicates
-
-    // Generate output "state x feature" matrix
-    // We will likely need to output somehow the structure of the (non-redundant) concepts and features,
-    // so that they can be reconstructed from python.
-
     const SLTP::DL::Sample sample = parse_input_sample(options.workspace_ + "/sample.io");
-    const std::vector<std::string> nominals = parse_nominals(options.workspace_ + "/nominals.io");
+    std::vector<std::string> nominals = parse_nominals(options.workspace_ + "/nominals.io");
 #if 0
     cout << "SAMPLE: #objects=" << sample->num_objects()
          << ", #predicates=" << sample->num_predicates()
@@ -112,6 +100,7 @@ int main(int argc, const char **argv) {
 
     SLTP::DL::Cache cache;
     factory.generate_basis(sample);
+    factory.generate_goal_concepts(sample);
     factory.generate_roles(cache, sample);
     auto concepts = factory.generate_concepts(cache, sample);
     factory.generate_features(concepts, cache, sample);

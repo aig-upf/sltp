@@ -246,16 +246,15 @@ def extract_features(config, sample):
         all_predicates.update(set((goal_predicate_name(p.symbol), p.arity)
                                   for p in lang.predicates if not p.builtin and p.symbol in all_goal_predicates))
 
-        # Add type predicates as well
+        # Add type predicates
         all_predicates.update(set((p.name, 1) for p in lang.sorts if not p.builtin and p != lang.Object))
-
-    logging.info('Invoking C++ feature generation module'.format())
 
     # Write sample information
     print_sample_info(sample, infos, model_cache, all_predicates, all_functions, nominals,
                       all_objects, config.experiment_dir)
 
     # Invoke C++ feature generation module
+    logging.info('Invoking C++ feature generation module'.format())
     featuregen_location = os.path.join(BASE_DIR, "..", "..", "features")
     cmd = os.path.realpath(os.path.join(featuregen_location, "featuregen"))
     args = [str(config.max_concept_size), config.experiment_dir]

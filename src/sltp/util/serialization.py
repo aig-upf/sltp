@@ -4,7 +4,8 @@ import pickle
 from tarski import Predicate, Function
 from tarski.dl import NullaryAtom, EmpiricalBinaryConcept, ConceptCardinalityFeature, PrimitiveConcept, \
     UniversalConcept, NotConcept, ExistsConcept, ForallConcept, PrimitiveRole, EmptyConcept, AndConcept, GoalRole, \
-    GoalConcept, InverseRole, EqualConcept, StarRole, NullaryAtomFeature, NominalConcept
+    GoalConcept, InverseRole, EqualConcept, StarRole, NullaryAtomFeature, NominalConcept, MinDistanceFeature, \
+    RestrictRole
 
 
 def serialize(data, filename):
@@ -58,8 +59,10 @@ def unserialize_feature(language, string):
         return ConceptCardinalityFeature(parse_concept(language, concept))
 
     elif ftype == "Distance":
-        assert False  # TO DO
-        return MinDistanceFeature()
+        parts = concept.split(';')
+        assert len(parts) == 3
+        params = [parse_concept(language, c) for c in parts]
+        return MinDistanceFeature(*params)
 
     raise RuntimeError("Don't know how to unserialize feature \"{}\"".format(string))
 
@@ -120,6 +123,12 @@ def build_concept(language, node):
         role = build_concept(language, node.children[0])
         concept = build_concept(language, node.children[1])
         return ForallConcept(role, concept)
+
+    elif node.name == "Restriction":
+        assert len(node.children) == 2
+        role = build_concept(language, node.children[0])
+        concept = build_concept(language, node.children[1])
+        return RestrictRole(role, concept)
 
     elif node.name == "Equal":
         assert len(node.children) == 2
