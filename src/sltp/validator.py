@@ -16,7 +16,7 @@ class AbstractionValidator:
 
     def action_captures(self, models, s, sprime, action_effs, feature_set):
         """ Return true iff the abstract action captures (i.e. represents) transition (s, s') """
-        for idx, f in feature_set:
+        for idx, f in enumerate(feature_set):
             effect_of_action_on_f = action_effs[idx]
             x0 = self.get_possibly_cached_model(models, s).denotation(f)
             x1 = self.get_possibly_cached_model(models, sprime).denotation(f)
@@ -41,14 +41,14 @@ class AbstractionValidator:
         sample = self.sample
         unsound, not_represented = set(), set()
         abstract_actions = abstraction["abstract_actions"]
-        pool = abstraction["features"]
+        selected_feature_objs = abstraction["features"]
 
         feature_idx = self.compute_feature_idx(abstract_actions)
         models = dict()  # We will store here the model corresponding to each state
 
         # Map the idxs of selected features to the actual features
-        selected_feature_idxs = abstraction["selected_features"]
-        selected_features = [(f["idx"], abstraction["features"][f["idx"]]) for f in selected_feature_idxs]
+        # selected_feature_idxs = abstraction["selected_features"]
+        # selected_features = [(f["idx"], abstraction["features"][f["idx"]]) for f in selected_feature_idxs]
         # assert all(str(f) == f2["name"] for f, f2 in zip(selected_features, selected_feature_idxs))
 
         # logging.info("Abstract action set:\n{}".format(abstract_actions))
@@ -59,9 +59,9 @@ class AbstractionValidator:
             # Check soundness
             for action in abstract_actions:
                 # We need to cast the actual feature value into a bool to compare it with the abstraction bool value
-                is_applicable = all(bool(model.denotation(pool[idx])) is val for idx, val in action.preconditions)
+                is_applicable = all(bool(model.denotation(selected_feature_objs[idx])) is val for idx, val in action.preconditions)
                 if is_applicable and \
-                        not any(self.action_captures(models, sid, sprime, feature_idx[action], selected_features)
+                        not any(self.action_captures(models, sid, sprime, feature_idx[action], selected_feature_objs)
                                 for sprime in sample.transitions[sid]):
                     # The abstract action is not sound
                     logging.info("Action {} *unsound* wrt state #{} of the sample".format(action_printer(action), sid))
@@ -74,7 +74,7 @@ class AbstractionValidator:
 
             # Check completeness
             if check_completeness:
-                if not all(self.action_set_captures(models, sid, sprime, feature_idx, selected_features)
+                if not all(self.action_set_captures(models, sid, sprime, feature_idx, selected_feature_objs)
                            for sprime in sample.transitions[sid]):
                     # The abstract action is not complete
                     logging.info("Action set not *complete* wrt state {}".format(sid))

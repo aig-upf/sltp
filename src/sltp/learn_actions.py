@@ -23,7 +23,7 @@ from enum import Enum
 from signal import signal, SIGPIPE, SIG_DFL
 
 import numpy as np
-
+from sltp.language import parse_pddl
 
 from .sampling import TransitionSample
 from .errors import CriticalPipelineError
@@ -32,7 +32,7 @@ from .util.console import header, lines
 from .util.cnfwriter import CNFWriter
 from .solvers import solve
 from .util.performance import print_memory_usage
-from .util.serialization import serialize_to_string
+from .util.serialization import serialize_to_string, unserialize_features
 from .returncodes import ExitCode
 
 signal(SIGPIPE, SIG_DFL)
@@ -457,7 +457,7 @@ class ModelTranslator(object):
         print("Features (total complexity: {}): ".format(
             sum(self.feature_complexity[f] for f in selected_features)))
         print('\t' + '\n\t'.join("{}. {} [k={}, id={}]".format(
-            i, namer(self.feature_names[f]), self.feature_complexity[f], f) for i, f in enumerate(selected_features, 1)))
+            i, namer(self.feature_names[f]), self.feature_complexity[f], f) for i, f in enumerate(selected_features, 0)))
 
         # logging.debug("Features:\n{}".format(serialize_to_string([features[i] for i in selected_features])))
         selected_data = [dict(idx=f,
@@ -477,10 +477,10 @@ class ModelTranslator(object):
 
             qchanges = self.retrieve_possibly_cached_qchanges(s, sprime)
             selected_qchanges = qchanges[selected_features]
-            abstract_effects = [ActionEffect(f, self.feature_names[f], self.generate_eff_change(f, c))
-                                for f, c in zip(selected_features, selected_qchanges) if c != 0]  # No need to record "NIL" changes
+            abstract_effects = [ActionEffect(i, self.feature_names[f], self.generate_eff_change(f, c))
+                                for i, (f, c) in enumerate(zip(selected_features, selected_qchanges)) if c != 0]  # No need to record "NIL" changes
 
-            precondition_bitmap = frozenset(zip(selected_features, abstract_s))
+            precondition_bitmap = frozenset(enumerate(abstract_s))
             abstract_actions.add(AbstractAction(precondition_bitmap, abstract_effects))
             if len(abstract_effects) == 0:
                 msg = "Abstract no-op necessary [concrete: ({}, {}), abstract: ({}, {})]".format(
@@ -561,13 +561,13 @@ class ModelTranslator(object):
         return tuple(map(bool, bin_values))
 
     def compute_action_model(self, selected_features, config):
-        states, actions, selected_features = self.compute_abstraction(selected_features, config.feature_namer)
+        states, actions, selected_data = self.compute_abstraction(selected_features, config.feature_namer)
         self.print_actions(actions, os.path.join(config.experiment_dir, 'actions.txt'), config.feature_namer)
         states, actions = optimize_abstract_action_model(states, actions)
         opt_filename = os.path.join(config.experiment_dir, 'optimized.txt')
         logging.info("Minimized action model with {} actions saved in {}".format(len(actions), opt_filename))
         self.print_actions(actions, opt_filename, config.feature_namer)
-        return states, actions, selected_features
+        return states, actions, selected_data
 
     def print_actions(self, actions, filename, namer):
         with open(filename, 'w') as f:

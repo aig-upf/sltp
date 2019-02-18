@@ -589,7 +589,7 @@ public:
         return cache.find_or_insert_state_denotation(sd);
     }
     std::string as_str() const override {
-        return std::string("{") + name_ + "}";
+        return std::string("Nominal(") + name_ + ")";
     }
 };
 

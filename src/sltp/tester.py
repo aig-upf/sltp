@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import logging
 
+from sltp.language import parse_pddl
+from sltp.util.serialization import unserialize_features
 from tarski.dl import EmpiricalBinaryConcept, ConceptCardinalityFeature
 
 from .features import parse_all_instances, compute_models
@@ -18,9 +20,14 @@ def process_features(features):
 
 
 def run(config, data, rng):
+    indexes = [elem['idx'] for elem in data.selected_features]
+    _, language, _ = parse_pddl(config.domain)
+    objs = unserialize_features(language, config.serialized_feature_filename, set(indexes))
+    assert len(indexes) == len(objs)
+
     abstraction = {"abstract_actions": data.abstract_actions,
                    "selected_features": data.selected_features,
-                   "features": process_features(data.features)}
+                   "features": process_features(objs)}
 
     if config.test_domain is None:
         logging.info("No testing instances were specified")

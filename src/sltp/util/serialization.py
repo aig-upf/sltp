@@ -1,6 +1,11 @@
 import logging
 import pickle
 
+from tarski import Predicate, Function
+from tarski.dl import NullaryAtom, EmpiricalBinaryConcept, ConceptCardinalityFeature, PrimitiveConcept, \
+    UniversalConcept, NotConcept, ExistsConcept, ForallConcept, PrimitiveRole, EmptyConcept, AndConcept, GoalRole, \
+    GoalConcept, InverseRole, EqualConcept, StarRole, NullaryAtomFeature, NominalConcept
+
 
 def serialize(data, filename):
     with open(filename, 'wb') as f:
@@ -28,3 +33,152 @@ def serialize_to_string(obj):
 def deserialize_from_string(string):
     import jsonpickle
     return jsonpickle.loads(string)
+
+
+def unserialize_features(language, filename, indexes=None):
+    features = []
+    with open(filename, 'r') as file:
+        for i, line in enumerate(file, 0):
+            if indexes is None or i in indexes:
+                features.append(unserialize_feature(language, line.rstrip('\n')))
+    return features
+
+
+def unserialize_feature(language, string):
+    ftype, concept, _ = string.replace("[", "]").split("]")  # Split feature name in 3 parts by '[', ']'
+    assert not _
+    if ftype == "Atom":
+        p = language.get(concept)  # Concept will necessarily be a nullary predicate
+        assert p.arity == 0
+        return NullaryAtomFeature(NullaryAtom(p))
+    elif ftype == "Boolean":
+        return EmpiricalBinaryConcept(ConceptCardinalityFeature(parse_concept(language, concept)))
+
+    elif ftype == "Numerical":
+        return ConceptCardinalityFeature(parse_concept(language, concept))
+
+    elif ftype == "Distance":
+        assert False  # TO DO
+        return MinDistanceFeature()
+
+    raise RuntimeError("Don't know how to unserialize feature \"{}\"".format(string))
+
+
+def parse_concept(language, string):
+    ast = read_ast(string)
+    # print("{}:\t\t {}".format(string, tree))
+    return build_concept(language, ast)
+
+
+def build_concept(language, node):
+    if isinstance(node, str):  # Must be a primitive symbol or universe / empty
+        if node == "<universe>":
+            return UniversalConcept('object')
+        if node == "<empty>":
+            return EmptyConcept('object')
+
+        is_goal = False
+        if node[-2:] == "_g":
+            # We have a goal concept / role
+            # (yes, this will fail miserably if some primitive in the original domain is named ending with _g)
+            is_goal = True
+            node = node[:-2]
+
+        obj = language.get(node)
+        assert isinstance(obj, (Predicate, Function))
+        arity = obj.uniform_arity()
+        assert arity in (1, 2)
+        if is_goal:
+            return GoalConcept(obj) if arity == 1 else GoalRole(obj)
+        else:
+            return PrimitiveConcept(obj) if arity == 1 else PrimitiveRole(obj)
+
+    elif node.name == "Nominal":
+        assert len(node.children) == 1
+        return NominalConcept(node.children[0], language.Object)
+
+    elif node.name == "Not":
+        assert len(node.children) == 1
+        return NotConcept(build_concept(language, node.children[0]), language.Object)
+
+    elif node.name == "Inverse":
+        assert len(node.children) == 1
+        return InverseRole(build_concept(language, node.children[0]))
+
+    elif node.name == "And":
+        assert len(node.children) == 2
+        return AndConcept(build_concept(language, node.children[0]), build_concept(language, node.children[1]), 'object')
+
+    elif node.name == "Exists":
+        assert len(node.children) == 2
+        role = build_concept(language, node.children[0])
+        concept = build_concept(language, node.children[1])
+        return ExistsConcept(role, concept)
+
+    elif node.name == "Forall":
+        assert len(node.children) == 2
+        role = build_concept(language, node.children[0])
+        concept = build_concept(language, node.children[1])
+        return ForallConcept(role, concept)
+
+    elif node.name == "Equal":
+        assert len(node.children) == 2
+        r1 = build_concept(language, node.children[0])
+        r2 = build_concept(language, node.children[1])
+        return EqualConcept(r1, r2, 'object')
+
+    elif node.name == "Star":
+        assert len(node.children) == 1
+        r1 = build_concept(language, node.children[0])
+        return StarRole(r1)
+
+    else:
+        raise RuntimeError("Don't know how to deserialize concept / feature: {}".format(node))
+
+
+def read_subitems(string):
+    copen = 0
+    splits = []
+    elems = []
+    last_split = -1
+    for i, c in enumerate(string):
+        if c == "(":
+            copen += 1
+        elif c == ")":
+            copen -= 1
+        elif c == ",":
+            if copen == 0:
+                splits.append(i)
+                elems.append(string[last_split+1:i])
+                last_split = i
+    elems.append(string[last_split+1:])
+    return [read_ast(elem) for elem in elems]
+
+
+def read_ast(string):
+    # print("recursive-call on |{}|".format(string))
+    lindex = string.find('(')
+    rindex = string.rfind(')')
+
+    assert bool(lindex == -1) == bool(rindex == -1)
+    if lindex == -1:
+        assert rindex == -1
+        return string
+
+    assert rindex != -1
+    name = string[:lindex]
+    between = string[lindex + 1:rindex]
+    return Node(name, children=read_subitems(between))
+
+
+class Node:
+    def __init__(self, name, children):
+        self.name = name
+        self.children = children
+
+    def __str__(self):
+        if not self.children:
+            return self.name
+        return "{}({})".format(self.name, ', '.join(map(str, self.children)))
+    __repr__ = __str__
+

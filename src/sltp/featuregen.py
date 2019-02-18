@@ -267,11 +267,13 @@ def extract_features(config, sample):
 
     # Read off the output of the module and transform it into the numpy matrices to be consumed
     # by the next pipeline step
-    sat_feature_mapping = transform_generator_output(config, sample,
-                                                     os.path.join(config.experiment_dir, "feature-matrix.io"),
-                                                     os.path.join(config.experiment_dir, "feature-info.io"),)
+    sat_feature_mapping = transform_generator_output(
+        config, sample,
+        os.path.join(config.experiment_dir, "feature-matrix.io"),
+        os.path.join(config.experiment_dir, "feature-info.io"),)
 
-    return ExitCode.Success, dict(enforced_feature_idxs=[], sat_feature_mapping=sat_feature_mapping)
+    return ExitCode.Success, dict(enforced_feature_idxs=[],
+                                  sat_feature_mapping=sat_feature_mapping)
 
 
 def print_sat_feature_matrix(filename, matrix, state_ids, goals, names, complexities, types):

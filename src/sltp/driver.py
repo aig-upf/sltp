@@ -311,6 +311,7 @@ class CPPFeatureGenerationStep(Step):
         config["concept_denotation_filename"] = compute_info_filename(config, "concept-denotations.txt")
         config["sat_feature_matrix_filename"] = compute_info_filename(config, "sat_matrix.dat")
         config["feature_denotation_filename"] = compute_info_filename(config, "feature-denotations.txt")
+        config["serialized_feature_filename"] = compute_info_filename(config, "serialized-features.io")
 
         if config["enforce_features"]:
             raise RuntimeError("Option enforce_features not allowed when using the C++ feature generator")
@@ -431,7 +432,7 @@ class ActionModelStep(Step):
         super().__init__(**kwargs)
 
     def get_required_attributes(self):
-        return []
+        return ['serialized_feature_filename']
 
     def process_config(self, config):
         config["feature_namer"] = config.get("feature_namer")
@@ -704,7 +705,7 @@ class AbstractionTestingComputation(Step):
         return config
 
     def get_required_data(self):
-        return ["abstract_actions", "selected_features", "features"]
+        return ["abstract_actions", "selected_features"]
 
     def description(self):
         return "Testing of the computed abstraction on the testing instances"

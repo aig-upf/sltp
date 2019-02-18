@@ -254,6 +254,20 @@ namespace SLTP { namespace DL {
             }
         }
         of.close();
+
+
+        // Print all generated features to be unserialized from the Python frontend
+        output = workspace + "/serialized-features.io";
+        of = std::ofstream(output);
+        if( of.fail() ) throw std::runtime_error("Could not open filename '" + output + "'");
+
+        std::cout << "Serializing generated features to " << output << std::endl;
+
+        for (const Feature* f:features_) {
+            of << f->as_str() << std::endl;
+        }
+        of.close();
+
     }
 } }; // namespaces
 
