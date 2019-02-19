@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 import logging
 
-from sltp.language import parse_pddl
-from sltp.util.serialization import unserialize_features
-from tarski.dl import EmpiricalBinaryConcept, ConceptCardinalityFeature
+from sltp.incremental import load_selected_features
 
 from .features import parse_all_instances, compute_models
 from .returncodes import ExitCode
@@ -12,22 +10,12 @@ from .validator import AbstractionValidator
 from .learn_actions import prettyprint_abstract_action
 
 
-def process_features(features):
-    """ Transform 'empirically binary features' in the given list into standard cardinality features.
-    This is useful if we want to apply these features to unseen models, since it these models it won't
-    necessarily be the case that the features are still binary. """
-    return [ConceptCardinalityFeature(f.c) if isinstance(f, EmpiricalBinaryConcept) else f for f in features]
-
-
 def run(config, data, rng):
-    indexes = [elem['idx'] for elem in data.selected_features]
-    _, language, _ = parse_pddl(config.domain)
-    objs = unserialize_features(language, config.serialized_feature_filename, set(indexes))
-    assert len(indexes) == len(objs)
+    features = load_selected_features(data.selected_features, config.domain, config.serialized_feature_filename)
 
     abstraction = {"abstract_actions": data.abstract_actions,
                    "selected_features": data.selected_features,
-                   "features": process_features(objs)}
+                   "features": features}
 
     if config.test_domain is None:
         logging.info("No testing instances were specified")

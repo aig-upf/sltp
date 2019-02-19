@@ -3,16 +3,21 @@ import os
 import shutil
 
 import numpy as np
+from sltp.language import parse_pddl
+from sltp.util.serialization import unserialize_features
+from tarski.dl import compute_dl_vocabulary, ConceptCardinalityFeature, EmpiricalBinaryConcept
+
 from .validator import AbstractionValidator
 
 from .sampling import log_sampled_states
-from .features import create_model_cache_from_samples, parse_all_instances
+from .features import create_model_cache_from_samples, parse_all_instances, compute_instance_information, \
+    report_use_goal_denotation
 from .returncodes import ExitCode
 from .util.misc import update_dict
 from .driver import Experiment, generate_pipeline_from_list, PlannerStep, check_int_parameter, \
     InvalidConfigParameter, TransitionSamplingStep, ConceptGenerationStep, SubprocessStepRunner, \
     run_and_check_output, save, FeatureMatrixGenerationStep, MaxsatProblemGenerationStep, MaxsatProblemSolutionStep, \
-    ActionModelStep, load, Bunch
+    ActionModelStep, load, Bunch, CPPFeatureGenerationStep
 
 
 def initial_sample_selection(sample, config, rng):
@@ -33,10 +38,15 @@ def full_learning(config, sample, rng):
     working_sample_idxs, expanded_state_ids_shuffled = initial_sample_selection(sample, config, rng)
     working_sample = sample.resample(working_sample_idxs)
 
+    use_goal_denotation = report_use_goal_denotation(config.parameter_generator)
     parsed_problems = parse_all_instances(config.domain, config.instances)
+    infos = [compute_instance_information(problem, use_goal_denotation) for problem, _, _ in parsed_problems]
+    # We assume all problems languages are the same and simply pick the first one
+    language = parsed_problems[0][0].language
+    vocabulary = compute_dl_vocabulary(language)
 
     # Note that the validator will validate wrt the full sample
-    _, _, model_cache = create_model_cache_from_samples(sample, config, parsed_problems)
+    _, model_cache = create_model_cache_from_samples(vocabulary, sample, config.domain, config.parameter_generator, infos)
     validator = AbstractionValidator(model_cache, sample, expanded_state_ids_shuffled)
 
     k, k_max, k_step = config.initial_concept_bound, config.max_concept_bound, config.concept_bound_step
@@ -91,13 +101,29 @@ def setup_workspace(config, sample, k):
     return subconfig
 
 
-def teardown_workspace(experiment_dir, clean_workspace, **kwargs):
+def teardown_workspace(domain, experiment_dir, serialized_feature_filename, clean_workspace, **kwargs):
     """ Clean up the given workspace """
-    data = load(experiment_dir, ["abstract_actions", "selected_features", "features"])
+    data = load(experiment_dir, ["abstract_actions", "selected_features"])
+    data["features"] = load_selected_features(data["selected_features"], domain, serialized_feature_filename)
     # if clean_workspace:
     #     print(experiment_dir)
-        # shutil.rmtree(experiment_dir)  # TODO activate
+    #     shutil.rmtree(experiment_dir)  # TODO activate
     return data
+
+
+def process_features(features):
+    """ Transform 'empirically binary features' in the given list into standard cardinality features.
+    This is useful if we want to apply these features to unseen models, since it these models it won't
+    necessarily be the case that the features are still binary. """
+    return [ConceptCardinalityFeature(f.c) if isinstance(f, EmpiricalBinaryConcept) else f for f in features]
+
+
+def load_selected_features(selected_features, domain, serialized_feature_filename):
+    indexes = [elem['idx'] for elem in selected_features]
+    _, language, _ = parse_pddl(domain)
+    objs = unserialize_features(language, serialized_feature_filename, set(indexes))
+    assert len(indexes) == len(objs)
+    return process_features(objs)
 
 
 def try_to_compute_abstraction(config, sample, k):
@@ -107,8 +133,18 @@ def try_to_compute_abstraction(config, sample, k):
     subconfig = setup_workspace(config, sample, k)
 
     steps, subconfig = generate_pipeline_from_list([
-        ConceptGenerationStep, FeatureMatrixGenerationStep, MaxsatProblemGenerationStep,
+        CPPFeatureGenerationStep,
+        MaxsatProblemGenerationStep,
         MaxsatProblemSolutionStep, ActionModelStep], **subconfig)
+
+    #         PlannerStep,
+    #         TransitionSamplingStep,
+    #         CPPFeatureGenerationStep,
+    #         MaxsatProblemGenerationStep,
+    #         MaxsatProblemSolutionStep,
+    #         ActionModelStep,
+    #         AbstractionTestingComputation,
+    #         # QNPGenerationStep,
 
     for step in steps:
         exitcode = run_and_check_output(step, SubprocessStepRunner, raise_on_error=False)
