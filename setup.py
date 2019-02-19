@@ -45,7 +45,7 @@ def main():
             'bitarray',
             'numpy',
             'jsonpickle',
-            "tarski @ git+ssh://git@github.com/aig-upf/tarski.git@6187518#egg=tarski-dev-0.1.0"
+            "tarski @ git+ssh://git@github.com/aig-upf/tarski.git@150a396#egg=tarski-dev-0.1.0"
         ],
 
         extras_require={
