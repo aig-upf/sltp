@@ -121,7 +121,7 @@ def _run_planner(config, data, rng):
         run(config.domain, i, o, w, config.num_states)
 
     for i, o in zip(config.test_instances, config.test_sample_files):
-        run(config.test_domain, i, o, -1, 1000)
+        run(config.test_domain, i, o, -1, config.num_tested_states)
 
     return ExitCode.Success, dict()
 
@@ -132,7 +132,7 @@ class PlannerStep(Step):
     VALID_DRIVERS = ("bfs", "ff")
 
     def get_required_attributes(self):
-        return ["instances", "domain", "num_states", "planner_location", "driver"]
+        return ["instances", "domain", "num_states", "planner_location", "driver", "test_instances", "num_tested_states"]
 
     def get_required_data(self):
         return []

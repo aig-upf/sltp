@@ -122,7 +122,7 @@ def print_sample_info(sample, infos, model_cache, all_predicates, all_functions,
         print(" ".join("{}/{}".format(name, arity) for name, arity in sorted(all_functions)), file=f)
 
         # Next: List of all predicates and functions mentioned in the goal
-        # goal_predicate_info = {}
+        goal_predicate_info = {}
         print(" ".join("{}".format(name) for name, arity in sorted(goal_predicate_info)), file=f)
 
         # Next: per-instance information.
