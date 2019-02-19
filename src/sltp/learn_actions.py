@@ -56,7 +56,7 @@ def compute_d2_index(s0, s1, t0, t1):
 
 def generate_maxsat_problem(config, data, rng):
     translator = create_maxsat_translator(config, data)
-    result = translator.run(config.cnf_filename, data.enforced_feature_idxs)
+    result = translator.run(config.cnf_filename, data.enforced_feature_idxs, data.in_goal_features)
     # translator.writer.print_variables(config.maxsat_variables_file)
 
     # TODO Serialize less stuff. Probably we don't need to serialize the full translator
@@ -202,6 +202,7 @@ class ModelTranslator(object):
 
         if complete_only_wrt_optimal:
             self.optimal_states = sample.compute_optimal_states()
+
         else:
             # Consider all transitions as optimal
             self.optimal_states = self.optimal_and_nonoptimal.copy()
@@ -321,9 +322,10 @@ class ModelTranslator(object):
             return min(s, t), max(s, t)
         return s, t
 
-    def run(self, cnf_filename, enforced_feature_idxs):
+    def run(self, cnf_filename, enforced_feature_idxs, in_goal_features):
         # allf = list(range(0, len(self.feature_names)))  # i.e. select all features
         # self.find_inconsistency(allf)
+        # in_goal_features = set()
         self.writer = CNFWriter(cnf_filename)
         self.create_variables()
 
@@ -350,13 +352,20 @@ class ModelTranslator(object):
 
             # Force D1(s1, s2) to be true if exactly one of the two states is a goal state
             if sum(1 for x in (s1, s2) if x in self.sample.goals) == 1:
-                self.writer.clause([d1_lit])
-                self.n_goal_clauses += 1
 
-                if len(d1_distinguishing_features) == 0:
-                    logging.warning("No feature in the pool can distinguish states {}, but one of them is a goal and "
-                                    "the other is not. MAXSAT encoding will be UNSAT".format((s1, s2)))
-                    return ExitCode.MaxsatModelUnsat
+                if len(in_goal_features):
+                    if not in_goal_features.intersection(d1_distinguishing_features):
+                        raise RuntimeError("No feature in pool can distinguish states {}, "
+                                           "but forced features should be enough to distinguish them".format((s1, s2)))
+
+                else:
+                    self.writer.clause([d1_lit])
+                    self.n_goal_clauses += 1
+
+                    if len(d1_distinguishing_features) == 0:
+                        logging.warning("No feature in pool can distinguish states {}, but one of them is a goal and "
+                                        "the other is not. MAXSAT encoding will be UNSAT".format((s1, s2)))
+                        return ExitCode.MaxsatModelUnsat
 
             # Else (i.e. D1(s1, s2) _might_ be false, create the bridge clauses between values of D1 and D2
             else:
@@ -399,7 +408,12 @@ class ModelTranslator(object):
             self.n_selected_clauses += 1
 
         # Make sure those features we want to enforce in the solution, if any, are posted as necessarily selected
-        for enforced in enforced_feature_idxs:
+        # for enforced in enforced_feature_idxs:
+        #     self.writer.clause([self.writer.literal(self.np_var_selected[enforced], True)])
+        assert not enforced_feature_idxs
+
+        logging.info("Enforcing features: {}".format(", ".join(str(self.np_var_selected[x]) for x in in_goal_features)))
+        for enforced in in_goal_features:
             self.writer.clause([self.writer.literal(self.np_var_selected[enforced], True)])
 
         # from pympler.asizeof import asizeof

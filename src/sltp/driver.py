@@ -337,7 +337,7 @@ class MaxsatProblemGenerationStep(Step):
         return config
 
     def get_required_data(self):
-        return ["sample", "enforced_feature_idxs"]
+        return ["sample", "enforced_feature_idxs", "in_goal_features"]
 
     def description(self):
         return "Generation of the max-sat problem"

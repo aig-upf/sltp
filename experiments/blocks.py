@@ -161,6 +161,8 @@ def experiment(experiment_name=None):
         concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
+    exps["bw_on_x_y_5_gc"] = update_dict(exps["bw_on_x_y_5"], parameter_generator=None,)
+
     exps["bw_on_x_y_5_iw"] = dict(
         instances=["instance_9_on_x_y_1.pddl", "instance_9_on_x_y_2.pddl", "holding_a_b_unclear.pddl"],#, "instance_9_on_x_y_4.pddl"],
         num_states=1000, max_width=2,

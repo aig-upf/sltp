@@ -100,6 +100,25 @@ namespace SLTP { namespace DL {
         return predicates;
     }
 
+
+    //! Parse a list of predicate names and return their indexes in the global predicate index
+    std::vector<predicate_id_t> parse_predicate_names(
+            const std::string &line,
+            const Sample::PredicateIndex& predicate_index) {
+        std::vector<std::string> names;
+        boost::split(names, line, boost::is_any_of(" \t"));
+
+        std::vector<predicate_id_t> predicates;
+        for(const auto &name : names) {
+            if (name != "") {
+                auto pid = (object_id_t) predicate_index.size();
+                predicates.push_back(predicate_index.at(name));
+            }
+        }
+
+        return predicates;
+    }
+
     const Sample Sample::read(std::istream &is) {
         //ObjectIndex object_index;
         PredicateIndex predicate_index;
@@ -118,6 +137,11 @@ namespace SLTP { namespace DL {
         std::string function_line;
         std::getline(is, function_line);
         // Note: Not supporting functions yet - we don't do anything with this line
+
+        // Next: List of all predicates and functions mentioned in the goal
+        std::string line;
+        std::getline(is,line);
+        std::vector<predicate_id_t> goal_predicates = parse_predicate_names(line, predicate_index);
 
         // Next: number of instances in file
         std::string num_instances_line;
@@ -162,6 +186,7 @@ namespace SLTP { namespace DL {
                       std::move(predicates),
                       std::move(instances),
                       std::move(states),
+                      std::move(goal_predicates),
                       std::move(predicate_index));
     }
 
@@ -184,8 +209,10 @@ namespace SLTP { namespace DL {
         return *sd;
     }
 
-    void Factory::log_all_concepts_and_features(const std::vector<const Concept*>& concepts,
+    void Factory::log_all_concepts_and_features(
+            const std::vector<const Concept*>& concepts,
             const Cache &cache, const Sample &sample, const string &workspace) {
+#if 0
         // Print concept denotations
         std::string output(workspace + "/concept-denotations.io.txt");
         std::ofstream of(output);
@@ -255,19 +282,18 @@ namespace SLTP { namespace DL {
         }
         of.close();
 
-
+#endif
         // Print all generated features to be unserialized from the Python frontend
-        output = workspace + "/serialized-features.io";
-        of = std::ofstream(output);
-        if( of.fail() ) throw std::runtime_error("Could not open filename '" + output + "'");
+        std::string fname = workspace + "/serialized-features.io";
+        std::ofstream of2 = std::ofstream(fname);
+        if( of2.fail() ) throw std::runtime_error("Could not open filename '" + fname + "'");
 
-        std::cout << "Serializing generated features to " << output << std::endl;
+        std::cout << "Serializing generated features to " << fname << std::endl;
 
         for (const Feature* f:features_) {
-            of << f->as_str() << std::endl;
+            of2 << f->as_str() << std::endl;
         }
-        of.close();
-
+        of2.close();
     }
 } }; // namespaces
 

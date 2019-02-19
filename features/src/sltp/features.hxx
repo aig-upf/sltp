@@ -31,6 +31,7 @@ class Atom;
 class Sample;
 class Concept;
 class Role;
+class Feature;
 class State;
 
 // A state denotation for concept C is a subset of objects
@@ -54,6 +55,7 @@ using sample_denotation_t = std::vector<const state_denotation_t*>;
 
 using feature_state_denotation_t = int;
 using feature_sample_denotation_t = std::vector<feature_state_denotation_t>;
+using feature_cache_t = std::unordered_map<feature_sample_denotation_t, const Feature*, utils::container_hash<feature_sample_denotation_t> >;
 
 // We cache sample and state denotations. The latter are cached
 // into a simple hash (i.e. unordered_set). The former are cached
@@ -155,6 +157,17 @@ class Cache {
         return it == cache2_.end() ? nullptr : it->second;
     }
 
+    void remove_sample_denotation(const std::string &name) {
+        cache2_t::const_iterator it2 = cache2_.find(name);
+        assert(it2 != cache2_.end());
+
+        cache1_t::const_iterator it1 = cache1_.find(it2->second);
+        assert(it1 != cache1_.end());
+        cache1_.erase(it1); // TODO Delete denotation
+
+        cache2_.erase(it2);
+    }
+
     // cache3: state denotations (bit vectors)
     //
     // We maintain a hash of these denotations such as to keep just one
@@ -222,6 +235,9 @@ struct Predicate {
     }
     predicate_id_t id() const {
         return id_;
+    }
+    const std::string& name() const {
+        return name_;
     }
     int arity() const {
         return arity_;
@@ -389,6 +405,9 @@ class Sample {
     const std::vector<Instance> instances_;
     const std::vector<State> states_;
 
+    // The IDs of predicates that are mentioned in the goal
+    const std::vector<predicate_id_t> goal_predicates_;
+
     // mapping from predicate names to their ID in the sample
     PredicateIndex predicate_index_;
 
@@ -396,11 +415,13 @@ class Sample {
            std::vector<Predicate> &&predicates,
            std::vector<Instance> &&instances,
            std::vector<State> &&states,
+           std::vector<predicate_id_t> &&goal_predicates,
            PredicateIndex &&predicate_index)
       : name_(name),
         predicates_(std::move(predicates)),
         instances_(std::move(instances)),
         states_(std::move(states)),
+        goal_predicates_(std::move(goal_predicates)),
         predicate_index_(std::move(predicate_index)) {
         std::cout << "SAMPLE:"
                   << " #predicates=" << predicates_.size()
@@ -427,21 +448,26 @@ class Sample {
     const std::vector<Predicate>& predicates() const {
         return predicates_;
     }
+    const std::vector<predicate_id_t>& goal_predicates() const {
+        return goal_predicates_;
+    }
     const std::vector<Instance>& instances() const {
         return instances_;
     }
     const std::vector<State>& states() const {
         return states_;
     }
-
-    const Instance& instance(int i) const {
+    const Instance& instance(unsigned i) const {
         return instances_.at(i);
     }
-    const Predicate& predicate(unsigned id) const {
+    const Predicate& predicate(predicate_id_t id) const {
         return predicates_.at(id);
     }
     const State& state(unsigned id) const {
         return states_.at(id);
+    }
+    const PredicateIndex& predicate_index() const {
+        return predicate_index_;
     }
 
     // factory method - reads sample from serialized data
@@ -490,6 +516,10 @@ class Base {
         return std::to_string(complexity_) + "." + as_str();
     }
 
+    void force_complexity(int c) {
+        complexity_ = c;
+    }
+
     friend std::ostream& operator<<(std::ostream &os, const Base &base) {
         return os << base.as_str_with_complexity() << std::flush;
     }
@@ -517,7 +547,7 @@ class PrimitiveConcept : public Concept {
     explicit PrimitiveConcept(const Predicate *predicate) : Concept(1), predicate_(predicate) { }
     ~PrimitiveConcept() override = default;
     const Concept* clone() const override {
-        return new PrimitiveConcept(predicate_);
+        return new PrimitiveConcept(*this);
     }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
@@ -675,7 +705,7 @@ class AndConcept : public Concept {
     }
     ~AndConcept() override = default;
     const Concept* clone() const override {
-        return new AndConcept(concept1_, concept2_);
+        return new AndConcept(*this);
     }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
@@ -726,7 +756,7 @@ class NotConcept : public Concept {
     }
     ~NotConcept() override = default;
     const Concept* clone() const override {
-        return new NotConcept(concept_);
+        return new NotConcept(*this);
     }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
@@ -775,7 +805,7 @@ class ExistsConcept : public Concept {
     }
     ~ExistsConcept() override = default;
     const Concept* clone() const override {
-        return new ExistsConcept(concept_, role_);
+        return new ExistsConcept(*this);
     }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
@@ -841,7 +871,7 @@ class ForallConcept : public Concept {
     }
     ~ForallConcept() override = default;
     const Concept* clone() const override {
-        return new ForallConcept(concept_, role_);
+        return new ForallConcept(*this);
     }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
@@ -973,7 +1003,7 @@ class PrimitiveRole : public Role {
     explicit PrimitiveRole(const Predicate *predicate) : Role(1), predicate_(predicate) { }
     ~PrimitiveRole() override { }
     const Role* clone() const override {
-        return new PrimitiveRole(predicate_);
+        return new PrimitiveRole(*this);
     }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
@@ -1017,7 +1047,7 @@ class PlusRole : public Role {
     explicit PlusRole(const Role *role) : Role(1 + role->complexity()), role_(role) { }
     ~PlusRole() override { }
     const Role* clone() const override {
-        return new PlusRole(role_);
+        return new PlusRole(*this);
     }
 
     // apply Johnson's algorithm for transitive closure
@@ -1096,7 +1126,7 @@ class StarRole : public Role {
         delete plus_role_;
     }
     const Role* clone() const override {
-        return new StarRole(role_);
+        return new StarRole(*this);
     }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
@@ -1143,7 +1173,7 @@ class InverseRole : public Role {
     explicit InverseRole(const Role *role) : Role(1 + role->complexity()), role_(role) { }
     ~InverseRole() override = default;
     const Role* clone() const override {
-        return new InverseRole(role_);
+        return new InverseRole(*this);
     }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
@@ -1201,7 +1231,7 @@ class RoleRestriction : public Role {
     }
     ~RoleRestriction() override = default;
     const Role* clone() const override {
-        return new RoleRestriction(role_, restriction_);
+        return new RoleRestriction(*this);
     }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
@@ -1243,6 +1273,65 @@ class RoleRestriction : public Role {
 
     std::string as_str() const override {
         return std::string("Restriction(") + role_->as_str() + "," + restriction_->as_str() + ")";
+    }
+};
+
+class RoleDifference : public Role {
+protected:
+    const Role *r1_;
+    const Role *r2_;
+
+public:
+    RoleDifference(const Role *r1, const Role *r2)
+            : Role(1 + r1->complexity() + r2->complexity()),
+              r1_(r1),
+              r2_(r2) {
+    }
+    ~RoleDifference() override = default;
+    const Role* clone() const override {
+        return new RoleDifference(*this);
+    }
+
+    const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
+        const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
+        if( cached == nullptr ) {
+            const sample_denotation_t *r1_den = cache.find_sample_denotation(r1_->as_str());
+            assert(r1_den && (r1_den->size() == sample.num_states()));
+            const sample_denotation_t *r2_den = cache.find_sample_denotation(r2_->as_str());
+            assert(r2_den && (r2_den->size() == sample.num_states()));
+
+            sample_denotation_t nd;
+            for( int i = 0; i < sample.num_states(); ++i ) {
+                const State &state = sample.state(i);
+                unsigned m = state.num_objects();
+                assert(state.id() == i);
+                const state_denotation_t *sd1 = (*r1_den)[i];
+                assert((sd1 != nullptr) && (sd1->size() == m*m));
+                const state_denotation_t *sd2 = (*r2_den)[i];
+                assert((sd2 != nullptr) && (sd2->size() == m*m));
+
+                state_denotation_t nsd(m*m, false);
+
+                for(int x = 0; x < m*m; ++x) {
+                    if ((*sd1)[x] && !(*sd2)[x]) {
+                        nsd[x] = true;
+                    }
+                }
+
+                nd.emplace_back(cache.find_or_insert_state_denotation(nsd));
+            }
+            return use_cache ? cache.find_or_insert_sample_denotation(nd, as_str()) : new sample_denotation_t(nd);
+        } else {
+            return cached;
+        }
+    }
+    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
+        throw std::runtime_error("Unexpected call: RoleDifference::denotation(Cache&, const Sample&, const State&)");
+        return nullptr;
+    }
+
+    std::string as_str() const override {
+        return std::string("RoleDifference(") + r1_->as_str() + "," + r2_->as_str() + ")";
     }
 };
 
@@ -1508,7 +1597,6 @@ class DistanceFeature : public Feature {
 class Factory {
   protected:
     const std::string name_;
-    const std::vector<std::string> goal_concepts_;
     const std::vector<std::string> nominals_;
     std::vector<const Role*> basis_roles_;
     std::vector<const Concept*> basis_concepts_;
@@ -1520,12 +1608,14 @@ class Factory {
     // A layered set of concepts, concepts_[k] contains all concepts generated in the k-th application of
     // the concept grammar
     mutable std::vector<std::vector<const Concept*> > concepts_;
-    mutable std::vector<const Feature*> features_;
+    std::vector<const Feature*> features_;
+
+    //! Indices of features generated from goal concepts
+    std::unordered_set<unsigned> goal_features_;
 
   public:
     Factory(std::string name, const std::vector<std::string>& nominals, int complexity_bound)
       : name_(std::move(name)),
-//        goal_concepts_(goal_concepts),
         nominals_(nominals),
         complexity_bound_(complexity_bound) {
     }
@@ -1731,24 +1821,76 @@ class Factory {
                   << std::endl;
     }
 
-    void generate_goal_concepts(const Sample &sample) {
-        /*
-        insert_basis(new UniversalConcept);
-        insert_basis(new EmptyConcept);
-        for( int i = 0; i < int(sample.num_predicates()); ++i ) {
-            const Predicate *predicate = &sample.predicates()[i];
-            if( predicate->arity() == 1 ) {
-                insert_basis(new PrimitiveConcept(predicate));
-            } else if( predicate->arity() == 2 ) {
-                insert_basis(new PrimitiveRole(predicate));
+    void generate_goal_concepts_and_roles(Cache &cache, const Sample &sample, std::vector<const Concept*>& goal_concepts) {
+        assert(goal_concepts.empty());
+
+        const Sample::PredicateIndex& predicate_idx = sample.predicate_index();
+        for (const predicate_id_t& pid:sample.goal_predicates()) {
+            const Predicate& pred = sample.predicate(pid);
+            unsigned arity = pred.arity();
+            const auto& name = pred.name();
+            auto name_n = name.size();
+            assert(name[name_n-2] == '_' && name[name_n-1] == 'g');  // Could try something more robust, but ATM this is OK
+            auto nongoal_name = name.substr(0, name_n-2);
+            const Predicate& nongoal_pred = sample.predicate(predicate_idx.at(nongoal_name));
+            if (arity == 0) {
+                // No need to do anything here, as the corresponding NullaryAtomFeature will always be generated
+                // with complexity 1
+                assert (0); // This will need some refactoring
+//                goal_features.push_back(new NullaryAtomFeature(&pred));
+
+            } else if (arity == 1) {
+                // Force into the basis a concept "p_g AND Not p"
+                auto c = new PrimitiveConcept(&nongoal_pred);
+                auto not_c = new NotConcept(c);
+                auto c_g = new PrimitiveConcept(&pred);
+                auto and_c = new AndConcept(c_g, not_c);
+
+                // Insert the denotations into the cache
+//                for (const auto elem:std::vector<const Concept*>({and_c})) {
+//                for (const auto elem:std::vector<const Concept*>({c, not_c, c_g, and_c})) {
+//                    const sample_denotation_t *d = elem->denotation(cache, sample, false);
+//                    cache.find_or_insert_sample_denotation(*d, elem->as_str());
+//                }
+//                for (const auto elem:std::vector<const Concept*>({c, not_c, c_g})) {
+//                    cache.remove_sample_denotation(elem->as_str());
+//                }
+
+
+                and_c->force_complexity(1);
+                for (const auto elem:std::vector<const Concept*>({c, not_c, c_g, and_c})) {
+                    insert_basis(elem);
+                }
+
+//                goal_features.push_back(new NumericalFeature(and_c));
+                goal_concepts.push_back(and_c);
+
+            } else if (arity == 2) {
+                // Force into the basis a new RoleDifference(r_g, r)
+                auto r = new PrimitiveRole(&nongoal_pred);
+                auto r_g = new PrimitiveRole(&pred);
+                auto r_diff = new RoleDifference(r_g, r);
+
+                // Insert the denotations into the cache
+//                for (const auto elem:std::vector<const Role*>({r_diff})) {
+//                for (const auto elem:std::vector<const Role*>({r, r_g, r_diff})) {
+//                    const sample_denotation_t *d = elem->denotation(cache, sample, false);
+//                    cache.find_or_insert_sample_denotation(*d, elem->as_str());
+//                }
+//                for (const auto elem:std::vector<const Role*>({r, r_g})) {
+//                    cache.remove_sample_denotation(elem->as_str());
+//                }
+
+                r_diff->force_complexity(1);
+                for (const auto elem:std::vector<const Role*>({r, r_g, r_diff})) {
+                    insert_basis(elem);
+                }
+
+                auto ex_c = new ExistsConcept(new UniversalConcept, r_diff); // memleak
+//                goal_features.push_back(new NumericalFeature(ex_c));
+                goal_concepts.push_back(ex_c);
             }
         }
-
-        for (const auto& gc:goal_concepts_) {
-            if (sample.predicates())
-            insert_basis(new NominalConcept(nominal));
-        }
-        */
     }
 
     int generate_roles(Cache &cache, const Sample &sample) const {
@@ -1869,85 +2011,104 @@ class Factory {
         return all_concepts;
     }
 
-    int generate_features(const std::vector<const Concept*>& concepts, Cache &cache, const Sample &sample) const {
-        using cache_t = std::unordered_map<feature_sample_denotation_t, const Feature*, utils::container_hash<feature_sample_denotation_t> >;
-        cache_t seen_denotations;
-        unsigned num_nullary_features = 0, num_boolean_features = 0, num_numeric_features = 0, num_distance_features = 0;
+    void generate_features(const std::vector<const Concept*>& concepts, Cache &cache, const Sample &sample, const std::vector<const Concept*>& forced_goal_features) {
+        feature_cache_t seen_denotations;
+
+        // Insert first the features that allow us to express the goal
+        goal_features_.clear();
+        for (auto c:forced_goal_features) {
+            if (generate_cardinality_feature_if_not_redundant(c, cache, sample, seen_denotations)) {
+                goal_features_.insert(features_.size()-1);
+            }
+        }
 
         // create features that derive from nullary predicates
+        // TODO Keep track of the denotation of nullary-atom features and prune them if necessary
         for (const auto& predicate:sample.predicates()) {
             if (predicate.arity() == 0) {
                 features_.push_back(new NullaryAtomFeature(&predicate));
-                num_nullary_features++;
             }
         }
 
         // create boolean/numerical features from concepts
         for (const Concept* c:concepts) {
-            //std::cout << c->as_str() << std::endl;
-            const sample_denotation_t *d = cache.find_sample_denotation(c->as_str());
-            assert((d != nullptr) && (d->size() == sample.num_states()));
-
-            // generate feature denotation associated to concept's sample denotation
-            feature_sample_denotation_t fd;
-            fd.reserve(sample.num_states());
-
-            // track whether feature would be boolean or numeric, or non-informative
-            bool boolean_feature = true;
-            bool denotation_is_constant = true;
-            bool all_values_greater_than_zero = true;
-            int previous_value = -1;
-
-            for( int j = 0; j < sample.num_states(); ++j ) {
-                const State &state = sample.state(j);
-                assert(state.id() == j);
-                const state_denotation_t *sd = (*d)[j];
-                assert((sd != nullptr) && (sd->size() == state.num_objects()));
-                int value = sd->cardinality();
-                boolean_feature = boolean_feature && (value < 2);
-                denotation_is_constant = (previous_value == -1) || (denotation_is_constant && (previous_value == value));
-                all_values_greater_than_zero = all_values_greater_than_zero && (value > 0);
-                previous_value = value;
-                fd.push_back(value);
-            }
-
-            if( !denotation_is_constant && !all_values_greater_than_zero ) {
-                cache_t::const_iterator it = seen_denotations.find(fd);
-                if( it == seen_denotations.end() ) { // The feature denotation is new, keep the feature
-                    num_boolean_features += boolean_feature;
-                    num_numeric_features += !boolean_feature;
-                    const Feature *feature = boolean_feature ? static_cast<Feature*>(new BooleanFeature(c)) :
-                            static_cast<Feature*>(new NumericalFeature(c));
-                    features_.emplace_back(feature);
-                    seen_denotations.emplace(fd, feature);
-                    //std::cout << "ACCEPT: " << feature->as_str_with_complexity() << std::endl;
-                } else {
-                    // Make sure that we are not pruning a feature of lower complexity in favor of a feature of higher
-                    // complexity!
-                    assert(it->second->complexity() <= c->complexity());
-//                    std::cout << "REJECT: " << c->as_str() << std::endl;
-//                    std::cout << "PRUNED-BY: " << it->second->as_str() << std::endl;
-                }
-            }
+            generate_cardinality_feature_if_not_redundant(c, cache, sample, seen_denotations);
         }
 
         // create distance features - temporarily deactivated
-         num_distance_features = generate_distance_features(concepts, cache, sample);
+//        generate_distance_features(concepts, cache, sample);
+        print_feature_count();
+    }
 
-        assert(num_nullary_features+num_boolean_features+num_numeric_features+num_distance_features == features_.size());
-        std::cout << "FEATURES: #features=" << features_.size()
+    void print_feature_count() const {
+        unsigned num_nullary_features = 0, num_boolean_features = 0, num_numeric_features = 0, num_distance_features = 0;
+        unsigned m = features_.size();
+        for (auto f:features_) {
+            if (dynamic_cast<const NullaryAtomFeature*>(f)) num_nullary_features++;
+            else if (dynamic_cast<const BooleanFeature*>(f)) num_boolean_features++;
+            else if (dynamic_cast<const NumericalFeature*>(f)) num_numeric_features++;
+            else if (dynamic_cast<const DistanceFeature*>(f)) num_distance_features++;
+        }
+
+        assert(num_nullary_features+num_boolean_features+num_numeric_features+num_distance_features == m);
+        std::cout << "FEATURES: #features=" << m
                   << ", #nullary="   << num_nullary_features
                   << ", #boolean="   << num_boolean_features
                   << ", #numerical=" << num_numeric_features
                   << ", #distance="  << num_distance_features
                   << std::endl;
-
-        return features_.size();
     }
 
-    int generate_distance_features(const std::vector<const Concept*>& concepts, Cache &cache, const Sample &sample) const {
-        using cache_t = std::unordered_map<feature_sample_denotation_t, const Feature*, utils::container_hash<feature_sample_denotation_t> >;
-        cache_t seen_denotations;
+    bool generate_cardinality_feature_if_not_redundant(const Concept* c, Cache &cache, const Sample &sample, feature_cache_t& seen_denotations) {
+
+        const sample_denotation_t *d = cache.find_sample_denotation(c->as_str());
+        assert((d != nullptr) && (d->size() == sample.num_states()));
+
+        // generate feature denotation associated to concept's sample denotation
+        feature_sample_denotation_t fd;
+        fd.reserve(sample.num_states());
+
+        // track whether feature would be boolean or numeric, or non-informative
+        bool boolean_feature = true;
+        bool denotation_is_constant = true;
+        bool all_values_greater_than_zero = true;
+        int previous_value = -1;
+
+        for( int j = 0; j < sample.num_states(); ++j ) {
+            const State &state = sample.state(j);
+            assert(state.id() == j);
+            const state_denotation_t *sd = (*d)[j];
+            assert((sd != nullptr) && (sd->size() == state.num_objects()));
+            int value = sd->cardinality();
+            boolean_feature = boolean_feature && (value < 2);
+            denotation_is_constant = (previous_value == -1) || (denotation_is_constant && (previous_value == value));
+            all_values_greater_than_zero = all_values_greater_than_zero && (value > 0);
+            previous_value = value;
+            fd.push_back(value);
+        }
+
+        if( !denotation_is_constant && !all_values_greater_than_zero ) {
+            auto it = seen_denotations.find(fd);
+            if( it == seen_denotations.end() ) { // The feature denotation is new, keep the feature
+                const Feature *feature = boolean_feature ? static_cast<Feature*>(new BooleanFeature(c)) :
+                                         static_cast<Feature*>(new NumericalFeature(c));
+                features_.emplace_back(feature);
+                seen_denotations.emplace(fd, feature);
+                //std::cout << "ACCEPT: " << feature->as_str_with_complexity() << std::endl;
+                return true;
+            } else {
+                // Make sure that we are not pruning a feature of lower complexity in favor of a feature of higher
+                // complexity!
+                assert(it->second->complexity() <= c->complexity());
+//                    std::cout << "REJECT: " << c->as_str() << std::endl;
+//                    std::cout << "PRUNED-BY: " << it->second->as_str() << std::endl;
+            }
+        }
+        return false;
+    }
+
+    void generate_distance_features(const std::vector<const Concept*>& concepts, Cache &cache, const Sample &sample) {
+        feature_cache_t seen_denotations;
 
         // identify concepts with singleton denotation across all states
         // as these are the candidates for start concepts
@@ -2013,7 +2174,7 @@ class Factory {
                         fd[index] = value;
                     }
 
-                    cache_t::const_iterator it = seen_denotations.find(fd);
+                    feature_cache_t::const_iterator it = seen_denotations.find(fd);
                     if( it == seen_denotations.end() ) {
                         ++num_distance_features;
                         features_.emplace_back(df.clone());
@@ -2026,7 +2187,6 @@ class Factory {
                 }
             }
         }
-        return num_distance_features;;
     }
 
     std::ostream& report_dl_data(std::ostream &os) const {
@@ -2152,6 +2312,14 @@ class Factory {
         for( int i = 0; i < num_features; ++i ) {
             const Feature* feature = features_[i];
             os << (feature->is_boolean() ? 0 : 1);
+            if( 1 + i < num_features ) os << "\t";
+        }
+        os << std::endl;
+
+        // Line #4: whether feature is goal feature (0: No; 1: yes)
+        for( int i = 0; i < num_features; ++i ) {
+            auto it = goal_features_.find(i);
+            os << (it == goal_features_.end() ? 0 : 1);
             if( 1 + i < num_features ) os << "\t";
         }
         os << std::endl;

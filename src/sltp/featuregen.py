@@ -95,7 +95,8 @@ def serialize_static_info(model: DLModel, info: InstanceInformation):
     return serialized
 
 
-def print_sample_info(sample, infos, model_cache, all_predicates, all_functions, nominals, all_objects, workspace):
+def print_sample_info(sample, infos, model_cache, all_predicates, all_functions, nominals,
+                      all_objects, goal_predicate_info, workspace):
 
     sample_fn = os.path.join(workspace, "sample.io")
     state_info = []
@@ -119,6 +120,10 @@ def print_sample_info(sample, infos, model_cache, all_predicates, all_functions,
 
         # Third line: all function names
         print(" ".join("{}/{}".format(name, arity) for name, arity in sorted(all_functions)), file=f)
+
+        # Next: List of all predicates and functions mentioned in the goal
+        # goal_predicate_info = {}
+        print(" ".join("{}".format(name) for name, arity in sorted(goal_predicate_info)), file=f)
 
         # Next: per-instance information.
         # Number of instances:
@@ -163,6 +168,10 @@ def transform_generator_output(config, sample, matrix_filename, info_filename):
         # Line #3: feature types (0: boolean; 1: numeric)
         types = [int(x) for x in f.readline().rstrip().split("\t")]
 
+        # Line #4: whether feature is goal feature (0: No; 1: yes)
+        in_goal_features = [bool(int(x)) for x in f.readline().rstrip().split("\t")]
+        in_goal_features = set(i for i, v in enumerate(in_goal_features, 0) if v)  # Transform into a set of indexes
+
     num_features = len(names)
     assert num_features == len(complexities) == len(types)
     num_numeric = sum(types)
@@ -197,7 +206,7 @@ def transform_generator_output(config, sample, matrix_filename, info_filename):
                                                    matrix,
                                                    state_ids, sample.goals,
                                                    names, complexities, types)
-    return sat_feature_mapping
+    return sat_feature_mapping, in_goal_features
 
 
 def generate_debug_scripts(target_dir, exe, arguments):
@@ -237,21 +246,23 @@ def extract_features(config, sample):
 
     all_objects = []
     all_predicates, all_functions = set(), set()
+    goal_predicate_info = set()
     for problem, lang, _ in parsed_problems:
         all_objects.append(set(c.symbol for c in lang.constants()))
-        all_predicates.update(set((p.symbol, p.arity) for p in lang.predicates if not p.builtin))
-        all_functions.update(set((p.symbol, p.arity) for p in lang.functions if not p.builtin))
+        all_predicates.update((p.symbol, p.arity) for p in lang.predicates if not p.builtin)
+        all_functions.update((p.symbol, p.arity) for p in lang.functions if not p.builtin)
 
         # Add goal predicates
-        all_predicates.update(set((goal_predicate_name(p.symbol), p.arity)
-                                  for p in lang.predicates if not p.builtin and p.symbol in all_goal_predicates))
+        goal_predicate_info = set((goal_predicate_name(p.symbol), p.arity)
+                                  for p in lang.predicates if not p.builtin and p.symbol in all_goal_predicates)
+        all_predicates.update(goal_predicate_info)
 
         # Add type predicates
-        all_predicates.update(set((p.name, 1) for p in lang.sorts if not p.builtin and p != lang.Object))
+        all_predicates.update((p.name, 1) for p in lang.sorts if not p.builtin and p != lang.Object)
 
     # Write sample information
     print_sample_info(sample, infos, model_cache, all_predicates, all_functions, nominals,
-                      all_objects, config.experiment_dir)
+                      all_objects, goal_predicate_info, config.experiment_dir)
 
     # Invoke C++ feature generation module
     logging.info('Invoking C++ feature generation module'.format())
@@ -266,12 +277,13 @@ def extract_features(config, sample):
 
     # Read off the output of the module and transform it into the numpy matrices to be consumed
     # by the next pipeline step
-    sat_feature_mapping = transform_generator_output(
+    sat_feature_mapping, in_goal_features = transform_generator_output(
         config, sample,
         os.path.join(config.experiment_dir, "feature-matrix.io"),
         os.path.join(config.experiment_dir, "feature-info.io"),)
 
     return ExitCode.Success, dict(enforced_feature_idxs=[],
+                                  in_goal_features=in_goal_features,
                                   sat_feature_mapping=sat_feature_mapping)
 
 
