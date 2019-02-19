@@ -467,7 +467,6 @@ class ModelTranslator(object):
         if not selected_features:
             raise CriticalPipelineError("Zero-cost maxsat solution - "
                                         "no action model possible, the encoding has likely some error")
-        print(self.feature_complexity.size)
         print("Features (total complexity: {}): ".format(
             sum(self.feature_complexity[f] for f in selected_features)))
         print('\t' + '\n\t'.join("{}. {} [k={}, id={}]".format(
