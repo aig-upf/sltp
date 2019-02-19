@@ -208,6 +208,9 @@ class ModelTranslator(object):
             self.optimal_states = self.optimal_and_nonoptimal.copy()
             self.optimal_transitions = set((x, y) for x, y in self.iterate_over_all_transitions())
 
+        self.non_goal_states = self.optimal_and_nonoptimal.difference(self.sample.goals)
+        self.d1_pairs = self.compute_d1_pairs()
+
         # Compute for each pair s and t of states which features distinguish s and t
         self.np_d1_distinguishing_features = self.compute_d1_distinguishing_features(bin_feat_matrix)
 
@@ -224,7 +227,18 @@ class ModelTranslator(object):
         self.compute_qchanges = self.standard_qchange
         self.compute_feature_weight = self.setup_optimization_policy(optimization)
 
-    def iterate_over_d1_pairs(self):
+    def compute_d1_pairs(self):
+        pairs = set()
+        for (x, y) in itertools.product(self.optimal_states, self.optimal_and_nonoptimal):
+            if y in self.optimal_states and y <= x:
+                # Break symmetries: if both x and y optimal, only need to take into account 1 of the 2 permutations
+                continue
+            pairs.add((x, y))
+        for (x, y) in itertools.product(self.sample.goals, self.non_goal_states):
+            pairs.add((x, y))
+        return list(x for x in pairs)
+
+    def iterate_over_bridge_pairs(self):
         for (x, y) in itertools.product(self.optimal_states, self.optimal_and_nonoptimal):
             if y in self.optimal_states and y <= x:
                 # Break symmetries: if both x and y optimal, only need to take into account 1 of the 2 permutations
@@ -233,16 +247,17 @@ class ModelTranslator(object):
 
     def compute_d1_distinguishing_features(self, bin_feat_matrix):
         """ """
-        ns1, ns2, nf = len(self.optimal_states), len(self.optimal_and_nonoptimal), bin_feat_matrix.shape[1]
+        nf = bin_feat_matrix.shape[1]
+        npairs = len(self.d1_pairs)
 
         # How many feature denotations we'll have to compute
-        nentries = nf * ((ns1 * (ns1-1)) / 2 + ns1 * ns2)
+        nentries = nf * npairs
 
-        logging.info("Computing sets of D1-distinguishing features for {} x {} state pairs "
-                     "and {} features ({:0.1f}M matrix entries)".format(ns1, ns2, nf, nentries / 1000000))
+        logging.info("Computing sets of D1-distinguishing features for {} state pairs "
+                     "and {} features ({:0.1f}M matrix entries)".format(npairs, nf, nentries / 1000000))
         np_d1_distinguishing_features = dict()
 
-        for s1, s2 in self.iterate_over_d1_pairs():
+        for s1, s2 in self.d1_pairs:
             xor = np.logical_xor(bin_feat_matrix[s1], bin_feat_matrix[s2])
             # We extract the tuple and turn it into a set:
             np_d1_distinguishing_features[(s1, s2)] = set(np.nonzero(xor)[0].flat)
@@ -303,7 +318,7 @@ class ModelTranslator(object):
             [self.writer.variable("selected(F{})".format(feat)) for feat in range(0, self.feat_matrix.shape[1])]
 
         self.var_d1 = {(s1, s2): self.writer.variable("D1[{}, {}]".format(s1, s2)) for s1, s2 in
-                       self.iterate_over_d1_pairs()}
+                       self.d1_pairs}
 
         self.var_d2 = dict()
 
@@ -329,20 +344,15 @@ class ModelTranslator(object):
         self.writer = CNFWriter(cnf_filename)
         self.create_variables()
 
-        logging.info("Generating D1 + bridge constraints from {} D1 variables".format(len(self.var_d1)))
-
-        # for s1, s2 in itertools.combinations(self.state_ids, 2):
-        for s1, s2 in self.iterate_over_d1_pairs():
-            d1_variable = self.var_d1[(s1, s2)]
-            # d1_distinguishing_features = self.d1_distinguishing_features[(s1, s2)]
-            d1_distinguishing_features = self.np_d1_distinguishing_features[(s1, s2)]
-
-            # Post the constraint: D1(si, sj) <=> OR active(f), where the OR ranges over all
+        logging.info("Generating D1 constraints from {} D1 variables".format(len(self.var_d1)))
+        for s1, s2 in self.d1_pairs:
+            # Post the constraint: D1(si, sj) <=> OR selected(f), where the OR ranges over all
             # those features f that tell apart si from sj
+            d1_variable = self.var_d1[(s1, s2)]
             d1_lit = self.writer.literal(d1_variable, True)
             forward_clause_literals = [self.writer.literal(d1_variable, False)]
 
-            for f in d1_distinguishing_features:
+            for f in self.np_d1_distinguishing_features[(s1, s2)]:
                 forward_clause_literals.append(self.writer.literal(self.np_var_selected[f], True))
                 self.writer.clause([d1_lit, self.writer.literal(self.np_var_selected[f], False)])
                 self.n_d1_clauses += 1
@@ -350,29 +360,40 @@ class ModelTranslator(object):
             self.writer.clause(forward_clause_literals)
             self.n_d1_clauses += 1
 
-            # Force D1(s1, s2) to be true if exactly one of the two states is a goal state
-            if sum(1 for x in (s1, s2) if x in self.sample.goals) == 1:
-
-                if len(in_goal_features):
-                    if not in_goal_features.intersection(d1_distinguishing_features):
-                        raise RuntimeError("No feature in pool can distinguish states {}, "
-                                           "but forced features should be enough to distinguish them".format((s1, s2)))
-
-                else:
-                    self.writer.clause([d1_lit])
-                    self.n_goal_clauses += 1
-
-                    if len(d1_distinguishing_features) == 0:
-                        logging.warning("No feature in pool can distinguish states {}, but one of them is a goal and "
-                                        "the other is not. MAXSAT encoding will be UNSAT".format((s1, s2)))
-                        return ExitCode.MaxsatModelUnsat
-
-            # Else (i.e. D1(s1, s2) _might_ be false, create the bridge clauses between values of D1 and D2
-            else:
+        logging.info("Generating bridge constraints from {} D1 variables".format(len(self.var_d1)))
+        for s1, s2 in self.iterate_over_bridge_pairs():
+            d1_lit = self.writer.literal(self.var_d1[(s1, s2)], True)
+            # if D1(s1, s2) _might_ be false, create the bridge clauses between values of D1 and D2:
+            if sum(1 for x in (s1, s2) if x in self.sample.goals) != 1:
                 assert s1 in self.optimal_states
                 self.create_bridge_clauses(d1_lit, s1, s2)
                 if s2 in self.optimal_states:
                     self.create_bridge_clauses(d1_lit, s2, s1)
+
+        # Force D1(s1, s2) to be true if exactly one of the two states is a goal state
+        logging.info("Generating goal constraints for {} state pairs".format(
+            len(self.sample.goals)*len(self.non_goal_states)))
+        for s1, s2 in itertools.product(self.sample.goals, self.non_goal_states):
+
+            if len(in_goal_features):
+                # we are enforcing goal-distinguishing features elsewhere, no need to do anything here
+                if not in_goal_features.intersection(self.np_d1_distinguishing_features[(s1, s2)]):
+                    raise RuntimeError("No feature in pool can distinguish states {}, "
+                                       "but forced features should be enough to distinguish them".format((s1, s2)))
+
+            else:
+                if len(self.np_d1_distinguishing_features[(s1, s2)]) == 0:
+                    logging.warning("No feature in pool can distinguish states {}, but one of them is a goal and "
+                                    "the other is not. MAXSAT encoding will be UNSAT".format((s1, s2)))
+                    return ExitCode.MaxsatModelUnsat
+
+                # if (s1, s2) in self.var_d1:
+                d1_lit = self.writer.literal(self.var_d1[(s1, s2)], True)
+                self.writer.clause([d1_lit])
+                # else:
+                #     self.writer.clause([self.writer.literal(self.np_var_selected[f], True)
+                #                         for f in self.np_d1_distinguishing_features[(s1, s2)]])
+                self.n_goal_clauses += 1
 
         logging.info("Generating D2 constraints from {} D2 variables".format(len(self.var_d2)))
         # self.d2_distinguished = set()
