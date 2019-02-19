@@ -86,9 +86,10 @@ class TerminologicalFactory(object):
         # C AND C'
         for pairings in (itertools.product(new_c, old_c), itertools.combinations(new_c, 2)):
             process(self.syntax.create_and_concept(c1, c2) for c1, c2 in pairings)
+            process(self.syntax.create_or_concept(c1, c2) for c1, c2 in pairings)
 
         # NOT C
-        # process(self.syntax.create_not_concept(c) for c in new_c)
+        process(self.syntax.create_not_concept(c) for c in new_c)
 
         return generated
 
