@@ -59,8 +59,9 @@ class TransitionSample:
         self.optimal_transitions.update(optimal)
 
     def compute_optimal_states(self):
-        """ Return those states that lie in some transition marked as optimal """
-        return set(itertools.chain.from_iterable(self.optimal_transitions))
+        """ Return those states that are the source of an optimal transition """
+        states = set(itertools.chain.from_iterable(self.optimal_transitions))
+        return states - {max(states)}  # Remove the max state ID, which will be the goal
 
     def info(self):
         return "roots: {}, states: {}, transitions: {} ({} optimal), goals: {}, unsolvable: {}".format(
