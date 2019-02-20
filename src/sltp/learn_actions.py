@@ -499,12 +499,9 @@ class ModelTranslator(object):
                               type=int(not self.feature_types[f]))
                          for f in selected_features]
 
-        # selected_features = [f for f in selected_features if str(f) == "bool[And(clear,{a})]"]
-
         abstract_states, state_abstraction = self.compute_state_abstractions(selected_features)
 
         abstract_actions = set()
-        already_computed = set()
         for s, sprime in self.iterate_over_optimal_transitions():
             abstract_s = state_abstraction[s]
             abstract_sprime = state_abstraction[sprime]
@@ -520,8 +517,6 @@ class ModelTranslator(object):
                 msg = "Abstract no-op necessary [concrete: ({}, {}), abstract: ({}, {})]".format(
                     s, sprime, abstract_s, abstract_sprime)
                 logging.warning(msg)
-
-            already_computed.add((abstract_s, abstract_sprime))
 
         logging.info("Abstract state space: {} states and {} actions".
                      format(len(abstract_states), len(abstract_actions)))
