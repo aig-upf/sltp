@@ -69,7 +69,7 @@ def experiment(experiment_name=None):
         num_states=10000,
         num_sampled_states=None,  # To take as a basis all states
         initial_sample_size=5,
-        initial_concept_bound=5, max_concept_bound=10, concept_bound_step=1,
+        initial_concept_bound=5, max_concept_bound=12, concept_bound_step=1,
         batch_refinement_size=1,
         # quiet=True,
         clean_workspace=False,
@@ -111,6 +111,16 @@ def experiment(experiment_name=None):
         batch_refinement_size=5,
         # quiet=True,
         clean_workspace=False,
+    )
+
+    exps["7blocks_inc_k0_12"] = update_dict(
+        exps["7blocks_inc"],
+        initial_concept_bound=12, max_concept_bound=14, concept_bound_step=2,
+    )
+
+    exps["5blocks_inc_k0_12"] = update_dict(
+        exps["7blocks_inc_k0_12"],
+        instances=["probBLOCKS-5-0.pddl", ],
     )
 
     if experiment_name not in exps:
