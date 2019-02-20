@@ -45,14 +45,67 @@ def experiment(experiment_name=None):
     exps["arbitrary1_inc"] = update_dict(
         exps["arbitrary1"],
         experiment_class=IncrementalExperiment,
-        instances=["probBLOCKS-6-0.pddl", ],
+        instances=["probBLOCKS-8-0.pddl", ],
         # instances=["probBLOCKS-6-0.pddl", "probBLOCKS-7-0.pddl",]
         test_instances=[
             "probBLOCKS-4-1.pddl",
             # "probBLOCKS-6-1.pddl",
             # "probBLOCKS-10-1.pddl",
         ],
+        num_states=100000,
+        num_sampled_states=None,  # To take as a basis all states
+        initial_sample_size=100,
+        initial_concept_bound=6, max_concept_bound=10, concept_bound_step=1,
+        batch_refinement_size=5,
+        # quiet=True,
+        clean_workspace=False,
+    )
+
+    exps["small_inc"] = update_dict(
+        exps["arbitrary1"],
+        experiment_class=IncrementalExperiment,
+        instances=["probBLOCKS-4-0.pddl", ],
+        test_instances=["probBLOCKS-3-0.pddl", ],
         num_states=10000,
+        num_sampled_states=None,  # To take as a basis all states
+        initial_sample_size=5,
+        initial_concept_bound=5, max_concept_bound=10, concept_bound_step=1,
+        batch_refinement_size=1,
+        # quiet=True,
+        clean_workspace=False,
+    )
+
+    exps["7blocks_inc"] = update_dict(
+        exps["arbitrary1"],
+        experiment_class=IncrementalExperiment,
+        instances=["probBLOCKS-7-0.pddl", ],
+        # instances=["probBLOCKS-6-0.pddl", "probBLOCKS-7-0.pddl",]
+        test_instances=[
+            "probBLOCKS-5-1.pddl",
+            # "probBLOCKS-6-1.pddl",
+            # "probBLOCKS-10-1.pddl",
+        ],
+        num_states=50000,  # 50K is the minimum we'll need for probBLOCKS-7-0.pddl
+        num_sampled_states=None,  # To take as a basis all states
+        initial_sample_size=50,
+        initial_concept_bound=5, max_concept_bound=14, concept_bound_step=1,
+        batch_refinement_size=5,
+        # quiet=True,
+        clean_workspace=False,
+    )
+
+    exps["8blocks_inc"] = update_dict(
+        exps["arbitrary1"],
+        experiment_class=IncrementalExperiment,
+        instances=["probBLOCKS-8-0.pddl", ],
+        # instances=["probBLOCKS-6-0.pddl", "probBLOCKS-7-0.pddl",]
+        test_instances=[
+            "probBLOCKS-4-1.pddl",
+            # "probBLOCKS-6-1.pddl",
+            # "probBLOCKS-10-1.pddl",
+        ],
+        num_states=600000,  # 600K is the minimum we'll need for probBLOCKS-8-0.pddl
+        num_sampled_states=None,  # To take as a basis all states
         initial_sample_size=100,
         initial_concept_bound=6, max_concept_bound=10, concept_bound_step=1,
         batch_refinement_size=5,
