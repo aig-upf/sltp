@@ -99,11 +99,8 @@ class TransitionSample:
 
         transitions = defaultdict(set)
         for source, targets in self.transitions.items():
-            if source in remapping:
-                mapped_source = remapping[source]
-                for t in targets:
-                    if t in remapping:
-                        transitions[mapped_source].add(remapping[t])
+            if source in selected:
+                transitions[remapping[source]] = {remapping[t] for t in targets}
 
         resampled = TransitionSample()
         resampled.add_transitions(states, transitions, 0)
