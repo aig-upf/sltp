@@ -22,6 +22,8 @@ namespace SLTP {
 
 namespace DL {
 
+const unsigned PRIMITIVE_COMPLEXITY = 1;
+
 using object_id_t = unsigned;
 using predicate_id_t = unsigned;
 using atom_id_t = unsigned;
@@ -544,7 +546,7 @@ class PrimitiveConcept : public Concept {
     const Predicate *predicate_;
 
   public:
-    explicit PrimitiveConcept(const Predicate *predicate) : Concept(1), predicate_(predicate) { }
+    explicit PrimitiveConcept(const Predicate *predicate) : Concept(PRIMITIVE_COMPLEXITY), predicate_(predicate) { }
     ~PrimitiveConcept() override = default;
     const Concept* clone() const override {
         return new PrimitiveConcept(*this);
@@ -698,8 +700,9 @@ class AndConcept : public Concept {
     const Concept *concept2_;
 
   public:
-    AndConcept(const Concept *concept1, const Concept *concept2)
-      : Concept(1 + concept1->complexity() + concept2->complexity()),
+    AndConcept(const Concept *concept1, const Concept *concept2) :
+//      : Concept(1 + concept1->complexity() + concept2->complexity()),
+        Concept(1 + concept1->complexity() * concept2->complexity()),
         concept1_(concept1),
         concept2_(concept2) {
     }
@@ -1000,7 +1003,7 @@ class PrimitiveRole : public Role {
     const Predicate *predicate_;
 
   public:
-    explicit PrimitiveRole(const Predicate *predicate) : Role(1), predicate_(predicate) { }
+    explicit PrimitiveRole(const Predicate *predicate) : Role(PRIMITIVE_COMPLEXITY), predicate_(predicate) { }
     ~PrimitiveRole() override { }
     const Role* clone() const override {
         return new PrimitiveRole(*this);
@@ -1033,6 +1036,8 @@ class PrimitiveRole : public Role {
         }
         return cache.find_or_insert_state_denotation(sr);
     }
+
+    const Predicate* predicate() const { return predicate_; }
 
     std::string as_str() const override {
         return predicate_->name_;
@@ -1105,6 +1110,8 @@ class PlusRole : public Role {
         return nullptr;
     }
 
+    const Role* role() const { return role_; }
+
     std::string as_str() const override {
         // ATM let us call these Star(X) to get the same output than the Python module
         return std::string("Star(") + role_->as_str() + ")";
@@ -1160,6 +1167,9 @@ class StarRole : public Role {
         return nullptr;
     }
 
+    const Role* role() const { return role_; }
+
+
     std::string as_str() const override {
         return std::string("Star(") + role_->as_str() + ")";
     }
@@ -1210,6 +1220,8 @@ class InverseRole : public Role {
         throw std::runtime_error("Unexpected call: InverseRole::denotation(Cache&, const Sample&, const State&)");
         return nullptr;
     }
+
+    const Role* role() const { return role_; }
 
     std::string as_str() const override {
         return std::string("Inverse(") + role_->as_str() + ")";
@@ -1270,6 +1282,8 @@ class RoleRestriction : public Role {
         throw std::runtime_error("Unexpected call: RoleRestriction::denotation(Cache&, const Sample&, const State&)");
         return nullptr;
     }
+
+    const Role* role() const { return role_; }
 
     std::string as_str() const override {
         return std::string("Restriction(") + role_->as_str() + "," + restriction_->as_str() + ")";
@@ -1763,6 +1777,19 @@ class Factory {
             if (is_first_non_basis_iteration) {
                 for (unsigned i = 0; i < roles_.size(); ++i) {
                     for (unsigned j = i + 1; j < roles_.size(); ++j) {
+                        auto name1 = get_role_predicate(roles_[i])->name();
+                        auto name2 = get_role_predicate(roles_[j])->name();
+                        auto substr1 = name1.substr(0, name1.size()-2);
+                        auto substr2 = name2.substr(0, name2.size()-2);
+
+
+                        // A hacky way to allow only equal concepts R=R' where R and R' come from the same predicate
+                        // and one of the two is a goal role
+                        if ((name1.substr(name1.size()-2) != "_g") && (name2.substr(name2.size()-2) != "_g"))
+                            continue;
+                        if (substr1 != name2 && substr2 != name1)
+                            continue;
+
                         EqualConcept eq_concept(roles_[i], roles_[j]);
                         auto p = is_superfluous_or_exceeds_complexity_bound(eq_concept, cache, sample);
                         if (!p.first) insert_new_concept(cache, eq_concept.clone(), p.second);
@@ -1799,6 +1826,31 @@ class Factory {
             }
         }
         return num_pruned_concepts;
+    }
+
+    //! Retrieve the predicate at the basis of a given role (given the current grammar restrictions, there will be
+    //! exactly one such predicate
+    static const Predicate* get_role_predicate(const Role* r) {
+
+        if (auto c = dynamic_cast<const PrimitiveRole*>(r)) {
+            return c->predicate();
+
+        } else if (auto c = dynamic_cast<const StarRole*>(r)) {
+            return get_role_predicate(c->role());
+
+        } else if (auto c = dynamic_cast<const PlusRole*>(r)) {
+            return get_role_predicate(c->role());
+
+        } else if (auto c = dynamic_cast<const RoleRestriction*>(r)) {
+            return get_role_predicate(c->role());
+
+        } else if (auto c = dynamic_cast<const InverseRole*>(r)) {
+            return get_role_predicate(c->role());
+
+        } else if (auto c = dynamic_cast<const RoleDifference*>(r)) {
+            throw std::runtime_error("Unimplemented");
+        }
+        throw std::runtime_error("Unknown role type");
     }
 
     void generate_basis(const Sample &sample) {
@@ -1999,6 +2051,7 @@ class Factory {
                       << " #concepts-in-layer=" << concepts_.back().size()
                       << ", #pruned-concepts=" << num_pruned_concepts
                       << std::endl;
+            report_dl_data(std::cout);
         }
         assert(concepts_.back().empty());
         concepts_.pop_back();
