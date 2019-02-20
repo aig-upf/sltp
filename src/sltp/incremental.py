@@ -1,3 +1,4 @@
+import itertools
 import logging
 import os
 import shutil
@@ -21,8 +22,9 @@ from .driver import Experiment, generate_pipeline_from_list, PlannerStep, check_
 
 
 def initial_sample_selection(sample, config, rng):
-    # Get the initial sample of M states plus one goal state per instance, if any goal is available,
-    # and all instance roots
+    # Get the initial sample of M states plus one goal state per instance, if any goal is available.
+    # plus all states on one path to each goal.
+    # plus all instance roots
     # all_state_ids_shuffled = list(sample.states.keys())
     # rng.shuffle(all_state_ids_shuffled)
     expanded_state_ids_shuffled = list(sample.expanded)
@@ -30,6 +32,7 @@ def initial_sample_selection(sample, config, rng):
     initial_size = min(len(expanded_state_ids_shuffled), config.initial_sample_size-len(sample.roots))
     working_sample_idxs = set(expanded_state_ids_shuffled[:initial_size])
     working_sample_idxs.update(sample.get_one_goal_per_instance())
+    working_sample_idxs.update(itertools.chain.from_iterable(sample.optimal_transitions))  # include all optimal tx
     working_sample_idxs.update(sample.roots)
     return working_sample_idxs, expanded_state_ids_shuffled
 
