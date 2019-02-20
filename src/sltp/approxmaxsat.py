@@ -51,22 +51,17 @@ def run(config, data, rng):
     with open(config.maxsat_solver_out, 'r') as f:
         out = f.read()
 
+    if "solution: UNSAT" in out:
+        return ExitCode.MaxsatModelUnsat, dict()
+
     # We parse an output like "solution=[0,16,17,2,21]"
     try:
         start = out.find('solution=[') + 10
         end = out.find(']', start)
         features_str = out[start:end]
+        features = list(map(int, features_str.split(',')))
         # features_str = re.search('solution=[(.+?)]', out).group(1)
-    except AttributeError:
+        return ExitCode.Success, dict(selected_feature_idxs=features)
+    except (AttributeError, ValueError):
         raise CriticalPipelineError("No solution found in output of MAXSAT solver, in file '{}'".format(
             config.maxsat_solver_out))
-
-    features = list(map(int, features_str.split(',')))
-
-    # TODO Check output when the problem is UNSAT
-    # if unsat:
-    #     return ExitCode.MaxsatModelUnsat, dict()
-
-    return ExitCode.Success, dict(selected_feature_idxs=features)
-
-
