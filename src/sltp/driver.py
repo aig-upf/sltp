@@ -510,7 +510,7 @@ class InhouseMaxsatSolverStep(Step):
         return config
 
     def get_required_data(self):
-        return ["sample", "enforced_feature_idxs"]
+        return ["sample"]
 
     def description(self):
         return "Generation & (approximate) solving of the max-sat problem with Blai's solver"

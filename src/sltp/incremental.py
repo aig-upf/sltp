@@ -144,6 +144,7 @@ def try_to_compute_abstraction(config, sample, k):
         CPPFeatureGenerationStep,
         # MaxsatProblemGenerationStep,
         # MaxsatProblemSolutionStep,
+        # ActionModelStep,
         InhouseMaxsatSolverStep,  # Blai's polynomial ad-hoc maxsat algorithm
         ActionModelFromFeatureIndexesStep
     ], **subconfig)

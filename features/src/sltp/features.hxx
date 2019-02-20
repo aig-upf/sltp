@@ -1690,45 +1690,57 @@ class Factory {
         return cache.find_sample_denotation(*d) != nullptr;
     }
     std::pair<bool, const sample_denotation_t*>
-      is_superfluous_or_exceeds_complexity_bound(const Base &base, Cache &cache, const Sample &sample, bool do_not_check_complexity = false) const {
-        if( !do_not_check_complexity && (base.complexity() > complexity_bound_) ) {
+      is_superfluous_or_exceeds_complexity_bound(const Base &base, Cache &cache, const Sample &sample) const {
+        if(base.complexity() > complexity_bound_) {
             return std::make_pair(true, nullptr);
-        } else {
-            const sample_denotation_t *d = base.denotation(cache, sample, false);
-            return std::make_pair(is_superfluous(cache, d), d);
         }
+
+        const sample_denotation_t *d = base.denotation(cache, sample, false);
+        return std::make_pair(is_superfluous(cache, d), d);
     }
 
     // apply one iteration of the concept generation grammar
     // new concepts are left on a new last layer in concepts_
     // new concepts are non-redundant if sample != nullptr
-    int advance_step(Cache &cache, const Sample &sample) const {
-        int num_pruned_concepts = 0;
-        if( concepts_.empty() ) {
+    unsigned advance_step(Cache &cache, const Sample &sample) const {
+        unsigned num_pruned_concepts = 0;
+        if( concepts_.empty() ) { // On the first iteration, we simply process the basis concepts and return
             concepts_.emplace_back();
             for (auto concept : basis_concepts_) {
-                std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(*concept, cache, sample);
-                if( !p.first ) insert_new_concept(cache, concept->clone(), p.second);
+                std::pair<bool, const sample_denotation_t *> p = is_superfluous_or_exceeds_complexity_bound(*concept, cache, sample);
+                if (!p.first) insert_new_concept(cache, concept->clone(), p.second);
                 //else std::cout << "PRUNE: " + concept.as_str() << std::endl;
                 delete p.second;
                 num_pruned_concepts += p.first;
             }
-
-        } else {
-            bool is_first_non_basis_iteration = (concepts_.size() == 1);
-            // extract concepts in existing concept layers
-            std::vector<const Concept*> last_concept_layer = concepts_.back();
-            std::vector<const Concept*> concepts_in_all_layers_except_last;
-            for( int layer = 0; layer < int(concepts_.size()); ++layer )
-                concepts_in_all_layers_except_last.insert(concepts_in_all_layers_except_last.end(), concepts_[layer].begin(), concepts_[layer].end());
-
-            // create new concept layer
-            concepts_.emplace_back();
+            return num_pruned_concepts;
+        }
 
 
+        // On subsequent iterations...
+        bool is_first_non_basis_iteration = (concepts_.size() == 1);
+        // Classify concepts and roles by their complexity - we will use this to minimize complexity checks later
+        std::vector<std::vector<const Role*>> roles_by_complexity(complexity_bound_+1);
+        std::vector<std::vector<const Concept*>> concepts_in_last_layer_by_complexity(complexity_bound_+1);
+        std::vector<std::vector<const Concept*>> concepts_in_previous_layers_by_complexity(complexity_bound_+1);
+
+        for (const auto r:roles_) roles_by_complexity.at(r->complexity()).push_back(r);  // TODO Do this just once
+        for (const auto c:concepts_.back()) concepts_in_last_layer_by_complexity.at(c->complexity()).push_back(c);
+
+        for( unsigned layer = 0; layer < concepts_.size()-1; ++layer ) {
+            for (const auto c:concepts_[layer]) {
+                concepts_in_previous_layers_by_complexity.at(c->complexity()).push_back(c);
+            }
+        }
+
+        // create new concept layer
+        int integer_bound = (int) complexity_bound_;
+        concepts_.emplace_back();
+
+        if (is_first_non_basis_iteration) {
             // Insert the negation of all primitive concepts only (not applied in later iterations)
-            if (is_first_non_basis_iteration) {
-                for (auto concept:last_concept_layer) {
+            for (int k = 0; k <= (integer_bound-1); ++k) {
+                for (auto concept:concepts_in_last_layer_by_complexity[k]) {
                     NotConcept not_concept(concept);
                     auto p = is_superfluous_or_exceeds_complexity_bound(not_concept, cache, sample);
                     if (!p.first) insert_new_concept(cache, not_concept.clone(), p.second);
@@ -1738,90 +1750,87 @@ class Factory {
                 }
             }
 
-            // generate exist, and forall for concepts in last layer
-            for( int i = 0; i < int(last_concept_layer.size()); ++i ) {
-                const Concept *concept = last_concept_layer[i];
-#if 0 // Don't negate in layers > 0
-                NotConcept not_concept(concept);
-                std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(not_concept, cache, sample);
-                if( !p.first ) insert_new_concept(cache, not_concept.clone(), p.second);
-                //else std::cout << "PRUNE: " + not_concept.as_str() << std::endl;
-                delete p.second;
-                num_pruned_concepts += p.first;
-#endif
 
-                // TODO: Merge the two loops below (for exist- and forall- concepts) into one single loop.
-                // TODO: We are keeping the separate ATM to be able to compare better with the Python version
-                for (auto role : roles_) {
-                    ExistsConcept exists_concept(concept, role);
-                    std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(exists_concept, cache, sample);
-                    if( !p.first ) insert_new_concept(cache, exists_concept.clone(), p.second);
-                    //else std::cout << "PRUNE: " + exists_concept.as_str() << std::endl;
+            // Insert equal concepts based on the already-fixed set of roles.
+            for (unsigned i = 0; i < roles_.size(); ++i) {
+                for (unsigned j = i + 1; j < roles_.size(); ++j) {
+                    auto name1 = get_role_predicate(roles_[i])->name();
+                    auto name2 = get_role_predicate(roles_[j])->name();
+                    auto substr1 = name1.substr(0, name1.size()-2);
+                    auto substr2 = name2.substr(0, name2.size()-2);
+
+
+                    // A hacky way to allow only equal concepts R=R' where R and R' come from the same predicate
+                    // and one of the two is a goal role
+                    if ((name1.substr(name1.size()-2) != "_g") && (name2.substr(name2.size()-2) != "_g"))
+                        continue;
+                    if (substr1 != name2 && substr2 != name1)
+                        continue;
+
+                    EqualConcept eq_concept(roles_[i], roles_[j]);
+                    auto p = is_superfluous_or_exceeds_complexity_bound(eq_concept, cache, sample);
+                    if (!p.first) insert_new_concept(cache, eq_concept.clone(), p.second);
                     delete p.second;
                     num_pruned_concepts += p.first;
                 }
+            }
+        }
 
-                for (auto role : roles_) {
-                    ForallConcept forall_concept(concept, role);
-                    std::pair<bool, const sample_denotation_t*> q = is_superfluous_or_exceeds_complexity_bound(forall_concept, cache, sample);
-                    if( !q.first ) insert_new_concept(cache, forall_concept.clone(), q.second);
-                    //else std::cout << "PRUNE: " + forall_concept.as_str() << std::endl;
-                    delete q.second;
-                    num_pruned_concepts += q.first;
+        // generate exist and forall combining a role with a concept in the last layer
+        for (int k = 0; k <= (integer_bound-1); ++k) {
+            for (auto concept:concepts_in_last_layer_by_complexity[k]) {
+                for (int k2 = 0; k2 <= (integer_bound-k-1); ++k2) {
+                    for (auto role:roles_by_complexity[k2]) {
+                        ExistsConcept exists_concept(concept, role);
+                        std::pair<bool, const sample_denotation_t *> p = is_superfluous_or_exceeds_complexity_bound(
+                                exists_concept, cache, sample);
+                        if (!p.first) insert_new_concept(cache, exists_concept.clone(), p.second);
+                        //else std::cout << "PRUNE: " + exists_concept.as_str() << std::endl;
+                        delete p.second;
+                        num_pruned_concepts += p.first;
+
+                        ForallConcept forall_concept(concept, role);
+                        std::pair<bool, const sample_denotation_t *> q = is_superfluous_or_exceeds_complexity_bound(
+                                forall_concept, cache, sample);
+                        if (!q.first) insert_new_concept(cache, forall_concept.clone(), q.second);
+                        //else std::cout << "PRUNE: " + forall_concept.as_str() << std::endl;
+                        delete q.second;
+                        num_pruned_concepts += q.first;
+                    }
                 }
             }
-
-            // Insert equal concepts based on the already-fixed set of roles. We only do this once, and it'd thus be
-            // more sensible to put this code elsewhere, but we want to generate concepts in the same order than
-            // the python code for easier comparability
-            if (is_first_non_basis_iteration) {
-                for (unsigned i = 0; i < roles_.size(); ++i) {
-                    for (unsigned j = i + 1; j < roles_.size(); ++j) {
-                        auto name1 = get_role_predicate(roles_[i])->name();
-                        auto name2 = get_role_predicate(roles_[j])->name();
-                        auto substr1 = name1.substr(0, name1.size()-2);
-                        auto substr2 = name2.substr(0, name2.size()-2);
+        }
 
 
-                        // A hacky way to allow only equal concepts R=R' where R and R' come from the same predicate
-                        // and one of the two is a goal role
-                        if ((name1.substr(name1.size()-2) != "_g") && (name2.substr(name2.size()-2) != "_g"))
-                            continue;
-                        if (substr1 != name2 && substr2 != name1)
-                            continue;
+        // generate conjunctions of (a) a concept in previous layer with a concept of the last layer, and
+        // (b) two concepts of the last layer, avoiding symmetries
+        for (int k = 0; k <= (integer_bound-1); ++k) {
+            for (unsigned i_k = 0; i_k < concepts_in_last_layer_by_complexity[k].size(); ++i_k) {
+                const auto& concept1 = concepts_in_last_layer_by_complexity[k][i_k];
 
-                        EqualConcept eq_concept(roles_[i], roles_[j]);
-                        auto p = is_superfluous_or_exceeds_complexity_bound(eq_concept, cache, sample);
-                        if (!p.first) insert_new_concept(cache, eq_concept.clone(), p.second);
+                for (int k2 = 0; k2 <= (integer_bound-k-1); ++k2) { // TODO Change if measuring AND-concept complexity by multiplication!
+                    for (auto concept2:concepts_in_previous_layers_by_complexity[k2]) {
+                        AndConcept and_concept(concept1, concept2);
+                        std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(and_concept, cache, sample);
+                        if( !p.first ) insert_new_concept(cache, and_concept.clone(), p.second);
+                        //else std::cout << "PRUNE: " + and_concept.as_str() << std::endl;
                         delete p.second;
                         num_pruned_concepts += p.first;
                     }
                 }
-            }
 
-            // generate conjunction of concepts in last layer with all other
-            // concepts, avoiding redudant pairs
-            for( int i = 0; i < int(last_concept_layer.size()); ++i ) {
-                const Concept *concept1 = last_concept_layer[i];
 
-                for( int j = 0; j < int(concepts_in_all_layers_except_last.size()); ++j ) {
-                    const Concept *concept2 = concepts_in_all_layers_except_last[j];
-                    AndConcept and_concept(concept1, concept2);
-                    std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(and_concept, cache, sample);
-                    if( !p.first ) insert_new_concept(cache, and_concept.clone(), p.second);
-                    //else std::cout << "PRUNE: " + and_concept.as_str() << std::endl;
-                    delete p.second;
-                    num_pruned_concepts += p.first;
-                }
-
-                for( int j = 1 + i; j < int(last_concept_layer.size()); ++j ) {
-                    const Concept *concept2 = last_concept_layer[j];
-                    AndConcept and_concept(concept1, concept2);
-                    std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(and_concept, cache, sample);
-                    if( !p.first ) insert_new_concept(cache, and_concept.clone(), p.second);
-                    //else std::cout << "PRUNE: " + and_concept.as_str() << std::endl;
-                    delete p.second;
-                    num_pruned_concepts += p.first;
+                for (int k2 = k; k2 <= (integer_bound-k-1); ++k2) { // TODO Change if measuring AND-concept complexity by multiplication!
+                    unsigned start_at = (k == k2) ? i_k+1: 0; // Break symmetries within same complexity bucket
+                    for (unsigned i_k2 = start_at; i_k2 < concepts_in_last_layer_by_complexity[k2].size(); ++i_k2) {
+                        const auto& concept2 = concepts_in_last_layer_by_complexity[k2][i_k2];
+                        AndConcept and_concept(concept1, concept2);
+                        std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(and_concept, cache, sample);
+                        if( !p.first ) insert_new_concept(cache, and_concept.clone(), p.second);
+                        //else std::cout << "PRUNE: " + and_concept.as_str() << std::endl;
+                        delete p.second;
+                        num_pruned_concepts += p.first;
+                    }
                 }
             }
         }
@@ -1947,23 +1956,20 @@ class Factory {
 
     int generate_roles(Cache &cache, const Sample &sample) const {
         assert(roles_.empty());
-        for( int i = 0; i < int(basis_roles_.size()); ++i ) {
-            const Role &role = *basis_roles_[i];
-            std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(role, cache, sample);
+        for (auto role : basis_roles_) {
+            std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(*role, cache, sample);
             if( !p.first ) {
-                insert_new_role(cache, role.clone(), p.second);
+                insert_new_role(cache, role->clone(), p.second);
             } else {
                 // we cannot just obviate this role since another
                 // role denotation may depend on this denotation
                 //std::cout << "PRUNE: " + role.as_str() << std::endl;
-                insert_new_denotation_by_name(cache, role.as_str(), p.second);
+                insert_new_denotation_by_name(cache, role->as_str(), p.second);
             }
             delete p.second;
         }
 
-        for( int i = 0; i < int(basis_roles_.size()); ++i ) {
-            const Role *role = basis_roles_[i];
-
+        for (auto role : basis_roles_) {
             PlusRole plus_role(role);
             std::pair<bool, const sample_denotation_t*> p1 = is_superfluous_or_exceeds_complexity_bound(plus_role, cache, sample);
             if( !p1.first ) {
@@ -2051,7 +2057,7 @@ class Factory {
                       << " #concepts-in-layer=" << concepts_.back().size()
                       << ", #pruned-concepts=" << num_pruned_concepts
                       << std::endl;
-            report_dl_data(std::cout);
+//            report_dl_data(std::cout);
         }
         assert(concepts_.back().empty());
         concepts_.pop_back();
