@@ -206,16 +206,18 @@ def sample_generated_states(config, rng):
         logging.info("Sample after resampling: {}".format(sample.info()))
 
     log_sampled_states(sample, config.resampled_states_filename)
-
-    state_ids = sample.get_sorted_state_ids()
-    if config.complete_only_wrt_optimal:
-        print_sat_transition_matrix(state_ids, sample.transitions, sample.optimal_transitions, config.sat_transitions_filename)
-    else:
-        print_sat_transition_matrix(state_ids, sample.transitions, [], config.sat_transitions_filename)
-    print_transition_matrix(state_ids, sample.transitions, config.transitions_filename)
+    print_transition_matrices(sample, config)
     print_state_set(sample.goals, config.goal_states_filename)
     print_state_set(sample.unsolvable, config.unsolvable_states_filename)
     return sample
+
+
+def print_transition_matrices(sample, config):
+    state_ids = sample.get_sorted_state_ids()
+    # We print the optimal transitions only if they need to be used for the encoding
+    optimal_transitions = sample.optimal_transitions if config.complete_only_wrt_optimal else []
+    print_sat_transition_matrix(state_ids, sample.transitions, optimal_transitions, config.sat_transitions_filename)
+    print_transition_matrix(state_ids, sample.transitions, config.transitions_filename)
 
 
 def mark_optimal_transitions(selection_strategy, sample: TransitionSample, goals_by_instance):

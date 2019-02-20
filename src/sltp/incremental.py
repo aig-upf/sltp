@@ -5,12 +5,13 @@ import shutil
 
 import numpy as np
 from sltp.language import parse_pddl
+from sltp.util.naming import compute_info_filename
 from sltp.util.serialization import unserialize_features
 from tarski.dl import compute_dl_vocabulary, ConceptCardinalityFeature, EmpiricalBinaryConcept
 
 from .validator import AbstractionValidator
 
-from .sampling import log_sampled_states
+from .sampling import log_sampled_states, print_transition_matrices
 from .features import create_model_cache_from_samples, parse_all_instances, compute_instance_information, \
     report_use_goal_denotation
 from .returncodes import ExitCode
@@ -18,7 +19,7 @@ from .util.misc import update_dict
 from .driver import Experiment, generate_pipeline_from_list, PlannerStep, check_int_parameter, \
     InvalidConfigParameter, TransitionSamplingStep, ConceptGenerationStep, SubprocessStepRunner, \
     run_and_check_output, save, FeatureMatrixGenerationStep, MaxsatProblemGenerationStep, MaxsatProblemSolutionStep, \
-    ActionModelStep, load, Bunch, CPPFeatureGenerationStep
+    ActionModelStep, load, Bunch, CPPFeatureGenerationStep, InhouseMaxsatSolverStep, ActionModelFromFeatureIndexesStep
 
 
 def initial_sample_selection(sample, config, rng):
@@ -141,8 +142,11 @@ def try_to_compute_abstraction(config, sample, k):
 
     steps, subconfig = generate_pipeline_from_list([
         CPPFeatureGenerationStep,
-        MaxsatProblemGenerationStep,
-        MaxsatProblemSolutionStep, ActionModelStep], **subconfig)
+        # MaxsatProblemGenerationStep,
+        # MaxsatProblemSolutionStep,
+        InhouseMaxsatSolverStep,  # Blai's polynomial ad-hoc maxsat algorithm
+        ActionModelFromFeatureIndexesStep
+    ], **subconfig)
 
     #         PlannerStep,
     #         TransitionSamplingStep,
@@ -152,6 +156,11 @@ def try_to_compute_abstraction(config, sample, k):
     #         ActionModelStep,
     #         AbstractionTestingComputation,
     #         # QNPGenerationStep,
+
+    # Update some parameters and paths of the subconfig and save there transition info
+    subconfig["sat_transitions_filename"] = compute_info_filename(subconfig, "sat_transitions.dat")
+    subconfig["transitions_filename"] = compute_info_filename(subconfig, "transition-matrix.dat")
+    print_transition_matrices(sample, Bunch(subconfig))
 
     for step in steps:
         exitcode = run_and_check_output(step, SubprocessStepRunner, raise_on_error=False)
