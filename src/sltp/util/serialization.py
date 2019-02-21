@@ -41,7 +41,8 @@ def unserialize_features(language, filename, indexes=None):
     with open(filename, 'r') as file:
         for i, line in enumerate(file, 0):
             if indexes is None or i in indexes:
-                features.append(unserialize_feature(language, line.rstrip('\n')))
+                name, complexity = line.rstrip('\n').split("\t")
+                features.append(unserialize_feature(language, name))
     return features
 
 
