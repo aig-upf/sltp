@@ -1767,7 +1767,10 @@ class Factory {
                     if (substr1 != name2 && substr2 != name1)
                         continue;
 
+                    // Force the complexity of R=R' to be 1 + max complexity over R and R'
                     EqualConcept eq_concept(roles_[i], roles_[j]);
+                    eq_concept.force_complexity(1+std::max(roles_[i]->complexity(), roles_[j]->complexity()));
+
                     auto p = is_superfluous_or_exceeds_complexity_bound(eq_concept, cache, sample);
                     if (!p.first) insert_new_concept(cache, eq_concept.clone(), p.second);
                     delete p.second;
@@ -1808,7 +1811,7 @@ class Factory {
             for (unsigned i_k = 0; i_k < concepts_in_last_layer_by_complexity[k].size(); ++i_k) {
                 const auto& concept1 = concepts_in_last_layer_by_complexity[k][i_k];
 
-                for (int k2 = 0; k2 <= (integer_bound-k-1); ++k2) { // TODO Change if measuring AND-concept complexity by multiplication!
+                for (int k2 = 0; k2 <= (integer_bound-k); ++k2) { // TODO Change if measuring AND-concept complexity by multiplication!
                     for (auto concept2:concepts_in_previous_layers_by_complexity[k2]) {
                         AndConcept and_concept(concept1, concept2);
                         std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(and_concept, cache, sample);
@@ -1820,7 +1823,7 @@ class Factory {
                 }
 
 
-                for (int k2 = k; k2 <= (integer_bound-k-1); ++k2) { // TODO Change if measuring AND-concept complexity by multiplication!
+                for (int k2 = k; k2 <= (integer_bound-k); ++k2) { // TODO Change if measuring AND-concept complexity by multiplication!
                     unsigned start_at = (k == k2) ? i_k+1: 0; // Break symmetries within same complexity bucket
                     for (unsigned i_k2 = start_at; i_k2 < concepts_in_last_layer_by_complexity[k2].size(); ++i_k2) {
                         const auto& concept2 = concepts_in_last_layer_by_complexity[k2][i_k2];
