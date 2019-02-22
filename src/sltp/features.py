@@ -382,7 +382,7 @@ def extract_features(config, sample):
         features = config.feature_generator(language)
 
     logging.info('Final number of features: {}'.format(len(features)))
-    # log_concept_denotations(sample.states, concepts, factory.processor.model_cache, config.concept_denotation_filename)
+    log_concept_denotations(sample.states, concepts, factory.processor.model_cache, config.concept_denotation_filename)
 
     return ExitCode.Success, dict(
         features=features,
@@ -411,8 +411,8 @@ def generate_concepts(config, factory, nominals, types, goal_predicates):
 
         logging.info("Starting iteration #{}...".format(i))
 
-        derive_compositions = i <= 1
-        derive_compositions = False  # Temporarily deactivate compositions
+        derive_compositions = True #i <= 1
+        #derive_compositions = False  # Temporarily deactivate compositions
         concepts.extend(factory.derive_concepts(old_c, new_c, old_r, new_r, config.max_concept_size))
         roles.extend(factory.derive_roles(old_c, new_c, old_r, new_r, config.max_concept_size,
                                           derive_compositions=derive_compositions))
