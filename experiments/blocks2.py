@@ -120,7 +120,28 @@ def experiment(experiment_name=None):
 
     exps["5blocks_inc_k0_12"] = update_dict(
         exps["7blocks_inc_k0_12"],
+        initial_concept_bound=7, max_concept_bound=10, concept_bound_step=1,
         instances=["probBLOCKS-5-0.pddl", ],
+        initial_sample_size=1000,
+    )
+
+    exps["5blocks_k7"] = dict(
+        instances=["probBLOCKS-5-0.pddl"],
+        test_domain=domain,
+        test_instances=[
+            "probBLOCKS-7-0.pddl",
+        ],
+        num_states=1000,
+        num_tested_states=50000,
+        num_sampled_states=None,
+        complete_only_wrt_optimal=True,
+        max_concept_size=7,
+        feature_namer=ijcai_paper_bw_feature_namer,
+    )
+
+    exps["7blocks_manual"] = update_dict(
+        exps["7blocks_inc"],
+        feature_generator=genfeatures,
     )
 
     if experiment_name not in exps:
@@ -129,6 +150,12 @@ def experiment(experiment_name=None):
     parameters["domain_dir"] = parameters.get("domain_dir", domain_dir)
     parameters["domain"] = parameters.get("domain", domain)
     return generate_experiment(**parameters)
+
+
+def genfeatures():
+    return ["Boolean[holding]",
+            "Numerical[And(Forall(on_g,And(Equal(Star(on),Star(on_g)),clear)),clear)]",
+            ]
 
 
 if __name__ == "__main__":

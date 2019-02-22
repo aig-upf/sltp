@@ -142,11 +142,11 @@ def try_to_compute_abstraction(config, sample, k):
 
     steps, subconfig = generate_pipeline_from_list([
         CPPFeatureGenerationStep,
-        # MaxsatProblemGenerationStep,
-        # MaxsatProblemSolutionStep,
-        # ActionModelStep,
-        InhouseMaxsatSolverStep,  # Blai's polynomial ad-hoc maxsat algorithm
-        ActionModelFromFeatureIndexesStep
+        MaxsatProblemGenerationStep,
+        MaxsatProblemSolutionStep,
+        ActionModelStep,
+        # InhouseMaxsatSolverStep,  # Blai's polynomial ad-hoc maxsat algorithm
+        # ActionModelFromFeatureIndexesStep
     ], **subconfig)
 
     #         PlannerStep,

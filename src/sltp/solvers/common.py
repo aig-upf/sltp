@@ -72,7 +72,8 @@ def run_solver(solver, rundir, input_filename, tag=None, stdout=None, timeout=No
             cmd = solver.command(input_filename)
             logging.info('Executing (timeout: {}) "{}" on directory "{}"'.format(timeout, cmd, rundir))
 
-            proc = subprocess.Popen(cmd, cwd=rundir, stdout=driver_log, stderr=driver_err)
+            proc = subprocess.Popen(cmd, cwd=rundir, stdout=driver_log, stderr=driver_err,
+                                    bufsize=0)  # use unbuffered output
             run_with_controlling_timer(proc, timeout)
 
             # retcode = subprocess.call(cmd, cwd=rundir, stdout=driver_log, stderr=driver_err)

@@ -701,8 +701,8 @@ class AndConcept : public Concept {
 
   public:
     AndConcept(const Concept *concept1, const Concept *concept2) :
-//      : Concept(1 + concept1->complexity() + concept2->complexity()),
-        Concept(1 + concept1->complexity() * concept2->complexity()),
+      Concept(1 + concept1->complexity() + concept2->complexity()),
+//        Concept(1 + concept1->complexity() * concept2->complexity()),
         concept1_(concept1),
         concept2_(concept2) {
     }
@@ -1738,38 +1738,24 @@ class Factory {
         concepts_.emplace_back();
 
         if (is_first_non_basis_iteration) {
-            // Insert the negation of all primitive concepts only (not applied in later iterations)
-            for (int k = 0; k <= (integer_bound-1); ++k) {
-                for (auto concept:concepts_in_last_layer_by_complexity[k]) {
-                    NotConcept not_concept(concept);
-                    auto p = is_superfluous_or_exceeds_complexity_bound(not_concept, cache, sample);
-                    if (!p.first) insert_new_concept(cache, not_concept.clone(), p.second);
-                    //else std::cout << "PRUNE: " + not_concept.as_str() << std::endl;
-                    delete p.second;
-                    num_pruned_concepts += p.first;
-                }
-            }
-
-
             // Insert equal concepts based on the already-fixed set of roles.
-            for (unsigned i = 0; i < roles_.size(); ++i) {
-                for (unsigned j = i + 1; j < roles_.size(); ++j) {
-                    auto name1 = get_role_predicate(roles_[i])->name();
-                    auto name2 = get_role_predicate(roles_[j])->name();
-                    auto substr1 = name1.substr(0, name1.size()-2);
-                    auto substr2 = name2.substr(0, name2.size()-2);
-
+            for (const auto r1:roles_) {
+                for (const auto r2:roles_) {
+//            for (unsigned i = 0; i < roles_.size(); ++i) {
+//                for (unsigned j = i + 1; j < roles_.size(); ++j) {
+                    auto name1 = get_role_predicate(r1)->name();
+                    auto name2 = get_role_predicate(r2)->name();
 
                     // A hacky way to allow only equal concepts R=R' where R and R' come from the same predicate
-                    // and one of the two is a goal role
-                    if ((name1.substr(name1.size()-2) != "_g") && (name2.substr(name2.size()-2) != "_g"))
-                        continue;
-                    if (substr1 != name2 && substr2 != name1)
-                        continue;
+                    // and the first one is a goal role
+                    if (name1.substr(name1.size()-2) != "_g") continue;
+                    if (name1.substr(0, name1.size()-2) != name2) continue;
 
-                    // Force the complexity of R=R' to be 1 + max complexity over R and R'
-                    EqualConcept eq_concept(roles_[i], roles_[j]);
-                    eq_concept.force_complexity(1+std::max(roles_[i]->complexity(), roles_[j]->complexity()));
+                    // Force the complexity of R=R' to be 1 + max complexity over R and R' or 1, if both roles are
+                    // of the same type
+                    EqualConcept eq_concept(r1, r2);
+                    unsigned k = (typeid(*r1) == typeid(*r2)) ? 1 : 1+std::max(r1->complexity(), r2->complexity());
+                    eq_concept.force_complexity(k);
 
                     auto p = is_superfluous_or_exceeds_complexity_bound(eq_concept, cache, sample);
                     if (!p.first) insert_new_concept(cache, eq_concept.clone(), p.second);
@@ -1779,9 +1765,33 @@ class Factory {
             }
         }
 
-        // generate exist and forall combining a role with a concept in the last layer
+
         for (int k = 0; k <= (integer_bound-1); ++k) {
             for (auto concept:concepts_in_last_layer_by_complexity[k]) {
+                NotConcept not_concept(concept);
+                auto p = is_superfluous_or_exceeds_complexity_bound(not_concept, cache, sample);
+                if (!p.first) insert_new_concept(cache, not_concept.clone(), p.second);
+                //else std::cout << "PRUNE: " + not_concept.as_str() << std::endl;
+                delete p.second;
+                num_pruned_concepts += p.first;
+            }
+        }
+
+        for (int k = 0; k <= (integer_bound-1); ++k) {
+            for (const Concept* concept:concepts_in_last_layer_by_complexity[k]) {
+
+                // Negate concepts in the last layer, only if they are not already negations
+                if (!dynamic_cast<const NotConcept*>(concept)) {
+                    NotConcept not_concept(concept);
+                    auto p = is_superfluous_or_exceeds_complexity_bound(not_concept, cache, sample);
+                    if (!p.first) insert_new_concept(cache, not_concept.clone(), p.second);
+                    //else std::cout << "PRUNE: " + not_concept.as_str() << std::endl;
+                    delete p.second;
+                    num_pruned_concepts += p.first;
+                }
+
+
+                // generate exist and forall combining a role with a concept in the last layer
                 for (int k2 = 0; k2 <= (integer_bound-k-1); ++k2) {
                     for (auto role:roles_by_complexity[k2]) {
                         ExistsConcept exists_concept(concept, role);

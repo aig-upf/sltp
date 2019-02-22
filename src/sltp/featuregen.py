@@ -233,6 +233,10 @@ def make_script(filename, code):
 
 
 def extract_features(config, sample):
+    if config.feature_generator is not None:
+        logging.info('Skipping automatic feature generation: User provided set of handcrafted features')
+        return ExitCode.Success, dict(enforced_feature_idxs=[], in_goal_features=[], sat_feature_mapping={})
+
     logging.info("Generating non-redundant concepts from sample set: {}".format(sample.info()))
 
     parsed_problems = parse_all_instances(config.domain, config.instances)  # Parse all problem instances
