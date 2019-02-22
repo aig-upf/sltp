@@ -168,8 +168,8 @@ def generate_features(config, data, rng):
     # selected = [translator.features[i] for i in [8, 9, 25, 26, 1232]]
     # selected = [features[1], features[35], ]
     # selected = [features[11]]
-    # selected = None
-    # log_feature_denotations(state_ids, features, models, config.feature_denotation_filename, selected)
+    selected = None
+    log_feature_denotations(state_ids, features, models, config.feature_denotation_filename, selected)
 
     return ExitCode.Success, dict(features=features, sat_feature_mapping=sat_feature_mapping)
 
