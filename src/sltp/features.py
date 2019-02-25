@@ -411,7 +411,7 @@ def generate_concepts(config, factory, nominals, types, goal_predicates):
 
         logging.info("Starting iteration #{}...".format(i))
 
-        derive_compositions = True #i <= 1
+        derive_compositions = i <= 1
         #derive_compositions = False  # Temporarily deactivate compositions
         concepts.extend(factory.derive_concepts(old_c, new_c, old_r, new_r, config.max_concept_size))
         roles.extend(factory.derive_roles(old_c, new_c, old_r, new_r, config.max_concept_size,
