@@ -34,6 +34,7 @@ class TransitionSample:
         self.transitions.update(transitions)
         self.parents.update(compute_parents(transitions))
         for s in states:
+            assert s not in self.instance
             self.instance[s] = instance_id
         for t, a in schemas.items():
             assert t not in self.transition_schemas
@@ -322,7 +323,7 @@ def normalize_atom_name(name):
     return tmp.split(',')
 
 
-def remap_state_ids(states, goals, transitions, unsolvable, remap):
+def remap_state_ids(states, goals, transitions, unsolvable, schemas, remap):
 
     new_goals = {remap(x) for x in goals}
     new_unsolvable = {remap(x) for x in unsolvable}
@@ -331,8 +332,11 @@ def remap_state_ids(states, goals, transitions, unsolvable, remap):
         new_states[remap(i)] = s
 
     new_transitions = defaultdict(set)
+    new_schemas = dict()
     for source, targets in transitions.items():
         new_transitions[remap(source)] = {remap(t) for t in targets}
+        for target in targets:
+            new_schemas[(remap(source), remap(target))] = schemas[(source, target)]
 
     return new_states, new_goals, new_transitions, new_unsolvable
 
@@ -346,7 +350,7 @@ def read_transitions_from_files(filenames):
         starting_state_id = sample.num_states()
         s, g, tx, unsolv, schemas = read_single_sample_file(filename)
         assert next(iter(s.keys())) == 0  # Make sure state IDs in the sample file start by 0
-        s, g, tx, unsolv = remap_state_ids(s, g, tx, unsolv, remap=lambda state: state + starting_state_id)
+        s, g, tx, unsolv = remap_state_ids(s, g, tx, unsolv, schemas, remap=lambda state: state + starting_state_id)
         assert next(iter(s)) == starting_state_id
 
         sample.add_transitions(s, tx, schemas, instance_id)
