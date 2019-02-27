@@ -338,7 +338,7 @@ def remap_state_ids(states, goals, transitions, unsolvable, schemas, remap):
         for target in targets:
             new_schemas[(remap(source), remap(target))] = schemas[(source, target)]
 
-    return new_states, new_goals, new_transitions, new_unsolvable
+    return new_states, new_goals, new_transitions, new_schemas, new_unsolvable
 
 
 def read_transitions_from_files(filenames):
@@ -350,7 +350,7 @@ def read_transitions_from_files(filenames):
         starting_state_id = sample.num_states()
         s, g, tx, unsolv, schemas = read_single_sample_file(filename)
         assert next(iter(s.keys())) == 0  # Make sure state IDs in the sample file start by 0
-        s, g, tx, unsolv = remap_state_ids(s, g, tx, unsolv, schemas, remap=lambda state: state + starting_state_id)
+        s, g, tx, schemas, unsolv = remap_state_ids(s, g, tx, unsolv, schemas, remap=lambda state: state + starting_state_id)
         assert next(iter(s)) == starting_state_id
 
         sample.add_transitions(s, tx, schemas, instance_id)
