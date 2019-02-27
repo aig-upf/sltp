@@ -245,10 +245,12 @@ def compute_static_atoms(problem):
     # Let's better do that ourselves with a basic fluent detection routine.
     index.process_symbols(problem)
 
+    fluents, statics = index.compute_fluent_and_statics()
+
     # TODO Fix the following hack. This will require offering a uniform interface in the tarski TaskIndex,
     # TODO which at the moment is being refactored.
-    fluent_symbols = {x.head.symbol.symbol if isinstance(x.head.symbol, Function) else x.head.symbol
-                      for x in index.fluent_symbols}
+    fluent_symbols = {x.symbol.symbol if isinstance(x, Function) else x.symbol
+                      for x in fluents}
 
     static_atoms = set()
     static_predicates = set()
