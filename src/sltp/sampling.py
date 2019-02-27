@@ -26,14 +26,18 @@ class TransitionSample:
         self.optimal_transitions = set()
         self.expanded = set()
         self.instance = dict()  # A mapping between states and the problem instances they came from
+        self.transition_schemas = dict()  # A mapping between transitions and the action schema that induced them
 
-    def add_transitions(self, states, transitions, instance_id):
+    def add_transitions(self, states, transitions, schemas, instance_id):
         # TODO Could check for ID overlappings, but would be expensive
         self.states.update(states)
         self.transitions.update(transitions)
         self.parents.update(compute_parents(transitions))
         for s in states:
             self.instance[s] = instance_id
+        for t, a in schemas.items():
+            assert t not in self.transition_schemas
+            self.transition_schemas[t] = a
         # TODO: This is not correct, will fail whenever we have states in the sample that have indeed been expanded
         # TODO: but have no children:
         self.expanded.update(s for s in states if len(transitions[s]) > 0)
@@ -101,15 +105,18 @@ class TransitionSample:
                 instance[remapping[i]] = self.instance[i]
 
         transitions = defaultdict(set)
+        schemas = dict()
         for source, targets in self.transitions.items():
             if source in remapping:
                 mapped_source = remapping[source]
                 for t in targets:
                     if t in remapping:
-                        transitions[mapped_source].add(remapping[t])
+                        mapped_target = remapping[t]
+                        transitions[mapped_source].add(mapped_target)
+                        schemas[mapped_source, mapped_target] = self.transition_schemas[(source, t)]
 
         resampled = TransitionSample()
-        resampled.add_transitions(states, transitions, 0)
+        resampled.add_transitions(states, transitions, schemas, 0)
         resampled.instance = instance
         resampled.mark_as_goals(goals)
         resampled.mark_as_optimal(optimal)
@@ -337,12 +344,12 @@ def read_transitions_from_files(filenames):
     sample = TransitionSample()
     for instance_id, filename in enumerate(filenames, 0):
         starting_state_id = sample.num_states()
-        s, g, tx, unsolv = read_single_sample_file(filename)
+        s, g, tx, unsolv, schemas = read_single_sample_file(filename)
         assert next(iter(s.keys())) == 0  # Make sure state IDs in the sample file start by 0
         s, g, tx, unsolv = remap_state_ids(s, g, tx, unsolv, remap=lambda state: state + starting_state_id)
         assert next(iter(s)) == starting_state_id
 
-        sample.add_transitions(s, tx, instance_id)
+        sample.add_transitions(s, tx, schemas, instance_id)
         sample.mark_as_root(starting_state_id)
         sample.mark_as_goals(g)
         sample.mark_as_unsolvable(unsolv)
@@ -360,10 +367,12 @@ def read_single_sample_file(filename):
     seen = set()
     goal_states = set()
     unsolvable_states = set()
+    schemas = dict()
 
     def register_transition(state):
         transitions[state['parent']].add(state['id'])
         transitions_inv[state['id']].add(state['parent'])
+        schemas[(state['parent'], state['id'])] = state['schema']
 
     def register_state(state):
         # states_by_str[state['atoms_string']] = data
@@ -409,7 +418,7 @@ def read_single_sample_file(filename):
     ordered = OrderedDict()  # Make sure we return an ordered dictionary
     for id_ in sorted(states_by_id.keys()):
         ordered[id_] = states_by_id[id_]
-    return ordered, goal_states, transitions, unsolvable_states
+    return ordered, goal_states, transitions, unsolvable_states, schemas
 
 
 def run(config, data, rng):

@@ -35,12 +35,17 @@ class DLModel:
         self.cache = cache
         self.universe_idx = universe_idx
         self._universe = self.primitive_denotation(_TOP)
+        self.dencache = dict()
 
     def universe(self):
         return self._universe
 
     def denotation(self, term):
-        return term.denotation(self)
+        try:
+            return self.dencache[term]
+        except KeyError:
+            x = self.dencache[term] = term.denotation(self)
+            return x
 
     def primitive_denotation(self, term):
         if term in self.statics:
