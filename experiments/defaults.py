@@ -135,6 +135,9 @@ def generate_experiment(domain_dir, domain, **kwargs):
 
         # Whether ad-hoc solve runs with verbose option
         wsat_solver_verbose=False,
+
+        # Number of states to expand & test on the testing instances
+        num_tested_states=50000,
     )
 
     parameters = {**defaults, **kwargs}  # Copy defaults, overwrite with user-specified parameters
