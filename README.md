@@ -6,11 +6,18 @@
 
 ## Installation
 
-The whole pipeline runs in *python3* and relies on a couple of dependencies; most notably:
+The whole pipeline runs in *Python3* and relies on some dependencies; most notably:
 
 * The [FS planner](https://github.com/aig-upf/fs-private/) (actually, a simplified version of it).
 * Some MaxSat solver such as [OpenWBO](http://sat.inesc-id.pt/open-wbo/)
 * The [Tarski](https://github.com/aig-upf/tarski/) planning problem definition module.
+* CMake
+
+### Installing required packages
+
+If running on Ubuntu, you will need to install CMake: 
+    
+    sudo apt-get -y install cmake
 
 
 ### Installing FS
@@ -62,7 +69,8 @@ issue the following command on the root directory of the project:
 
     pip install -e .
 
-This should install all the required dependencies.
+This should build and install all the required dependencies, including some the C++ feature generator
+module, which should be compiled and installed transparently.
 
 
 ## Usage
