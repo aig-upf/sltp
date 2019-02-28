@@ -164,7 +164,7 @@ def try_to_compute_abstraction(config, sample, k):
     print_transition_matrices(sample, Bunch(subconfig))
 
     for step in steps:
-        exitcode = run_and_check_output(step, SubprocessStepRunner, raise_on_error=False)
+        exitcode = run_and_check_output(step, "[inc]", SubprocessStepRunner, raise_on_error=False)
         if exitcode != ExitCode.Success:
             return exitcode, None
 
@@ -214,8 +214,8 @@ class IncrementalExperiment(Experiment):
 
         # 1. Extract and resample the whole training set
         initial_steps, config = generate_pipeline_from_list([PlannerStep, TransitionSamplingStep], **self.parameters)
-        exitcode = run_and_check_output(initial_steps[0], SubprocessStepRunner)
-        exitcode = run_and_check_output(initial_steps[1], SubprocessStepRunner)
+        exitcode = run_and_check_output(initial_steps[0], 0, SubprocessStepRunner)
+        exitcode = run_and_check_output(initial_steps[1], 1, SubprocessStepRunner)
 
         learner = IncrementalLearner(**config)
         exitcode = learner.run()

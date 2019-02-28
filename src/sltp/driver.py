@@ -561,9 +561,10 @@ def load(basedir, items):
 
 class StepRunner(object):
     """ Run the given step """
-    def __init__(self, step_name, target, required_data):
+    def __init__(self, stepnum, step_name, target, required_data):
         self.start = self.elapsed_time()
         self.target = target
+        self.stepnum = stepnum
         self.step_name = step_name
         self.required_data = required_data
 
@@ -582,15 +583,15 @@ class StepRunner(object):
         if quiet:
             logging.getLogger().setLevel(logging.ERROR)
         else:
-            print(console.header("({}) STARTING STEP: {}".format(os.getpid(), self.step_name)))
+            print(console.header("(pid: {}) STARTING STEP #{}: {}".format(os.getpid(), self.stepnum, self.step_name)))
 
     def teardown(self, quiet):
         if quiet:
             logging.getLogger().setLevel(self.loglevel)
         else:
             current = self.elapsed_time()
-            print(console.header("END OF STEP {}: {:.2f} CPU sec - {:.2f} MB".format(
-                self.step_name, current - self.start, self.used_memory())))
+            print(console.header("END OF STEP #{}: {}. {:.2f} CPU sec - {:.2f} MB".format(
+                self.stepnum, self.step_name, current - self.start, self.used_memory())))
 
     def run(self, config):
         exitcode = self._run(config)
@@ -736,16 +737,16 @@ class Experiment(object):
         # If no steps were given on the commandline, run all exp steps.
         steps = [get_step(self.steps, name) for name in self.args.steps] or self.steps
 
-        for step in steps:
+        for stepnum, step in enumerate(steps, start=1):
             try:
-                run_and_check_output(step, SubprocessStepRunner)
+                run_and_check_output(step, stepnum, SubprocessStepRunner)
             except Exception as e:
                 logging.error((step, _create_exception_msg(step, e)))
                 break
 
 
-def run_and_check_output(step, runner_class, raise_on_error=True):
-    runner = runner_class(step.description(), step.get_step_runner(), step.get_required_data())
+def run_and_check_output(step, stepnum, runner_class, raise_on_error=True):
+    runner = runner_class(stepnum, step.description(), step.get_step_runner(), step.get_required_data())
     exitcode = runner.run(config=Bunch(step.config))
     if raise_on_error and exitcode is not ExitCode.Success:
         raise RuntimeError(_create_exception_msg(step, exitcode))
