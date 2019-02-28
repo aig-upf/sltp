@@ -23,7 +23,6 @@ from enum import Enum
 from signal import signal, SIGPIPE, SIG_DFL
 
 import numpy as np
-from sltp.language import parse_pddl
 
 from .sampling import TransitionSample
 from .errors import CriticalPipelineError
@@ -32,7 +31,6 @@ from .util.console import header, lines
 from .util.cnfwriter import CNFWriter
 from .solvers import solve
 from .util.performance import print_memory_usage
-from .util.serialization import serialize_to_string, unserialize_features
 from .returncodes import ExitCode
 
 signal(SIGPIPE, SIG_DFL)
