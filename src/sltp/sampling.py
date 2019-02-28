@@ -63,10 +63,12 @@ class TransitionSample:
     def mark_as_optimal(self, optimal):
         self.optimal_transitions.update(optimal)
 
-    def compute_optimal_states(self):
+    def compute_optimal_states(self, include_goals):
         """ Return those states that are the source of an optimal transition """
         states = set(itertools.chain.from_iterable(self.optimal_transitions))
-        return states - {max(states)}  # Remove the max state ID, which will be the goal
+        if include_goals:
+            return states
+        return states.difference(self.goals)
 
     def info(self):
         return "roots: {}, states: {}, transitions: {} ({} optimal), goals: {}, unsolvable: {}".format(
@@ -100,7 +102,7 @@ class TransitionSample:
 
         instance = dict()
         states = OrderedDict()
-        for i, s in self.states.items():
+        for i, s in self.states.items():  # Iterate following the order in self.states
             if i in remapping:
                 states[remapping[i]] = s
                 instance[remapping[i]] = self.instance[i]
@@ -108,13 +110,22 @@ class TransitionSample:
         transitions = defaultdict(set)
         schemas = dict()
         for source, targets in self.transitions.items():
-            if source in remapping:
+            if source in selected:
                 mapped_source = remapping[source]
                 for t in targets:
-                    if t in remapping:
-                        mapped_target = remapping[t]
-                        transitions[mapped_source].add(mapped_target)
-                        schemas[mapped_source, mapped_target] = self.transition_schemas[(source, t)]
+                    assert t in remapping  # because we have added all children of the selected nodes
+                    transitions[mapped_source].add(remapping[t])
+                    schemas[(mapped_source, remapping[t])] = self.transition_schemas[(source, t)]
+
+        # transitions2 = defaultdict(set)
+        # for source, targets in self.transitions.items():
+        #     if source in remapping:
+        #         mapped_source = remapping[source]
+        #         for t in targets:
+        #             if t in remapping:
+        #                 mapped_target = remapping[t]
+        #                 transitions2[mapped_source].add(mapped_target)
+        #                 schemas[(mapped_source, mapped_target)] = self.transition_schemas[(source, t)]
 
         resampled = TransitionSample()
         resampled.add_transitions(states, transitions, schemas, 0)
@@ -208,7 +219,7 @@ def sample_generated_states(config, rng):
     if config.num_sampled_states is not None:
         # Resample the full sample and extract only a few specified states
         selected = sample_first_x_states(sample.instance_roots, config.num_sampled_states)
-        states_in_some_optimal_transition = sample.compute_optimal_states()
+        states_in_some_optimal_transition = sample.compute_optimal_states(include_goals=True)
         selected.update(states_in_some_optimal_transition)
         sample = sample.resample(set(selected))
         logging.info("Sample after resampling: {}".format(sample.info()))

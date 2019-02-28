@@ -199,7 +199,7 @@ class ModelTranslator(object):
         self.optimal_transitions = sample.optimal_transitions
 
         if complete_only_wrt_optimal:
-            self.optimal_states = sample.compute_optimal_states()
+            self.optimal_states = sample.compute_optimal_states(include_goals=False)
 
         else:
             # Consider all transitions as optimal
