@@ -423,7 +423,6 @@ class ModelTranslator(object):
         # Add the weighted clauses to minimize the number of selected features
         for feature, var in enumerate(self.np_var_selected):
             d = self.compute_feature_weight(feature)
-            d = 1
             self.writer.clause([self.writer.literal(var, False)], weight=d)
             self.n_selected_clauses += 1
 
