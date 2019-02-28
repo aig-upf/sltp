@@ -26,7 +26,7 @@ def main():
     setup(
         name='sltp',
         version=get_version(),
-        description='SLTP: The Sample+Learn+Transform+Plan Framework',
+        description='The SLTP Generalized Planning Framework: Sample, Learn, Transform & Plan',
         long_description=get_description(),
         url='https://github.com/aig-upf/sltp',
         author='Blai Bonet and Guillem Francès',

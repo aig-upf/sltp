@@ -1,7 +1,7 @@
 
 
 
-# The SLTP Framework: Sample, Learn, Transform & Plan
+# The SLTP Generalized Planning Framework: Sample, Learn, Transform & Plan
 
 
 ## Installation
