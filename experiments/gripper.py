@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 import sys
 
+from tarski.dl import ConceptCardinalityFeature, NominalConcept, ExistsConcept, PrimitiveRole, UniversalConcept, \
+    NotConcept, AndConcept, PrimitiveConcept
+
 from defaults import generate_experiment
 from sltp.util.misc import update_dict
 
@@ -66,6 +69,8 @@ def experiment(experiment_name=None):
     exps["aaai_prob01_blai_std"] = update_dict(  # Same config as Blai, but with standard pipeline
         exps["aaai_prob01_blai"], pipeline="maxsat")
 
+    exps["aaai_prob01_deb"] = update_dict(exps["aaai_prob01"], feature_generator=debug_aaai_features)
+
     if experiment_name not in exps:
         raise RuntimeError('No experiment named "{}" in current experiment script'.format(experiment_name))
     return generate_experiment(domain_dir, domain, **exps[experiment_name])
@@ -93,6 +98,26 @@ def feature_namer(feature):
         "card[Exists(at,And(Forall(Inverse(at-robby),<empty>), Not({roomb})))]": "nballs-in-some-room-notB-without-any-robot",
         "bool[And(Exists(Inverse(at),<universe>), And({roomb}, Not(at-robby)))]": "some-ball-in-B-but-robbot-not-in-B",
     }.get(s, s)
+
+
+def debug_aaai_features(lang):
+    obj_t = lang.Object
+    at = PrimitiveRole(lang.get("at"))
+    carry = PrimitiveRole(lang.get("carry"))
+    at_robby = PrimitiveConcept(lang.get("at-robby"))
+    free = PrimitiveConcept(lang.get("free"))
+    x_param = NominalConcept("roomb", obj_t)
+
+    f1 = AndConcept(at_robby, x_param, "object")
+    f2 = ExistsConcept(at, NotConcept(x_param, obj_t))
+    f3 = ExistsConcept(carry, UniversalConcept("object"))
+
+    return [
+        ConceptCardinalityFeature(f1),
+        ConceptCardinalityFeature(f2),
+        ConceptCardinalityFeature(f3),
+        ConceptCardinalityFeature(free),
+    ]
 
 
 if __name__ == "__main__":
