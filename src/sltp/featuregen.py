@@ -22,7 +22,7 @@ import stat
 from collections import defaultdict
 
 from . import BASE_DIR
-from .matrices import NP_FEAT_VALUE_TYPE, cast_feature_value_to_numpy_value
+from .matrices import NP_FEAT_VALUE_TYPE, cast_feature_value_to_numpy_value, log_feature_denotations
 from .models import DLModel
 from tarski.dl import PrimitiveConcept, UniversalConcept, NullaryAtom, NominalConcept, GoalConcept, GoalRole, \
     EmptyConcept, GoalNullaryAtom
@@ -194,6 +194,35 @@ def transform_generator_output(config, sample, matrix_filename, info_filename):
 
     logging.info("Read denotation matrix with dimensions {}".format(matrix.shape))
 
+    return print_actual_output(sample, config, in_goal_features, names, complexities, matrix, types)
+
+
+def generate_output_from_handcrafted_features(sample, config, features, model_cache):
+    import numpy as np
+    num_features = len(features)
+    num_states = len(sample.states)
+
+    names = [str(f) for f in features]
+    types = [1]*num_features  # Let us harmlessly assume that all features are numeric
+    complexities = [f.complexity() for f in features]
+    matrix = np.empty(shape=(num_states, num_features), dtype=NP_FEAT_VALUE_TYPE)
+
+    for i, (sid, atoms) in enumerate(sample.states.items(), start=0):
+        assert i == sid
+        model = model_cache.get_feature_model(sid)
+        denotations = [model.denotation(f) for f in features]
+        matrix[i] = [cast_feature_value_to_numpy_value(int(x)) for x in denotations]
+
+    # These next 3 lines just to print the denotation of all features
+    state_ids = sample.get_sorted_state_ids()
+    models = {sid: model_cache.get_feature_model(sid) for sid in sample.states}
+    log_feature_denotations(state_ids, features, models, config.feature_denotation_filename, None)
+
+    return print_actual_output(sample, config, [], names, complexities, matrix, types)
+
+
+def print_actual_output(sample, config, in_goal_features, names, complexities, matrix, types):
+    import numpy as np
     bin_matrix = np.array(matrix, dtype=np.bool)
     np.save(config.feature_matrix_filename, matrix)
     np.save(config.bin_feature_matrix_filename, bin_matrix)
@@ -233,16 +262,19 @@ def make_script(filename, code):
 
 
 def extract_features(config, sample):
-    if config.feature_generator is not None:
-        logging.info('Skipping automatic feature generation: User provided set of handcrafted features')
-        return ExitCode.Success, dict(enforced_feature_idxs=[], in_goal_features=[], sat_feature_mapping={})
-
     logging.info("Generating non-redundant concepts from sample set: {}".format(sample.info()))
 
     parsed_problems = parse_all_instances(config.domain, config.instances)  # Parse all problem instances
 
     language, nominals, model_cache, infos = compute_models(
         config.domain, sample, parsed_problems, config.parameter_generator)
+
+    # If user provides handcrafted features, no need to go further than hear
+    if config.feature_generator is not None:
+        logging.info('Skipping automatic feature generation: User provided set of handcrafted features')
+        features = config.feature_generator(language)
+        generate_output_from_handcrafted_features(sample, config, features, model_cache)
+        return ExitCode.Success, dict(enforced_feature_idxs=[], in_goal_features=[], sat_feature_mapping={})
 
     all_goal_predicates = set(itertools.chain.from_iterable(info.goal_predicates for info in infos))
     if any(all_goal_predicates != info.goal_predicates for info in infos):

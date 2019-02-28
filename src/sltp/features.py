@@ -381,8 +381,8 @@ def extract_features(config, sample):
         features = config.feature_generator(language)
 
     logging.info('Final number of features: {}'.format(len(features)))
-    log_concept_denotations(sample.states, concepts, roles + rest, infos, factory.processor.model_cache,
-                            config.concept_denotation_filename, config.role_denotation_filename)
+    # log_concept_denotations(sample.states, concepts, roles + rest, infos, factory.processor.model_cache,
+    #                         config.concept_denotation_filename, config.role_denotation_filename)
 
     return ExitCode.Success, dict(
         features=features,
