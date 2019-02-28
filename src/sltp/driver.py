@@ -77,7 +77,7 @@ def check_int_parameter(config, name, positive=False):
             name, "positive " if positive else ""))
 
 
-class Step(object):
+class Step:
 
     def __init__(self, **kwargs):
         self.config = self.process_config(self.parse_config(**kwargs))
@@ -557,7 +557,7 @@ def load(basedir, items):
     return output
 
 
-class StepRunner(object):
+class StepRunner:
     """ Run the given step """
     def __init__(self, stepnum, step_name, target, required_data):
         self.start = self.elapsed_time()
@@ -683,7 +683,8 @@ class DFAGenerationStep(Step):
 
     def get_step_runner(self):
         from . import factorization
-        return learn_actions.generate_maxsat_problem
+        return None
+        # return learn_actions.generate_maxsat_problem
 
 
 class AbstractionTestingComputation(Step):
@@ -714,7 +715,7 @@ class AbstractionTestingComputation(Step):
         return tester.run
 
 
-class Experiment(object):
+class Experiment:
     def __init__(self, steps, parameters):
         self.args = None
         self.steps = steps
@@ -756,7 +757,7 @@ def _create_exception_msg(step, e):
         format(step.description(), e)
 
 
-class Bunch(object):
+class Bunch:
     def __init__(self, adict):
         self.__dict__.update(adict)
 

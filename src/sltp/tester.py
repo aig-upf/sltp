@@ -21,7 +21,7 @@ def run(config, data, rng):
         logging.info("No testing instances were specified")
         return ExitCode.Success, dict()
 
-    logging.info("Testing learnt abstraction on instances: ".format(config.test_instances))
+    logging.info("Testing learnt abstraction on instances: {}".format(config.test_instances))
     sample, goals_by_instance = read_transitions_from_files(config.test_sample_files)
 
     parsed_problems = parse_all_instances(config.test_domain, config.test_instances)

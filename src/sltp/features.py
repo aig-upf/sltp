@@ -38,7 +38,7 @@ from .extensions import DLDenotationTraceIndex
 from .returncodes import ExitCode
 
 
-class TerminologicalFactory(object):
+class TerminologicalFactory:
     def __init__(self, language: tsk.FirstOrderLanguage, processor):
         self.syntax = SyntacticFactory(language)
         self.processor = processor
@@ -146,7 +146,7 @@ class TerminologicalFactory(object):
         return all_roles
 
 
-class SemanticProcessor(object):
+class SemanticProcessor:
     def __init__(self, states, model_cache):
         self.states = states
         self.model_cache = model_cache

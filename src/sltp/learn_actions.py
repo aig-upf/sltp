@@ -93,7 +93,7 @@ def run_solver(config, data, rng):
     return ExitCode.Success, dict(cnf_solution=solution)
 
 
-class AbstractAction(object):
+class AbstractAction:
     def __init__(self, preconditions, effects, name=None):
         self.name = name
         self.preconditions = preconditions
@@ -115,7 +115,7 @@ class AbstractAction(object):
     __repr__ = __str__
 
 
-class ActionEffect(object):
+class ActionEffect:
     def __init__(self, feature, feature_name, change):
         self.feature = feature
         self.feature_name = feature_name
@@ -176,7 +176,7 @@ def prettyprint_abstract_action(action, all_features, namer):
     return "AbstractAction<{}; {}>".format(precs, effs)
 
 
-class ModelTranslator(object):
+class ModelTranslator:
     def __init__(self, feat_matrix, bin_feat_matrix, feature_complexity, feature_names, feature_types,
                  sample: TransitionSample,
                  optimization, complete_only_wrt_optimal):

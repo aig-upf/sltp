@@ -32,10 +32,8 @@ def compute_factorization(transitions, num_features, max_effects_per_action):
     pass
 
 
-
-
 def learn_factorization(config, data, rng):
-    optimization = config.optimization if hasattr(config, "optimization") else OptimizationPolicy.NUM_FEATURES
+    # optimization = config.optimization if hasattr(config, "optimization") else OptimizationPolicy.NUM_FEATURES
 
     state_ids = data.state_ids
     transitions = data.transitions

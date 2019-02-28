@@ -59,7 +59,8 @@ class AbstractionValidator:
             # Check soundness
             for action in abstract_actions:
                 # We need to cast the actual feature value into a bool to compare it with the abstraction bool value
-                is_applicable = all(bool(model.denotation(selected_feature_objs[idx])) is val for idx, val in action.preconditions)
+                is_applicable = all(bool(model.denotation(selected_feature_objs[idx])) is val
+                                    for idx, val in action.preconditions)
                 if is_applicable and \
                         not any(self.action_captures(models, sid, sprime, feature_idx[action], selected_feature_objs)
                                 for sprime in sample.transitions[sid]):

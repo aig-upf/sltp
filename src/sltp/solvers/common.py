@@ -8,7 +8,7 @@ from threading import Timer
 from ..solvers import library
 
 
-class Solution(object):
+class Solution:
     def __init__(self):
         self.cost = sys.maxsize
         self.assignment = dict()

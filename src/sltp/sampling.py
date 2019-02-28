@@ -27,6 +27,7 @@ class TransitionSample:
         self.expanded = set()
         self.instance = dict()  # A mapping between states and the problem instances they came from
         self.transition_schemas = dict()  # A mapping between transitions and the action schema that induced them
+        self.remapping = dict()
 
     def add_transitions(self, states, transitions, schemas, instance_id):
         # TODO Could check for ID overlappings, but would be expensive

@@ -17,7 +17,7 @@ _btrue = bitarray('1')
 _bfalse = bitarray('0')
 
 
-class ExtensionTrace(object):
+class ExtensionTrace:
     """
     We represent an extension trace by a single, compact bitmap that contains in sequence the extension for
     each state in the sequence of states from which we build the trace.
@@ -51,7 +51,7 @@ class ExtensionTrace(object):
     __repr__ = __str__
 
 
-class UniverseIndex(object):
+class UniverseIndex:
     """ An index of the universe :-) Basically mapping every (string) in our universe of discourse to a numeric ID """
     def __init__(self):
         self._objects = []
@@ -153,7 +153,7 @@ def get_term_key(term):
     return term
 
 
-class ExtensionCache(object):
+class ExtensionCache:
     """ A standard cache of concept denotations, caches all computed denotations by default """
     # TODO DEPRECATE AND REMOVE
     def __init__(self, universe: UniverseIndex):
@@ -214,7 +214,7 @@ class ExtensionCache(object):
             return True
 
 
-class DLDenotationCache(object):
+class DLDenotationCache:
     """ A standard cache of concept denotations, caches all computed denotations by default """
     def __init__(self, universe: UniverseIndex):
         self.m = len(universe)

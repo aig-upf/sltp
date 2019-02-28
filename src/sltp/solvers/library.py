@@ -1,6 +1,6 @@
 
 
-class WPM3(object):
+class WPM3:
     """ See http://web.udl.es/usuaris/q4374304/ """
     TAG = 'wpm3-co'
 
@@ -12,7 +12,7 @@ class WPM3(object):
         return ['WPM3-2015-co', input_filename]
 
 
-class Maxino(object):
+class Maxino:
     TAG = 'maxino'
 
     def __init__(self, rundir=None):
@@ -23,7 +23,7 @@ class Maxino(object):
         return ['maxino', input_filename]
 
 
-class Openwbo(object):
+class Openwbo:
     TAG = 'openwbo'
 
     def __init__(self, rundir=None):
@@ -34,7 +34,7 @@ class Openwbo(object):
         return ['open-wbo_static', input_filename]
 
 
-class OpenwboInc(object):
+class OpenwboInc:
     TAG = 'openwbo-inc'
 
     def __init__(self, rundir=None):
@@ -46,7 +46,7 @@ class OpenwboInc(object):
         return ['open-wbo-inc', '-ca=1', '-c=100000', '-algorithm=6', input_filename]
 
 
-class Glucose(object):
+class Glucose:
     TAG = 'glucose'
 
     def __init__(self):
@@ -57,7 +57,7 @@ class Glucose(object):
         return ['glucose_static', input_filename]
 
 
-class GlucoseSyrup(object):
+class GlucoseSyrup:
     TAG = 'glucose-syrup'
 
     def __init__(self):

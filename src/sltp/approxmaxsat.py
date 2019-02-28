@@ -16,12 +16,10 @@
 #  Blai Bonet, bonet@ldc.usb.ve, bonetblai@gmail.com
 #  Guillem Frances, guillem.frances@unibas.ch
 import logging
-import re
 
 from sltp.errors import CriticalPipelineError
 from sltp.util.command import execute
 
-from .solvers import solve
 from .returncodes import ExitCode
 
 

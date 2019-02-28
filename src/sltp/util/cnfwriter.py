@@ -4,7 +4,7 @@ import time
 from .command import count_file_lines, remove_duplicate_lines, read_file
 
 
-class CNFWriter(object):
+class CNFWriter:
     def __init__(self, filename):
         self.filename = filename
         self.variables = dict()
@@ -99,7 +99,7 @@ class CNFWriter(object):
             print("\n".join("{}: {}".format(i, v) for v, i in variables), file=f)
 
 
-class Variable(object):
+class Variable:
     def __init__(self, name):
         self.name = name
 
@@ -115,7 +115,7 @@ class Variable(object):
     __repr__ = __str__
 
 
-class Literal(object):
+class Literal:
     def __init__(self, variable, polarity=True):
         assert isinstance(variable, Variable)
         self.variable = variable
@@ -139,7 +139,7 @@ class Literal(object):
     __repr__ = __str__
 
 
-class Clause(object):
+class Clause:
     def __init__(self, literals, weight=None):
         # assert all(isinstance(l, Literal) for l in literals)
         # self.literals = tuple(literals)
