@@ -27,8 +27,8 @@ useful down the road if we need to use compact FSTRIPS encodings. To install the
 the following packages (assuming Ubuntu):
 
 
-sudo apt-get install --no-install-recommends \
-     build-essential g++ python3 git scons libboost-all-dev pkg-config
+    sudo apt-get install -y --no-install-recommends \
+         build-essential g++ python3 git scons libboost-all-dev
 
 
 Now checkout the `sltp-lite` branch (which contains a simplified version of the planner for our purposes)
