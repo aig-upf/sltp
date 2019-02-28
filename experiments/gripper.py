@@ -3,7 +3,7 @@
 import sys
 
 from tarski.dl import ConceptCardinalityFeature, NominalConcept, ExistsConcept, PrimitiveRole, UniversalConcept, \
-    NotConcept, AndConcept, PrimitiveConcept
+    NotConcept, AndConcept, PrimitiveConcept, EmpiricalBinaryConcept
 
 from defaults import generate_experiment
 from sltp.util.misc import update_dict
@@ -86,7 +86,7 @@ def feature_namer(feature):
         "card[Exists(at,Not({roomb}))]": "nballs-A",
         "card[Exists(at,{roomb})]": "nballs-B",
         "card[Exists(carry,<universe>)]": "ncarried",
-        "bool[And(at-robby, {roomb})]": "robot-at-B",
+        "bool[And(at-robby,{roomb})]": "robot-at-B",
         "card[Exists(at,Not(at-robby))]": "nballs-in-rooms-with-no-robot",
         "card[free]": "nfree-grippers",
         "bool[Exists(at-robby,{roomb})]": "robby-is-at-B",
@@ -113,7 +113,7 @@ def debug_aaai_features(lang):
     f3 = ExistsConcept(carry, UniversalConcept("object"))
 
     return [
-        ConceptCardinalityFeature(f1),
+        EmpiricalBinaryConcept(ConceptCardinalityFeature(f1)),
         ConceptCardinalityFeature(f2),
         ConceptCardinalityFeature(f3),
         ConceptCardinalityFeature(free),
