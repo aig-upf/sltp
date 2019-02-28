@@ -144,7 +144,6 @@ def log_features(features, feature_filename):
             f.write("{}:\t{}\n".format(i, feat))
             # serialized = serialize_to_string(feat)
             # f.write("{}:\t{}\n".format(feat, serialized))
-            # assert deserialize_from_string(serialized) == feat
 
 
 def compute_feature_extensions(states, features, model_cache: DLModelCache, prune_positive_features,

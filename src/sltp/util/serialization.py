@@ -26,16 +26,6 @@ def deserialize(filename):
     return data
 
 
-def serialize_to_string(obj):
-    import jsonpickle
-    return jsonpickle.dumps(obj)
-
-
-def deserialize_from_string(string):
-    import jsonpickle
-    return jsonpickle.loads(string)
-
-
 def unserialize_features(language, filename, indexes=None):
     features = []
     with open(filename, 'r') as file:

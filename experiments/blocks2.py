@@ -9,7 +9,6 @@ from common import build_ijcai_paper_bw_concepts, add_bw_domain_parameters, ijca
     add_bw_domain_parameters_2, build_on_x_y_feature_set, generate_features_n_ab, get_on_x_y_feature, \
     features_clear_x
 from sltp.util.misc import update_dict
-from sltp.util.serialization import deserialize_from_string
 
 
 def experiment(experiment_name=None):

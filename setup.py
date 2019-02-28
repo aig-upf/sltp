@@ -6,22 +6,33 @@ from os import path
 
 here = path.abspath(path.dirname(__file__))
 
-# Get the long description from the README file
-with open(path.join(here, 'README.md'), encoding='utf-8') as f:
-    long_description = f.read()
+
+def get_description():
+    # Get the long description from the README file
+    with open(path.join(here, 'README.md'), encoding='utf-8') as f:
+        return f.read()
+
+
+def get_version():
+    import sys
+    sys.path.insert(0, path.join(here, "src", "sltp"))
+    import version
+    v = version.get_version()
+    sys.path = sys.path[1:]
+    return v
 
 
 def main():
     setup(
         name='sltp',
-        version='0.1.0',
-        description='sltp: The Sample+Learn+Transform+Plan Framework',
-        long_description=long_description,
-        url='https://github.com/aig-upf/features-generalized-planning',
+        version=get_version(),
+        description='SLTP: The Sample+Learn+Transform+Plan Framework',
+        long_description=get_description(),
+        url='https://github.com/aig-upf/sltp',
         author='Blai Bonet and Guillem Francès',
         author_email='-',
 
-        keywords='planning logic STRIPS',
+        keywords='planning logic STRIPS generalized planning',
         classifiers=[
             'Development Status :: 3 - Alpha',
 
@@ -44,8 +55,7 @@ def main():
             'psutil',
             'bitarray',
             'numpy',
-            'jsonpickle',
-            "tarski @ git+ssh://git@github.com/aig-upf/tarski.git@792d829#egg=tarski-dev-0.1.0"
+            "tarski @ git+ssh://git@github.com/aig-upf/tarski.git@c8c2e1b#egg=tarski-dev-0.1.0"
         ],
 
         extras_require={

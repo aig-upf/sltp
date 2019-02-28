@@ -24,8 +24,8 @@ import sys
 from signal import signal, SIGPIPE, SIG_DFL
 import numpy as np
 
+from .version import get_version
 from .returncodes import ExitCode
-
 from .errors import CriticalPipelineError
 from .util import console
 from .util.bootstrap import setup_global_parser
@@ -37,8 +37,6 @@ from .util.serialization import deserialize, serialize
 from .util import performance
 
 signal(SIGPIPE, SIG_DFL)
-
-VERSION = "0.5"
 
 BASEDIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 BENCHMARK_DIR = os.path.join(BASEDIR, 'domains')
@@ -725,7 +723,7 @@ class Experiment(object):
         return "\t\t" + "\n\t\t".join("{}. {}".format(i, s.description()) for i, s in enumerate(self.steps, 1))
 
     def hello(self, args=None):
-        print(console.header("SLTP v.{}".format(VERSION)))
+        print(console.header("SLTP v.{}".format(get_version())))
         argparser = setup_global_parser(step_description=self.print_step_description())
         self.args = argparser.parse_args(args)
         if not self.args.steps and not self.args.run_all_steps:
