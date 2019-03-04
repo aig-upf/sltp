@@ -556,6 +556,7 @@ class StepRunner:
         self.stepnum = stepnum
         self.step_name = step_name
         self.required_data = required_data
+        self.loglevel = None
 
     def elapsed_time(self):
         info_children = resource.getrusage(resource.RUSAGE_CHILDREN)
@@ -649,27 +650,27 @@ class SATStateFactorizationStep(Step):
         return factorization.learn_factorization
 
 
-class DFAGenerationStep(Step):
-    """ Generate the DFA from observation traces """
-
-    def get_required_attributes(self):
-        return ["experiment_dir"]
-
-    def process_config(self, config):
-        config["cnf_filename"] = compute_maxsat_filename(config)
-        config["maxsat_variables_file"] = compute_maxsat_variables_filename(config)
-        return config
-
-    def get_required_data(self):
-        return ["goal_states", "transitions", "state_ids", "enforced_feature_idxs", "optimal_transitions"]
-
-    def description(self):
-        return "DFA generation from observation traces"
-
-    def get_step_runner(self):
-        from . import factorization
-        return None
-        # return learn_actions.generate_maxsat_problem
+# class DFAGenerationStep(Step):
+#     """ Generate the DFA from observation traces """
+#
+#     def get_required_attributes(self):
+#         return ["experiment_dir"]
+#
+#     def process_config(self, config):
+#         config["cnf_filename"] = compute_maxsat_filename(config)
+#         config["maxsat_variables_file"] = compute_maxsat_variables_filename(config)
+#         return config
+#
+#     def get_required_data(self):
+#         return ["goal_states", "transitions", "state_ids", "enforced_feature_idxs", "optimal_transitions"]
+#
+#     def description(self):
+#         return "DFA generation from observation traces"
+#
+#     def get_step_runner(self):
+#         from . import factorization
+#         return None
+#         # return learn_actions.generate_maxsat_problem
 
 
 class AbstractionTestingComputation(Step):
@@ -787,8 +788,8 @@ PIPELINES = dict(
         SatProblemSolutionStep,
         SatSolutionDecodingStep,
     ],
-    observations=[
-        DFAGenerationStep,
-        SATStateFactorizationStep,
-    ],
+    # observations=[
+    #     DFAGenerationStep,
+    #     SATStateFactorizationStep,
+    # ],
 )
