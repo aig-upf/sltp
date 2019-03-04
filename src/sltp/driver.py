@@ -426,9 +426,6 @@ class SatSolutionDecodingStep(Step):
 class ActionModelStep(Step):
     """ Generate an abstract action model from the solution of the max-sat encoding """
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def get_required_attributes(self):
         return ['serialized_feature_filename']
 
@@ -451,9 +448,6 @@ class ActionModelStep(Step):
 class ActionModelFromFeatureIndexesStep(Step):
     """ Generate an abstract action model from the solution of the max-sat encoding """
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def get_required_attributes(self):
         return []
 
@@ -475,9 +469,6 @@ class ActionModelFromFeatureIndexesStep(Step):
 
 class QNPGenerationStep(Step):
     """ Generate a QNP encoding from the computed abstract action model """
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
 
     def get_required_attributes(self):
         return ["qnp_abstraction_filename"]
@@ -639,9 +630,6 @@ class SubprocessStepRunner(StepRunner):
 
 class SATStateFactorizationStep(Step):
     """ Generate the SAT problem that learns a state factorization """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def get_required_attributes(self):
         return ["experiment_dir"]
 
@@ -663,9 +651,6 @@ class SATStateFactorizationStep(Step):
 
 class DFAGenerationStep(Step):
     """ Generate the DFA from observation traces """
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
 
     def get_required_attributes(self):
         return ["experiment_dir"]
@@ -689,9 +674,6 @@ class DFAGenerationStep(Step):
 
 class AbstractionTestingComputation(Step):
     """  """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
     def get_required_attributes(self):
         return ["experiment_dir", "test_instances", "test_domain"]
 

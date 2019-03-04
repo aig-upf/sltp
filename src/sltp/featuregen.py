@@ -21,12 +21,12 @@ import os
 import stat
 from collections import defaultdict
 
-from . import BASE_DIR
-from .matrices import NP_FEAT_VALUE_TYPE, cast_feature_value_to_numpy_value, log_feature_denotations
-from .models import DLModel
 from tarski.dl import PrimitiveConcept, UniversalConcept, NullaryAtom, NominalConcept, GoalConcept, GoalRole, \
     EmptyConcept, GoalNullaryAtom
 
+from . import BASE_DIR
+from .matrices import NP_FEAT_VALUE_TYPE, cast_feature_value_to_numpy_value, log_feature_denotations
+from .models import DLModel
 from .features import parse_all_instances, compute_models, InstanceInformation
 from .util.command import execute
 from .returncodes import ExitCode

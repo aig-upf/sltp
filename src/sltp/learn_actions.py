@@ -181,6 +181,7 @@ class ModelTranslator:
                  sample: TransitionSample,
                  optimization, complete_only_wrt_optimal):
 
+        self.writer = None
         self.feat_matrix = feat_matrix
         self.bin_feat_matrix = bin_feat_matrix
         self.feature_complexity = feature_complexity
@@ -372,7 +373,7 @@ class ModelTranslator:
                     return ExitCode.MaxsatModelUnsat
 
                 self.writer.clause([self.writer.literal(self.np_var_selected[f], True)
-                                   for f in self.np_d1_distinguishing_features[(s1, s2)]])
+                                    for f in self.np_d1_distinguishing_features[(s1, s2)]])
                 self.n_goal_clauses += 1
 
         logging.info("Generating D2 constraints from {} D2 variables".format(len(self.var_d2)))
@@ -382,7 +383,7 @@ class ModelTranslator:
             qchanges_s0s1 = self.retrieve_possibly_cached_qchanges(s0, s1)
             qchanges_t0t1 = self.retrieve_possibly_cached_qchanges(t0, t1)
             equal_idxs = np.equal(qchanges_s0s1, qchanges_t0t1)
-            np_d2_distinguishing_features = np.where(equal_idxs==False)[0]
+            np_d2_distinguishing_features = np.where(equal_idxs == False)[0]
 
             np_d1_dist = self.np_d1_distinguishing_features[self.compute_d1_idx(s0, t0)]
             # D2(s0,s1,t0,t2) <-- OR_f selected(f), where f ranges over features that d2-distinguish the transition
