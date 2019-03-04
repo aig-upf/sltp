@@ -191,9 +191,6 @@ class ModelTranslator:
         self.sample = sample
         self.state_ids = sample.get_sorted_state_ids()
 
-        # We'll need this later if using relaxed inc semantics:
-        self.all_twos = 2*np.ones(self.feat_matrix.shape[1], dtype=np.int8)
-
         # i.e. all states:
         self.optimal_and_nonoptimal = set(sample.get_sorted_state_ids())
 
@@ -431,13 +428,6 @@ class ModelTranslator:
 
     def standard_qchange(self, s0, s1):
         return np.sign(self.feat_matrix[s1] - self.feat_matrix[s0])
-
-    def relaxed_qchange(self, s0, s1):
-        std = self.standard_qchange(s0, s1)
-        # For each feature, return the standard qchange value if the feature is boolean, or the qchange is -1 (DEC),
-        # but otherwise turn 0's (NO-CHANGE) and 1's (INCREASES) into value 2, denoted to mean "relaxed increase" (INC*)
-        relaxed = np.where(np.logical_or(std == -1, self.feature_types == True), std, self.all_twos)
-        return relaxed
 
     def ftype(self, f):
         return bool if self.feature_types[f] else int
