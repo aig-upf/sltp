@@ -724,7 +724,8 @@ class Experiment:
                 run_and_check_output(step, stepnum, SubprocessStepRunner)
             except Exception as e:
                 logging.error((step, _create_exception_msg(step, e)))
-                break
+                return e
+        return ExitCode.Success
 
 
 def run_and_check_output(step, stepnum, runner_class, raise_on_error=True):
@@ -739,6 +740,12 @@ def _create_exception_msg(step, e):
     return 'Critical error processing step "{}". Error message: {}'.\
         format(step.description(), e)
 
+
+def run_experiment(experiment, argv):
+    retcode = experiment.run(argv)
+    if retcode != ExitCode.Success:
+        sys.exit(-1)
+    
 
 class Bunch:
     def __init__(self, adict):

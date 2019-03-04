@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import sys
 
+from sltp.driver import run_experiment
 from sltp.incremental import IncrementalExperiment
 
 from defaults import generate_experiment
@@ -256,7 +257,7 @@ def experiment(experiment_name=None):
     return generate_experiment(**parameters)
 
 
-
 if __name__ == "__main__":
     exp = experiment(sys.argv[1])
-    exp.run(sys.argv[2:])
+    run_experiment(exp, sys.argv[2:])
+

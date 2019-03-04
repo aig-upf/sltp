@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import sys
 
+from sltp.driver import run_experiment
 from tarski.dl import ConceptCardinalityFeature, NominalConcept, ExistsConcept, PrimitiveRole, UniversalConcept, \
     NotConcept, AndConcept, PrimitiveConcept, EmpiricalBinaryConcept
 
@@ -122,4 +123,4 @@ def debug_aaai_features(lang):
 
 if __name__ == "__main__":
     exp = experiment(sys.argv[1])
-    exp.run(sys.argv[2:])
+    run_experiment(exp, sys.argv[2:])

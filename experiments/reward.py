@@ -3,6 +3,8 @@
 
 import sys
 
+from sltp.driver import run_experiment
+
 from defaults import generate_experiment
 from sltp.util.misc import update_dict
 from tarski.dl import AndConcept, NominalConcept, PrimitiveConcept, NotConcept, ExistsConcept, InverseRole, \
@@ -99,4 +101,5 @@ def feature_namer(feature):
 
 if __name__ == "__main__":
     exp = experiment(sys.argv[1])
-    exp.run(sys.argv[2:])
+    run_experiment(exp, sys.argv[2:])
+
