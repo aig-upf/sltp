@@ -385,18 +385,18 @@ class ModelTranslator:
             np_d2_distinguishing_features = np.where(equal_idxs==False)[0]
 
             np_d1_dist = self.np_d1_distinguishing_features[self.compute_d1_idx(s0, t0)]
-            # D2(s0,s1,t0,t2) iff OR_f selected(f), where f ranges over features that d2-distinguish the transition
+            # D2(s0,s1,t0,t2) <-- OR_f selected(f), where f ranges over features that d2-distinguish the transition
             # but do _not_ d1-distinguish the two states at the origin of each transition.
             d2_lit = self.writer.literal(d2_var, True)
-            forward_clause_literals = [self.writer.literal(d2_var, False)]
+            # forward_clause_literals = [self.writer.literal(d2_var, False)]
             for f in np_d2_distinguishing_features.flat:
                 if f not in np_d1_dist:
-                    forward_clause_literals.append(self.writer.literal(self.np_var_selected[f], True))
+                    # forward_clause_literals.append(self.writer.literal(self.np_var_selected[f], True))
                     self.writer.clause([d2_lit, self.writer.literal(self.np_var_selected[f], False)])
                     self.n_d2_clauses += 1
 
-            self.writer.clause(forward_clause_literals)
-            self.n_d2_clauses += 1
+            # self.writer.clause(forward_clause_literals)
+            # self.n_d2_clauses += 1
 
         # Add the weighted clauses to minimize the number of selected features
         for feature, var in enumerate(self.np_var_selected):
