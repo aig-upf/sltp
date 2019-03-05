@@ -203,9 +203,9 @@ class ModelTranslator:
         self.d1_pairs = self.compute_d1_pairs()
 
         # Compute for each pair s and t of states which features distinguish s and t
-        self.np_d1_distinguishing_features = self.compute_d1_distinguishing_features(bin_feat_matrix)
+        self.d1_distinguishing_features = self.compute_d1_distinguishing_features(bin_feat_matrix)
 
-        self.np_var_selected = None
+        self.var_selected = None
         self.var_d1 = None
         self.var_d2 = None
 
@@ -214,8 +214,7 @@ class ModelTranslator:
         self.n_d2_clauses = 0
         self.n_bridge_clauses = 0
         self.n_goal_clauses = 0
-        self.np_qchanges = dict()
-        self.compute_qchanges = self.standard_qchange
+        self.qchanges = dict()
         self.compute_feature_weight = self.setup_optimization_policy(optimization)
 
     def compute_d1_pairs(self):
@@ -246,14 +245,14 @@ class ModelTranslator:
 
         logging.info("Computing sets of D1-distinguishing features for {} state pairs "
                      "and {} features ({:0.1f}M matrix entries)".format(npairs, nf, nentries / 1000000))
-        np_d1_distinguishing_features = dict()
+        d1_distinguishing_features = dict()
 
         for s1, s2 in self.d1_pairs:
             xor = np.logical_xor(bin_feat_matrix[s1], bin_feat_matrix[s2])
             # We extract the tuple and turn it into a set:
-            np_d1_distinguishing_features[(s1, s2)] = set(np.nonzero(xor)[0].flat)
+            d1_distinguishing_features[(s1, s2)] = set(np.nonzero(xor)[0].flat)
 
-        return np_d1_distinguishing_features
+        return d1_distinguishing_features
 
     def create_bridge_clauses(self, s_t_distinguishing, s, t):
         # If there are no transitions (t, t') in the sample set, then we do not post the bridge constraint.
@@ -271,7 +270,7 @@ class ModelTranslator:
                 continue
 
             # Start with OR_i Selected(f_i)
-            lits = [self.writer.literal(self.np_var_selected[f], True) for f in s_t_distinguishing]
+            lits = [self.writer.literal(self.var_selected[f], True) for f in s_t_distinguishing]
             for t_prime in self.sample.transitions[t]:
                 idx = compute_d2_index(s, s_prime, t, t_prime)
                 # And add a literal -D2(s,s',t,t') for each child t' of t
@@ -281,9 +280,9 @@ class ModelTranslator:
 
     def retrieve_possibly_cached_qchanges(self, s0, s1):
         try:
-            return self.np_qchanges[(s0, s1)]
+            return self.qchanges[(s0, s1)]
         except KeyError:
-            self.np_qchanges[(s0, s1)] = val = self.compute_qchanges(s0, s1)
+            self.qchanges[(s0, s1)] = val = self.compute_qchanges(s0, s1)
             return val
 
     def is_optimal_transition(self, s, sprime):
@@ -307,7 +306,7 @@ class ModelTranslator:
 
     def create_variables(self):
         # self.var_selected = {feat: self.writer.variable("selected({})".format(feat)) for feat in self.features}
-        self.np_var_selected = \
+        self.var_selected = \
             [self.writer.variable("selected(F{})".format(feat)) for feat in range(0, self.feat_matrix.shape[1])]
 
         self.var_d2 = dict()
@@ -342,7 +341,7 @@ class ModelTranslator:
             # where t' ranges over all successors of state t
             if sum(1 for x in (s1, s2) if x in self.sample.goals) != 1:
                 assert s1 in self.optimal_states
-                s_t_distinguishing = self.np_d1_distinguishing_features[(s1, s2)]
+                s_t_distinguishing = self.d1_distinguishing_features[(s1, s2)]
                 self.create_bridge_clauses(s_t_distinguishing, s1, s2)
                 if s2 in self.optimal_states:
                     self.create_bridge_clauses(s_t_distinguishing, s2, s1)
@@ -354,18 +353,18 @@ class ModelTranslator:
 
             if len(in_goal_features):
                 # we are enforcing goal-distinguishing features elsewhere, no need to do anything here
-                if not in_goal_features.intersection(self.np_d1_distinguishing_features[(s1, s2)]):
+                if not in_goal_features.intersection(self.d1_distinguishing_features[(s1, s2)]):
                     raise RuntimeError("No feature in pool can distinguish states {}, "
                                        "but forced features should be enough to distinguish them".format((s1, s2)))
 
             else:
-                if len(self.np_d1_distinguishing_features[(s1, s2)]) == 0:
+                if len(self.d1_distinguishing_features[(s1, s2)]) == 0:
                     logging.warning("No feature in pool can distinguish states {}, but one of them is a goal and "
                                     "the other is not. MAXSAT encoding will be UNSAT".format((s1, s2)))
                     return ExitCode.MaxsatModelUnsat
 
-                self.writer.clause([self.writer.literal(self.np_var_selected[f], True)
-                                    for f in self.np_d1_distinguishing_features[(s1, s2)]])
+                self.writer.clause([self.writer.literal(self.var_selected[f], True)
+                                    for f in self.d1_distinguishing_features[(s1, s2)]])
                 self.n_goal_clauses += 1
 
         logging.info("Generating D2 constraints from {} D2 variables".format(len(self.var_d2)))
@@ -377,51 +376,51 @@ class ModelTranslator:
             equal_idxs = np.equal(qchanges_s0s1, qchanges_t0t1)
             np_d2_distinguishing_features = np.where(equal_idxs == False)[0]
 
-            np_d1_dist = self.np_d1_distinguishing_features[self.compute_d1_idx(s0, t0)]
+            np_d1_dist = self.d1_distinguishing_features[self.compute_d1_idx(s0, t0)]
             # D2(s0,s1,t0,t2) <-- OR_f selected(f), where f ranges over features that d2-distinguish the transition
             # but do _not_ d1-distinguish the two states at the origin of each transition.
             d2_lit = self.writer.literal(d2_var, True)
             # forward_clause_literals = [self.writer.literal(d2_var, False)]
             for f in np_d2_distinguishing_features.flat:
                 if f not in np_d1_dist:
-                    # forward_clause_literals.append(self.writer.literal(self.np_var_selected[f], True))
-                    self.writer.clause([d2_lit, self.writer.literal(self.np_var_selected[f], False)])
+                    # forward_clause_literals.append(self.writer.literal(self.var_selected[f], True))
+                    self.writer.clause([d2_lit, self.writer.literal(self.var_selected[f], False)])
                     self.n_d2_clauses += 1
 
             # self.writer.clause(forward_clause_literals)
             # self.n_d2_clauses += 1
 
         # Add the weighted clauses to minimize the number of selected features
-        for feature, var in enumerate(self.np_var_selected):
+        for feature, var in enumerate(self.var_selected):
             d = self.compute_feature_weight(feature)
             self.writer.clause([self.writer.literal(var, False)], weight=d)
             self.n_selected_clauses += 1
 
         # Make sure those features we want to enforce in the solution, if any, are posted as necessarily selected
         # for enforced in enforced_feature_idxs:
-        #     self.writer.clause([self.writer.literal(self.np_var_selected[enforced], True)])
+        #     self.writer.clause([self.writer.literal(self.var_selected[enforced], True)])
         assert not enforced_feature_idxs
 
-        logging.info("Enforcing features: {}".format(", ".join(str(self.np_var_selected[x]) for x in in_goal_features)))
+        logging.info("Enforcing features: {}".format(", ".join(str(self.var_selected[x]) for x in in_goal_features)))
         for enforced in in_goal_features:
-            self.writer.clause([self.writer.literal(self.np_var_selected[enforced], True)])
+            self.writer.clause([self.writer.literal(self.var_selected[enforced], True)])
 
         # from pympler.asizeof import asizeof
         # print(f"asizeof(self.writer): {asizeof(self.writer)/(1024*1024)}MB")
         # print(f"asizeof(self): {asizeof(self)/(1024*1024)}MB")
-        # print(f"asizeof(self.np_d1_distinguishing_features): {asizeof(self.np_d1_distinguishing_features)/(1024*1024)}MB")
+        # print(f"asizeof(self.d1_distinguishing_features): {asizeof(self.d1_distinguishing_features)/(1024*1024)}MB")
         # print(f"np_d2_distinguishing_features.nbytes: {np_d2_distinguishing_features.nbytes/(1024*1024)}MB")
         print_memory_usage()
 
         self.report_stats()
 
         # self.debug_tests()
-        self.np_d1_distinguishing_features = None  # We won't need this anymore
+        self.d1_distinguishing_features = None  # We won't need this anymore
         self.writer.save()
 
         return ExitCode.Success
 
-    def standard_qchange(self, s0, s1):
+    def compute_qchanges(self, s0, s1):
         return np.sign(self.feat_matrix[s1] - self.feat_matrix[s0])
 
     def ftype(self, f):
@@ -471,7 +470,8 @@ class ModelTranslator:
             qchanges = self.retrieve_possibly_cached_qchanges(s, sprime)
             selected_qchanges = qchanges[selected_features]
             abstract_effects = [ActionEffect(i, self.feature_names[f], self.generate_eff_change(f, c))
-                                for i, (f, c) in enumerate(zip(selected_features, selected_qchanges)) if c != 0]  # No need to record "NIL" changes
+                                # No need to record "NIL" changes:
+                                for i, (f, c) in enumerate(zip(selected_features, selected_qchanges)) if c != 0]
 
             precondition_bitmap = frozenset(enumerate(abstract_s))
             abstract_actions.add(AbstractAction(precondition_bitmap, abstract_effects))
@@ -487,14 +487,14 @@ class ModelTranslator:
     def decode_solution(self, assignment):
         varmapping = self.writer.mapping
         true_variables = set(varmapping[idx] for idx, value in assignment.items() if value is True)
-        np_feature_mapping = {variable: feature for feature, variable in enumerate(self.np_var_selected)}
-        assert len(np_feature_mapping) == len(self.np_var_selected)
-        selected_features = sorted(np_feature_mapping[v] for v in true_variables if v in np_feature_mapping)
+        feature_mapping = {variable: feature for feature, variable in enumerate(self.var_selected)}
+        assert len(feature_mapping) == len(self.var_selected)
+        selected_features = sorted(feature_mapping[v] for v in true_variables if v in feature_mapping)
         return selected_features
 
     def report_stats(self):
 
-        d1_distinguishing = self.np_d1_distinguishing_features.values()
+        d1_distinguishing = self.d1_distinguishing_features.values()
         avg_num_d1_dist_features = sum(len(feats) for feats in d1_distinguishing) / len(d1_distinguishing)
         n_undistinguishable_state_pairs = sum(1 for x in d1_distinguishing if len(x) == 0)
         s = header("Max-sat encoding stats", 1)
