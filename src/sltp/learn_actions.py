@@ -239,20 +239,13 @@ class ModelTranslator:
         """ """
         nf = bin_feat_matrix.shape[1]
         npairs = len(self.d1_pairs)
-
-        # How many feature denotations we'll have to compute
-        nentries = nf * npairs
+        nentries = nf * npairs  # How many feature denotations we'll have to compute
 
         logging.info("Computing sets of D1-distinguishing features for {} state pairs "
                      "and {} features ({:0.1f}M matrix entries)".format(npairs, nf, nentries / 1000000))
-        d1_distinguishing_features = dict()
-
-        for s1, s2 in self.d1_pairs:
-            xor = np.logical_xor(bin_feat_matrix[s1], bin_feat_matrix[s2])
-            # We extract the tuple and turn it into a set:
-            d1_distinguishing_features[(s1, s2)] = set(np.nonzero(xor)[0].flat)
-
-        return d1_distinguishing_features
+        # We extract the non-zero indexes of the XOR of both binary matrices and store them in a set:
+        return {(s1, s2): set(np.nonzero(np.logical_xor(bin_feat_matrix[s1], bin_feat_matrix[s2]))[0].flat)
+                for s1, s2 in self.d1_pairs}
 
     def create_bridge_clauses(self, s_t_distinguishing, s, t):
         # If there are no transitions (t, t') in the sample set, then we do not post the bridge constraint.
