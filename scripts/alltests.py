@@ -36,7 +36,7 @@ def test(script, configuration, expected_output):
     cwd = os.path.join(BASEDIR, "experiments")
     with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as f:
         command = [os.path.join(cwd, script), configuration, "--all"]
-        print('Calling "{}" on directory "{}". Output redirected to "{}"'.format(' '.join(command), cwd, f.name))
+        print('Calling "{}". Output redirected to "{}"'.format(' '.join(command), cwd, f.name))
         retcode = subprocess.call(command, stdout=f, stderr=f)
         if retcode:
             print("Experiment returned error code {}".format(retcode))

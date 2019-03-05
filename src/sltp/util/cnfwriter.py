@@ -65,7 +65,7 @@ class CNFWriter:
     def _save(self, filename, numvars, numclauses):
         num_written_clauses = count_file_lines(self.buffer_filename)
         assert numclauses == num_written_clauses
-        remove_duplicate_lines(self.buffer_filename)
+        # remove_duplicate_lines(self.buffer_filename)
         num_unique_clauses = count_file_lines(self.buffer_filename)
         # num_unique_clauses_in_mem = len(self.clauses)
         # assert num_unique_clauses == num_unique_clauses_in_mem  # Keeping the set in memory is expensive!
