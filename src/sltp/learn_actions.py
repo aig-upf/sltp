@@ -206,7 +206,6 @@ class ModelTranslator:
         self.d1_distinguishing_features = self.compute_d1_distinguishing_features(bin_feat_matrix)
 
         self.var_selected = None
-        self.var_d1 = None
         self.var_d2 = None
 
         self.n_selected_clauses = 0
@@ -298,9 +297,8 @@ class ModelTranslator:
                 yield (s, s_prime, t, t_prime)
 
     def create_variables(self):
-        # self.var_selected = {feat: self.writer.variable("selected({})".format(feat)) for feat in self.features}
         self.var_selected = \
-            [self.writer.variable("selected(F{})".format(feat)) for feat in range(0, self.feat_matrix.shape[1])]
+            [self.writer.variable("F{}".format(feat)) for feat in range(0, self.feat_matrix.shape[1])]
 
         self.var_d2 = dict()
 
@@ -313,6 +311,7 @@ class ModelTranslator:
         logging.info("A total of {} MAXSAT variables were created".format(len(self.writer.variables)))
 
     def compute_d1_idx(self, s, t):
+        assert s != t
         assert s in self.optimal_states
 
         if t in self.optimal_states:  # Break symmetries when both states are optimal
@@ -326,7 +325,7 @@ class ModelTranslator:
         self.writer = CNFWriter(cnf_filename)
         self.create_variables()
 
-        logging.info("Generating bridge constraints from {} D1 pairs".format(len(self.d1_pairs)))
+        logging.info("Generating bridge constraints")
         for s1, s2 in self.iterate_over_bridge_pairs():
             # Only if D1(s, t) _might_ be false, we create the bridge clauses between values of D1 and D2:
             # For each s' in succ(s), we'll post:
