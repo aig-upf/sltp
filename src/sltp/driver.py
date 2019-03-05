@@ -36,7 +36,6 @@ from .util.naming import compute_instance_tag, compute_experiment_tag, compute_s
 from .util.serialization import deserialize, serialize
 from .util import performance
 
-signal(SIGPIPE, SIG_DFL)
 
 BASEDIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 BENCHMARK_DIR = os.path.join(BASEDIR, 'domains')
@@ -441,8 +440,8 @@ class ActionModelStep(Step):
         return "Computation of the action model"
 
     def get_step_runner(self):
-        from . import learn_actions
-        return learn_actions.compute_action_model
+        from . import actionmodel
+        return actionmodel.compute_action_model
 
 
 class ActionModelFromFeatureIndexesStep(Step):
@@ -463,8 +462,8 @@ class ActionModelFromFeatureIndexesStep(Step):
         return "Computation of the action model from the feature indexes"
 
     def get_step_runner(self):
-        from . import learn_actions
-        return learn_actions.compute_action_model_from_feature_idxs
+        from . import actionmodel
+        return actionmodel.compute_action_model_from_feature_idxs
 
 
 class QNPGenerationStep(Step):
@@ -647,7 +646,8 @@ class SATStateFactorizationStep(Step):
 
     def get_step_runner(self):
         from . import factorization
-        return factorization.learn_factorization
+        return None
+        # return factorization.learn_factorization
 
 
 # class DFAGenerationStep(Step):

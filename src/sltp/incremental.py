@@ -1,7 +1,6 @@
 import itertools
 import logging
 import os
-import shutil
 
 import numpy as np
 from sltp.language import parse_pddl
@@ -17,9 +16,9 @@ from .features import create_model_cache_from_samples, parse_all_instances, comp
 from .returncodes import ExitCode
 from .util.misc import update_dict
 from .driver import Experiment, generate_pipeline_from_list, PlannerStep, check_int_parameter, \
-    InvalidConfigParameter, TransitionSamplingStep, ConceptGenerationStep, SubprocessStepRunner, \
-    run_and_check_output, save, FeatureMatrixGenerationStep, MaxsatProblemGenerationStep, MaxsatProblemSolutionStep, \
-    ActionModelStep, load, Bunch, CPPFeatureGenerationStep, InhouseMaxsatSolverStep, ActionModelFromFeatureIndexesStep
+    InvalidConfigParameter, TransitionSamplingStep, SubprocessStepRunner, \
+    run_and_check_output, save, MaxsatProblemGenerationStep, MaxsatProblemSolutionStep, \
+    ActionModelStep, load, Bunch, CPPFeatureGenerationStep
 
 
 def initial_sample_selection(sample, config, rng):
