@@ -15,7 +15,7 @@ def experiment(experiment_name=None):
     exps["prob01"] = dict(
         instances="sample01.pddl",
         # test_domain=domain, test_instances=["pfile01-001.pddl"],
-        num_states=200000, max_concept_size=8, max_concept_grammar_iterations=3,
+        num_states=200000, max_concept_size=8,
         num_sampled_states=300,
         # distance_feature_max_complexity=8,
         concept_generator=None, parameter_generator=None,

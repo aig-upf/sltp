@@ -10,7 +10,7 @@
      l0 l1 l2 - level
 )
  (:init 
-  (= (total-cost) 0)
+
   (ontable shaker1)
   (ontable shot1)
   (ontable shot2)
@@ -42,4 +42,4 @@
      (contains shot1 cocktail2)
      (contains shot2 cocktail1)
 ))
-(:metric minimize (total-cost)))
+)
