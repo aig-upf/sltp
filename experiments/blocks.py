@@ -249,6 +249,18 @@ def experiment(experiment_name=None):
         concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
+    exps["clear_two_atoms"] = dict(
+        instances="instance_5_clear_x_y.pddl",
+        test_domain=domain, test_instances=["instance_5_clear_x_2.pddl"],
+        num_states=2000, max_width=[-1],
+        num_sampled_states=300,
+        complete_only_wrt_optimal=True,
+        max_concept_size=8,
+        concept_generator=None,
+        parameter_generator=None,
+        feature_namer=ijcai_paper_bw_feature_namer,
+    )
+
     if experiment_name not in exps:
         raise RuntimeError('No experiment named "{}" in current experiment script'.format(experiment_name))
     parameters = exps[experiment_name]

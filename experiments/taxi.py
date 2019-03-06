@@ -14,18 +14,16 @@ def experiment(experiment_name=None):
 
     exps = dict()
 
-    # dict(instance=instance, num_states=6, max_concept_size=6, max_concept_grammar_iterations=2,
-    #      distance_feature_max_complexity=5, relax_numeric_increase=True, )
-
     exps["simple"] = dict(
         instances="instance_3.pddl",
         test_domain=domain, test_instances=["instance_5.pddl"],
         num_states=300,
-        max_concept_size=10, max_concept_grammar_iterations=3,
+        max_concept_size=10,
         distance_feature_max_complexity=5,
         parameter_generator=None,
         feature_namer=feature_namer,
         concept_generator=build_expected_concepts,
+        complete_only_wrt_optimal=True
     )
 
     if experiment_name not in exps:
