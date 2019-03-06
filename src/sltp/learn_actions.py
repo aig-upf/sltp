@@ -48,12 +48,12 @@ def compute_d2_index(s0, s1, t0, t1):
 
 
 def generate_maxsat_problem(config, data, rng):
-    translator = create_maxsat_translator(config, data.sample)
+    translator, sample = create_maxsat_translator(config, data.sample)
     result = translator.run(config.cnf_filename, data.enforced_feature_idxs, data.in_goal_features)
     # translator.writer.print_variables(config.maxsat_variables_file)
 
     # TODO Serialize less stuff. Probably we don't need to serialize the full translator
-    data = dict(cnf_translator=translator) if result == ExitCode.Success else dict()
+    data = dict(cnf_translator=translator, sample=sample) if result == ExitCode.Success else dict()
     return result, data
 
 
@@ -63,7 +63,24 @@ class CompletenessInfo:
         self.all_transitions = all_transitions
         self.optimal_states = optimal_states
         self.optimal_transitions = optimal_transitions
-        
+
+
+def compute_completeness_info(sample, complete_only_wrt_optimal):
+    """ Compute optimal states and transitions based on the experiment configuration """
+    opt = complete_only_wrt_optimal
+    all_states = set(sample.get_sorted_state_ids())
+    all_transitions = [(s, s_prime) for s in sample.transitions for s_prime in sample.transitions[s]]
+
+    if opt:
+        optimal_states = sample.compute_optimal_states(include_goals=False)
+        optimal_transitions = sample.optimal_transitions
+    else:
+        optimal_states = sample.compute_optimal_states(include_goals=False) if opt else all_states.copy()
+        optimal_transitions = set((x, y) for x, y in all_transitions)  # Consider all transitions as optimal
+
+    cinfo = CompletenessInfo(all_states, all_transitions, optimal_states, optimal_transitions)
+    return cinfo
+
 
 def create_maxsat_translator(config, sample):
     optimization = config.optimization if hasattr(config, "optimization") else OptimizationPolicy.NUM_FEATURES
@@ -77,25 +94,21 @@ def create_maxsat_translator(config, sample):
     if not sample.goals:
         raise CriticalPipelineError("No goal state identified in the sample, SAT theory will be trivially satisfiable")
 
-    # Compute optimal states and transitions based on the experiment configuration
-    opt = config.complete_only_wrt_optimal
-    all_states = set(sample.get_sorted_state_ids())
-    all_transitions = [(s, s_prime) for s in sample.transitions for s_prime in sample.transitions[s]]
+    cinfo = compute_completeness_info(sample, config.complete_only_wrt_optimal)
 
-    if opt:
-        optimal_states = sample.compute_optimal_states(include_goals=False)
-        optimal_transitions = sample.optimal_transitions
-    else:
-        optimal_states = sample.compute_optimal_states(include_goals=False) if opt else all_states.copy()
-        optimal_transitions = set((x, y) for x, y in all_transitions)  # Consider all transitions as optimal
-
-    cinfo = CompletenessInfo(all_states, all_transitions, optimal_states, optimal_transitions)
-
+    # Remove states that are redundant
     sample = preprocess_sample(sample, feat_matrix, bin_feat_matrix, cinfo)
+
+    # Reproject the denotation matrices to the new state indices
+    assert sample.remapping
+    projection = list(sorted(sample.remapping.keys()))
+    feat_matrix = feat_matrix[projection]
+    bin_feat_matrix = bin_feat_matrix[projection]
+    cinfo = compute_completeness_info(sample, config.complete_only_wrt_optimal)
 
     translator = ModelTranslator(feat_matrix, bin_feat_matrix, feature_complexity, feature_names, feature_types,
                                  sample, optimization, cinfo)
-    return translator
+    return translator, sample
 
 
 def run_solver(config, data, rng):
@@ -279,7 +292,7 @@ class ModelTranslator:
         try:
             return self.qchanges[(s0, s1)]
         except KeyError:
-            self.qchanges[(s0, s1)] = val = self.compute_qchanges(s0, s1)
+            self.qchanges[(s0, s1)] = val = compute_qualitative_changes(self.feat_matrix, s0, s1)
             return val
 
     def is_optimal_transition(self, s, sprime):
@@ -419,9 +432,6 @@ class ModelTranslator:
         self.writer.save()
 
         return ExitCode.Success
-
-    def compute_qchanges(self, s0, s1):
-        return np.sign(self.feat_matrix[s1] - self.feat_matrix[s0])
 
     def ftype(self, f):
         return bool if self.feature_types[f] else int
@@ -723,13 +733,42 @@ def optimize_abstract_action_model(states, actions):
     return states, merged
 
 
+def compute_qualitative_changes(feature_matrix, s0, s1):
+    return np.sign(feature_matrix[s1] - feature_matrix[s0])
+
+
 def preprocess_sample(sample, feat_matrix, bin_feat_matrix, cinfo):
     logging.info("Preprocessing sample {} to prune redundant states".format(sample))
 
-    # set(np.nonzero(np.logical_xor(bin_feat_matrix[s1], bin_feat_matrix[s2]))[0].flat
-    # for s, t in sample.states:
-    #     x = 1
+    nonoptimal_states = cinfo.all_states - cinfo.optimal_states
+    prunable_states = dict()
+    for s, t in itertools.combinations(nonoptimal_states, 2):
+        if s in prunable_states or t in prunable_states:
+            continue
+        distinguishing = np.nonzero(np.logical_xor(bin_feat_matrix[s], bin_feat_matrix[t]))[0]
+        if distinguishing.size == 0:  # s and t are not distinguishable
+            if has_analog_transition(sample, feat_matrix, s, t) and has_analog_transition(sample, feat_matrix, t, s):
+                prunable_states[t] = s
 
-    # logging.info("Processed sample: {}".format(processed))
-    # return processed
-    return sample
+    # logging.info("Set of prunable states ({}): {}".format(len(prunable_states), prunable_states))
+    logging.info("Number of prunable states: {}".format(len(prunable_states)))
+    selected = cinfo.all_states - set(prunable_states.keys())
+    resampled = sample.resample(selected)
+    logging.info("Processed sample: {}".format(resampled))
+    return resampled
+    # return sample
+
+
+def has_analog_transition(sample, feat_matrix, s, t):
+    """ Check whether all transitions starting in s have some transition starting in t with same qualitative nature
+        on the set of all features in the given feature matrix
+    """
+    for sp in sample.transitions[s]:
+        for tp in sample.transitions[t]:
+            qchanges_s0s1 = compute_qualitative_changes(feat_matrix, s, sp)
+            qchanges_t0t1 = compute_qualitative_changes(feat_matrix, t, tp)
+            equal_idxs = np.equal(qchanges_s0s1, qchanges_t0t1)
+            d2_distinguishing_features = np.where(equal_idxs == False)[0]
+            if d2_distinguishing_features.size == 0:
+                return True
+    return False

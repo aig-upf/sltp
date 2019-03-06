@@ -17,7 +17,7 @@ def compute_action_model_from_feature_idxs(config, data, rng):
     selected_features = sorted(sat_feature_mapping[i] for i in data.selected_feature_idxs)
     # We create the translator just to compute the action model. TODO It'd be better to fully decouple both steps,
     # so that we don't need to perform unnecessary initialization operations here.
-    translator = create_maxsat_translator(config, data.sample)
+    translator, sample = create_maxsat_translator(config, data.sample)
     states, actions, features = translator.compute_action_model(selected_features, config)
     # data.cnf_translator.compute_qnp(states, actions, features, config, data)
-    return ExitCode.Success, dict(abstract_actions=actions, selected_features=features)
+    return ExitCode.Success, dict(abstract_actions=actions, selected_features=features, sample=sample)
