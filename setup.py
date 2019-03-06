@@ -64,7 +64,7 @@ def main():
             "tarski @ git+ssh://git@github.com/aig-upf/tarski.git@c8c2e1b#egg=tarski-dev-0.1.0"
         ],
 
-        ext_modules=[CMakeExtension('featuregen', os.path.join(here, "features"))],
+        ext_modules=[CMakeExtension('featuregen', os.path.join(here, "src", "features"))],
         cmdclass={'build_ext': BuildExt, },
 
         extras_require={
