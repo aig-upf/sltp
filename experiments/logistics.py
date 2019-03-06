@@ -13,10 +13,13 @@ def experiment(experiment_name=None):
     exps = dict()
 
     exps["sample1"] = dict(
-        instances="sample1.pddl",
-        test_domain=domain, test_instances=["prob01.pddl"],
-        num_states=100, max_concept_size=10, max_concept_grammar_iterations=3,
-        concept_generator=None, parameter_generator=None,
+        instances="sample2.pddl",
+        test_domain=domain, test_instances=["prob01.pddl"], num_tested_states=50000,
+        num_states=5000, max_width=[-1],
+        num_sampled_states=300,
+        max_concept_size=10,
+        concept_generator=None,
+        parameter_generator=None,
         feature_namer=feature_namer,)
 
     exps["sample1_tg"] = update_dict(
