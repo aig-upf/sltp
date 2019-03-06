@@ -48,7 +48,7 @@ def compute_d2_index(s0, s1, t0, t1):
 
 
 def generate_maxsat_problem(config, data, rng):
-    translator = create_maxsat_translator(config, data)
+    translator = create_maxsat_translator(config, data.sample)
     result = translator.run(config.cnf_filename, data.enforced_feature_idxs, data.in_goal_features)
     # translator.writer.print_variables(config.maxsat_variables_file)
 
@@ -57,9 +57,16 @@ def generate_maxsat_problem(config, data, rng):
     return result, data
 
 
-def create_maxsat_translator(config, data):
+class CompletenessInfo:
+    def __init__(self, all_states, all_transitions, optimal_states, optimal_transitions):
+        self.all_states = all_states
+        self.all_transitions = all_transitions
+        self.optimal_states = optimal_states
+        self.optimal_transitions = optimal_transitions
+        
+
+def create_maxsat_translator(config, sample):
     optimization = config.optimization if hasattr(config, "optimization") else OptimizationPolicy.NUM_FEATURES
-    sample = data.sample
 
     feature_complexity = np.load(config.feature_complexity_filename + ".npy")
     feature_names = np.load(config.feature_names_filename + ".npy")
@@ -67,14 +74,27 @@ def create_maxsat_translator(config, data):
     bin_feat_matrix = np.load(config.bin_feature_matrix_filename + ".npy")
     feature_types = feat_matrix.max(0) <= 1  # i.e. feature_types[i] is True iff i is an (empirically) bool feature
 
-    logging.info("Generating MAXSAT problem from {} states, {} transitions and {} features"
-                 .format(feat_matrix.shape[0], sample.num_transitions(), feat_matrix.shape[1]))
-
     if not sample.goals:
         raise CriticalPipelineError("No goal state identified in the sample, SAT theory will be trivially satisfiable")
 
+    # Compute optimal states and transitions based on the experiment configuration
+    opt = config.complete_only_wrt_optimal
+    all_states = set(sample.get_sorted_state_ids())
+    all_transitions = [(s, s_prime) for s in sample.transitions for s_prime in sample.transitions[s]]
+
+    if opt:
+        optimal_states = sample.compute_optimal_states(include_goals=False)
+        optimal_transitions = sample.optimal_transitions
+    else:
+        optimal_states = sample.compute_optimal_states(include_goals=False) if opt else all_states.copy()
+        optimal_transitions = set((x, y) for x, y in all_transitions)  # Consider all transitions as optimal
+
+    cinfo = CompletenessInfo(all_states, all_transitions, optimal_states, optimal_transitions)
+
+    sample = preprocess_sample(sample, feat_matrix, bin_feat_matrix, cinfo)
+
     translator = ModelTranslator(feat_matrix, bin_feat_matrix, feature_complexity, feature_names, feature_types,
-                                 sample, optimization, config.complete_only_wrt_optimal)
+                                 sample, optimization, cinfo)
     return translator
 
 
@@ -173,8 +193,7 @@ def prettyprint_abstract_action(action, all_features, namer):
 
 class ModelTranslator:
     def __init__(self, feat_matrix, bin_feat_matrix, feature_complexity, feature_names, feature_types,
-                 sample: TransitionSample,
-                 optimization, complete_only_wrt_optimal):
+                 sample, optimization, cinfo):
 
         self.writer = None
         self.feat_matrix = feat_matrix
@@ -182,24 +201,10 @@ class ModelTranslator:
         self.feature_complexity = feature_complexity
         self.feature_names = feature_names
         self.feature_types = feature_types
-        self.complete_only_wrt_optimal = complete_only_wrt_optimal
         self.sample = sample
-        self.state_ids = sample.get_sorted_state_ids()
+        self.cinfo = cinfo
 
-        # i.e. all states:
-        self.optimal_and_nonoptimal = set(sample.get_sorted_state_ids())
-
-        self.optimal_transitions = sample.optimal_transitions
-
-        if complete_only_wrt_optimal:
-            self.optimal_states = sample.compute_optimal_states(include_goals=False)
-
-        else:
-            # Consider all transitions as optimal
-            self.optimal_states = self.optimal_and_nonoptimal.copy()
-            self.optimal_transitions = set((x, y) for x, y in self.iterate_over_all_transitions())
-
-        self.non_goal_states = self.optimal_and_nonoptimal.difference(self.sample.goals)
+        self.non_goal_states = cinfo.all_states.difference(self.sample.goals)
         self.d1_pairs = self.compute_d1_pairs()
 
         # Compute for each pair s and t of states which features distinguish s and t
@@ -218,8 +223,8 @@ class ModelTranslator:
 
     def compute_d1_pairs(self):
         pairs = set()
-        for (x, y) in itertools.product(self.optimal_states, self.optimal_and_nonoptimal):
-            if y in self.optimal_states and y <= x:
+        for (x, y) in itertools.product(self.cinfo.optimal_states, self.cinfo.all_states):
+            if y in self.cinfo.optimal_states and y <= x:
                 # Break symmetries: if both x and y optimal, only need to take into account 1 of the 2 permutations
                 continue
             pairs.add((x, y))
@@ -228,8 +233,8 @@ class ModelTranslator:
         return list(x for x in pairs)
 
     def iterate_over_bridge_pairs(self):
-        for (x, y) in itertools.product(self.optimal_states, self.optimal_and_nonoptimal):
-            if y in self.optimal_states and y <= x:
+        for (x, y) in itertools.product(self.cinfo.optimal_states, self.cinfo.all_states):
+            if y in self.cinfo.optimal_states and y <= x:
                 # Break symmetries: if both x and y optimal, only need to take into account 1 of the 2 permutations
                 continue
             yield (x, y)
@@ -255,7 +260,7 @@ class ModelTranslator:
             return
 
         assert s != t
-        assert s in self.optimal_states
+        assert s in self.cinfo.optimal_states
 
         for s_prime in self.sample.transitions[s]:
             if not self.is_optimal_transition(s, s_prime):
@@ -278,11 +283,11 @@ class ModelTranslator:
             return val
 
     def is_optimal_transition(self, s, sprime):
-        return (s, sprime) in self.optimal_transitions
+        return (s, sprime) in self.cinfo.optimal_transitions
 
     def iterate_over_optimal_transitions(self):
         """ """
-        return self.optimal_transitions
+        return self.cinfo.optimal_transitions
 
     def iterate_over_all_transitions(self):
         for s in self.sample.transitions:
@@ -312,13 +317,16 @@ class ModelTranslator:
 
     def compute_d1_idx(self, s, t):
         assert s != t
-        assert s in self.optimal_states
+        assert s in self.cinfo.optimal_states
 
-        if t in self.optimal_states:  # Break symmetries when both states are optimal
+        if t in self.cinfo.optimal_states:  # Break symmetries when both states are optimal
             return min(s, t), max(s, t)
         return s, t
 
     def run(self, cnf_filename, enforced_feature_idxs, in_goal_features):
+        logging.info("Generating MAXSAT problem from {} states, {} transitions and {} features"
+                     .format(self.feat_matrix.shape[0], self.sample.num_transitions(), self.feat_matrix.shape[1]))
+
         # allf = list(range(0, len(self.feature_names)))  # i.e. select all features
         # self.find_inconsistency(allf)
         # in_goal_features = set()
@@ -332,10 +340,10 @@ class ModelTranslator:
             #    -D1(s,t) --> OR_t'  D2(s,s',t,t')
             # where t' ranges over all successors of state t
             if sum(1 for x in (s1, s2) if x in self.sample.goals) != 1:
-                assert s1 in self.optimal_states
+                assert s1 in self.cinfo.optimal_states
                 s_t_distinguishing = self.d1_distinguishing_features[(s1, s2)]
                 self.create_bridge_clauses(s_t_distinguishing, s1, s2)
-                if s2 in self.optimal_states:
+                if s2 in self.cinfo.optimal_states:
                     self.create_bridge_clauses(s_t_distinguishing, s2, s1)
 
         # Force D1(s1, s2) to be true if exactly one of the two states is a goal state
@@ -431,7 +439,7 @@ class ModelTranslator:
     def compute_state_abstractions(self, features):
         abstract_states = set()
         state_abstraction = dict()
-        for state in self.state_ids:
+        for state in self.cinfo.all_states:
             abstract = self.compute_abstract_state(features, state)
             abstract_states.add(abstract)
             state_abstraction[state] = abstract
@@ -640,7 +648,7 @@ class ModelTranslator:
         abstract_states, abstraction = self.compute_state_abstractions(features)
 
         abstract2concrete = defaultdict(set)
-        for s in self.optimal_and_nonoptimal:
+        for s in self.cinfo.all_states:
             abstract2concrete[abstraction[s]].add(s)
 
         for s, sprime in self.iterate_over_optimal_transitions():
@@ -713,3 +721,15 @@ def optimize_abstract_action_model(states, actions):
             merged.append(AbstractAction(prec, effs))
 
     return states, merged
+
+
+def preprocess_sample(sample, feat_matrix, bin_feat_matrix, cinfo):
+    logging.info("Preprocessing sample {} to prune redundant states".format(sample))
+
+    # set(np.nonzero(np.logical_xor(bin_feat_matrix[s1], bin_feat_matrix[s2]))[0].flat
+    # for s, t in sample.states:
+    #     x = 1
+
+    # logging.info("Processed sample: {}".format(processed))
+    # return processed
+    return sample
