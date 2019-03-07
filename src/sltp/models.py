@@ -1,12 +1,11 @@
 """
 Concept and feature models and related classes
 """
-import copy
 from bitarray import bitarray
 
 from sltp.extensions import uncompress_extension, compress_extension
 from sltp.util.misc import try_number
-from tarski import Predicate, Function
+from tarski import PredicateSymbol, FunctionSymbol
 from tarski.dl import UniversalConcept, EmptyConcept, NullaryAtom, PrimitiveConcept, PrimitiveRole, GoalRole, \
     GoalConcept, GoalNullaryAtom, NominalConcept, EmpiricalBinaryConcept
 from tarski.syntax import Sort
@@ -98,7 +97,7 @@ class DLModelFactory:
         statics = {_TOP: instance_info.universe.as_extension(), _BOT: set()}
         for p in vocabulary.values():
             arity = 1 if isinstance(p, Sort) else p.uniform_arity()
-            name = p.name if isinstance(p, Sort) else p.symbol
+            name = p.name
             dl_element = _STANDARD_DL_MAPPING[arity](p)
             if name in instance_info.static_predicates:
                 statics[dl_element] = default_denotation_by_arity(arity)
@@ -146,7 +145,7 @@ class DLModelFactory:
         """
         assert len(atom) <= 3, "Cannot deal with arity>2 predicates or arity>1 functions yet"
         symbol = self.vocabulary[atom[0]]
-        assert isinstance(symbol, (Predicate, Function, Sort))
+        assert isinstance(symbol, (PredicateSymbol, FunctionSymbol, Sort))
         arity = 1 if isinstance(symbol, Sort) else symbol.uniform_arity()
         assert arity == len(atom) - 1
         dl_element = dl_mapping[arity](symbol)

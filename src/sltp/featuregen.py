@@ -285,12 +285,12 @@ def extract_features(config, sample):
     goal_predicate_info = set()
     for problem, lang, _ in parsed_problems:
         all_objects.append(set(c.symbol for c in lang.constants()))
-        all_predicates.update((p.symbol, p.arity) for p in lang.predicates if not p.builtin)
-        all_functions.update((p.symbol, p.arity) for p in lang.functions if not p.builtin)
+        all_predicates.update((p.name, p.arity) for p in lang.predicates if not p.builtin)
+        all_functions.update((p.name, p.arity) for p in lang.functions if not p.builtin)
 
         # Add goal predicates
-        goal_predicate_info = set((goal_predicate_name(p.symbol), p.arity)
-                                  for p in lang.predicates if not p.builtin and p.symbol in all_goal_predicates)
+        goal_predicate_info = set((goal_predicate_name(p.name), p.arity)
+                                  for p in lang.predicates if not p.builtin and p.name in all_goal_predicates)
         all_predicates.update(goal_predicate_info)
 
         # Add type predicates
