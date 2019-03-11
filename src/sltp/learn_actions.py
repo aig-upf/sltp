@@ -224,11 +224,14 @@ class ModelTranslator:
         self.d1_distinguishing_features = self.compute_d1_distinguishing_features(bin_feat_matrix)
 
         self.var_selected = None
-        self.var_d2 = None
+        self.var_d1 = dict()
+        self.var_d2 = dict()
+        self.var_d2_n = dict()
 
         self.n_selected_clauses = 0
         self.n_d1_clauses = 0
         self.n_d2_clauses = 0
+        self.n_d2_n_clauses = 0
         self.n_bridge_clauses = 0
         self.n_goal_clauses = 0
         self.qchanges = dict()
@@ -241,9 +244,18 @@ class ModelTranslator:
                 # Break symmetries: if both x and y optimal, only need to take into account 1 of the 2 permutations
                 continue
             pairs.add((x, y))
-        for (x, y) in itertools.product(self.sample.goals, self.non_goal_states):
+        for (x, y) in itertools.product(self.sample.goals, self.cinfo.all_states):
+            if y in self.sample.goals and y <= x:
+                # Break symmetries: if both x and y are goals, only need to take into account 1 of the 2 permutations
+                continue
             pairs.add((x, y))
-        return list(x for x in pairs)
+        return pairs
+        # return list(x for x in pairs)
+        # return list((x, y) for x, y in itertools.product(self.cinfo.all_states, self.cinfo.all_states) if x < y)
+
+    def d1idx(self, s, t):
+        assert (s, t) in self.d1_pairs or (t, s) in self.d1_pairs
+        return (s, t) if (s, t) in self.d1_pairs else (t, s)
 
     def iterate_over_bridge_pairs(self):
         for (x, y) in itertools.product(self.cinfo.optimal_states, self.cinfo.all_states):
@@ -264,7 +276,7 @@ class ModelTranslator:
         return {(s1, s2): set(np.nonzero(np.logical_xor(bin_feat_matrix[s1], bin_feat_matrix[s2]))[0].flat)
                 for s1, s2 in self.d1_pairs}
 
-    def create_bridge_clauses(self, s_t_distinguishing, s, t):
+    def create_bridge_clauses(self, d1_lit, s, t):
         # If there are no transitions (t, t') in the sample set, then we do not post the bridge constraint.
         # if t not in self.transitions or not self.transitions[t]:
         # TODO WE MIGHT NEED A BETTER WAY OF IDENTIFYING NON-EXPANDED STATES AND DISTINGUISHING THEM FROM
@@ -280,7 +292,9 @@ class ModelTranslator:
                 continue
 
             # Start with OR_i Selected(f_i)
-            lits = [self.writer.literal(self.var_selected[f], True) for f in s_t_distinguishing]
+            # lits = [self.writer.literal(self.var_selected[f], True) for f in s_t_distinguishing]
+            # Post constraint: -D1(s, t) --> OR_{t' in succ(t)} -D2(s,s',t,t')
+            lits = [d1_lit]
             for t_prime in self.sample.transitions[t]:
                 idx = compute_d2_index(s, s_prime, t, t_prime)
                 # And add a literal -D2(s,s',t,t') for each child t' of t
@@ -318,12 +332,14 @@ class ModelTranslator:
         self.var_selected = \
             [self.writer.variable("F{}".format(feat)) for feat in range(0, self.feat_matrix.shape[1])]
 
-        self.var_d2 = dict()
+        self.var_d1 = {(s1, s2): self.writer.variable("D1[{}, {}]".format(s1, s2)) for s1, s2 in
+                       self.d1_pairs}
 
+        self.var_d2 = dict()
         for s, s_prime, t, t_prime in self.iterate_over_d2_transitions():
             idx = compute_d2_index(s, s_prime, t, t_prime)
-            varname = "D2[({},{}), ({},{})]".format(*idx)
-            self.var_d2[idx] = self.writer.variable(varname)
+            self.var_d2[idx] = self.writer.variable("D2[({},{}), ({},{})]".format(*idx))
+            self.var_d2_n[idx] = self.writer.variable("D2^N[({},{}), ({},{})]".format(*idx))
 
         self.writer.close()
         logging.info("A total of {} MAXSAT variables were created".format(len(self.writer.variables)))
@@ -346,6 +362,23 @@ class ModelTranslator:
         self.writer = CNFWriter(cnf_filename)
         self.create_variables()
 
+        logging.info("Generating D1 constraints from {} D1 variables".format(len(self.var_d1)))
+        for s1, s2 in self.d1_pairs:
+            # Post: D1(s, t) <=> OR selected(f), where the OR ranges over all features f in \Delta_1(s,t),
+            # i.e. features that tell apart s from t, i.e. have different binary value in each state. Note that this
+            # iteration covers the case where \Delta(s,t) is empty, in which case -D1(s, t) is a unit clause.
+            d1_variable = self.var_d1[self.d1idx(s1, s2)]
+            d1_lit = self.writer.literal(d1_variable, True)
+            forward_clause_literals = [self.writer.literal(d1_variable, False)]
+
+            for f in self.d1_distinguishing_features[self.d1idx(s1, s2)]:
+                forward_clause_literals.append(self.writer.literal(self.var_selected[f], True))
+                self.writer.clause([d1_lit, self.writer.literal(self.var_selected[f], False)])
+                self.n_d1_clauses += 1
+
+            self.writer.clause(forward_clause_literals)
+            self.n_d1_clauses += 1
+
         logging.info("Generating bridge constraints")
         for s1, s2 in self.iterate_over_bridge_pairs():
             # Only if D1(s, t) _might_ be false, we create the bridge clauses between values of D1 and D2:
@@ -354,10 +387,11 @@ class ModelTranslator:
             # where t' ranges over all successors of state t
             if sum(1 for x in (s1, s2) if x in self.sample.goals) != 1:
                 assert s1 in self.cinfo.optimal_states
-                s_t_distinguishing = self.d1_distinguishing_features[(s1, s2)]
-                self.create_bridge_clauses(s_t_distinguishing, s1, s2)
+                d1_lit = self.writer.literal(self.var_d1[self.d1idx(s1, s2)], True)
+                # s_t_distinguishing = self.d1_distinguishing_features[(s1, s2)]
+                self.create_bridge_clauses(d1_lit, s1, s2)
                 if s2 in self.cinfo.optimal_states:
-                    self.create_bridge_clauses(s_t_distinguishing, s2, s1)
+                    self.create_bridge_clauses(d1_lit, s2, s1)
 
         # Force D1(s1, s2) to be true if exactly one of the two states is a goal state
         logging.info("Generating goal constraints for {} state pairs".format(
@@ -366,42 +400,78 @@ class ModelTranslator:
 
             if len(in_goal_features):
                 # we are enforcing goal-distinguishing features elsewhere, no need to do anything here
-                if not in_goal_features.intersection(self.d1_distinguishing_features[(s1, s2)]):
+                if not in_goal_features.intersection(self.d1_distinguishing_features[self.d1idx(s1, s2)]):
                     raise RuntimeError("No feature in pool can distinguish states {}, "
                                        "but forced features should be enough to distinguish them".format((s1, s2)))
 
             else:
-                if len(self.d1_distinguishing_features[(s1, s2)]) == 0:
+                if len(self.d1_distinguishing_features[self.d1idx(s1, s2)]) == 0:
                     logging.warning("No feature in pool can distinguish states {}, but one of them is a goal and "
                                     "the other is not. MAXSAT encoding will be UNSAT".format((s1, s2)))
                     return ExitCode.MaxsatModelUnsat
 
-                self.writer.clause([self.writer.literal(self.var_selected[f], True)
-                                    for f in self.d1_distinguishing_features[(s1, s2)]])
+                d1_lit = self.writer.literal(self.var_d1[self.d1idx(s1, s2)], True)
+                self.writer.clause([d1_lit])
+                # self.writer.clause([self.writer.literal(self.var_selected[f], True)
+                #                     for f in self.d1_distinguishing_features[(s1, s2)]])
                 self.n_goal_clauses += 1
 
-        logging.info("Generating D2 constraints from {} D2 variables".format(len(self.var_d2)))
+        logging.info("Generating D2 and D2^N constraints from {} D2 variables".format(len(self.var_d2)))
         for s0, s1, t0, t1 in self.iterate_over_d2_transitions():
-            d2_var = self.var_d2[compute_d2_index(s0, s1, t0, t1)]
+            # d2_var = self.var_d2[compute_d2_index(s0, s1, t0, t1)]
 
             qchanges_s0s1 = self.retrieve_possibly_cached_qchanges(s0, s1)
             qchanges_t0t1 = self.retrieve_possibly_cached_qchanges(t0, t1)
             equal_idxs = np.equal(qchanges_s0s1, qchanges_t0t1)
-            np_d2_distinguishing_features = np.where(equal_idxs == False)[0]
+            # np_d2_distinguishing_features = np.where(equal_idxs == False)[0]
+            all_positive = np.logical_and(
+                np.logical_not(self.feature_types),  # i.e. only numeric features
+                np.logical_and(
+                self.bin_feat_matrix[s0],
+                np.logical_and(self.bin_feat_matrix[s1],
+                               np.logical_and(self.bin_feat_matrix[t0], self.bin_feat_matrix[t1]))))
+            delta_2_n = np.logical_and(all_positive, np.logical_not(equal_idxs))
 
-            np_d1_dist = self.d1_distinguishing_features[self.compute_d1_idx(s0, t0)]
+            # np_d1_dist = self.d1_distinguishing_features[self.compute_d1_idx(s0, t0)]
             # D2(s0,s1,t0,t2) <-- OR_f selected(f), where f ranges over features that d2-distinguish the transition
             # but do _not_ d1-distinguish the two states at the origin of each transition.
-            d2_lit = self.writer.literal(d2_var, True)
-            # forward_clause_literals = [self.writer.literal(d2_var, False)]
-            for f in np_d2_distinguishing_features.flat:
-                if f not in np_d1_dist:
-                    # forward_clause_literals.append(self.writer.literal(self.var_selected[f], True))
-                    self.writer.clause([d2_lit, self.writer.literal(self.var_selected[f], False)])
-                    self.n_d2_clauses += 1
 
-            # self.writer.clause(forward_clause_literals)
-            # self.n_d2_clauses += 1
+            # for f in np_d2_distinguishing_features.flat:
+            #     if f not in np_d1_dist:
+            #         # forward_clause_literals.append(self.writer.literal(self.var_selected[f], True))
+            #         self.writer.clause([d2_lit, self.writer.literal(self.var_selected[f], False)])
+            #         self.n_d2_clauses += 1
+            d2_var = self.var_d2[compute_d2_index(s0, s1, t0, t1)]
+            d2_n_var = self.var_d2_n[compute_d2_index(s0, s1, t0, t1)]
+
+            # D2(s,s',t,t') <-- [D2^N(s,s',t,t') OR D1(s',t')]
+            d2_lit = self.writer.literal(d2_var, True)
+            if s1 != t1:  # if s1 == t1, then trivially -D1(s1,t1)
+                self.writer.clause([d2_lit, self.writer.literal(self.var_d1[self.d1idx(s1, t1)], False)])
+                self.n_d2_clauses += 1
+            self.writer.clause([d2_lit, self.writer.literal(d2_n_var, False)])
+            self.n_d2_clauses += 1
+
+            if s1 != t1:
+                self.writer.clause([self.writer.literal(d2_var, False),
+                                    self.writer.literal(self.var_d1[self.d1idx(s0, t0)], True),
+                                    self.writer.literal(d2_n_var, True)])
+            else:
+                self.writer.clause([self.writer.literal(d2_var, False),
+                                    self.writer.literal(d2_n_var, True)])
+            self.n_d2_clauses += 1
+
+            # D2^N(s,s',t,t') <-- OR_f selected(f), where f ranges over features that d2-distinguish the transition
+            # and are > 0 on the four states s,s',t,t'
+            forward_clause_literals = [self.writer.literal(d2_n_var, False)]
+            d2_n_lit = self.writer.literal(d2_n_var, True)
+            for f in np.nonzero(delta_2_n)[0].flat:
+                forward_clause_literals.append(self.writer.literal(self.var_selected[f], True))
+                self.writer.clause([d2_n_lit, self.writer.literal(self.var_selected[f], False)])
+                self.n_d2_n_clauses += 1
+
+            self.writer.clause(forward_clause_literals)
+            self.n_d2_n_clauses += 1
 
         # Add the weighted clauses to minimize the number of selected features
         for feature, var in enumerate(self.var_selected):
@@ -514,10 +584,11 @@ class ModelTranslator:
         s += "\n" + lines("Selected: {}".format(self.n_selected_clauses), 2)
         s += "\n" + lines("D1: {}".format(self.n_d1_clauses), 2)
         s += "\n" + lines("D2: {}".format(self.n_d2_clauses), 2)
+        s += "\n" + lines("D2^N: {}".format(self.n_d2_n_clauses), 2)
         s += "\n" + lines("Bridge: {}".format(self.n_bridge_clauses), 2)
         s += "\n" + lines("Goal: {}".format(self.n_goal_clauses), 2)
         s += "\n" + lines("TOTAL: {}".format(self.n_selected_clauses + self.n_d1_clauses + self.n_d2_clauses +
-                                             self.n_bridge_clauses + self.n_goal_clauses), 2)
+                                             self.n_d2_n_clauses + self.n_bridge_clauses + self.n_goal_clauses), 2)
         logging.info("\n{}".format(s))
 
     def debug_tests(self):
