@@ -18,22 +18,16 @@ set(SOURCE_FILES
         src/sltp/utils.hxx
 )
 
-
-set(CNFGEN_SOURCE_FILES
-        src/cnfgenerator.cpp
-)
-
 add_executable(featuregen ${SOURCE_FILES})
-add_executable(cnfgen ${CNFGEN_SOURCE_FILES})
 set_target_properties(featuregen PROPERTIES LINKER_LANGUAGE CXX)
-set_target_properties(featuregen PROPERTIES LINKER_LANGUAGE CXX)
-
 
 
 set(PROJECT_ROOT .)
 #MESSAGE(WARNING "Your FS_ROOT home directory is: ${PROJECT_ROOT}" )
 
 include_directories(${PROJECT_ROOT}/src)
+include_directories(${PROJECT_ROOT}/vendor)
+
 
 
 #find_package(Boost 1.68 COMPONENTS program_options REQUIRED)
