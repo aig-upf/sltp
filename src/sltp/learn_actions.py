@@ -238,12 +238,7 @@ class ModelTranslator:
         self.compute_feature_weight = self.setup_optimization_policy(optimization)
 
     def compute_d1_pairs(self):
-        pairs = set()
-        for (x, y) in itertools.product(self.cinfo.optimal_states, self.cinfo.all_states):
-            if y in self.cinfo.optimal_states and y <= x:
-                # Break symmetries: if both x and y optimal, only need to take into account 1 of the 2 permutations
-                continue
-            pairs.add((x, y))
+        pairs = set(self.iterate_over_bridge_pairs())
         for (x, y) in itertools.product(self.sample.goals, self.cinfo.all_states):
             if y in self.sample.goals and y <= x:
                 # Break symmetries: if both x and y are goals, only need to take into account 1 of the 2 permutations
@@ -344,14 +339,6 @@ class ModelTranslator:
         self.writer.close()
         logging.info("A total of {} MAXSAT variables were created".format(len(self.writer.variables)))
 
-    def compute_d1_idx(self, s, t):
-        assert s != t
-        assert s in self.cinfo.optimal_states
-
-        if t in self.cinfo.optimal_states:  # Break symmetries when both states are optimal
-            return min(s, t), max(s, t)
-        return s, t
-
     def run(self, cnf_filename, enforced_feature_idxs, in_goal_features):
         logging.info("Generating MAXSAT problem from {} states, {} transitions and {} features"
                      .format(self.feat_matrix.shape[0], self.sample.num_transitions(), self.feat_matrix.shape[1]))
@@ -391,6 +378,7 @@ class ModelTranslator:
                 # s_t_distinguishing = self.d1_distinguishing_features[(s1, s2)]
                 self.create_bridge_clauses(d1_lit, s1, s2)
                 if s2 in self.cinfo.optimal_states:
+                    assert s2 > s1
                     self.create_bridge_clauses(d1_lit, s2, s1)
 
         # Force D1(s1, s2) to be true if exactly one of the two states is a goal state
@@ -432,7 +420,7 @@ class ModelTranslator:
                                np.logical_and(self.bin_feat_matrix[t0], self.bin_feat_matrix[t1]))))
             delta_2_n = np.logical_and(all_positive, np.logical_not(equal_idxs))
 
-            # np_d1_dist = self.d1_distinguishing_features[self.compute_d1_idx(s0, t0)]
+            # np_d1_dist = self.d1_distinguishing_features[self.d1idx(s0, t0)]
             # D2(s0,s1,t0,t2) <-- OR_f selected(f), where f ranges over features that d2-distinguish the transition
             # but do _not_ d1-distinguish the two states at the origin of each transition.
 
@@ -461,8 +449,8 @@ class ModelTranslator:
                                     self.writer.literal(d2_n_var, True)])
             self.n_d2_clauses += 1
 
-            # D2^N(s,s',t,t') <-- OR_f selected(f), where f ranges over features that d2-distinguish the transition
-            # and are > 0 on the four states s,s',t,t'
+            # D2^N(s,s',t,t') <-- OR_f selected(f), where f ranges over numeric features that d2-distinguish
+            # the transition and are > 0 on the four states s,s',t,t'
             forward_clause_literals = [self.writer.literal(d2_n_var, False)]
             d2_n_lit = self.writer.literal(d2_n_var, True)
             for f in np.nonzero(delta_2_n)[0].flat:
