@@ -478,7 +478,7 @@ class ModelTranslator:
                                 # No need to record "NIL" changes:
                                 for i, (f, c) in enumerate(zip(selected_features, selected_qchanges)) if c != 0]
 
-            precondition_bitmap = frozenset(enumerate(abstract_s))
+            precondition_bitmap = frozenset(zip(selected_features, abstract_s))
             abstract_actions.add(AbstractAction(precondition_bitmap, abstract_effects))
             if len(abstract_effects) == 0:
                 msg = "Abstract no-op necessary [concrete: ({}, {}), abstract: ({}, {})]".format(

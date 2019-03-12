@@ -41,6 +41,8 @@ class AbstractionValidator:
         sample = self.sample
         unsound, not_represented = set(), set()
         abstract_actions = abstraction["abstract_actions"]
+        selected_feature_indexes = [f["idx"] for f in abstraction["selected_features"]]
+        id_to_feature = dict(zip(selected_feature_indexes, abstraction["features"]))
         selected_feature_objs = abstraction["features"]
 
         feature_idx = self.compute_feature_idx(abstract_actions)
@@ -59,7 +61,7 @@ class AbstractionValidator:
             # Check soundness
             for action in abstract_actions:
                 # We need to cast the actual feature value into a bool to compare it with the abstraction bool value
-                is_applicable = all(bool(model.denotation(selected_feature_objs[idx])) is val
+                is_applicable = all(bool(model.denotation(id_to_feature[idx])) is val
                                     for idx, val in action.preconditions)
                 if is_applicable and \
                         not any(self.action_captures(models, sid, sprime, feature_idx[action], selected_feature_objs)
