@@ -214,9 +214,9 @@ def generate_output_from_handcrafted_features(sample, config, features, model_ca
         matrix[i] = [cast_feature_value_to_numpy_value(int(x)) for x in denotations]
 
     # These next 3 lines just to print the denotation of all features
-    state_ids = sample.get_sorted_state_ids()
-    models = {sid: model_cache.get_feature_model(sid) for sid in sample.states}
-    log_feature_denotations(state_ids, features, models, config.feature_denotation_filename, None)
+    # state_ids = sample.get_sorted_state_ids()
+    # models = {sid: model_cache.get_feature_model(sid) for sid in sample.states}
+    # log_feature_denotations(state_ids, features, models, config.feature_denotation_filename, None)
 
     return print_actual_output(sample, config, [], names, complexities, matrix, types)
 
