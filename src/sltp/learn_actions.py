@@ -97,14 +97,15 @@ def create_maxsat_translator(config, sample):
     cinfo = compute_completeness_info(sample, config.complete_only_wrt_optimal)
 
     # Remove states that are redundant
-    sample = preprocess_sample(sample, feat_matrix, bin_feat_matrix, cinfo)
+    if True:
+        sample = preprocess_sample(sample, feat_matrix, bin_feat_matrix, cinfo)
 
-    # Reproject the denotation matrices to the new state indices
-    assert sample.remapping
-    projection = list(sorted(sample.remapping.keys()))
-    feat_matrix = feat_matrix[projection]
-    bin_feat_matrix = bin_feat_matrix[projection]
-    cinfo = compute_completeness_info(sample, config.complete_only_wrt_optimal)
+        # Reproject the denotation matrices to the new state indices
+        assert sample.remapping
+        projection = list(sorted(sample.remapping.keys()))
+        feat_matrix = feat_matrix[projection]
+        bin_feat_matrix = bin_feat_matrix[projection]
+        cinfo = compute_completeness_info(sample, config.complete_only_wrt_optimal)
 
     translator = ModelTranslator(feat_matrix, bin_feat_matrix, feature_complexity, feature_names, feature_types,
                                  sample, optimization, cinfo)
@@ -751,7 +752,6 @@ def preprocess_sample(sample, feat_matrix, bin_feat_matrix, cinfo):
     resampled = sample.resample(selected)
     logging.info("Processed sample: {}".format(resampled))
     return resampled
-    # return sample
 
 
 def has_analog_transition(sample, feat_matrix, s, t):
