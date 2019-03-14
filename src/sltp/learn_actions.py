@@ -363,13 +363,11 @@ class ModelTranslator:
             if len(in_goal_features):
                 # we are enforcing goal-distinguishing features elsewhere, no need to do anything here
                 if not in_goal_features.intersection(self.d1_distinguishing_features[self.d1idx(s1, s2)]):
-                    raise RuntimeError("No feature in pool can distinguish states {}, "
-                                       "but forced features should be enough to distinguish them".format((s1, s2)))
+                    raise RuntimeError(undist_goal_warning(s1, s2))
 
             else:
                 if len(self.d1_distinguishing_features[self.d1idx(s1, s2)]) == 0:
-                    logging.warning("No feature in pool can distinguish states {}, but one of them is a goal and "
-                                    "the other is not. MAXSAT encoding will be UNSAT".format((s1, s2)))
+                    logging.warning(undist_goal_warning(s1,s2))
                     return ExitCode.MaxsatModelUnsat
 
                 self.writer.clause([self.writer.literal(self.var_selected[f], True)
@@ -737,18 +735,18 @@ def preprocess_sample(sample, feat_matrix, bin_feat_matrix, cinfo):
     logging.info("Preprocessing sample {} to prune redundant states".format(sample))
 
     nonoptimal_states = cinfo.all_states - cinfo.optimal_states
-    prunable_states = dict()
+    isomorphisms = dict()
+
+    for s, t in itertools.product(cinfo.optimal_states, cinfo.all_states):
+        if s != t:
+            check_isomorphic(sample, bin_feat_matrix, feat_matrix, s, t, isomorphisms)
+
     for s, t in itertools.combinations(nonoptimal_states, 2):
-        if s in prunable_states or t in prunable_states:
-            continue
-        distinguishing = np.nonzero(np.logical_xor(bin_feat_matrix[s], bin_feat_matrix[t]))[0]
-        if distinguishing.size == 0:  # s and t are not distinguishable
-            if has_analog_transition(sample, feat_matrix, s, t) and has_analog_transition(sample, feat_matrix, t, s):
-                prunable_states[t] = s
+        check_isomorphic(sample, bin_feat_matrix, feat_matrix, s, t, isomorphisms)
 
     # logging.info("Set of prunable states ({}): {}".format(len(prunable_states), prunable_states))
-    logging.info("Number of prunable states: {}".format(len(prunable_states)))
-    selected = cinfo.all_states - set(prunable_states.keys())
+    logging.info("Number of prunable states: {}".format(len(isomorphisms)))
+    selected = cinfo.all_states - set(isomorphisms.keys())
     resampled = sample.resample(selected)
     logging.info("Processed sample: {}".format(resampled))
     return resampled
@@ -767,3 +765,21 @@ def has_analog_transition(sample, feat_matrix, s, t):
             if d2_distinguishing_features.size == 0:
                 return True
     return False
+
+
+def check_isomorphic(sample, bin_feat_matrix, feat_matrix, s, t, isomorphisms):
+    if s in isomorphisms or t in isomorphisms:
+        return
+    distinguishing = np.nonzero(np.logical_xor(bin_feat_matrix[s], bin_feat_matrix[t]))[0]
+    if distinguishing.size == 0:  # s and t are not distinguishable
+        if sum(1 for x in (s, t) if x in sample.goals) == 1:  # Only one of the two is a goal!
+            raise RuntimeError(undist_goal_warning(s, t))
+
+        if has_analog_transition(sample, feat_matrix, s, t) and has_analog_transition(sample, feat_matrix, t, s):
+            isomorphisms[t] = s
+    return
+
+
+def undist_goal_warning(s1, s2):
+    return "No feature in pool can distinguish states {}, but one of them is a goal and the other is not." \
+           " MAXSAT encoding will be UNSAT".format((s1, s2))
