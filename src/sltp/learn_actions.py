@@ -283,6 +283,7 @@ class ModelTranslator:
             if not self.is_optimal_transition(s, s_prime):
                 continue
 
+            # print("Bridge clause btw transitions {} and {}".format((s, s_prime), (t, "?")))
             # Start with OR_i Selected(f_i)
             lits = [self.writer.literal(self.var_selected[f], True) for f in s_t_distinguishing]
             for t_prime in self.sample.transitions[t]:
@@ -370,6 +371,7 @@ class ModelTranslator:
                     logging.warning(undist_goal_warning(s1,s2))
                     return ExitCode.MaxsatModelUnsat
 
+                # print("Force goal distinguishability: {}".format((s1, s2)))
                 self.writer.clause([self.writer.literal(self.var_selected[f], True)
                                     for f in self.d1_distinguishing_features[self.d1idx(s1, s2)]])
                 self.n_goal_clauses += 1
