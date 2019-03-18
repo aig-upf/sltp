@@ -30,7 +30,7 @@ def run(config, data, rng):
 
     # we don't care about the order of validation
     validator = AbstractionValidator(model_cache, sample, list(sample.expanded))
-    action_printer = lambda a: prettyprint_abstract_action(a, abstraction["features"], config.feature_namer)
+    action_printer = lambda a, id_to_feature: prettyprint_abstract_action(a, config.feature_namer, id_to_feature)
     flaws = validator.find_flaws(abstraction, 1, check_completeness=False, action_printer=action_printer)
     if flaws:
         logging.error("The computed abstraction is not sound & complete".format())

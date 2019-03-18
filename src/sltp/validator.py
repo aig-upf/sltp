@@ -37,7 +37,7 @@ class AbstractionValidator:
 
     def find_flaws(self, abstraction, max_flaws, action_printer=None, check_completeness=True):
         """ """
-        action_printer = action_printer or (lambda a: str(a))
+        action_printer = action_printer or (lambda a, _: str(a))
         sample = self.sample
         unsound, not_represented = set(), set()
         abstract_actions = abstraction["abstract_actions"]
@@ -67,7 +67,7 @@ class AbstractionValidator:
                         not any(self.action_captures(models, sid, sprime, feature_idx[action], selected_feature_objs)
                                 for sprime in sample.transitions[sid]):
                     # The abstract action is not sound
-                    logging.info("Action {} *unsound* wrt state #{} of the sample".format(action_printer(action), sid))
+                    logging.info("Action {} *unsound* wrt state #{} of the sample".format(action_printer(action, id_to_feature), sid))
                     logging.info("State #{} is: {}".format(sid, sample.states[sid]))
                     children = map(str, (sample.states[sprime] for sprime in sample.transitions[sid]))
                     logging.info("Children of #{} are:\n\t{}".format(sid, "\n\t".join(children)))

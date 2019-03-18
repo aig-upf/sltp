@@ -199,8 +199,8 @@ def prettyprint_atom(feature, polarity, namer):
     return "{} > 0".format(named) if polarity else "{} = 0".format(named)
 
 
-def prettyprint_abstract_action(action, all_features, namer):
-    precs = " and ".join(map(lambda p: prettyprint_atom(all_features[p[0]], p[1], namer), action.preconditions))
+def prettyprint_abstract_action(action, namer, id_to_feature):
+    precs = " and ".join(map(lambda p: prettyprint_atom(id_to_feature[p[0]], p[1], namer), action.preconditions))
     effs = ", ".join(map(lambda eff: eff.print_named(namer), action.effects))
     return "AbstractAction<{}; {}>".format(precs, effs)
 
