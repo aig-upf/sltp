@@ -6,6 +6,7 @@ from tarski.dl import NullaryAtom, EmpiricalBinaryConcept, ConceptCardinalityFea
     UniversalConcept, NotConcept, ExistsConcept, ForallConcept, PrimitiveRole, EmptyConcept, AndConcept, GoalRole, \
     GoalConcept, InverseRole, EqualConcept, StarRole, NullaryAtomFeature, NominalConcept, MinDistanceFeature, \
     RestrictRole
+from tarski.syntax import Sort
 
 
 def serialize(data, filename):
@@ -79,8 +80,8 @@ def build_concept(language, node):
             node = node[:-2]
 
         obj = language.get(node)
-        assert isinstance(obj, (PredicateSymbol, FunctionSymbol))
-        arity = obj.uniform_arity()
+        assert isinstance(obj, (PredicateSymbol, FunctionSymbol, Sort))
+        arity = 1 if isinstance(obj, Sort) else obj.uniform_arity()
         assert arity in (1, 2)
         if is_goal:
             return GoalConcept(obj) if arity == 1 else GoalRole(obj)
