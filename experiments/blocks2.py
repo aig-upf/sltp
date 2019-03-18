@@ -17,6 +17,21 @@ def experiment(experiment_name=None):
 
     exps = dict()
 
+    exps["on_x_y"] = dict(
+        instances=["inst_on_x_y_14.pddl"],
+        num_states=40000, max_width=[-1],
+        num_sampled_states=[500],
+        # Note: Testing here is not simple, as we'd want to test only when X and Y are on different towers
+        # test_domain=domain, test_instances=["inst_on_x_y_16.pddl"], num_tested_states=10000,
+        complete_only_wrt_optimal=True,
+        sampling="all",
+        max_concept_size=8,
+        concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
+        feature_namer=ijcai_paper_bw_feature_namer,
+    )
+
+    exps["on_x_y_gc"] = update_dict(exps["on_x_y"], parameter_generator=None)
+
     exps["arbitrary1"] = dict(
         instances=["probBLOCKS-4-0.pddl"],
         test_domain=domain,
