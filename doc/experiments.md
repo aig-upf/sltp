@@ -35,6 +35,9 @@
     # IPC Miconic domain
     ./miconic.py p1 --all
     
+    # Towers of Hanoi
+    ./hanoi.py p1 --all
+    
     # Blocksworld: clear two particular blocks
     ./blocks.py clear_two_atoms --all  # goal: clear(x) and clear(y)
     
