@@ -41,6 +41,9 @@
     # IPC Visitall domain
     ./visitall.py p1 --all
     
+    # IPC depot domain
+    ./depot.py p1 --all
+    
     # Blocksworld: clear two particular blocks
     ./blocks.py clear_two_atoms --all  # goal: clear(x) and clear(y)
     
