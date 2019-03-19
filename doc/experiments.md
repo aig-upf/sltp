@@ -44,6 +44,9 @@
     # IPC depot domain
     ./run.py depot:p1 --all
     
+    # IPC Satellite domain
+    ./run.py satellite:p1 --all
+    
     # Blocksworld: clear two particular blocks
     ./blocks.py clear_two_atoms --all  # goal: clear(x) and clear(y)
     
