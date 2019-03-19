@@ -1,46 +1,40 @@
-#! /usr/bin/env python3
-# -*- coding: utf-8 -*-
-import sys
-
-from defaults import generate_experiment
 from sltp.util.misc import update_dict
 
 
-def experiment(experiment_name=None):
-    domain_dir = "spanner-small"
-    domain = "domain.pddl"
+def experiments():
+
+    base = dict(
+        domain_dir="spanner-small",
+        domain="domain.pddl",
+        test_domain="domain.pddl",
+        feature_namer=None,
+    )
 
     exps = dict()
 
-    exps["exp1"] = dict(
-        instances="prob-4-4-3-1540907456.pddl",
-        test_domain=domain, test_instances=["prob-10-10-10-1540903568.pddl"], num_tested_states=50000,
-        num_states=500, max_concept_size=8,
+    exps["p1"] = update_dict(
+        base,
+        instances=[
+            "prob-4-4-3-1540907456.pddl"
+        ],
+        test_instances=[
+            "prob-10-10-10-1540903568.pddl"
+        ],
+        num_states=2000,
+        num_tested_states=50000,
+        num_sampled_states=500,
+        complete_only_wrt_optimal=True,
+        max_concept_size=8,
         distance_feature_max_complexity=8,
-        concept_generator=None, parameter_generator=add_domain_parameters,  # No goal concepts!
-        feature_namer=feature_namer,)
+        concept_generator=None,
+        parameter_generator=add_domain_parameters,  # No goal concepts!
+    )
 
-    exps["exp1_tg"] = update_dict(
-        exps["exp1"], complete_only_wrt_optimal=True)
+    exps["p1"] = update_dict(
+        exps["p1"], pipeline="maxsat_poly")
 
-    exps["exp1_p"] = update_dict(
-        exps["exp1"], pipeline="maxsat_poly")
-
-    if experiment_name not in exps:
-        raise RuntimeError('No experiment named "{}" in current experiment script'.format(experiment_name))
-    return generate_experiment(domain_dir, domain, **exps[experiment_name])
-
-
-def feature_namer(feature):
-    s = str(feature)
-    return {
-    }.get(s, s)
+    return exps
 
 
 def add_domain_parameters(language):
     return []
-
-
-if __name__ == "__main__":
-    exp = experiment(sys.argv[1])
-    exp.run(sys.argv[2:])

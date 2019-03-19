@@ -18,31 +18,31 @@
 ## Other benchmarks
 
     # IPC Logistics domain
-    ./logistics.py sample1_tg --all
+    ./run.py logistics:p1 --all
     
     # IPC Barman domain
-    ./barman.py prob01_tg --all
+    ./run.py barman:p1 --all
     
     # IPC Childsnack domain
-    ./childsnack.py prob01_tg --all
+    ./run.py childsnack:p1 --all
 
     # IPC Spanner domain
-    ./spanner.py exp1 --all
+    ./run.py spanner:p1 --all
     
     # IPC Grid domain
-    ./grid.py prob01 --all
-    
+    ./run.py grid:p1 --all
+
     # IPC Miconic domain
-    ./miconic.py p1 --all
+    ./run.py miconic:p1 --all
     
     # Towers of Hanoi
-    ./hanoi.py p1 --all
+    ./run.py hanoi:p1 --all
     
     # IPC Visitall domain
-    ./visitall.py p1 --all
+    ./run.py visitall:p1 --all
     
     # IPC depot domain
-    ./depot.py p1 --all
+    ./run.py depot:p1 --all
     
     # Blocksworld: clear two particular blocks
     ./blocks.py clear_two_atoms --all  # goal: clear(x) and clear(y)

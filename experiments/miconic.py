@@ -1,23 +1,19 @@
-#! /usr/bin/env python3
-# -*- coding: utf-8 -*-
-import sys
-
-from sltp.incremental import IncrementalExperiment
-
-from defaults import generate_experiment
-from common import build_ijcai_paper_bw_concepts, add_bw_domain_parameters, ijcai_paper_bw_feature_namer, \
-    add_bw_domain_parameters_2, build_on_x_y_feature_set, generate_features_n_ab, get_on_x_y_feature, \
-    features_clear_x
 from sltp.util.misc import update_dict
 
 
-def experiment(experiment_name=None):
-    domain_dir = "miconic"
-    domain = "domain.pddl"
+def experiments():
+
+    base = dict(
+        domain_dir="miconic",
+        domain="domain.pddl",
+        test_domain="domain.pddl",
+        feature_namer=None,
+    )
 
     exps = dict()
 
-    exps["p1"] = dict(
+    exps["p1"] = update_dict(
+        base,
         instances=[
             's2-0.pddl',
             # 's2-1.pddl',
@@ -25,13 +21,12 @@ def experiment(experiment_name=None):
             # 's2-3.pddl',
             's3-0.pddl',
         ],
-        test_domain=domain,
         test_instances=[
             's2-4.pddl',
             's3-1.pddl',
         ],
         num_states=2000,
-        num_tested_states=50000,
+        num_tested_states=20000,
         num_sampled_states=200,
         complete_only_wrt_optimal=True,
         max_concept_size=8,
@@ -39,14 +34,4 @@ def experiment(experiment_name=None):
         parameter_generator=None,
     )
 
-    if experiment_name not in exps:
-        raise RuntimeError('No experiment named "{}" in current experiment script'.format(experiment_name))
-    parameters = exps[experiment_name]
-    parameters["domain_dir"] = parameters.get("domain_dir", domain_dir)
-    parameters["domain"] = parameters.get("domain", domain)
-    return generate_experiment(**parameters)
-
-
-if __name__ == "__main__":
-    exp = experiment(sys.argv[1])
-    exp.run(sys.argv[2:])
+    return exps
