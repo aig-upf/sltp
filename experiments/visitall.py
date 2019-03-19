@@ -7,7 +7,6 @@ def experiments():
         domain_dir="visitall-opt11-strips",
         domain="domain.pddl",
         test_domain="domain.pddl",
-        feature_namer=None,
     )
 
     exps = dict()

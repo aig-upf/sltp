@@ -7,7 +7,6 @@ def experiments():
         domain_dir="logistics98",
         domain="domain.pddl",
         test_domain="domain.pddl",
-        feature_namer=None,
     )
 
     exps = dict()
