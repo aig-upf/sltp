@@ -38,6 +38,9 @@
     # Towers of Hanoi
     ./hanoi.py p1 --all
     
+    # IPC Visitall domain
+    ./visitall.py p1 --all
+    
     # Blocksworld: clear two particular blocks
     ./blocks.py clear_two_atoms --all  # goal: clear(x) and clear(y)
     
