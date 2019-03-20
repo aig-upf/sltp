@@ -440,10 +440,10 @@ class Sample {
     const std::string& name() const {
         return name_;
     }
-    int num_predicates() const {
+    std::size_t num_predicates() const {
         return predicates_.size();
     }
-    int num_states() const {
+    std::size_t num_states() const {
         return states_.size();
     }
 
@@ -2114,7 +2114,7 @@ class Factory {
 
     void print_feature_count() const {
         unsigned num_nullary_features = 0, num_boolean_features = 0, num_numeric_features = 0, num_distance_features = 0;
-        unsigned m = features_.size();
+        auto m = features_.size();
         for (auto f:features_) {
             if (dynamic_cast<const NullaryAtomFeature*>(f)) num_nullary_features++;
             else if (dynamic_cast<const BooleanFeature*>(f)) num_boolean_features++;
@@ -2146,18 +2146,23 @@ class Factory {
         bool all_values_greater_than_zero = true;
         int previous_value = -1;
 
-        for( int j = 0; j < sample.num_states(); ++j ) {
+//        std::cout << "Trying: " << c->as_str() << std::endl;
+
+        const auto m = sample.num_states();
+        for(unsigned j = 0; j < m; ++j) {
             const State &state = sample.state(j);
             assert(state.id() == j);
             const state_denotation_t *sd = (*d)[j];
             assert((sd != nullptr) && (sd->size() == state.num_objects()));
-            int value = sd->cardinality();
+            int value = static_cast<int>(sd->cardinality());
             boolean_feature = boolean_feature && (value < 2);
             denotation_is_constant = (previous_value == -1) || (denotation_is_constant && (previous_value == value));
             all_values_greater_than_zero = all_values_greater_than_zero && (value > 0);
             previous_value = value;
             fd.push_back(value);
         }
+
+//        if (all_values_greater_than_zero) std::cout << "ALL>0: " << c->as_str() << std::endl;
 
         if( !denotation_is_constant && !all_values_greater_than_zero ) {
             auto it = seen_denotations.find(fd);
