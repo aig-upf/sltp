@@ -1,3 +1,4 @@
 
+*.sh
 slurm.*
 *.log
