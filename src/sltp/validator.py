@@ -67,7 +67,7 @@ class AbstractionValidator:
                         not any(self.action_captures(models, sid, sprime, feature_idx[action], selected_feature_objs)
                                 for sprime in sample.transitions[sid]):
                     # The abstract action is not sound
-                    logging.info("Action {} *unsound* wrt state #{} of the sample".format(action_printer(action, id_to_feature), sid))
+                    logging.info("Action {} *unsound* wrt state #{}".format(action_printer(action, id_to_feature), sid))
                     logging.info("State #{} is: {}".format(sid, sample.states[sid]))
                     children = map(str, (sample.states[sprime] for sprime in sample.transitions[sid]))
                     logging.info("Children of #{} are:\n\t{}".format(sid, "\n\t".join(children)))

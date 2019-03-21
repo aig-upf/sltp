@@ -6,6 +6,19 @@ EXP_DIR = os.path.dirname(os.path.realpath(__file__))
 BASE_DIR = os.path.join(EXP_DIR, "..")
 
 
+def get_experiment_class(kwargs):
+    exptype = kwargs.get('experiment_type', None)
+    if exptype is not None:  # parameter 'experiment_type' takes precedence
+        if exptype == 'incremental':
+            from sltp.incremental import IncrementalExperiment
+            return IncrementalExperiment
+        else:
+            return Experiment
+
+    expclass = kwargs.get('experiment_class', None)
+    return expclass if expclass is not None else Experiment
+
+
 def generate_experiment(domain_dir, domain, **kwargs):
     """ """
 
@@ -30,7 +43,7 @@ def generate_experiment(domain_dir, domain, **kwargs):
         # pipeline="maxsat_poly",
 
         # Location of the FS planner, used to do the state space sampling
-        #planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
+        # planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),
         planner_location=os.getenv("FS_PATH", os.path.expanduser("~/software/github/fs-planner")),
 
         # Type of sampling procedure. Only breadth-first search implemented ATM
@@ -113,7 +126,7 @@ def generate_experiment(domain_dir, domain, **kwargs):
         domain_dir=domain_dir,
 
         # The Experiment class to be used (e.g. standard, or incremental)
-        experiment_class=Experiment,
+        experiment_class=get_experiment_class(kwargs),
 
         # The max. number of states in the Flaw set when validating an incremental abstraction
         batch_refinement_size=10,
