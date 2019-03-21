@@ -8,7 +8,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Uncomment for debug build. Alternatively, build with `cmake -DCMAKE_BUILD_TYPE=Debug .`
 #set(CMAKE_BUILD_TYPE Debug)
-#set(CMAKE_CXX_FLAGS "-g -DDEBUG")
 #set(CMAKE_CXX_FLAGS "-O3 -Wall -Wextra")
 set(CMAKE_CXX_FLAGS "-O3 -DNDEBUG")
 
@@ -19,22 +18,16 @@ set(SOURCE_FILES
         src/sltp/utils.hxx
 )
 
-
-set(CNFGEN_SOURCE_FILES
-        src/cnfgenerator.cpp
-)
-
 add_executable(featuregen ${SOURCE_FILES})
-add_executable(cnfgen ${CNFGEN_SOURCE_FILES})
 set_target_properties(featuregen PROPERTIES LINKER_LANGUAGE CXX)
-set_target_properties(featuregen PROPERTIES LINKER_LANGUAGE CXX)
-
 
 
 set(PROJECT_ROOT .)
 #MESSAGE(WARNING "Your FS_ROOT home directory is: ${PROJECT_ROOT}" )
 
 include_directories(${PROJECT_ROOT}/src)
+include_directories(${PROJECT_ROOT}/vendor)
+
 
 
 #find_package(Boost 1.68 COMPONENTS program_options REQUIRED)
