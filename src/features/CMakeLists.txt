@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(sltp-features VERSION 0.1 LANGUAGES CXX)
+project(sltp VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -22,12 +22,14 @@ set(SOURCE_FILES
 
 set(CNFGEN_SOURCE_FILES
         src/cnfgenerator.cpp
+        src/blai/sample.h
+        src/blai/utils.h
 )
 
 add_executable(featuregen ${SOURCE_FILES})
 add_executable(cnfgen ${CNFGEN_SOURCE_FILES})
 set_target_properties(featuregen PROPERTIES LINKER_LANGUAGE CXX)
-set_target_properties(featuregen PROPERTIES LINKER_LANGUAGE CXX)
+set_target_properties(cnfgen PROPERTIES LINKER_LANGUAGE CXX)
 
 
 
