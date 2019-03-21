@@ -29,7 +29,7 @@ def experiments():
         parameter_generator=add_domain_parameters,  # No goal concepts!
     )
 
-    exps["p1"] = update_dict(
+    exps["p1_p"] = update_dict(
         exps["p1"], pipeline="maxsat_poly")
 
     return exps
