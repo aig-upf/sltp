@@ -1,5 +1,6 @@
 
 featuregen
+cnfgen
 
 # Object code
 *.slo

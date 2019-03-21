@@ -1,5 +1,5 @@
-#ifndef SAMPLE_H
-#define SAMPLE_H
+
+#pragma once
 
 #include <cassert>
 #include <iostream>
@@ -87,6 +87,12 @@ class Matrix {
     }
     bool is_numerical(int i) const {
         return i < last_numerical_feature_;
+    }
+
+    // remap features when removing dummies
+    int remap_feature(int f) const {
+        assert((f < last_numerical_feature_) || (first_boolean_feature_ <= f));
+        return f < last_numerical_feature_ ? f : f - num_dummy_features_;
     }
 
     // accessors
@@ -489,11 +495,10 @@ class Transitions {
 };
 
 class Sample {
-  protected:
+public:
     const Matrix *matrix_;
     const Transitions *transitions_;
 
-  public:
     Sample(const std::string &matrix_filename,
            const std::string &transitions_filename,
            int additional_marked_transitions = 0,
@@ -577,6 +582,3 @@ class Sample {
 };
 
 }; // end of namespace Sample
-
-#endif
-

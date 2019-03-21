@@ -14,14 +14,16 @@ set(CMAKE_CXX_FLAGS "-O3 -DNDEBUG")
 
 
 set(SOURCE_FILES
-        src/main.cpp
+        src/featuregen.cpp
         src/sltp/features
         src/sltp/utils.hxx
 )
 
 
 set(CNFGEN_SOURCE_FILES
-        src/cnfgenerator.cpp
+        src/cnfgen.cpp
+        src/cnf/generator.h
+        src/common/utils.h
         src/blai/sample.h
         src/blai/utils.h
 )

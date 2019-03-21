@@ -5,6 +5,8 @@
 
 #include <blai/sample.h>
 #include <blai/utils.h>
+#include <cnf/generator.h>
+#include <common/utils.h>
 
 using namespace std;
 
@@ -60,7 +62,19 @@ int main(int argc, const char **argv) {
 
     // dump MaxSAT problem
     string wsat_filename = prefix + "_theory.wsat";
-//    sample.dump_weighted_max_sat_problem(wsat_filename, true);
+    CNFGenerator generator(sample);
+
+
+    std::cout << Utils::blue() << "writing" << Utils::normal() << " '" << wsat_filename << "' ... " << std::endl;
+    auto wsatstream = open_file(wsat_filename);
+    // The generation of the CNF might already detect unsatisfiability
+    bool unsat = generator.dump_weighted_max_sat_problem(wsatstream, true);
+    wsatstream.close();
+
+    if(unsat) {
+        std::cout << Utils::warning() << "CNF theory is UNSAT" << std::endl;
+    }
+
     float total_time = Utils::read_time_in_seconds() - start_time;
 
     cout << "stats:"
@@ -68,5 +82,5 @@ int main(int argc, const char **argv) {
          << " total-time " << total_time
          << endl;
 
-    return 0;
+    return unsat ? 1 : 0;
 }
