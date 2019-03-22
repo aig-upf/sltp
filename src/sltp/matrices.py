@@ -63,8 +63,6 @@ def print_feature_matrix(config, state_ids, features, models):
     np.save(config.feature_names_filename,
             np.array([str(f) for f in features], dtype=np.unicode_))
 
-    # np.savez(config.feature_matrix_filename, matrix)
-
 
 def print_feature_info(config, features):
     filename = config.feature_info_filename

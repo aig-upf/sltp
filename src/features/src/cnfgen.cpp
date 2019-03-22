@@ -5,6 +5,8 @@
 
 #include <blai/sample.h>
 #include <blai/utils.h>
+#include <blai/matrix.h>
+#include <blai/transitions.h>
 #include <cnf/generator.h>
 #include <common/utils.h>
 
@@ -50,14 +52,28 @@ int main(int argc, const char **argv) {
         exit(0);
     }
 
+    bool verbose = true;
+
     // read arguments
     string prefix = argv[0];
     cout << "arguments: prefix=" << prefix << endl;
 
-    // read data
-    string matrix_filename = prefix + "/sat_matrix.dat";
-    string transitions_filename = prefix + "/sat_transitions.dat";
-    Sample::Sample sample(matrix_filename, transitions_filename);
+    // Read feature matrix
+    std::string matrix_filename = prefix + "/feature-matrix.dat";
+    std::cout << Utils::blue() << "reading" << Utils::normal() << " '" << matrix_filename << std::endl;
+    auto ifs_matrix = get_ifstream(matrix_filename);
+    auto matrix = Sample::Matrix::read_dump(ifs_matrix, verbose);
+    ifs_matrix.close();
+
+    // Read transition data
+    std::string transitions_filename = prefix + "/sat_transitions.dat";
+    std::cout << Utils::blue() << "reading" << Utils::normal() << " '" << transitions_filename << std::endl;
+    auto ifs_transitions = get_ifstream(transitions_filename);
+    auto transitions = Sample::Transitions::read_dump(ifs_transitions, verbose);
+    ifs_transitions.close();
+
+
+    Sample::Sample sample(std::move(matrix), std::move(transitions), verbose);
     float preprocess_time = Utils::read_time_in_seconds() - start_time;
 
     // dump MaxSAT problem
@@ -66,9 +82,9 @@ int main(int argc, const char **argv) {
 
 
     std::cout << Utils::blue() << "writing" << Utils::normal() << " '" << wsat_filename << "' ... " << std::endl;
-    auto wsatstream = open_file(wsat_filename);
+    auto wsatstream = get_ofstream(wsat_filename);
     // The generation of the CNF might already detect unsatisfiability
-    bool unsat = generator.dump_weighted_max_sat_problem(wsatstream, true);
+    bool unsat = generator.write_maxsat(wsatstream, true);
     wsatstream.close();
 
     if(unsat) {

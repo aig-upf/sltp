@@ -25,6 +25,8 @@ set(CNFGEN_SOURCE_FILES
         src/cnf/generator.h
         src/common/utils.h
         src/blai/sample.h
+        src/blai/matrix.h
+        src/blai/transitions.h
         src/blai/utils.h
 )
 

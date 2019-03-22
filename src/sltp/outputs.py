@@ -27,8 +27,8 @@ def print_sat_transition_matrix(state_ids, transitions, optimal_transitions, tra
         print("{} {} {}".format(num_states, num_transitions, num_optimal_transitions), file=f)
 
         # second line: <#marked-transitions> <src0> <dst0> <src1> <dst1> ...
-        flatten_optimal_transitions = list(itertools.chain(*optimal_transitions))
-        print("{} {}".format(num_optimal_transitions, " ".join(str(item) for item in flatten_optimal_transitions)), file=f)
+        flat_optimal_transitions = list(itertools.chain(*optimal_transitions))
+        print("{} {}".format(num_optimal_transitions, " ".join(str(item) for item in flat_optimal_transitions)), file=f)
 
         # third line: <#expanded states>
         print("{}".format(num_states), file=f)
