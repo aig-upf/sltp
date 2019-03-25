@@ -81,7 +81,7 @@ class CNFWriter:
             # p wcnf nbvar nbclauses top
             print("p wcnf {} {} {}".format(numvars, num_unique_clauses, top), file=output)
             for line in read_file(self.buffer_filename):
-                print(line.replace("#TOP#", top), file=output)
+                print(line.replace("TOP", top), file=output)
                 # for clause in self.clauses:
                 #     print(clause_printer(clause), file=file)
 
@@ -173,6 +173,6 @@ class Clause:
 
 def print_clause(literals, weight):
     # w <literals> 0
-    w = "#TOP#" if weight is None else weight
+    w = "TOP" if weight is None else weight
     literals = " ".join(str(l) for l in literals)
     return "{} {} 0".format(w, literals)

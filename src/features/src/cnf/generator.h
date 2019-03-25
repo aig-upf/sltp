@@ -2,289 +2,259 @@
 #pragma once
 
 #include <blai/sample.h>
+#include "cnfwriter.h"
+
+void undist_goal_warning(unsigned s, unsigned t) {
+    std::cout <<  "No feature can distinguish state " << s << " from state " << t << ", but only one of tthem is a goal"
+              <<  ". The MAXSAT encoding will be UNSAT" << std::endl;
+}
+
 
 class CNFGenerator {
 public:
-    using D1_map_t = std::map<int, int>;
-    using D2_map_t = std::map<std::pair<int, int>, int>;
-    using D_t = std::vector<std::vector<int>>;
+    //!
+    using d1_key = std::tuple<unsigned, unsigned>;
+
+    //! A map from 4 state IDs to the ID of the corresponding D2(s, s', t, t') variable
+    using d2_key = std::tuple<unsigned, unsigned, unsigned, unsigned>;
+    using d2map_t = std::unordered_map<d2_key, cnfvar_t, boost::hash<d2_key>>;
+
+    using transition_t = Sample::Transitions::transition_t;
+    using transition_set_t = Sample::Transitions::transition_set_t;
+    using transition_list_t = Sample::Transitions::transition_list_t;
 
 protected:
+    //! The transition sample data
     const Sample::Sample& sample_;
+
+    //! The number of states in the encoding
+    const unsigned ns_;
+
+    //! The number of features in the encoding
+    const unsigned nf_;
+
+    //! For convenient and performant access, a list of goal and non-goal states + a list of expanded states
+    std::vector<unsigned> goals_, nongoals_;
+    std::vector<unsigned> expanded_states_;
+
+    //!
+    std::unordered_map<d1_key, std::vector<unsigned>, boost::hash<d1_key>> d1_features_cache_;
+    std::unordered_map<d2_key, std::vector<unsigned>, boost::hash<d2_key>> d2_features_cache_;
+
+public:
+    //! Some statistics
+    unsigned n_selected_clauses;
+    unsigned n_d2_clauses;
+    unsigned n_bridge_clauses;
+    unsigned n_goal_clauses;
 
 public:
     explicit CNFGenerator(const Sample::Sample& sample) :
-        sample_(sample)
-    {}
+        sample_(sample),
+        ns_(sample.matrix().num_states()),
+        nf_(sample.matrix().num_features()),
+        n_selected_clauses(0),
+        n_d2_clauses(0),
+        n_bridge_clauses(0),
+        n_goal_clauses(0)
+    {
+        for (unsigned s = 0; s < ns_; ++s) {
+            if (is_goal(s)) goals_.push_back(s);
+            else nongoals_.push_back(s);
+
+            if (sample_.transitions_.num_transitions(s) > 0) {
+                // TODO This check is not fully correct, we should annotate the planner output with this information
+                // TODO so that we do not take a dead-end for a not expanded state
+                expanded_states_.push_back(s);
+            }
+        }
+    }
+
+    bool is_goal(unsigned s) const { return sample_.matrix().goal(s); }
+
+    bool is_sound_transition(unsigned s, unsigned sprime) const {
+        return sample_.transitions().marked(s, sprime);
+    }
+
+    const transition_set_t& sound_transitions() const {
+        return sample_.transitions().marked_transitions();
+    }
+
+    const transition_list_t& all_transitions() const {
+        return sample_.transitions().all_transitions();
+    }
+
+    unsigned feature_weight(unsigned f) const {
+        return sample_.matrix().feature_cost(f);
+    }
+
+    const std::vector<unsigned>& successors(unsigned s) const {
+        return sample_.transitions().successors(s);
+    }
+
+    const std::vector<unsigned>& d1_distinguishing_features(unsigned s, unsigned t) {
+        const auto idx = d1idx(s, t);
+        const auto it = d1_features_cache_.find(idx);
+        if (it != d1_features_cache_.end()) return it->second;
+
+        std::vector<unsigned>& features = d1_features_cache_[idx];
+        for(unsigned f = 0; f < nf_; ++f) {
+            // Store those features that d1-distinguish s from t
+            auto sf = sample_.matrix().entry(s, f);
+            auto tf = sample_.matrix().entry(t, f);
+            if ((sf == 0) != (tf == 0)) {
+                features.push_back(f);
+            }
+        }
+        return features;
+    }
+
+    const std::vector<unsigned>& d2_distinguishing_features(const d2_key& key) {
+        unsigned s = std::get<0>(key), sprime = std::get<1>(key), t = std::get<2>(key), tprime = std::get<3>(key);
+        const auto it = d2_features_cache_.find(key);
+        if (it != d2_features_cache_.end()) return it->second;
+
+        std::vector<unsigned>& features = d2_features_cache_[key];
+        for(unsigned f = 0; f < nf_; ++f) {
+            // Store those features that d2-distinguish (s, s') from (t, t'), but do _not_ d1-distinguish s from t
+            int sf = sample_.matrix().entry(s, f);
+            int tf = sample_.matrix().entry(t, f);
+            if ((sf == 0) != (tf == 0)) continue; // f d1-distinguishes s from t
+
+            int sprime_f = sample_.matrix().entry(sprime, f);
+            int tprime_f = sample_.matrix().entry(tprime, f);
+
+            int type_s = sprime_f - sf; // <0 if DEC, =0 if unaffected, >0 if INC
+            int type_t = tprime_f - tf; // <0 if DEC, =0 if unaffected, >0 if INC
+
+            // Get the sign
+            type_s = (type_s > 0) ? 1 : ((type_s < 0) ? -1 : 0);
+            type_t = (type_t > 0) ? 1 : ((type_t < 0) ? -1 : 0);
+
+            if(type_s != type_t) {
+                features.push_back(f);
+            }
+        }
+        return features;
+    }
 
 
-    // fill in given D1 and D2 data-structures
-    size_t populate(D_t &D1, D1_map_t &D1_map, bool complete_only_for_marked_transitions = false) const {
-        size_t total_size = 0;
-        for( int s = 0; s < sample_.matrix().num_states(); ++s ) {
-            for( int t = s + 1; t < sample_.matrix().num_states(); ++t ) {
-                if( !sample_.marked(s, complete_only_for_marked_transitions) && !sample_.marked(t, complete_only_for_marked_transitions) ) continue;
-                int index = s * sample_.matrix().num_states() + t;
-                D1_map.insert(std::make_pair(index, D1.size()));
-                D1.emplace_back();
-                for( int f = 0; f < sample_.matrix().num_features(); ++f ) {
-                    int sf = (sample_.matrix())(s, f);
-                    int tf = (sample_.matrix())(t, f);
-                    if( ((sf == 0) && (tf > 0)) || ((sf > 0) && (tf == 0)) ) {
-                        D1.back().push_back(f);
+    static d1_key d1idx(unsigned s, unsigned t) {
+        assert(s != t);
+        return (s < t) ? std::make_tuple(s, t) : std::make_tuple(t, s);
+    }
+
+    static d2_key d2idx(unsigned s, unsigned sprime, unsigned t, unsigned tprime) {
+        assert(s != t);
+        return (s < t) ? std::make_tuple(s, sprime, t, tprime) :
+               std::make_tuple(t, tprime, s, sprime);
+    }
+
+    std::pair<bool, CNFWriter> write_maxsat(std::ostream &os, bool verbose) {
+        unsigned num_states = ns_;
+        unsigned num_features = nf_;
+
+        CNFWriter writer(os);
+
+        /////// Create the CNF variables ///////
+
+        // Selected(f) for each feature f
+        std::vector<cnfvar_t> var_selected;
+        for (unsigned f = 0; f < nf_; ++f) var_selected.push_back(writer.variable());
+
+        // D2(s, s', t, t')
+        d2map_t d2vars;
+        using bridge_clause_t = std::tuple<unsigned, unsigned, unsigned>;
+        std::unordered_set<bridge_clause_t, boost::hash<bridge_clause_t>> bridge_clauses;
+        for (const transition_t& tx1:sound_transitions()) {
+            unsigned s = tx1.first, sprime = tx1.second;
+
+            for (unsigned t = 0; t < ns_; ++t) {
+                // If s and t have to be distinguished (because only one of them is a goal),
+                // then no need to consider bridge clauses for them, as they will be trivially true
+                if (is_goal(s) != is_goal(t)) continue; // NOTE: This wasn't being checked in the Python version
+                // Bridge constraints not reflexive
+                if (s == t) continue;
+
+
+                for (unsigned tprime:successors(t)) {
+                    if (!(is_sound_transition(t, tprime) && t < s)) {
+                        // Symmetry-breaking: no need to define two D2 variables for permutations of s, t
+                        auto res = d2vars.emplace(d2idx(s, sprime, t, tprime), writer.variable());
+                        assert(res.second); // Make sure D2 was not already declared
                     }
-                }
-                total_size += D1.back().size();
-            }
-        }
-        return total_size;
-    }
-    size_t populate(std::vector<std::vector<int> > &D2, std::map<std::pair<int, int>, int> &D2_map, bool complete_only_for_marked_transitions = false) const {
-        size_t total_size = 0;
-        for( int s = 0; s < sample_.matrix().num_states(); ++s ) {
-            if( !sample_.expanded(s) ) continue;
 
-            const auto& succ_s =  sample_.transitions().successors(s);
-            for( int t = s + 1; t < sample_.matrix().num_states(); ++t ) {
-                if( !sample_.expanded(t) ) continue;
-                if( sample_.matrix().goal(s) != sample_.matrix().goal(t) ) continue;
-                if( !sample_.marked(s, complete_only_for_marked_transitions) && !sample_.marked(t, complete_only_for_marked_transitions) ) continue;
-
-                const auto& succ_t =  sample_.transitions().successors(t);
-                for(auto s_next:succ_s) {
-                    int index_s = s * sample_.matrix().num_states() + s_next;
-                    for (auto t_next:succ_t) {
-                        if( !sample_.marked(s, s_next, complete_only_for_marked_transitions) && !sample_.marked(t, t_next, complete_only_for_marked_transitions) ) continue;
-
-                        int index_t = t * sample_.matrix().num_states() + t_next;
-                        D2_map.insert(std::make_pair(std::make_pair(index_s, index_t), D2.size()));
-                        D2.emplace_back();
-                        for( int f = 0; f < sample_.matrix().num_features(); ++f ) {
-                            int spf = (sample_.matrix())(s_next, f);
-                            int sf = (sample_.matrix())(s, f);
-                            int type_s = spf - sf; // <0 if DEC, =0 if unaffected, >0 if INC
-                            type_s = type_s < 0 ? -1 : (type_s > 0 ? 1 : 0);
-
-                            int tpf = (sample_.matrix())(t_next, f);
-                            int tf = (sample_.matrix())(t, f);
-                            int type_t = tpf - tf; // <0 if DEC, =0 if unaffected, >0 if INC
-                            type_t = type_t < 0 ? -1 : (type_t > 0 ? 1 : 0);
-
-                            if( type_s != type_t ) {
-                                D2.back().push_back(f);
-                            }
-                        }
-                        total_size += D2.back().size();
-                    }
-                }
-            }
-        }
-        return total_size;
-    }
-    
-    bool dump_bridge(std::ostream &os, const D1_map_t &D1_map, const D2_map_t &D2_map, const D_t &D1, const D_t &D2, int s, int s_next, int t, bool verbose) const {
-
-        assert(sample_.matrix().goal(s) == sample_.matrix().goal(t));
-        assert(!sample_.expanded(s));
-        assert(!sample_.expanded(t));
-
-        // order states s and t
-        int small = s < t ? s : t;
-        int large = s < t ? t : s;
-        assert(small < large);
-
-        // define index for (s,s') and get successors of t
-        int index_s = s * sample_.matrix().num_states() + s_next;
-
-        // -D1(s,t) => OR_{t'} -D2(s,s',t,t')  for transition (s,s')
-
-        // antecedent: -D1(s,t)
-        int index_st = small * sample_.matrix().num_states() + large;
-        D1_map_t::const_iterator it = D1_map.find(index_st);
-        assert(it != D1_map.end());
-        int k = it->second;
-        os << D1[k].size();
-        for (int j : D1[k])
-            os << " " << -(1 + j);
-
-        // consequent: OR_{t'} -D2(s,s',t,t')
-        os << " " << sample_.transitions().num_transitions(t);
-        for (int j : sample_.transitions().successors(t)) {
-            int index_t = t * sample_.matrix().num_states() + j;
-            D2_map_t::const_iterator jt = D2_map.find(std::make_pair(index_s, index_t));
-            assert(jt != D2_map.end());
-            int k = jt->second;
-            os << " " << D2[k].size();
-            for (int l : D2[k])
-                os << " " << -(1 + l);
-        }
-        os << std::endl;
-
-        // generate warning if D1(s,t) is empty AND t has no successors
-        if( D1[k].empty() && (sample_.transitions().num_transitions(t) == 0) ) {
-            if( verbose ) {
-                std::cout << Utils::warning()
-                          << "theory is UNSAT:"
-                          << " D1(s=" << s << ",t=" << t << ") is empty,"
-                          << " there is transition (s=" << s << ",s'=" << s_next << "),"
-                          << " there are no transitions for t=" << t
-                          << std::endl;
-            }
-            return false;
-        }
-        return true;
-    }
-    void dump_target(std::ostream &os, const D1_map_t &D1_map, const D_t &D1, int s, int t, bool verbose) const {
-        int index = s * sample_.matrix().num_states() + t;
-        D1_map_t::const_iterator it = D1_map.find(index);
-        assert(it != D1_map.end());
-        int k = it->second;
-        assert(!D1[k].empty());
-        os << D1[k].size();
-        for (int x : D1[k]) os << " " << 1 + x;
-        os << std::endl;
-    }
-
-    bool write_maxsat(std::ostream &os, bool verbose) const {
-        assert(sample_.matrix_ != nullptr && sample_.transitions_ != nullptr);
-
-        int num_states = sample_.matrix().num_states();
-        int num_features = sample_.matrix().num_features();
-
-        // populate D1: D1(s,t) contains the features that make s and t different (s < t)
-        D_t D1;
-        D1_map_t D1_map;
-        populate(D1, D1_map, true);
-
-        // populate D2: D2(s,s',t,t') contains the features that make (s,s') and (t,t') different (s < t)
-        D_t D2;
-        D2_map_t D2_map;
-        populate(D2, D2_map, true);
-
-        // count bridge formulas
-        int num_formulas = 0;
-        for( unsigned s = 0; s < num_states; ++s ) {
-            if( !sample_.expanded(s) ) continue;
-            for( unsigned t = s + 1; t < num_states; ++t ) {
-                if( (sample_.matrix().goal(s) == sample_.matrix().goal(t)) && sample_.expanded(t) )
-                    num_formulas += sample_.transitions().num_transitions(s);
-                num_formulas += sample_.transitions().num_transitions(t);
-            }
-        }
-
-        // count targets
-        int num_targets = 0;
-        for( int s = 0; s < num_states; ++s ) {
-            for( int t = s + 1; t < num_states; ++t ) {
-                if( sample_.matrix().goal(s) != sample_.matrix().goal(t) ) {
-                    int index = s * num_states + t;
-                    assert(D1_map.find(index) != D1_map.end());
-                    int k = D1_map[index];
-                    if( D1[k].empty() ) {
-                        if( verbose ) {
-                            std::cout << "UNSAT: D1(s=" << s << ",t=" << t << ") is empty:"
-                                      << " s.goal()=" << sample_.matrix().goal(s) << ","
-                                      << " t.goal()=" << sample_.matrix().goal(t)
-                                      << std::endl;
-                        }
-                        return false;
-                    }
-                    ++num_targets;
+                    bridge_clauses.emplace(s, sprime, t);
                 }
             }
         }
+        // No more variables will be created. Print total count.
+        std::cout << "A total of " << writer.nvars() << " variables were created" << std::endl;
 
-        // dump Weighted MaxSAT problem
-        os << num_features << " " << num_formulas << " " << num_targets << std::endl;
 
-        // dump feature costs
-        os << num_features;
-        for( int i = 0; i < num_features; ++i ) {
-            assert(sample_.matrix().feature_cost(i) > 0);
-            os << " " << sample_.matrix().feature_cost(i);
+        /////// Create the CNF constraints ///////
+
+        std::cout << "Generating weighted selected constraints for " << var_selected.size() << " features" << std::endl;
+        for (unsigned f = 0; f < nf_; ++f) {
+            unsigned w = feature_weight(f);
+            writer.print_clause({CNFWriter::literal(var_selected[f], false)}, w);
+            n_selected_clauses += 1;
         }
-        os << std::endl;
 
-        // dump bridge formulas
-        for( unsigned s = 0; s < num_states; ++s ) {
-            if( !sample_.expanded(s) ) continue;
+        std::cout << "Generating bridge constraints for " << bridge_clauses.size() << " triplets" << std::endl;
+        for (const auto& bc:bridge_clauses) {
+            unsigned s = std::get<0>(bc), sprime = std::get<1>(bc), t = std::get<2>(bc);
 
-            for (unsigned s_next : sample_.transitions().successors(s)) {
-                for( int t = 0; t < num_states; ++t ) {
-                    if( s == t ) continue;
-                    if( !sample_.expanded(t) ) continue;
-                    if( sample_.matrix().goal(s) != sample_.matrix().goal(t) ) continue;
-                    if( !dump_bridge(os, D1_map, D2_map, D1, D2, s, s_next, t, verbose) )
-                        return false;
+            const auto& d1feats = d1_distinguishing_features(s, t);
+
+            // Start with OR_i Selected(f_i)
+            cnfclause_t clause;
+            for (unsigned f:d1feats) {
+                clause.push_back(CNFWriter::literal(var_selected.at(f), true));
+            }
+
+            // And add a literal -D2(s,s',t,t') for each child t' of t
+            for (unsigned tprime:successors(t)) {
+                auto d2_var = d2vars.at(d2idx(s, sprime, t, tprime));
+                clause.push_back(CNFWriter::literal(d2_var, false));
+            }
+
+            writer.print_clause(clause);
+            n_bridge_clauses += 1;
+        }
+
+        // Force D1(s1, s2) to be true if exactly one of the two states is a goal state
+        std::cout << "Generating goal constraints for " << goals_.size() * nongoals_.size() << " state pairs" << std::endl;
+        for (unsigned s:goals_) {
+            for (unsigned t:nongoals_) {
+                const auto& d1feats = d1_distinguishing_features(s, t);
+                if (d1feats.empty()) {
+                    undist_goal_warning(s, t);
+                    return {true, writer};
                 }
-            }
-        }
 
-#if 0
-        // dump bridge formulas
-        for( int s = 0; s < num_states; ++s ) {
-            if( !sample_.expanded(s) ) continue;
-            std::vector<int> succ_s;
-            sample_.transitions().successors(s, succ_s);
-            for( int i = 0; i < int(succ_s.size()); ++i ) {
-                int index_s = s * num_states + succ_s[i];
-                for( int t = s + 1; t < num_states; ++t ) {
-                    if( sample_.matrix().goal(s) != sample_.matrix().goal(t) ) continue;
-                    if( !sample_.expanded(t) ) continue;
-
-                    std::vector<int> succ_t;
-                    sample_.transitions().successors(t, succ_t);
-                    assert(int(succ_t.size()) == sample_.transitions().num_transitions(t));
-
-                    // implications: (1) -D1(s,t) => OR_{t'} -D2(s,s',t,t')  for transition (s,s')
-                    //               (1) -D1(s,t) => OR_{s'} -D2(s,s',t,t')  for transition (t,t')
-
-                    // antecedent for (1): -D1(s,t)
-                    int index_st = s * num_states + t;
-                    assert(D1_map.find(index_st) != D1_map.end());
-                    int k = D1_map[index_st];
-                    os << D1[k].size();
-                    for( int j = 0; j < int(D1[k].size()); ++j )
-                        os << " " << -(1 + D1[k][j]);
-
-                    // consequent for (1): OR_{t'} -D2(s,s',t,t')
-                    os << " " << sample_.transitions().num_transitions(t);
-                    for( int j = 0; j < int(succ_t.size()); ++j ) {
-                        int index_t = t * num_states + succ_t[j];
-                        assert(D2_map.find(std::make_pair(index_s, index_t)) != D2_map.end());
-                        int k = D2_map[std::make_pair(index_s, index_t)];
-                        os << " " << D2[k].size();
-                        for( int l = 0; l < int(D2[k].size()); ++l )
-                            os << " " << -(1 + D2[k][l]);
-                    }
-                    os << std::endl;
-
-                    // generate warning if D1(s,t) is empty AND t has no successors
-                    if( D1[k].empty() && (sample_.transitions().num_transitions(t) == 0) ) {
-                        if( verbose ) {
-                            std::cout << Utils::warning()
-                                      << "theory is UNSAT:"
-                                      << " D1(s=" << s << ",t=" << t << ") is empty,"
-                                      << " there is transition (s=" << s << ",s'=" << succ_s[i] << "),"
-                                      << " there are no transitions for t=" << t
-                                      << std::endl;
-                        }
-                        return false;
-                    }
+                cnfclause_t clause;
+                for (unsigned f:d1feats) {
+                    clause.push_back(CNFWriter::literal(var_selected.at(f), true));
                 }
-            }
-        }
-#endif
 
-        // dump targets
-        for( unsigned s = 0; s < num_states; ++s ) {
-            for( unsigned t = s + 1; t < num_states; ++t ) {
-                if( sample_.matrix().goal(s) != sample_.matrix().goal(t) )
-                    dump_target(os, D1_map, D1, s, t, verbose);
+                writer.print_clause(clause);
+                n_goal_clauses += 1;
             }
         }
 
-        return true;
+        std::cout << "Generating D2 constraints for " << d2vars.size() << " variables" << std::endl;
+        for (const auto& d2elem:d2vars) {
+            cnflit_t d2lit = CNFWriter::literal(d2elem.second, true);
+
+            // D2(s0,s1,t0,t2) <-- OR_f selected(f), where f ranges over features that d2-distinguish the transition
+            // but do _not_ d1-distinguish the two states at the origin of each transition.
+            for (unsigned f:d2_distinguishing_features(d2elem.first)) {
+                writer.print_clause({d2lit, CNFWriter::literal(var_selected.at(f), false)});
+                n_d2_clauses += 1;
+            }
+        }
+
+        return {false, writer};
     }
-
 };

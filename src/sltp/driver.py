@@ -323,6 +323,27 @@ class CPPFeatureGenerationStep(Step):
         return featuregen.run
 
 
+class CPPMaxsatProblemGenerationStep(Step):
+    """ Generate exhaustively a set of all features up to a given complexity from the transition (state) sample """
+    def get_required_attributes(self):
+        return ["experiment_dir"]
+
+    def get_required_data(self):
+        return []
+
+    def process_config(self, config):
+        config["top_filename"] = compute_info_filename(config, "top.dat")
+        config["cnf_filename"] = compute_maxsat_filename(config)
+        return config
+
+    def description(self):
+        return "C++ CNF generation module"
+
+    def get_step_runner(self):
+        from . import cnfgen
+        return cnfgen.run
+
+
 class MaxsatProblemGenerationStep(Step):
     """ Generate the max-sat problem from a given set of generated features """
     def get_required_attributes(self):
@@ -771,6 +792,7 @@ PIPELINES = dict(
         PlannerStep,
         TransitionSamplingStep,
         CPPFeatureGenerationStep,
+        # CPPMaxsatProblemGenerationStep,
         MaxsatProblemGenerationStep,
         MaxsatProblemSolutionStep,
         ActionModelStep,

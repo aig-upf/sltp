@@ -77,26 +77,40 @@ int main(int argc, const char **argv) {
     float preprocess_time = Utils::read_time_in_seconds() - start_time;
 
     // dump MaxSAT problem
-    string wsat_filename = prefix + "_theory.wsat";
-    CNFGenerator generator(sample);
+    string top_filename = prefix + "/top.dat";
+    string wsat_filename = prefix + "/theory.wsat";
+    string wsat_filename_tmp = wsat_filename + ".tmp";
+    CNFGenerator gen(sample);
 
-
-    std::cout << Utils::blue() << "writing" << Utils::normal() << " '" << wsat_filename << "' ... " << std::endl;
-    auto wsatstream = get_ofstream(wsat_filename);
-    // The generation of the CNF might already detect unsatisfiability
-    bool unsat = generator.write_maxsat(wsatstream, true);
+    auto wsatstream = get_ofstream(wsat_filename_tmp);
+    auto res = gen.write_maxsat(wsatstream, true);
     wsatstream.close();
 
+    // return {true, writer.top(), writer.nvars(), writer.nclauses()};
+    const auto& writer = res.second;
+
+    auto topstream = get_ofstream(top_filename);
+    topstream << writer.top() << " "
+              << writer.nvars() << " "
+              << writer.nclauses();
+    topstream.close();
+
+    bool unsat = std::get<0>(res);
     if(unsat) {
+        // The generation of the CNF might have already detected unsatisfiability
         std::cout << Utils::warning() << "CNF theory is UNSAT" << std::endl;
     }
 
     float total_time = Utils::read_time_in_seconds() - start_time;
 
-    cout << "stats:"
-         << " preprocess-time " << preprocess_time
-         << " total-time " << total_time
-         << endl;
+    std::cout << "Runtime stats:"  << " preprocess-time " << preprocess_time << " total-time " << total_time << std::endl;
+    std::cout << "CNF Theory: "  << writer.nvars() << " vars + " << writer.nclauses() << " clauses" << std::endl;
+    std::cout << "Clause breakdown: " << std::endl;
+    std::cout << "Selected(f):" <<  gen.n_selected_clauses << std::endl;
+    std::cout << "D2-definition:" <<  gen.n_d2_clauses << std::endl;
+    std::cout << "Bridge:" <<  gen.n_bridge_clauses << std::endl;
+    std::cout << "Goal-distinguishing:" <<  gen.n_goal_clauses << std::endl;
+    std::cout << "TOTAL:" <<  gen.n_selected_clauses + gen.n_d2_clauses + gen.n_bridge_clauses + gen.n_goal_clauses << std::endl;
 
     return unsat ? 1 : 0;
 }

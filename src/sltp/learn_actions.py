@@ -75,7 +75,7 @@ def compute_completeness_info(sample, complete_only_wrt_optimal):
         optimal_states = sample.compute_optimal_states(include_goals=False)
         optimal_transitions = sample.optimal_transitions
     else:
-        optimal_states = sample.compute_optimal_states(include_goals=False) if opt else all_states.copy()
+        optimal_states = all_states.copy()
         optimal_transitions = set((x, y) for x, y in all_transitions)  # Consider all transitions as optimal
 
     cinfo = CompletenessInfo(all_states, all_transitions, optimal_states, optimal_transitions)
@@ -368,7 +368,7 @@ class ModelTranslator:
 
             else:
                 if len(self.d1_distinguishing_features[self.d1idx(s1, s2)]) == 0:
-                    logging.warning(undist_goal_warning(s1,s2))
+                    logging.warning(undist_goal_warning(s1, s2))
                     return ExitCode.MaxsatModelUnsat
 
                 # print("Force goal distinguishability: {}".format((s1, s2)))

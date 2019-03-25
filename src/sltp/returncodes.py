@@ -14,6 +14,7 @@ class ExitCode(Enum):
     AbstractionFailsOnTestInstances = 20
 
     FeatureGenerationUnknownError = 30
+    CNFGenerationUnknownError = 31
 
     OutOfMemory = 100
     OutOfTime = 101

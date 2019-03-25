@@ -19,18 +19,18 @@ public:
     //! A transition is a pair of state IDs
     using transition_t = std::pair<unsigned, unsigned>;
 
+    using transition_list_t = std::vector<transition_t>;
+    using transition_set_t = std::unordered_set<transition_t, boost::hash<transition_t>>;
+
 protected:
     const unsigned num_states_;
     const unsigned num_transitions_;
     unsigned num_marked_transitions_;
-
     // trdata_[s] contains the IDs of all neighbors of s in the state space
     std::vector<std::vector<unsigned>> trdata_;
+    transition_list_t all_transitions_;
 
-    using transition_set_t = std::unordered_set<transition_t, boost::hash<transition_t>>;
-    using state_set_t = std::unordered_set<unsigned>;
     transition_set_t marked_transitions_;
-    state_set_t marked_states_;
 
 public:
     Transitions(unsigned num_states, unsigned num_transitions, unsigned num_marked_transitions)
@@ -51,14 +51,18 @@ public:
         return trdata_.at(s).size();
     }
 
-    const std::vector<unsigned> successors(unsigned s) const {
+    const std::vector<unsigned>& successors(unsigned s) const {
         return trdata_.at(s);
     }
 
-    // marked states and transitions
-    bool marked(unsigned s) const {
-        return marked_states_.find(s) != marked_states_.end();
+    const transition_set_t& marked_transitions() const {
+        return marked_transitions_;
     }
+
+    const transition_list_t& all_transitions() const {
+        return all_transitions_;
+    }
+
     bool marked(const transition_t& p) const {
         return marked_transitions_.find(p) != marked_transitions_.end();
     }
@@ -110,6 +114,7 @@ public:
                     if (seen.at(dst)) throw std::runtime_error("Duplicate transition");
                     trdata_[src].push_back(dst);
                     seen[dst] = true;
+                    all_transitions_.emplace_back(src, dst);
                 }
             }
         }
@@ -133,12 +138,6 @@ public:
             }
             marked_transitions_.emplace(src, dst);
         }
-
-        // marked states are those appearing in marked transitions
-        for (const auto &marked : marked_transitions) {
-            marked_states_.emplace(marked.first);
-            marked_states_.emplace(marked.second);
-        }
     }
     static Transitions read_dump(std::istream &is, bool verbose) {
         unsigned num_states, num_transitions, num_marked_transitions;
@@ -148,7 +147,6 @@ public:
         if( verbose ) {
             std::cout << "Transitions::read_dump: #states=" << transitions.num_states()
                       << ", #transitions=" << transitions.num_transitions()
-                      << ", #marked-states=" << transitions.marked_states_.size()
                       << ", #marked-transitions=" << transitions.marked_transitions_.size()
                       << std::endl;
         }

@@ -47,8 +47,8 @@ namespace Sample {
 
         unsigned num_goals() const { return num_goals_; }
 
-        int feature_cost(int i) const {
-            assert((0 <= i) && (i < num_features_));
+        unsigned feature_cost(unsigned i) const {
+            assert(i < num_features_);
             return feature_data_[i].second;
         }
 
@@ -107,22 +107,30 @@ namespace Sample {
                 is >> s;
                 goals_.insert(s);
             }
-            assert(int(goals_.size()) == num_goals_);
+            assert(goals_.size() == num_goals_);
 
             // Read the actual feature matrix data
             rowdata_.reserve(num_states_);
             feature_value_t value;
             for (int i = 0; i < num_states_; ++i) {
-                unsigned s;
-                is >> s;
+                unsigned s, nentries;
+                is >> s >> nentries;
                 assert(i == s);  // Make sure states are listed in increasing order
 
-                std::vector<feature_value_t> data;
-                data.reserve(num_features_);
-                for (unsigned f = 0; f < num_features_; ++f) {
-                    is >> value;
-                    data.push_back(value);
+                std::vector<feature_value_t> data(num_features_, 0);
+                for(unsigned j = 0; j < nentries; ++j) {
+                    char filler;
+                    unsigned f;
+                    is >> f >> filler >> value;
+                    assert(filler == ':');
+                    assert(f < num_features_);
+                    assert(value > 0);
+                    data[f] = value;
                 }
+//                for (unsigned f = 0; f < num_features_; ++f) {
+//                    is >> value;
+//                    data.push_back(value);
+//                }
                 rowdata_.push_back(std::move(data));
             }
 
