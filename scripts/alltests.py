@@ -8,27 +8,27 @@ BASEDIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 tests = [
     ("gripper.py", "aaai_prob01_gc",
-     ["total complexity: 8", "Numerical[free]", "Numerical[Not(Equal(at_g,at))]", "Numerical[Exists(carry,<universe>)]",
-      "Numerical[Exists(at_g,at-robby)]"]),
+     ["total complexity: 8", "Num[free]", "Num[Not(Equal(at_g,at))]", "Num[Exists(carry,<universe>)]",
+      "Num[Exists(at_g,at-robby)]"]),
 
     ("blocks.py", "aaai_clear_x_simple_hybrid",
      ["total complexity: 8",
-      # "Boolean[holding]", (sometimes  Atom[handempty] is found instead)
-      "Boolean[And(holding,Nominal(a))]",
-      "Numerical[Exists(Star(on),Nominal(a))]"]),
+      # "Bool[holding]", (sometimes  Atom[handempty] is found instead)
+      "Bool[And(holding,Nominal(a))]",
+      "Num[Exists(Star(on),Nominal(a))]"]),
 
     ("blocks.py", "aaai_clear_x_simple_hybrid_gc",
      ["total complexity: 8",
-      # "Boolean[holding]", (sometimes  Atom[handempty] is found instead)
-      "Boolean[And(clear_g,holding)]",
-      "Numerical[Exists(Star(on),clear_g)]"]),
+      # "Bool[holding]", (sometimes  Atom[handempty] is found instead)
+      "Bool[And(clear_g,holding)]",
+      "Num[Exists(Star(on),clear_g)]"]),
 
     ("blocks.py", "aaai_bw_on_x_y_completeness_opt",
     ["total complexity: 17",
-     # "Boolean[holding]",
-     "Boolean[And(holding,Nominal(a))]",
-     "Numerical[Exists(Star(on),Nominal(b))]", "Numerical[Exists(Star(on),Nominal(a))]",
-     "Boolean[And(Exists(on,Nominal(b)),Nominal(a))]"]),
+     # "Bool[holding]",
+     "Bool[And(holding,Nominal(a))]",
+     "Num[Exists(Star(on),Nominal(b))]", "Num[Exists(Star(on),Nominal(a))]",
+     "Bool[And(Exists(on,Nominal(b)),Nominal(a))]"]),
 ]
 
 
