@@ -326,7 +326,7 @@ class CPPFeatureGenerationStep(Step):
 class CPPMaxsatProblemGenerationStep(Step):
     """ Generate exhaustively a set of all features up to a given complexity from the transition (state) sample """
     def get_required_attributes(self):
-        return ["experiment_dir"]
+        return ["experiment_dir", "prune_redundant_states"]
 
     def get_required_data(self):
         return []
@@ -347,7 +347,7 @@ class CPPMaxsatProblemGenerationStep(Step):
 class MaxsatProblemGenerationStep(Step):
     """ Generate the max-sat problem from a given set of generated features """
     def get_required_attributes(self):
-        return ["experiment_dir"]
+        return ["experiment_dir", "prune_redundant_states"]
 
     def process_config(self, config):
         config["cnf_filename"] = compute_maxsat_filename(config)
@@ -450,12 +450,11 @@ class ActionModelStep(Step):
         return ['serialized_feature_filename']
 
     def process_config(self, config):
-        config["feature_namer"] = config.get("feature_namer")
         config["qnp_abstraction_filename"] = compute_info_filename(config, "abstraction.qnp")
         return config
 
     def get_required_data(self):
-        return ["cnf_translator", "cnf_solution", "sample"]
+        return ["cnf_translator", "cnf_solution", "sample", "model_cache"]
 
     def description(self):
         return "Computation of the action model"
@@ -465,6 +464,27 @@ class ActionModelStep(Step):
         return actionmodel.compute_action_model
 
 
+class CPPActionModelStep(Step):
+    """ Generate an abstract action model from the solution of the max-sat encoding """
+
+    def get_required_attributes(self):
+        return ['serialized_feature_filename', 'domain']
+
+    def process_config(self, config):
+        config["qnp_abstraction_filename"] = compute_info_filename(config, "abstraction.qnp")
+        return config
+
+    def get_required_data(self):
+        return ["cnf_solution", "sample", "num_features", "model_cache"]
+
+    def description(self):
+        return "Computation of the action model"
+
+    def get_step_runner(self):
+        from . import actionmodel
+        return actionmodel.compute_abstract_action_model
+
+
 class ActionModelFromFeatureIndexesStep(Step):
     """ Generate an abstract action model from the solution of the max-sat encoding """
 
@@ -472,7 +492,6 @@ class ActionModelFromFeatureIndexesStep(Step):
         return []
 
     def process_config(self, config):
-        config["feature_namer"] = config.get("feature_namer")
         config["qnp_abstraction_filename"] = compute_info_filename(config, "abstraction.qnp")
         return config
 
@@ -694,7 +713,7 @@ class SATStateFactorizationStep(Step):
 #         # return learn_actions.generate_maxsat_problem
 
 
-class AbstractionTestingComputation(Step):
+class AbstractionTestingStep(Step):
     """  """
     def get_required_attributes(self):
         return ["experiment_dir", "test_instances", "test_domain"]
@@ -709,10 +728,10 @@ class AbstractionTestingComputation(Step):
         return config
 
     def get_required_data(self):
-        return ["abstract_actions", "selected_features"]
+        return ["abstraction"]
 
     def description(self):
-        return "Testing of the computed abstraction on the testing instances"
+        return "Testing of the computed abstraction"
 
     def get_step_runner(self):
         from . import tester
@@ -785,18 +804,27 @@ PIPELINES = dict(
         MaxsatProblemGenerationStep,
         MaxsatProblemSolutionStep,
         ActionModelStep,
-        AbstractionTestingComputation,
+        AbstractionTestingStep,
+        # QNPGenerationStep,
+    ],
+    maxsatcpp_old=[
+        PlannerStep,
+        TransitionSamplingStep,
+        CPPFeatureGenerationStep,
+        MaxsatProblemGenerationStep,
+        MaxsatProblemSolutionStep,
+        ActionModelStep,
+        AbstractionTestingStep,
         # QNPGenerationStep,
     ],
     maxsatcpp=[
         PlannerStep,
         TransitionSamplingStep,
         CPPFeatureGenerationStep,
-        # CPPMaxsatProblemGenerationStep,
-        MaxsatProblemGenerationStep,
+        CPPMaxsatProblemGenerationStep,
         MaxsatProblemSolutionStep,
-        ActionModelStep,
-        AbstractionTestingComputation,
+        CPPActionModelStep,
+        AbstractionTestingStep,
         # QNPGenerationStep,
     ],
     maxsat_poly=[
@@ -807,7 +835,7 @@ PIPELINES = dict(
         # FeatureMatrixGenerationStep,
         InhouseMaxsatSolverStep,  # Blai's polynomial ad-hoc maxsat algorithm
         ActionModelFromFeatureIndexesStep,
-        AbstractionTestingComputation,
+        AbstractionTestingStep,
     ],
     sat=[
         PlannerStep,

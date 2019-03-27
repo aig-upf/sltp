@@ -33,24 +33,28 @@ def unserialize_features(language, filename, indexes=None):
         for i, line in enumerate(file, 0):
             if indexes is None or i in indexes:
                 name, complexity = line.rstrip('\n').split("\t")
-                features.append(unserialize_feature(language, name))
+                features.append(unserialize_feature(language, name, int(complexity)))
     return features
 
 
-def unserialize_feature(language, string):
+def unserialize_feature(language, string, complexity):
     ftype, concept, _ = string.replace("[", "]").split("]")  # Split feature name in 3 parts by '[', ']'
     assert not _
     if ftype == "Atom":
         p = language.get(concept)  # Concept will necessarily be a nullary predicate
         assert p.arity == 0
         return NullaryAtomFeature(NullaryAtom(p))
-    elif ftype == "Boolean":
-        return EmpiricalBinaryConcept(ConceptCardinalityFeature(parse_concept(language, concept)))
+    elif ftype == "Bool":
+        c = parse_concept(language, concept)
+        c.size = complexity
+        return EmpiricalBinaryConcept(ConceptCardinalityFeature(c))
 
-    elif ftype == "Numerical":
-        return ConceptCardinalityFeature(parse_concept(language, concept))
+    elif ftype == "Num":
+        c = parse_concept(language, concept)
+        c.size = complexity
+        return ConceptCardinalityFeature(c)
 
-    elif ftype == "Distance":
+    elif ftype == "Dist":
         parts = concept.split(';')
         assert len(parts) == 3
         params = [parse_concept(language, c) for c in parts]

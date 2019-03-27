@@ -47,9 +47,13 @@ namespace Sample {
 
         unsigned num_goals() const { return num_goals_; }
 
-        unsigned feature_cost(unsigned i) const {
+        const std::string& feature_name(unsigned i) const {
             assert(i < num_features_);
-            return feature_data_[i].second;
+            return feature_data_.at(i).first;
+        }
+
+        unsigned feature_cost(unsigned i) const {
+            return feature_data_.at(i).second;
         }
 
         bool goal(unsigned s) const {

@@ -7,10 +7,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 
 # Uncomment for debug build. Alternatively, build with `cmake -DCMAKE_BUILD_TYPE=Debug .`
-set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_CXX_FLAGS "-g -DDEBUG")
+#set(CMAKE_BUILD_TYPE Debug)
+#set(CMAKE_CXX_FLAGS "-g -DDEBUG")
 #set(CMAKE_CXX_FLAGS "-O3 -Wall -Wextra")
-#set(CMAKE_CXX_FLAGS "-O3 -DNDEBUG")
+set(CMAKE_CXX_FLAGS "-O3 -DNDEBUG")
 
 
 set(SOURCE_FILES

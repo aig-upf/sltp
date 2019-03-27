@@ -193,8 +193,8 @@ def transform_generator_output(config, sample, matrix_filename, info_filename):
             matrix[i] = [cast_feature_value_to_numpy_value(int(x)) for x in data]
 
     logging.info("Read denotation matrix with dimensions {}".format(matrix.shape))
-
-    return print_actual_output(sample, config, in_goal_features, names, complexities, matrix, types)
+    sat_feature_mapping, in_goal_features = print_actual_output(sample, config, in_goal_features, names, complexities, matrix, types)
+    return sat_feature_mapping, in_goal_features, len(names)
 
 
 def generate_output_from_handcrafted_features(sample, config, features, model_cache):
@@ -218,7 +218,8 @@ def generate_output_from_handcrafted_features(sample, config, features, model_ca
     # models = {sid: model_cache.get_feature_model(sid) for sid in sample.states}
     # log_feature_denotations(state_ids, features, models, config.feature_denotation_filename, None)
 
-    return print_actual_output(sample, config, [], names, complexities, matrix, types)
+    sat_feature_mapping, in_goal_features = print_actual_output(sample, config, [], names, complexities, matrix, types)
+    return sat_feature_mapping, in_goal_features, len(names)
 
 
 def print_actual_output(sample, config, in_goal_features, names, complexities, matrix, types):
@@ -234,7 +235,7 @@ def print_actual_output(sample, config, in_goal_features, names, complexities, m
                                                         matrix, state_ids, sample.goals,
                                                         names, complexities, types)
 
-    print_feature_matrix(config.feature_matrix_filename, matrix, state_ids, sample.goals, names, complexities, types)
+    print_feature_matrix(config.feature_matrix_filename, matrix, state_ids, sample.goals, names, complexities)
     return sat_feature_mapping, in_goal_features
 
 
@@ -269,12 +270,13 @@ def extract_features(config, sample):
     language, nominals, model_cache, infos = compute_models(
         config.domain, sample, parsed_problems, config.parameter_generator)
 
-    # If user provides handcrafted features, no need to go further than hear
+    # If user provides handcrafted features, no need to go further than here
     if config.feature_generator is not None:
         logging.info('Skipping automatic feature generation: User provided set of handcrafted features')
         features = config.feature_generator(language)
         generate_output_from_handcrafted_features(sample, config, features, model_cache)
-        return ExitCode.Success, dict(enforced_feature_idxs=[], in_goal_features=[], sat_feature_mapping={})
+        return ExitCode.Success, dict(enforced_feature_idxs=[], in_goal_features=[], sat_feature_mapping={},
+                                      model_cache=model_cache,)
 
     all_goal_predicates = set(itertools.chain.from_iterable(info.goal_predicates for info in infos))
     if any(all_goal_predicates != info.goal_predicates for info in infos):
@@ -313,13 +315,15 @@ def extract_features(config, sample):
 
     # Read off the output of the module and transform it into the numpy matrices to be consumed
     # by the next pipeline step
-    sat_feature_mapping, in_goal_features = transform_generator_output(
+    sat_feature_mapping, in_goal_features, nfeatures = transform_generator_output(
         config, sample,
         os.path.join(config.experiment_dir, "feature-matrix.io"),
         os.path.join(config.experiment_dir, "feature-info.io"),)
 
     return ExitCode.Success, dict(enforced_feature_idxs=[],
                                   in_goal_features=in_goal_features,
+                                  num_features=nfeatures,
+                                  model_cache=model_cache,
                                   sat_feature_mapping=sat_feature_mapping)
 
 
@@ -366,31 +370,20 @@ def print_blai_sat_feature_matrix(filename, matrix, state_ids, goals, names, com
     return all_feature_idxs  # A mapping between the new and the old feature indexes
 
 
-def print_feature_matrix(filename, matrix, state_ids, goals, names, complexities, types):
+def print_feature_matrix(filename, matrix, state_ids, goals, names, complexities):
     ngoals, nfeatures = len(goals), len(names)
+    assert nfeatures == len(complexities) == matrix.shape[1]
     logging.info("Printing matrix of {} features x {} states to '{}'".format(nfeatures, len(state_ids), filename))
-
-    # Separate features into binary and numeric
-    binary, numeric = [], []
-    for i, t in enumerate(types, 0):
-        if t == 0:
-            binary.append(i)
-        elif t == 1:
-            numeric.append(i)
-        else:
-            assert 0, "Unknown feature type"
-
-    all_feature_idxs = numeric + binary  # Shuffle the idxs so that all numeric features come first
 
     with open(filename, 'w') as f:
         # Header row: <#states> <#features> <#goals>
         print("{} {} {}".format(len(state_ids), nfeatures, ngoals), file=f)
 
         # Line #2:: <list of feature names>
-        print("{}".format(" ".join(names[f].replace(" ", "") for f in all_feature_idxs)), file=f)
+        print("{}".format(" ".join(name.replace(" ", "") for name in names)), file=f)
 
         # Line #3: <list of feature costs>
-        print("{}".format(" ".join(str(complexities[f]) for f in all_feature_idxs)), file=f)
+        print("{}".format(" ".join(str(c) for c in complexities)), file=f)
 
         # Line #4: <list of goal state IDs>
         print("{}".format(" ".join(map(str, goals))), file=f)
@@ -398,7 +391,7 @@ def print_feature_matrix(filename, matrix, state_ids, goals, names, complexities
         # next lines: one per each state with format: <state-index> <#features-in-state> <list-features>
         # each feature has format: <feature-index>:<value>
         for s in state_ids:
-            feature_values = ((i, matrix[s][f]) for i, f in enumerate(all_feature_idxs, 0))
+            feature_values = ((i, matrix[s][i]) for i in range(0, nfeatures))
             nonzero_features = [(i, v) for i, v in feature_values if v != 0]
             print("{} {} {}".format(s, len(nonzero_features), " ".join(
                 "{}:{}".format(i, int(v)) for i, v in nonzero_features)), file=f)

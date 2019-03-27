@@ -1433,7 +1433,7 @@ class BooleanFeature : public Feature {
         return sd->cardinality();
     }
     std::string as_str() const override {
-        return std::string("Boolean[") + concept_->as_str() + "]";
+        return std::string("Bool[") + concept_->as_str() + "]";
     }
 
     bool is_boolean() const override { return true; }
@@ -1466,7 +1466,7 @@ class NumericalFeature : public Feature {
         return sd->cardinality();
     }
     std::string as_str() const override {
-        return std::string("Numerical[") + concept_->as_str() + "]";
+        return std::string("Num[") + concept_->as_str() + "]";
     }
 
     bool is_boolean() const override { return false; }
@@ -1538,7 +1538,7 @@ class DistanceFeature : public Feature {
         return cached_distances_[state.id()];
     }
     std::string as_str() const override {
-        return std::string("Distance[") + start_->as_str() + ";" + role_->as_str() + ";" + end_->as_str() + "]";
+        return std::string("Dist[") + start_->as_str() + ";" + role_->as_str() + ";" + end_->as_str() + "]";
     }
 
     bool valid_cache() const {

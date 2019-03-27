@@ -38,7 +38,8 @@ def generate_experiment(domain_dir, domain, **kwargs):
 
     defaults = dict(
         # pipeline="maxsat",
-        pipeline="maxsatcpp",
+        # pipeline="maxsatcpp",
+        pipeline="maxsatcpp_old",
         # pipeline="sat",
         # pipeline="maxsat_poly",
 
@@ -151,6 +152,9 @@ def generate_experiment(domain_dir, domain, **kwargs):
 
         # Number of states to expand & test on the testing instances
         num_tested_states=50000,
+
+        # Prune those states that are redundante wrt the feature pool before building the CNF theory
+        prune_redundant_states=True,
     )
 
     parameters = {**defaults, **kwargs}  # Copy defaults, overwrite with user-specified parameters

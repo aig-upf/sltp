@@ -17,15 +17,12 @@
 #  Guillem Frances, guillem.frances@unibas.ch
 import itertools
 import logging
-import os
-from collections import defaultdict
 from enum import Enum
 
 import numpy as np
 
-from .sampling import TransitionSample
+from .util.tools import minimize_dnf
 from .errors import CriticalPipelineError
-from tarski.dl import FeatureValueChange, EmpiricalBinaryConcept
 from .util.console import header, lines
 from .util.cnfwriter import CNFWriter
 from .solvers import solve
@@ -53,7 +50,7 @@ def generate_maxsat_problem(config, data, rng):
     # translator.writer.print_variables(config.maxsat_variables_file)
 
     # TODO Serialize less stuff. Probably we don't need to serialize the full translator
-    data = dict(cnf_translator=translator, sample=sample) if result == ExitCode.Success else dict()
+    data = dict(cnf_translator=translator, post_cnf_sample=sample) if result == ExitCode.Success else dict()
     return result, data
 
 
@@ -97,7 +94,7 @@ def create_maxsat_translator(config, sample):
     cinfo = compute_completeness_info(sample, config.complete_only_wrt_optimal)
 
     # Remove states that are redundant
-    if True:
+    if config.prune_redundant_states:
         sample = preprocess_sample(sample, feat_matrix, bin_feat_matrix, cinfo)
 
         # Reproject the denotation matrices to the new state indices
@@ -106,6 +103,8 @@ def create_maxsat_translator(config, sample):
         feat_matrix = feat_matrix[projection]
         bin_feat_matrix = bin_feat_matrix[projection]
         cinfo = compute_completeness_info(sample, config.complete_only_wrt_optimal)
+    else:
+        logging.warning("Not pruning redundant states")
 
     translator = ModelTranslator(feat_matrix, bin_feat_matrix, feature_complexity, feature_names, feature_types,
                                  sample, optimization, cinfo)
@@ -120,89 +119,6 @@ def run_solver(config, data, rng):
         logging.info("MAXSAT solution with cost {} found".format(solution.cost))
 
     return ExitCode.Success, dict(cnf_solution=solution)
-
-
-class AbstractAction:
-    def __init__(self, preconditions, effects, name=None):
-        self.name = name
-        self.preconditions = preconditions
-        self.effects = frozenset(effects)
-        self.hash = hash((self.__class__, self.preconditions, self.effects))
-
-    def __hash__(self):
-        return self.hash
-
-    def __eq__(self, other):
-        return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
-                self.preconditions == other.preconditions and self.effects == other.effects)
-
-    def __str__(self):
-        precs = " and ".join(map(str, self.preconditions))
-        effs = ", ".join(map(str, self.effects))
-        return "AbstractAction<{}; {}>".format(precs, effs)
-
-    __repr__ = __str__
-
-
-class ActionEffect:
-    def __init__(self, feature, feature_name, change):
-        self.feature = feature
-        self.feature_name = feature_name
-        self.change = change
-        self.hash = hash((self.__class__, self.feature, self.change))
-
-    def __hash__(self):
-        return self.hash
-
-    def __eq__(self, other):
-        return (hasattr(other, 'hash') and self.hash == other.hash and self.__class__ is other.__class__ and
-                self.feature == other.feature and self.change == other.change)
-
-    def __str__(self):
-        return self.print_named()
-
-    __repr__ = __str__
-
-    def print_named(self, namer=lambda s: s):
-        name = namer(self.feature_name)
-        if self.change == FeatureValueChange.ADD:
-            return name
-        if self.change == FeatureValueChange.DEL:
-            return "NOT {}".format(name)
-        if self.change == FeatureValueChange.ADD_OR_NIL:
-            return "ADD* {}".format(name)
-        if self.change == FeatureValueChange.INC:
-            return "INC {}".format(name)
-        if self.change == FeatureValueChange.DEC:
-            return "DEC {}".format(name)
-        if self.change == FeatureValueChange.INC_OR_NIL:
-            return "INC* {}".format(name)
-        raise RuntimeError("Unexpected effect type")
-
-    def print_qnp_named(self, namer=lambda s: s):
-        name = namer(self.feature_name)
-        if self.change in (FeatureValueChange.ADD, FeatureValueChange.INC):
-            return "{} 1".format(name)
-
-        if self.change in (FeatureValueChange.DEL, FeatureValueChange.DEC):
-            return "{} 0".format(name)
-
-        if self.change in (FeatureValueChange.INC_OR_NIL, FeatureValueChange.ADD_OR_NIL):
-            assert False, "Relaxed INC semantics not supported for QNP"
-        raise RuntimeError("Unexpected effect type")
-
-
-def prettyprint_atom(feature, polarity, namer):
-    named = namer(feature)
-    if isinstance(feature, EmpiricalBinaryConcept):
-        return named if polarity else "not {}".format(named)
-    return "{} > 0".format(named) if polarity else "{} = 0".format(named)
-
-
-def prettyprint_abstract_action(action, namer, id_to_feature):
-    precs = " and ".join(map(lambda p: prettyprint_atom(id_to_feature[p[0]], p[1], namer), action.preconditions))
-    effs = ", ".join(map(lambda eff: eff.print_named(namer), action.effects))
-    return "AbstractAction<{}; {}>".format(precs, effs)
 
 
 class ModelTranslator:
@@ -338,7 +254,6 @@ class ModelTranslator:
                      .format(self.feat_matrix.shape[0], self.sample.num_transitions(), self.feat_matrix.shape[1]))
 
         # allf = list(range(0, len(self.feature_names)))  # i.e. select all features
-        # self.find_inconsistency(allf)
         # in_goal_features = set()
         self.writer = CNFWriter(cnf_filename)
         self.create_variables()
@@ -432,64 +347,6 @@ class ModelTranslator:
     def ftype(self, f):
         return bool if self.feature_types[f] else int
 
-    def generate_eff_change(self, feat, qchange):
-
-        if self.ftype(feat) == bool:
-            assert qchange in (-1, 1)
-            return {-1: FeatureValueChange.DEL, 1: FeatureValueChange.ADD, 2: FeatureValueChange.ADD_OR_NIL}[qchange]
-
-        # else type must be int
-        assert qchange in (-1, 1, 2)
-        return {-1: FeatureValueChange.DEC, 1: FeatureValueChange.INC, 2: FeatureValueChange.INC_OR_NIL}[qchange]
-
-    def compute_state_abstractions(self, features):
-        abstract_states = set()
-        state_abstraction = dict()
-        for state in self.cinfo.all_states:
-            abstract = self.compute_abstract_state(features, state)
-            abstract_states.add(abstract)
-            state_abstraction[state] = abstract
-        return abstract_states, state_abstraction
-
-    def compute_abstraction(self, selected_features, namer):
-        if not selected_features:
-            raise CriticalPipelineError("Zero-cost maxsat solution - "
-                                        "no action model possible, the encoding has likely some error")
-        print("Features (total complexity: {}): ".format(
-            sum(self.feature_complexity[f] for f in selected_features)))
-        print('\t' + '\n\t'.join("{}. {} [k={}, id={}]".format(
-            i, namer(self.feature_names[f]), self.feature_complexity[f], f) for i, f in enumerate(selected_features, 0)))
-
-        # logging.debug("Features:\n{}".format(serialize_to_string([features[i] for i in selected_features])))
-        selected_data = [dict(idx=f,
-                              name=namer(self.feature_names[f]),
-                              type=int(not self.feature_types[f]))
-                         for f in selected_features]
-
-        abstract_states, state_abstraction = self.compute_state_abstractions(selected_features)
-
-        abstract_actions = set()
-        for s, sprime in self.iterate_over_optimal_transitions():
-            abstract_s = state_abstraction[s]
-            abstract_sprime = state_abstraction[sprime]
-
-            qchanges = self.retrieve_possibly_cached_qchanges(s, sprime)
-            selected_qchanges = qchanges[selected_features]
-            abstract_effects = [ActionEffect(i, self.feature_names[f], self.generate_eff_change(f, c))
-                                # No need to record "NIL" changes:
-                                for i, (f, c) in enumerate(zip(selected_features, selected_qchanges)) if c != 0]
-
-            precondition_bitmap = frozenset(zip(selected_features, abstract_s))
-            abstract_actions.add(AbstractAction(precondition_bitmap, abstract_effects))
-            if len(abstract_effects) == 0:
-                msg = "Abstract no-op necessary [concrete: ({}, {}), abstract: ({}, {})]".format(
-                    s, sprime, abstract_s, abstract_sprime)
-                logging.warning(msg)
-
-        logging.info("Abstract state space: {} states and {} actions".
-                     format(len(abstract_states), len(abstract_actions)))
-        return abstract_states, abstract_actions, selected_data
-
     def decode_solution(self, assignment):
         varmapping = self.writer.mapping
         true_variables = set(varmapping[idx] for idx, value in assignment.items() if value is True)
@@ -553,52 +410,19 @@ class ModelTranslator:
 
         raise RuntimeError("Unknown optimization policy")
 
-    def compute_abstract_state(self, features, state_id):
-        bin_values = self.bin_feat_matrix[state_id, features]
-        return tuple(map(bool, bin_values))
-
-    def compute_action_model(self, selected_features, config):
-        states, actions, selected_data = self.compute_abstraction(selected_features, config.feature_namer)
-        self.print_actions(actions, os.path.join(config.experiment_dir, 'actions.txt'), config.feature_namer)
-        states, actions = optimize_abstract_action_model(states, actions)
-        opt_filename = os.path.join(config.experiment_dir, 'optimized.txt')
-        logging.info("Minimized action model with {} actions saved in {}".format(len(actions), opt_filename))
-        self.print_actions(actions, opt_filename, config.feature_namer)
-        return states, actions, selected_data
-
-    def print_actions(self, actions, filename, namer):
-        with open(filename, 'w') as f:
-            for i, action in enumerate(actions, 1):
-                action_str = self.print_abstract_action(action, namer)
-                print("\nAction {}:\n{}".format(i, action_str), file=f)
-
-    def print_abstract_action(self, action, namer=lambda s: s):
-        precs = ", ".join(sorted(self.print_precondition_atom(f, v, namer) for f, v in action.preconditions))
-        effs = ", ".join(sorted(eff.print_named(namer) for eff in action.effects))
-        return "\tPRE: {}\n\tEFFS: {}".format(precs, effs)
-
     def print_qnp_precondition_atom(self, feature, value, namer):
         assert value in (True, False)
         return "{} {}".format(namer(self.feature_names[feature]), int(value))
-
-    def print_precondition_atom(self, feature, value, namer):
-        assert value in (True, False)
-        type_ = self.ftype(feature)
-        fstr = namer(self.feature_names[feature])
-        if type_ == bool:
-            return fstr if value else "NOT {}".format(fstr)
-        assert type_ == int
-        return "{} > 0".format(fstr) if value else "{} = 0".format(fstr)
 
     def print_qnp_conjunction(self, conjunction, namer):
         sorted_ = sorted(self.print_qnp_precondition_atom(f, v, namer) for f, v in conjunction)
         return "{} {}".format(len(sorted_), " ".join(sorted_))
 
-    def compute_qnp(self, states, actions, features, config, data):
+    def compute_qnp(self, actions, features, config, sample):
         logging.info("Writing QNP abstraction to {}".format(config.qnp_abstraction_filename))
         namer = lambda x: config.feature_namer(x).replace(" ", "")  # let's make sure no spaces in feature names
 
-        init_dnf, goal_dnf = self.compute_init_goals(data.sample, features)
+        init_dnf, goal_dnf = self.compute_init_goals(sample, features)
 
         # TODO Just pick an arbitrary clause from the DNF. Should do better!
         init = next(iter(init_dnf))
@@ -637,7 +461,7 @@ class ModelTranslator:
         """ """
         dnf = self.bin_feat_matrix[np.ix_(states, feature_indexes)]  # see https://stackoverflow.com/q/22927181
         dnf = set(frozenset((i, val) for i, val in zip(feature_indexes, f)) for f in dnf)
-        return self.minimize_dnf(dnf)
+        return minimize_dnf(dnf)
 
     def compute_init_goals(self, sample, features):
         fidxs = [f["idx"] for f in features]
@@ -646,87 +470,6 @@ class ModelTranslator:
         goal_dnf = self.extract_dnf(fidxs, sorted(sample.goals))
 
         return init_dnf, goal_dnf
-
-    def minimize_dnf(self, dnf):
-        return merge_precondition_sets(dnf)
-
-    def find_inconsistency(self, features):
-        abstract_states, abstraction = self.compute_state_abstractions(features)
-
-        abstract2concrete = defaultdict(set)
-        for s in self.cinfo.all_states:
-            abstract2concrete[abstraction[s]].add(s)
-
-        for s, sprime in self.iterate_over_optimal_transitions():
-            abstract_s = abstraction[s]
-            qs = self.retrieve_possibly_cached_qchanges(s, sprime)
-
-            same_abstraction = [x for x in abstract2concrete[abstract_s] if x != s]
-
-            for t in same_abstraction:
-                if not self.sample.transitions[t]:  # i.e. state was not expanded
-                    continue
-
-                equal_qchanges_found = False
-                all_qts = []
-                for tprime in self.sample.transitions[t]:
-                    qt = self.retrieve_possibly_cached_qchanges(t, tprime)
-                    all_qts.append((tprime, qt))
-                    if np.array_equal(qs, qt):
-                        equal_qchanges_found = True
-                        break
-                if not equal_qchanges_found:
-                    named_qs = list(zip(self.feature_names, qs))
-                    logging.error("Unsoundness! No correspondence between qual. changes in transition {} "
-                                  "and qual. changes of any transition starting at state {}".format((s, sprime), t))
-                    logging.error("Q. changes for transition {}:".format((s, sprime)))
-                    logging.error("\t{}".format(named_qs))
-                    logging.error("Q. changes for all transitions starting at {}:".format(t))
-                    for tprime, qt in all_qts:
-                        named_qt = list(zip(self.feature_names, qt))
-                        logging.error("\t{}: {}".format((t, tprime), named_qt))
-
-
-def attempt_single_merge(action_precs):
-    for p1, p2 in itertools.combinations(action_precs, 2):
-        diff = p1.symmetric_difference(p2)
-        diffl = list(diff)
-        if len(diffl) == 2 and diffl[0][0] == diffl[1][0]:
-            # The two conjunctions differ in that one has one literal L and the other its negation, the rest being equal
-            assert diffl[0][1] != diffl[1][1]
-            p_merged = p1.difference(diff)
-            return p1, p2, p_merged  # Meaning p1 and p2 should be merged into p_merged
-    return None
-
-
-def merge_precondition_sets(action_precs):
-    action_precs = action_precs.copy()
-    while True:
-        res = attempt_single_merge(action_precs)
-        if res is None:
-            break
-
-        # else do the actual merge
-        p1, p2, new = res
-        action_precs.remove(p1)
-        action_precs.remove(p2)
-        action_precs.add(new)
-    return action_precs
-
-
-def optimize_abstract_action_model(states, actions):
-    actions_grouped_by_effects = defaultdict(set)
-    for a in actions:
-        actions_grouped_by_effects[a.effects].add(a.preconditions)
-    logging.info("Optimizing abstract action model with {} actions and {} effect groups".
-                 format(len(actions), len(actions_grouped_by_effects)))
-
-    merged = []
-    for effs, action_precs in actions_grouped_by_effects.items():
-        for prec in merge_precondition_sets(action_precs):
-            merged.append(AbstractAction(prec, effs))
-
-    return states, merged
 
 
 def compute_qualitative_changes(feature_matrix, s0, s1):

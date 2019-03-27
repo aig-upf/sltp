@@ -160,7 +160,10 @@ public:
 
         // Selected(f) for each feature f
         std::vector<cnfvar_t> var_selected;
-        for (unsigned f = 0; f < nf_; ++f) var_selected.push_back(writer.variable());
+        for (unsigned f = 0; f < nf_; ++f) {
+//            std::cout << "#" << f << ": " << sample_.matrix().feature_name(f) << std::endl;
+            var_selected.push_back(writer.variable());
+        }
 
         // D2(s, s', t, t')
         d2map_t d2vars;

@@ -1,37 +1,26 @@
-#!/usr/bin/env python3
 import logging
 
-from sltp.incremental import load_selected_features
-
-from .features import parse_all_instances, compute_models
+from .util.tools import Abstraction
+from .features import generate_model_cache
 from .returncodes import ExitCode
 from .sampling import read_transitions_from_files
 from .validator import AbstractionValidator
-from .learn_actions import prettyprint_abstract_action
 
 
 def run(config, data, rng):
-    features = load_selected_features(data.selected_features, config.domain, config.serialized_feature_filename)
-
-    abstraction = {"abstract_actions": data.abstract_actions,
-                   "selected_features": data.selected_features,
-                   "features": features}
-
     if config.test_domain is None:
         logging.info("No testing instances were specified")
         return ExitCode.Success, dict()
-
     logging.info("Testing learnt abstraction on instances: {}".format(config.test_instances))
-    sample, goals_by_instance = read_transitions_from_files(config.test_sample_files)
 
-    parsed_problems = parse_all_instances(config.test_domain, config.test_instances)
-    language, nominals, model_cache, infos = compute_models(
-        config.domain, sample, parsed_problems, config.parameter_generator)
+    abstraction = data.abstraction
+    assert isinstance(abstraction, Abstraction)
 
-    # we don't care about the order of validation
+    sample, _ = read_transitions_from_files(config.test_sample_files)
+    model_cache = generate_model_cache(config.test_domain, config.test_instances, sample, config.parameter_generator)
+
     validator = AbstractionValidator(model_cache, sample, list(sample.expanded))
-    action_printer = lambda a, id_to_feature: prettyprint_abstract_action(a, config.feature_namer, id_to_feature)
-    flaws = validator.find_flaws(abstraction, 1, check_completeness=False, action_printer=action_printer)
+    flaws = validator.find_flaws(abstraction, 1, check_completeness=False)
     if flaws:
         logging.error("The computed abstraction is not sound & complete".format())
         return ExitCode.AbstractionFailsOnTestInstances, dict()

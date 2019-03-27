@@ -49,6 +49,8 @@ def experiment(experiment_name=None):
     #
     exps["aaai_prob01"] = dict(
         instances=["prob01.pddl", "sample02.pddl"],
+        test_domain=domain, test_instances=["prob03.pddl"],
+        num_tested_states=5000,
         num_states=2000, max_width=[-1],
         num_sampled_states=100,
         complete_only_wrt_optimal=True,

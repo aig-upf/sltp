@@ -3,10 +3,9 @@ import logging
 import os
 
 import numpy as np
-from sltp.language import parse_pddl
-from sltp.util.naming import compute_info_filename
-from sltp.util.serialization import unserialize_features
-from tarski.dl import compute_dl_vocabulary, ConceptCardinalityFeature, EmpiricalBinaryConcept
+from .util.naming import compute_info_filename
+from .util.tools import load_selected_features, process_features
+from tarski.dl import compute_dl_vocabulary
 
 from .validator import AbstractionValidator
 
@@ -111,26 +110,17 @@ def setup_workspace(config, sample, k):
 def teardown_workspace(domain, experiment_dir, serialized_feature_filename, clean_workspace, **kwargs):
     """ Clean up the given workspace """
     data = load(experiment_dir, ["abstract_actions", "selected_features"])
-    data["features"] = load_selected_features(data["selected_features"], domain, serialized_feature_filename)
+    data["features"] = load_features(data["selected_features"], domain, serialized_feature_filename)
     # if clean_workspace:
     #     print(experiment_dir)
     #     shutil.rmtree(experiment_dir)  # TODO activate
     return data
 
 
-def process_features(features):
-    """ Transform 'empirically binary features' in the given list into standard cardinality features.
-    This is useful if we want to apply these features to unseen models, since it these models it won't
-    necessarily be the case that the features are still binary. """
-    return [ConceptCardinalityFeature(f.c) if isinstance(f, EmpiricalBinaryConcept) else f for f in features]
-
-
-def load_selected_features(selected_features, domain, serialized_feature_filename):
-    indexes = [elem['idx'] for elem in selected_features]
-    _, language, _ = parse_pddl(domain)
-    objs = unserialize_features(language, serialized_feature_filename, set(indexes))
-    assert len(indexes) == len(objs)
-    return process_features(objs)
+def load_features(selected_features, domain, filename):
+    indexes = set(elem['idx'] for elem in selected_features)
+    features = load_selected_features(indexes, domain, filename)
+    return process_features(features)
 
 
 def try_to_compute_abstraction(config, sample, k):
@@ -154,7 +144,7 @@ def try_to_compute_abstraction(config, sample, k):
     #         MaxsatProblemGenerationStep,
     #         MaxsatProblemSolutionStep,
     #         ActionModelStep,
-    #         AbstractionTestingComputation,
+    #         AbstractionTestingStep,
     #         # QNPGenerationStep,
 
     # Update some parameters and paths of the subconfig and save there transition info
