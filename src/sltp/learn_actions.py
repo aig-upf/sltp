@@ -502,14 +502,18 @@ def has_analog_transition(sample, feat_matrix, s, t):
         on the set of all features in the given feature matrix
     """
     for sp in sample.transitions[s]:
+        has_analog = False
         for tp in sample.transitions[t]:
             qchanges_s0s1 = compute_qualitative_changes(feat_matrix, s, sp)
             qchanges_t0t1 = compute_qualitative_changes(feat_matrix, t, tp)
             equal_idxs = np.equal(qchanges_s0s1, qchanges_t0t1)
             d2_distinguishing_features = np.where(equal_idxs == False)[0]
             if d2_distinguishing_features.size == 0:
-                return True
-    return False
+                has_analog = True
+        if not has_analog:
+            return False
+
+    return True
 
 
 def check_isomorphic(sample, bin_feat_matrix, feat_matrix, s, t, isomorphisms):
@@ -522,7 +526,6 @@ def check_isomorphic(sample, bin_feat_matrix, feat_matrix, s, t, isomorphisms):
 
         if has_analog_transition(sample, feat_matrix, s, t) and has_analog_transition(sample, feat_matrix, t, s):
             isomorphisms[t] = s
-    return
 
 
 def undist_goal_warning(s1, s2):
