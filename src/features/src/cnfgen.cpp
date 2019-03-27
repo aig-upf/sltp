@@ -3,6 +3,10 @@
 #include <string>
 #include <algorithm>
 
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/parsers.hpp>
+#include <boost/program_options/variables_map.hpp>
+
 #include <blai/sample.h>
 #include <blai/utils.h>
 #include <blai/matrix.h>
@@ -10,75 +14,79 @@
 #include <cnf/generator.h>
 #include <common/utils.h>
 
-using namespace std;
 
-void usage(ostream &os, const string &name) {
-    cout << endl
-         << "usage: " << name << " <prefix>" << endl
-         << endl
-         << "where" << endl
-         << "    <prefix> is prefix for all files" << endl
-         << endl
-         << "Constructs a Weighted MaxSAT problem from matrix and transition files." << endl
-         << "The output is a .wsat file that can be fed directly into the solver." << endl
-         << endl;
-}
+using namespace std;
+namespace po = boost::program_options;
+
+struct Options {
+    std::string workspace;
+    bool prune_redundant_states;
+    bool verbose;
+
+    Options(int argc, const char **argv) {
+        po::options_description description("Generate a weighted max-sat instance from given feature "
+                                            "matrix and transition samples.\n\nOptions");
+
+        description.add_options()
+                ("help,h", "Display this help message and exit.")
+                ("verbose,v", "Show extra debugging messages.")
+
+                ("workspace,w", po::value<std::string>()->required(),
+                        "Directory where the input files (feature matrix, transition sample) reside, "
+                        "and where the output .wsat file will be left.")
+
+                ("prune-redundant-states,p",
+                        "Whether to prune those states that appear redundant for the given feature pool.")
+                ;
+
+        po::variables_map vm;
+
+        try {
+            po::store(po::command_line_parser(argc, argv).options(description).run(), vm);
+
+            if (vm.count("help")) {
+                std::cout << description << "\n";
+                exit(0);
+            }
+            po::notify(vm);
+        } catch (const std::exception &ex) {
+            std::cout << "Error with command-line options:" << ex.what() << std::endl;
+            std::cout << std::endl << description << std::endl;
+            exit(1);
+        }
+
+        workspace = vm["workspace"].as<std::string>();
+        prune_redundant_states = vm.count("prune-redundant-states") > 0;
+        verbose = vm.count("verbose") > 0;
+    }
+};
+
 
 int main(int argc, const char **argv) {
-    // print call and start clock
-    cout << "call: " << Utils::cmdline(argc, argv) << endl;
     float start_time = Utils::read_time_in_seconds();
-
-    // read executable name
-    string name(*argv);
-
-    // read options
-    for( ++argv, --argc; (argc > 0) && (**argv == '-'); ++argv, --argc ) {
-        if( string(*argv) == "--" ) {
-            ++argv;
-            --argc;
-            break;
-        } else {
-            cout << Utils::error() << "unrecognized option '" << *argv << "'" << endl;
-            usage(cout, name);
-            exit(0);
-        }
-    }
-
-    // check we have enough arguments
-    if( argc < 1 ) {
-        cout << Utils::error() << "insufficient arguments" << endl;
-        usage(cout, name);
-        exit(0);
-    }
-
-    bool verbose = true;
-
-    // read arguments
-    string prefix = argv[0];
-    cout << "arguments: prefix=" << prefix << endl;
+    Options options(argc, argv);
 
     // Read feature matrix
-    std::string matrix_filename = prefix + "/feature-matrix.dat";
+    std::string matrix_filename = options.workspace + "/feature-matrix.dat";
     std::cout << Utils::blue() << "reading" << Utils::normal() << " '" << matrix_filename << std::endl;
     auto ifs_matrix = get_ifstream(matrix_filename);
-    auto matrix = Sample::Matrix::read_dump(ifs_matrix, verbose);
+    auto matrix = Sample::Matrix::read_dump(ifs_matrix, options.verbose);
     ifs_matrix.close();
 
     // Read transition data
-    std::string transitions_filename = prefix + "/sat_transitions.dat";
+    std::string transitions_filename = options.workspace + "/sat_transitions.dat";
     std::cout << Utils::blue() << "reading" << Utils::normal() << " '" << transitions_filename << std::endl;
     auto ifs_transitions = get_ifstream(transitions_filename);
-    auto transitions = Sample::Transitions::read_dump(ifs_transitions, verbose);
+    auto transitions = Sample::Transitions::read_dump(ifs_transitions, options.verbose);
     ifs_transitions.close();
 
 
-    Sample::Sample sample(std::move(matrix), std::move(transitions), verbose);
+    Sample::Sample sample(std::move(matrix), std::move(transitions), options.verbose);
     float preprocess_time = Utils::read_time_in_seconds() - start_time;
 
     // dump MaxSAT problem
-    string top_filename = prefix + "/top.dat";
-    string wsat_filename = prefix + "/theory.wsat";
+    string top_filename = options.workspace + "/top.dat";
+    string wsat_filename = options.workspace + "/theory.wsat";
     string wsat_filename_tmp = wsat_filename + ".tmp";
     CNFGenerator gen(sample);
 

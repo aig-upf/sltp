@@ -43,7 +43,13 @@ set(PROJECT_ROOT .)
 
 include_directories(${PROJECT_ROOT}/src)
 
+# Allow custom boost installations
+if(DEFINED ENV{BOOST_ROOT})
+    message(STATUS "BOOST_ROOT variable set to '$ENV{BOOST_ROOT}'")
+    set(BOOST_ROOT $ENV{HOME}/local)
+endif()
 
-#find_package(Boost 1.68 COMPONENTS program_options REQUIRED)
-#include_directories(${Boost_INCLUDE_DIR})
-#target_link_libraries(genfeatures LINK_PUBLIC ${Boost_LIBRARIES})
+
+find_package(Boost 1.68 COMPONENTS program_options REQUIRED)
+include_directories(${Boost_INCLUDE_DIR})
+target_link_libraries(cnfgen LINK_PUBLIC ${Boost_LIBRARIES})

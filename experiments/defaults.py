@@ -38,8 +38,8 @@ def generate_experiment(domain_dir, domain, **kwargs):
 
     defaults = dict(
         # pipeline="maxsat",
-        # pipeline="maxsatcpp",
-        pipeline="maxsatcpp_old",
+        pipeline="maxsatcpp",
+        # pipeline="maxsatcpp_old",
         # pipeline="sat",
         # pipeline="maxsat_poly",
 

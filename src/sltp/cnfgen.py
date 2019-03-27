@@ -13,7 +13,9 @@ def run(config, data, rng):
     logging.info('Invoking C++ CNF generation module'.format())
     featuregen_location = os.path.join(BASE_DIR, "..", "features")
     cmd = os.path.realpath(os.path.join(featuregen_location, "cnfgen"))
-    args = [config.experiment_dir]
+    args = ["--workspace", config.experiment_dir]
+    if config.prune_redundant_states:
+        args.append("--prune-redundant-states")
     retcode = execute([cmd] + args)
 
     if retcode != 0:
