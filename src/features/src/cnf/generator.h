@@ -82,9 +82,12 @@ protected:
     std::vector<unsigned> goals_, nongoals_;
     std::vector<unsigned> expanded_states_;
 
+    d2map_t d2ids_;
+    std::vector<cnfvar_t> d2vars_;
+
     //!
     std::unordered_map<d1_key, std::vector<unsigned>, boost::hash<d1_key>> d1_features_cache_;
-    std::unordered_map<d2_key, std::vector<unsigned>, boost::hash<d2_key>> d2_features_cache_;
+    std::vector<std::vector<unsigned>> d2_features_cache_;
 
 public:
     //! Some statistics
@@ -145,14 +148,9 @@ public:
     }
 
     //! Return possibly-cached set of features that d2-distinguish (s, s') from (t, t')
-    const std::vector<unsigned>& d2_distinguishing_features(const d2_key& key) {
-        unsigned s = std::get<0>(key), sprime = std::get<1>(key), t = std::get<2>(key), tprime = std::get<3>(key);
-        const auto it = d2_features_cache_.find(key);
-        if (it != d2_features_cache_.end()) return it->second;
-
-        std::vector<unsigned>& features = d2_features_cache_[key];
-        features = compute_d2_distinguishing_features(sample_, s, sprime, t, tprime);
-        return features;
+    const std::vector<unsigned>& d2_distinguishing_features(unsigned d2id) {
+        // key is guaranteed to be on the cache, as we have inserted upfront all necessary sets
+        return d2_features_cache_.at(d2id);
     }
 
 
@@ -165,6 +163,11 @@ public:
         assert(s != t);
         return (s < t) ? std::make_tuple(s, sprime, t, tprime) :
                std::make_tuple(t, tprime, s, sprime);
+    }
+
+    cnfvar_t get_d2var(unsigned s, unsigned sprime, unsigned t, unsigned tprime) const {
+        auto d2id = d2ids_.at(d2idx(s, sprime, t, tprime));
+        return d2vars_.at(d2id);
     }
 
     //! Generate and write the actual CNF instance as we go
@@ -184,7 +187,6 @@ public:
         }
 
         // D2(s, s', t, t')
-        d2map_t d2vars;
         using bridge_clause_t = std::tuple<unsigned, unsigned, unsigned>;
         std::unordered_set<bridge_clause_t, boost::hash<bridge_clause_t>> bridge_clauses;
         for (const transition_t& tx1:sound_transitions()) {
@@ -199,10 +201,19 @@ public:
 
 
                 for (unsigned tprime:successors(t)) {
+                    // Symmetry-breaking: no need to define two D2 variables for permutations of s, t:
                     if (!(is_sound_transition(t, tprime) && t < s)) {
-                        // Symmetry-breaking: no need to define two D2 variables for permutations of s, t
-                        auto res = d2vars.emplace(d2idx(s, sprime, t, tprime), writer.variable());
-                        assert(res.second); // Make sure D2 was not already declared
+                        auto d2_id = d2ids_.size();
+                        assert(d2_id == d2vars_.size() && d2_id == d2_features_cache_.size());
+
+                        auto res = d2ids_.emplace(d2idx(s, sprime, t, tprime), d2_id);
+                        assert(res.second); // Make sure this D2 variable was not already declared
+
+                        // Register the actual CNF variable
+                        d2vars_.push_back(writer.variable());
+
+                        // Register the set of d2-distinguishing features for this pair of transitions
+                        d2_features_cache_.push_back(compute_d2_distinguishing_features(sample_, s, sprime, t, tprime));
                     }
 
                     bridge_clauses.emplace(s, sprime, t);
@@ -236,7 +247,7 @@ public:
 
             // And add a literal -D2(s,s',t,t') for each child t' of t
             for (unsigned tprime:successors(t)) {
-                auto d2_var = d2vars.at(d2idx(s, sprime, t, tprime));
+                auto d2_var = get_d2var(s, sprime, t, tprime);
                 clause.push_back(CNFWriter::literal(d2_var, false));
             }
 
@@ -264,13 +275,14 @@ public:
             }
         }
 
-        std::cout << "Generating D2 constraints for " << d2vars.size() << " variables" << std::endl;
-        for (const auto& d2elem:d2vars) {
-            cnflit_t d2lit = CNFWriter::literal(d2elem.second, true);
+        auto num_d2vars = d2vars_.size();
+        std::cout << "Generating D2 constraints for " << num_d2vars << " variables" << std::endl;
+        for (unsigned i = 0; i < num_d2vars; ++i) {
+            cnflit_t d2lit = CNFWriter::literal(d2vars_[i], true);
 
             // D2(s0,s1,t0,t2) <-- OR_f selected(f), where f ranges over features that d2-distinguish the transition
             // but do _not_ d1-distinguish the two states at the origin of each transition.
-            for (unsigned f:d2_distinguishing_features(d2elem.first)) {
+            for (unsigned f:d2_distinguishing_features(i)) {
                 writer.print_clause({d2lit, CNFWriter::literal(var_selected.at(f), false)});
                 n_d2_clauses += 1;
             }
