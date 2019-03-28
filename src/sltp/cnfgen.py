@@ -3,7 +3,7 @@ import os
 import time
 
 from . import BASE_DIR
-from .util.command import execute, read_file, count_file_lines
+from .util.command import execute, read_file
 from .returncodes import ExitCode
 
 

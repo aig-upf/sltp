@@ -23,17 +23,16 @@ public:
     using transition_set_t = std::unordered_set<transition_t, boost::hash<transition_t>>;
 
 protected:
-    const unsigned num_states_;
-    const unsigned num_transitions_;
-    unsigned num_marked_transitions_;
+    const std::size_t num_states_;
+    const std::size_t num_transitions_;
+    const std::size_t num_marked_transitions_;
     // trdata_[s] contains the IDs of all neighbors of s in the state space
     std::vector<std::vector<unsigned>> trdata_;
-    transition_list_t all_transitions_;
 
     transition_set_t marked_transitions_;
 
 public:
-    Transitions(unsigned num_states, unsigned num_transitions, unsigned num_marked_transitions)
+    Transitions(std::size_t num_states, std::size_t num_transitions, std::size_t num_marked_transitions)
             : num_states_(num_states),
               num_transitions_(num_transitions),
               num_marked_transitions_(num_marked_transitions),
@@ -41,15 +40,9 @@ public:
           {}
     ~Transitions() = default;
 
-    unsigned num_states() const {
-        return num_states_;
-    }
-    unsigned num_transitions() const {
-        return num_transitions_;
-    }
-    std::size_t num_transitions(unsigned s) const {
-        return trdata_.at(s).size();
-    }
+    std::size_t num_states() const { return num_states_; }
+    std::size_t num_transitions() const { return num_transitions_; }
+    std::size_t num_marked_transitions() const { return num_marked_transitions_; }
 
     const std::vector<unsigned>& successors(unsigned s) const {
         return trdata_.at(s);
@@ -59,10 +52,6 @@ public:
         return marked_transitions_;
     }
 
-    const transition_list_t& all_transitions() const {
-        return all_transitions_;
-    }
-
     bool marked(const transition_t& p) const {
         return marked_transitions_.find(p) != marked_transitions_.end();
     }
@@ -70,14 +59,18 @@ public:
         return marked(std::make_pair(src, dst));
     }
 
-    void print(std::ostream &os) const {
-        os << "Transition set: #states=" << num_states_ << ", #transitions=" << num_transitions_ << std::endl;
-        for (unsigned s = 0; s < num_states_; ++s) {
-            const auto& dsts = trdata_[s];
-            if (!dsts.empty()) os << "state " << s << ":";
-            for (auto dst:dsts) os << " " << dst;
-            os << std::endl;
-        }
+    //! Print a representation of the object to the given stream.
+    friend std::ostream& operator<<(std::ostream &os, const Transitions& o) { return o.print(os); }
+    std::ostream& print(std::ostream &os) const {
+        os << "Transition sample [states: " << num_states_ << ", transitions: " << num_transitions_;
+        os << " (" << num_marked_transitions_ << " marked)]" << std::endl;
+//        for (unsigned s = 0; s < num_states_; ++s) {
+//            const auto& dsts = trdata_[s];
+//            if (!dsts.empty()) os << "state " << s << ":";
+//            for (auto dst:dsts) os << " " << dst;
+//            os << std::endl;
+//        }
+        return os;
     }
 
     // readers
@@ -114,7 +107,6 @@ public:
                     if (seen.at(dst)) throw std::runtime_error("Duplicate transition");
                     trdata_[src].push_back(dst);
                     seen[dst] = true;
-                    all_transitions_.emplace_back(src, dst);
                 }
             }
         }
@@ -139,6 +131,7 @@ public:
             marked_transitions_.emplace(src, dst);
         }
     }
+
     static Transitions read_dump(std::istream &is, bool verbose) {
         unsigned num_states, num_transitions, num_marked_transitions;
         is >> num_states >> num_transitions >> num_marked_transitions;
@@ -150,6 +143,41 @@ public:
                       << ", #marked-transitions=" << transitions.marked_transitions_.size()
                       << std::endl;
         }
+        return transitions;
+    }
+
+    //! Project the m states in selected, assumed to be a subset of [0, n], to the range
+    //! [0, m], applying the given mapping
+    Transitions resample(const std::unordered_set<unsigned>& selected,
+            const std::unordered_map<unsigned, unsigned>& mapping) const {
+
+        auto nstates = mapping.size();
+        unsigned ntransitions = 0;
+
+        std::vector<std::vector<unsigned>> trdata(nstates);
+        transition_set_t marked_transitions;
+
+        for (unsigned s:selected) {
+            unsigned mapped_s = mapping.at(s);
+            assert(mapped_s < nstates);
+
+            for (unsigned sprime:successors(s)) {
+                // mapping must contain all successors of the states in selected
+                assert(mapping.find(sprime) != mapping.end());
+                auto mapped_sprime = mapping.at(sprime);
+
+                trdata.at(mapped_s).push_back(mapped_sprime);
+                if (marked(s, sprime)) {
+                    marked_transitions.emplace(mapped_s, mapped_sprime);
+                }
+
+                ++ntransitions;
+            }
+        }
+
+        Transitions transitions(nstates, ntransitions, marked_transitions.size());
+        transitions.trdata_ = std::move(trdata);
+        transitions.marked_transitions_ = std::move(marked_transitions);
         return transitions;
     }
 };

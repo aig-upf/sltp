@@ -9,6 +9,51 @@ void undist_goal_warning(unsigned s, unsigned t) {
               <<  ". The MAXSAT encoding will be UNSAT" << std::endl;
 }
 
+//! Return a vector with those features that d1-distinguish s from t
+std::vector<unsigned> compute_d1_distinguishing_features(const Sample::Sample& sample, unsigned s, unsigned t) {
+    std::vector<unsigned> features;
+    const auto& mat = sample.matrix();
+    for(unsigned f = 0; f < mat.num_features(); ++f) {
+        auto sf = mat.entry(s, f);
+        auto tf = mat.entry(t, f);
+        if ((sf == 0) != (tf == 0)) {
+            features.push_back(f);
+        }
+    }
+    return features;
+}
+
+
+std::vector<unsigned> compute_d2_distinguishing_features(const Sample::Sample& sample,
+        unsigned s, unsigned sprime, unsigned t, unsigned tprime) {
+
+    std::vector<unsigned> features;
+    const auto& mat = sample.matrix();
+
+    for(unsigned f = 0; f < mat.num_features(); ++f) {
+        // Store those features that d2-distinguish (s, s') from (t, t'), but do _not_ d1-distinguish s from t
+        int sf = mat.entry(s, f);
+        int tf = mat.entry(t, f);
+        if ((sf == 0) != (tf == 0)) continue; // f d1-distinguishes s from t
+
+        int sprime_f = mat.entry(sprime, f);
+        int tprime_f = mat.entry(tprime, f);
+
+        int type_s = sprime_f - sf; // <0 if DEC, =0 if unaffected, >0 if INC
+        int type_t = tprime_f - tf; // <0 if DEC, =0 if unaffected, >0 if INC
+
+        // Get the sign
+        type_s = (type_s > 0) ? 1 : ((type_s < 0) ? -1 : 0);
+        type_t = (type_t > 0) ? 1 : ((type_t < 0) ? -1 : 0);
+
+        if(type_s != type_t) {
+            features.push_back(f);
+        }
+    }
+
+    return features;
+}
+
 
 class CNFGenerator {
 public:
@@ -28,10 +73,10 @@ protected:
     const Sample::Sample& sample_;
 
     //! The number of states in the encoding
-    const unsigned ns_;
+    const std::size_t ns_;
 
     //! The number of features in the encoding
-    const unsigned nf_;
+    const std::size_t nf_;
 
     //! For convenient and performant access, a list of goal and non-goal states + a list of expanded states
     std::vector<unsigned> goals_, nongoals_;
@@ -62,7 +107,7 @@ public:
             if (is_goal(s)) goals_.push_back(s);
             else nongoals_.push_back(s);
 
-            if (sample_.transitions_.num_transitions(s) > 0) {
+            if (!sample_.transitions_.successors(s).empty()) {
                 // TODO This check is not fully correct, we should annotate the planner output with this information
                 // TODO so that we do not take a dead-end for a not expanded state
                 expanded_states_.push_back(s);
@@ -80,10 +125,6 @@ public:
         return sample_.transitions().marked_transitions();
     }
 
-    const transition_list_t& all_transitions() const {
-        return sample_.transitions().all_transitions();
-    }
-
     unsigned feature_weight(unsigned f) const {
         return sample_.matrix().feature_cost(f);
     }
@@ -92,49 +133,25 @@ public:
         return sample_.transitions().successors(s);
     }
 
+    //! Return possibly-cached set of features that d1-distinguish s from t
     const std::vector<unsigned>& d1_distinguishing_features(unsigned s, unsigned t) {
         const auto idx = d1idx(s, t);
         const auto it = d1_features_cache_.find(idx);
         if (it != d1_features_cache_.end()) return it->second;
 
         std::vector<unsigned>& features = d1_features_cache_[idx];
-        for(unsigned f = 0; f < nf_; ++f) {
-            // Store those features that d1-distinguish s from t
-            auto sf = sample_.matrix().entry(s, f);
-            auto tf = sample_.matrix().entry(t, f);
-            if ((sf == 0) != (tf == 0)) {
-                features.push_back(f);
-            }
-        }
+        features = compute_d1_distinguishing_features(sample_, s, t);
         return features;
     }
 
+    //! Return possibly-cached set of features that d2-distinguish (s, s') from (t, t')
     const std::vector<unsigned>& d2_distinguishing_features(const d2_key& key) {
         unsigned s = std::get<0>(key), sprime = std::get<1>(key), t = std::get<2>(key), tprime = std::get<3>(key);
         const auto it = d2_features_cache_.find(key);
         if (it != d2_features_cache_.end()) return it->second;
 
         std::vector<unsigned>& features = d2_features_cache_[key];
-        for(unsigned f = 0; f < nf_; ++f) {
-            // Store those features that d2-distinguish (s, s') from (t, t'), but do _not_ d1-distinguish s from t
-            int sf = sample_.matrix().entry(s, f);
-            int tf = sample_.matrix().entry(t, f);
-            if ((sf == 0) != (tf == 0)) continue; // f d1-distinguishes s from t
-
-            int sprime_f = sample_.matrix().entry(sprime, f);
-            int tprime_f = sample_.matrix().entry(tprime, f);
-
-            int type_s = sprime_f - sf; // <0 if DEC, =0 if unaffected, >0 if INC
-            int type_t = tprime_f - tf; // <0 if DEC, =0 if unaffected, >0 if INC
-
-            // Get the sign
-            type_s = (type_s > 0) ? 1 : ((type_s < 0) ? -1 : 0);
-            type_t = (type_t > 0) ? 1 : ((type_t < 0) ? -1 : 0);
-
-            if(type_s != type_t) {
-                features.push_back(f);
-            }
-        }
+        features = compute_d2_distinguishing_features(sample_, s, sprime, t, tprime);
         return features;
     }
 
@@ -150,9 +167,10 @@ public:
                std::make_tuple(t, tprime, s, sprime);
     }
 
+    //! Generate and write the actual CNF instance as we go
     std::pair<bool, CNFWriter> write_maxsat(std::ostream &os, bool verbose) {
-        unsigned num_states = ns_;
-        unsigned num_features = nf_;
+        auto num_states = ns_;
+        auto num_features = nf_;
 
         CNFWriter writer(os);
 
@@ -261,3 +279,74 @@ public:
         return {false, writer};
     }
 };
+
+using isomorphism_t = std::unordered_map<unsigned, unsigned>;
+
+//! Check whether all transitions starting in s have some transition starting in t with same qualitative nature
+//! on the set of all features in the given feature matrix
+bool all_tx_have_analogs(const Sample::Sample& sample, unsigned s, unsigned t) {
+
+    for (unsigned sprime:sample.transitions().successors(s)) {
+        bool tx_has_analog = false;
+        for (unsigned tprime:sample.transitions().successors(t)) {
+            auto d2distinguishing = compute_d2_distinguishing_features(sample, s, sprime, t, tprime);
+            if (d2distinguishing.empty()) tx_has_analog = true;
+        }
+
+        if (!tx_has_analog) return false;
+    }
+    return true;
+}
+
+//! Check whether t appears isomorphic to s, and in that case, add it to the given list of isomorphisms
+void check_isomorphic(const Sample::Sample& sample, unsigned s, unsigned t, isomorphism_t& isomorphisms) {
+    if (isomorphisms.find(s) != isomorphisms.end() || isomorphisms.find(t) != isomorphisms.end()) return;
+
+    auto distinguishing = compute_d1_distinguishing_features(sample, s, t);
+
+    if (distinguishing.empty()) { // s and t are not distinguishable
+        if (sample.matrix().goal(s) != sample.matrix().goal(t)) { // Only one of the two is a goal
+            undist_goal_warning(s, t);
+        }
+
+        if (all_tx_have_analogs(sample, s, t) && all_tx_have_analogs(sample, t, s)) {
+            isomorphisms.emplace(t, s);  // t can be pruned in favor of s
+        }
+    }
+}
+
+
+isomorphism_t compute_redundant_states(const Sample::Sample& sample) {
+    isomorphism_t isomorphisms;
+
+    // Collect optimal and non-optimal states
+    std::unordered_set<unsigned> optimal_states;
+    for (const auto& tx:sample.transitions().marked_transitions()) {
+        optimal_states.insert(tx.first);
+    }
+
+    std::vector<unsigned> nonoptimal_states;
+    for (unsigned s=0; s < sample.transitions().num_states(); ++s) {
+        if (optimal_states.find(s) == optimal_states.end()) nonoptimal_states.push_back(s);
+    }
+
+
+    // Check isomorphism between an optimal and a non-optimal state
+    for (unsigned s:optimal_states) {
+        for (unsigned t:nonoptimal_states) {
+            if (s != t) {
+                check_isomorphic(sample, s, t, isomorphisms);
+            }
+        }
+    }
+
+    // Check isomorphism between two non-optimal states
+    for (unsigned i=0; i < nonoptimal_states.size(); ++i) {
+        for (unsigned j=i+1; j < nonoptimal_states.size(); ++j) {
+            unsigned s = nonoptimal_states[i], t = nonoptimal_states[j];
+            check_isomorphic(sample, s, t, isomorphisms);
+        }
+    }
+    return isomorphisms;
+}
+

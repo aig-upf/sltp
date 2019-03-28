@@ -497,7 +497,7 @@ def preprocess_sample(sample, feat_matrix, bin_feat_matrix, cinfo):
     return resampled
 
 
-def has_analog_transition(sample, feat_matrix, s, t):
+def all_tx_have_analogs(sample, feat_matrix, s, t):
     """ Check whether all transitions starting in s have some transition starting in t with same qualitative nature
         on the set of all features in the given feature matrix
     """
@@ -524,7 +524,7 @@ def check_isomorphic(sample, bin_feat_matrix, feat_matrix, s, t, isomorphisms):
         if sum(1 for x in (s, t) if x in sample.goals) == 1:  # Only one of the two is a goal!
             raise RuntimeError(undist_goal_warning(s, t))
 
-        if has_analog_transition(sample, feat_matrix, s, t) and has_analog_transition(sample, feat_matrix, t, s):
+        if all_tx_have_analogs(sample, feat_matrix, s, t) and all_tx_have_analogs(sample, feat_matrix, t, s):
             isomorphisms[t] = s
 
 

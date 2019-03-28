@@ -118,16 +118,6 @@ class TransitionSample:
                     transitions[mapped_source].add(remapping[t])
                     schemas[(mapped_source, remapping[t])] = self.transition_schemas[(source, t)]
 
-        # transitions2 = defaultdict(set)
-        # for source, targets in self.transitions.items():
-        #     if source in remapping:
-        #         mapped_source = remapping[source]
-        #         for t in targets:
-        #             if t in remapping:
-        #                 mapped_target = remapping[t]
-        #                 transitions2[mapped_source].add(mapped_target)
-        #                 schemas[(mapped_source, mapped_target)] = self.transition_schemas[(source, t)]
-
         resampled = TransitionSample()
         resampled.add_transitions(states, transitions, schemas, 0)
         resampled.instance = instance

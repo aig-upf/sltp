@@ -18,6 +18,7 @@
 using namespace std;
 namespace po = boost::program_options;
 
+//! Command-line option processing
 struct Options {
     std::string workspace;
     bool prune_redundant_states;
@@ -70,7 +71,7 @@ int main(int argc, const char **argv) {
     std::string matrix_filename = options.workspace + "/feature-matrix.dat";
     std::cout << Utils::blue() << "reading" << Utils::normal() << " '" << matrix_filename << std::endl;
     auto ifs_matrix = get_ifstream(matrix_filename);
-    auto matrix = Sample::Matrix::read_dump(ifs_matrix, options.verbose);
+    auto matrix = Sample::FeatureMatrix::read_dump(ifs_matrix, options.verbose);
     ifs_matrix.close();
 
     // Read transition data
@@ -80,45 +81,61 @@ int main(int argc, const char **argv) {
     auto transitions = Sample::Transitions::read_dump(ifs_transitions, options.verbose);
     ifs_transitions.close();
 
+    // If indicated by the user, prune those states that appear redundant for the given feature pool
+    auto sample = std::make_unique<Sample::Sample>(std::move(matrix), std::move(transitions));
 
-    Sample::Sample sample(std::move(matrix), std::move(transitions), options.verbose);
+    std::cout << "Training sample: " << *sample << std::endl;
+
+    if (options.prune_redundant_states) {
+        auto isomorphisms = compute_redundant_states(*sample);
+
+        std::cout << isomorphisms.size() << " / " << sample->matrix().num_states()
+                  << " were found to be isomorphic and were discarded" << std::endl;
+
+        std::unordered_set<unsigned> nonisomorphic;
+        for (unsigned s = 0; s < sample->transitions().num_states(); ++s) {
+            if (isomorphisms.find(s) == isomorphisms.end()) nonisomorphic.insert(s);
+        }
+
+        sample = std::unique_ptr<Sample::Sample>(sample->resample(nonisomorphic));
+
+        std::cout << "Pruned training sample: " << *sample << std::endl;
+    } else {
+        std::cout << "No pruning of redundant states performed" << std::endl;
+    }
+
     float preprocess_time = Utils::read_time_in_seconds() - start_time;
 
-    // dump MaxSAT problem
-    string top_filename = options.workspace + "/top.dat";
-    string wsat_filename = options.workspace + "/theory.wsat";
-    string wsat_filename_tmp = wsat_filename + ".tmp";
-    CNFGenerator gen(sample);
-
-    auto wsatstream = get_ofstream(wsat_filename_tmp);
+    // We write the MaxSAT instance progressively as we generate the CNF. We do so into a temporary "*.tmp" file
+    // which will be later processed by the Python pipeline to inject the value of the TOP weight, which we can
+    // know only when we finish writing all clauses
+    CNFGenerator gen(*sample);
+    auto wsatstream = get_ofstream(options.workspace + "/theory.wsat.tmp");
     auto res = gen.write_maxsat(wsatstream, true);
     wsatstream.close();
 
-    // return {true, writer.top(), writer.nvars(), writer.nclauses()};
+    // Write some characteristics of the CNF to a different file
     const auto& writer = res.second;
-
-    auto topstream = get_ofstream(top_filename);
-    topstream << writer.top() << " "
-              << writer.nvars() << " "
-              << writer.nclauses();
+    auto topstream = get_ofstream(options.workspace + "/top.dat");
+    topstream << writer.top() << " " << writer.nvars() << " " << writer.nclauses();
     topstream.close();
 
-    bool unsat = std::get<0>(res);
+    float total_time = Utils::read_time_in_seconds() - start_time;
+    std::cout << "Preprocessing time: " << preprocess_time << std::endl;
+    std::cout << "Total-time: " << total_time << std::endl;
+    std::cout << "CNF Theory: "  << writer.nvars() << " vars + " << writer.nclauses() << " clauses" << std::endl;
+    std::cout << "Clause breakdown: " << std::endl;
+    std::cout << "\tSelected(f):" <<  gen.n_selected_clauses << std::endl;
+    std::cout << "\tD2-definition:" <<  gen.n_d2_clauses << std::endl;
+    std::cout << "\tBridge:" <<  gen.n_bridge_clauses << std::endl;
+    std::cout << "\tGoal-distinguishing:" <<  gen.n_goal_clauses << std::endl;
+    std::cout << "\tTOTAL:" <<  gen.n_selected_clauses + gen.n_d2_clauses + gen.n_bridge_clauses + gen.n_goal_clauses << std::endl;
+
+    bool unsat = res.first;
     if(unsat) {
         // The generation of the CNF might have already detected unsatisfiability
         std::cout << Utils::warning() << "CNF theory is UNSAT" << std::endl;
+        return 1;
     }
-
-    float total_time = Utils::read_time_in_seconds() - start_time;
-
-    std::cout << "Runtime stats:"  << " preprocess-time " << preprocess_time << " total-time " << total_time << std::endl;
-    std::cout << "CNF Theory: "  << writer.nvars() << " vars + " << writer.nclauses() << " clauses" << std::endl;
-    std::cout << "Clause breakdown: " << std::endl;
-    std::cout << "Selected(f):" <<  gen.n_selected_clauses << std::endl;
-    std::cout << "D2-definition:" <<  gen.n_d2_clauses << std::endl;
-    std::cout << "Bridge:" <<  gen.n_bridge_clauses << std::endl;
-    std::cout << "Goal-distinguishing:" <<  gen.n_goal_clauses << std::endl;
-    std::cout << "TOTAL:" <<  gen.n_selected_clauses + gen.n_d2_clauses + gen.n_bridge_clauses + gen.n_goal_clauses << std::endl;
-
-    return unsat ? 1 : 0;
+    return 0;
 }

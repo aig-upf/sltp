@@ -12,14 +12,14 @@
 
 namespace Sample {
 
-    class Matrix {
+class FeatureMatrix {
     public:
         using feature_value_t = uint16_t;
 
     protected:
-        const unsigned num_states_;
-        const unsigned num_features_;
-        const unsigned num_goals_;
+        const std::size_t num_states_;
+        const std::size_t num_features_;
+        const std::size_t num_goals_;
 
         //! Contains pairs of feature name, feature cost
         std::vector<std::pair<std::string, unsigned>> feature_data_;
@@ -31,7 +31,7 @@ namespace Sample {
 
 
     public:
-        Matrix(unsigned num_states, unsigned num_features, unsigned num_goals)
+        FeatureMatrix(std::size_t num_states, std::size_t num_features, std::size_t num_goals)
                 : num_states_(num_states),
                   num_features_(num_features),
                   num_goals_(num_goals),
@@ -39,13 +39,13 @@ namespace Sample {
                   numeric_features_(num_features_, false)
         {}
 
-        virtual ~Matrix() = default;
+        virtual ~FeatureMatrix() = default;
 
-        unsigned num_states() const { return num_states_; }
+        std::size_t num_states() const { return num_states_; }
 
-        unsigned num_features() const { return num_features_; }
+        std::size_t num_features() const { return num_features_; }
 
-        unsigned num_goals() const { return num_goals_; }
+        std::size_t num_goals() const { return num_goals_; }
 
         const std::string& feature_name(unsigned i) const {
             assert(i < num_features_);
@@ -70,7 +70,7 @@ namespace Sample {
         }
 
         void print(std::ostream &os) const {
-            os << "Matrix stats: #states=" << num_states_
+            os << "FeatureMatrix stats: #states=" << num_states_
                << ", #features=" << num_features_
                << ", #binary-features=" << std::count(binary_features_.begin(), binary_features_.end(), true)
                << ", #numeric-features=" << std::count(numeric_features_.begin(), binary_features_.end(), true)
@@ -84,6 +84,43 @@ namespace Sample {
                 }
                 os << std::endl;
             }
+        }
+
+        FeatureMatrix resample(const std::unordered_map<unsigned, unsigned>& mapping) const {
+            auto nstates = mapping.size();
+
+            std::unordered_set<unsigned> goals;
+            for (unsigned s:goals_) {
+                auto it = mapping.find(s);
+                if (it != mapping.end()) goals.insert(it->second);
+            }
+
+            FeatureMatrix matrix(nstates, num_features_, goals.size());
+            // Feature data remains unchanged
+            matrix.feature_data_ = feature_data_;
+            matrix.feature_name_to_id_ = feature_name_to_id_;
+            matrix.binary_features_ = binary_features_;
+            matrix.numeric_features_ = numeric_features_;
+
+
+            // Remap state data
+            matrix.goals_ = goals;
+
+            // The mapping [0, n] -> [0, m], for n > m, needs to be surjective and map
+            // to a "gap-free" range
+            std::unordered_map<unsigned, unsigned> inv_mapping;
+            for (const auto& elem:mapping) {
+                assert(elem.second < nstates);
+                inv_mapping.emplace(elem.second, elem.first);
+            }
+            assert(nstates == inv_mapping.size());
+
+            matrix.rowdata_.reserve(nstates);
+            for (unsigned s = 0; s < nstates; ++s) {
+                matrix.rowdata_.push_back(rowdata_.at(inv_mapping.at(s)));
+            }
+
+            return matrix;
         }
 
         // readers
@@ -131,10 +168,6 @@ namespace Sample {
                     assert(value > 0);
                     data[f] = value;
                 }
-//                for (unsigned f = 0; f < num_features_; ++f) {
-//                    is >> value;
-//                    data.push_back(value);
-//                }
                 rowdata_.push_back(std::move(data));
             }
 
@@ -156,13 +189,13 @@ namespace Sample {
             }
         }
 
-        static Matrix read_dump(std::istream &is, bool verbose) {
+        static FeatureMatrix read_dump(std::istream &is, bool verbose) {
             unsigned num_states, num_features, num_goals;
             is >> num_states >> num_features >> num_goals;
-            Matrix matrix(num_states, num_features, num_goals);
+            FeatureMatrix matrix(num_states, num_features, num_goals);
             matrix.read(is);
             if (verbose) {
-                std::cout << "Matrix::read_dump: "
+                std::cout << "FeatureMatrix::read_dump: "
                           << "#states=" << matrix.num_states()
                           << ", #features=" << matrix.num_features()
                           << ", #goals=" << matrix.num_goals()
