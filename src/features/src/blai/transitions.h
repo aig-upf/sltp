@@ -14,7 +14,7 @@
 
 namespace Sample {
 
-class Transitions {
+class TransitionSample {
 public:
     //! A transition is a pair of state IDs
     using transition_t = std::pair<unsigned, unsigned>;
@@ -32,13 +32,13 @@ protected:
     transition_set_t marked_transitions_;
 
 public:
-    Transitions(std::size_t num_states, std::size_t num_transitions, std::size_t num_marked_transitions)
+    TransitionSample(std::size_t num_states, std::size_t num_transitions, std::size_t num_marked_transitions)
             : num_states_(num_states),
               num_transitions_(num_transitions),
               num_marked_transitions_(num_marked_transitions),
               trdata_(num_states)
           {}
-    ~Transitions() = default;
+    ~TransitionSample() = default;
 
     std::size_t num_states() const { return num_states_; }
     std::size_t num_transitions() const { return num_transitions_; }
@@ -60,7 +60,7 @@ public:
     }
 
     //! Print a representation of the object to the given stream.
-    friend std::ostream& operator<<(std::ostream &os, const Transitions& o) { return o.print(os); }
+    friend std::ostream& operator<<(std::ostream &os, const TransitionSample& o) { return o.print(os); }
     std::ostream& print(std::ostream &os) const {
         os << "Transition sample [states: " << num_states_ << ", transitions: " << num_transitions_;
         os << " (" << num_marked_transitions_ << " marked)]" << std::endl;
@@ -132,13 +132,13 @@ public:
         }
     }
 
-    static Transitions read_dump(std::istream &is, bool verbose) {
+    static TransitionSample read_dump(std::istream &is, bool verbose) {
         unsigned num_states, num_transitions, num_marked_transitions;
         is >> num_states >> num_transitions >> num_marked_transitions;
-        Transitions transitions(num_states, num_transitions, num_marked_transitions);
+        TransitionSample transitions(num_states, num_transitions, num_marked_transitions);
         transitions.read(is);
         if( verbose ) {
-            std::cout << "Transitions::read_dump: #states=" << transitions.num_states()
+            std::cout << "TransitionSample::read_dump: #states=" << transitions.num_states()
                       << ", #transitions=" << transitions.num_transitions()
                       << ", #marked-transitions=" << transitions.marked_transitions_.size()
                       << std::endl;
@@ -148,7 +148,7 @@ public:
 
     //! Project the m states in selected, assumed to be a subset of [0, n], to the range
     //! [0, m], applying the given mapping
-    Transitions resample(const std::unordered_set<unsigned>& selected,
+    TransitionSample resample(const std::unordered_set<unsigned>& selected,
             const std::unordered_map<unsigned, unsigned>& mapping) const {
 
         auto nstates = mapping.size();
@@ -175,7 +175,7 @@ public:
             }
         }
 
-        Transitions transitions(nstates, ntransitions, marked_transitions.size());
+        TransitionSample transitions(nstates, ntransitions, marked_transitions.size());
         transitions.trdata_ = std::move(trdata);
         transitions.marked_transitions_ = std::move(marked_transitions);
         return transitions;

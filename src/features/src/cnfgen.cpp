@@ -78,7 +78,7 @@ int main(int argc, const char **argv) {
     std::string transitions_filename = options.workspace + "/sat_transitions.dat";
     std::cout << Utils::blue() << "reading" << Utils::normal() << " '" << transitions_filename << std::endl;
     auto ifs_transitions = get_ifstream(transitions_filename);
-    auto transitions = Sample::Transitions::read_dump(ifs_transitions, options.verbose);
+    auto transitions = Sample::TransitionSample::read_dump(ifs_transitions, options.verbose);
     ifs_transitions.close();
 
     // If indicated by the user, prune those states that appear redundant for the given feature pool

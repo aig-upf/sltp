@@ -64,9 +64,9 @@ public:
     using d2_key = std::tuple<unsigned, unsigned, unsigned, unsigned>;
     using d2map_t = std::unordered_map<d2_key, cnfvar_t, boost::hash<d2_key>>;
 
-    using transition_t = Sample::Transitions::transition_t;
-    using transition_set_t = Sample::Transitions::transition_set_t;
-    using transition_list_t = Sample::Transitions::transition_list_t;
+    using transition_t = Sample::TransitionSample::transition_t;
+    using transition_set_t = Sample::TransitionSample::transition_set_t;
+    using transition_list_t = Sample::TransitionSample::transition_list_t;
 
 protected:
     //! The transition sample data

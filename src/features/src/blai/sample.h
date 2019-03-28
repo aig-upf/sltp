@@ -18,15 +18,15 @@ namespace Sample {
 class Sample {
 public:
     const FeatureMatrix matrix_;
-    const Transitions transitions_;
+    const TransitionSample transitions_;
 
-    Sample(FeatureMatrix&& matrix, Transitions&& transitions)
+    Sample(FeatureMatrix&& matrix, TransitionSample&& transitions)
       : matrix_(matrix), transitions_(transitions)
     {}
     virtual ~Sample() = default;
 
     const FeatureMatrix& matrix() const { return matrix_; }
-    const Transitions& transitions() const { return transitions_; }
+    const TransitionSample& transitions() const { return transitions_; }
 
     //! Remap the states in the current sample, whose IDs are assumed to span the full range [0..n],
     //! into a smaller range [0..m] with the m states that are either contained in `selected` or a successor of them
