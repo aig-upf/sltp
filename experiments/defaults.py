@@ -155,6 +155,9 @@ def generate_experiment(domain_dir, domain, **kwargs):
 
         # Prune those states that are redundante wrt the feature pool before building the CNF theory
         prune_redundant_states=True,
+
+        # Use the D2-Tree for the CNF encoding
+        use_d2tree=True,
     )
 
     parameters = {**defaults, **kwargs}  # Copy defaults, overwrite with user-specified parameters

@@ -23,6 +23,7 @@ struct Options {
     std::string workspace;
     bool prune_redundant_states;
     bool verbose;
+    bool use_d2tree;
 
     Options(int argc, const char **argv) {
         po::options_description description("Generate a weighted max-sat instance from given feature "
@@ -38,6 +39,9 @@ struct Options {
 
                 ("prune-redundant-states,p",
                         "Whether to prune those states that appear redundant for the given feature pool.")
+
+                ("d2tree,d",
+                  "Whether to use the encoding based on the D2 tree.")
                 ;
 
         po::variables_map vm;
@@ -59,6 +63,7 @@ struct Options {
         workspace = vm["workspace"].as<std::string>();
         prune_redundant_states = vm.count("prune-redundant-states") > 0;
         verbose = vm.count("verbose") > 0;
+        use_d2tree = vm.count("d2tree") > 0;
     }
 };
 
@@ -111,7 +116,7 @@ int main(int argc, const char **argv) {
     // know only when we finish writing all clauses
     CNFGenerator gen(*sample);
     auto wsatstream = get_ofstream(options.workspace + "/theory.wsat.tmp");
-    auto res = gen.write_maxsat(wsatstream, true);
+    auto res = gen.write_maxsat(wsatstream, options.use_d2tree);
     wsatstream.close();
 
     // Write some characteristics of the CNF to a different file
@@ -125,11 +130,11 @@ int main(int argc, const char **argv) {
     std::cout << "Total-time: " << total_time << std::endl;
     std::cout << "CNF Theory: "  << writer.nvars() << " vars + " << writer.nclauses() << " clauses" << std::endl;
     std::cout << "Clause breakdown: " << std::endl;
-    std::cout << "\tSelected(f):" <<  gen.n_selected_clauses << std::endl;
-    std::cout << "\tD2-definition:" <<  gen.n_d2_clauses << std::endl;
-    std::cout << "\tBridge:" <<  gen.n_bridge_clauses << std::endl;
-    std::cout << "\tGoal-distinguishing:" <<  gen.n_goal_clauses << std::endl;
-    std::cout << "\tTOTAL:" <<  gen.n_selected_clauses + gen.n_d2_clauses + gen.n_bridge_clauses + gen.n_goal_clauses << std::endl;
+    std::cout << "\tSelected(f): " <<  gen.n_selected_clauses << std::endl;
+    std::cout << "\tD2-definition: " <<  gen.n_d2_clauses << std::endl;
+    std::cout << "\tBridge: " <<  gen.n_bridge_clauses << std::endl;
+    std::cout << "\tGoal-distinguishing: " <<  gen.n_goal_clauses << std::endl;
+    std::cout << "\tTOTAL: " <<  gen.n_selected_clauses + gen.n_d2_clauses + gen.n_bridge_clauses + gen.n_goal_clauses << std::endl;
 
     bool unsat = res.first;
     if(unsat) {

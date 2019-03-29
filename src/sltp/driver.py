@@ -326,7 +326,7 @@ class CPPFeatureGenerationStep(Step):
 class CPPMaxsatProblemGenerationStep(Step):
     """ Generate exhaustively a set of all features up to a given complexity from the transition (state) sample """
     def get_required_attributes(self):
-        return ["experiment_dir", "prune_redundant_states"]
+        return ["experiment_dir", "prune_redundant_states", "use_d2tree"]
 
     def get_required_data(self):
         return []
@@ -347,7 +347,7 @@ class CPPMaxsatProblemGenerationStep(Step):
 class MaxsatProblemGenerationStep(Step):
     """ Generate the max-sat problem from a given set of generated features """
     def get_required_attributes(self):
-        return ["experiment_dir", "prune_redundant_states"]
+        return ["experiment_dir", "prune_redundant_states", "use_d2tree"]
 
     def process_config(self, config):
         config["cnf_filename"] = compute_maxsat_filename(config)

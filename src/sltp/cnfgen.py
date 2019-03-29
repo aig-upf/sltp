@@ -16,6 +16,8 @@ def run(config, data, rng):
     args = ["--workspace", config.experiment_dir]
     if config.prune_redundant_states:
         args.append("--prune-redundant-states")
+    if config.use_d2tree:
+        args.append("--d2tree")
     retcode = execute([cmd] + args)
 
     if retcode != 0:
