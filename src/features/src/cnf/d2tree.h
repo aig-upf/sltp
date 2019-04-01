@@ -12,7 +12,7 @@ using sorted_nodes_t = std::priority_queue<std::tuple<unsigned, unsigned, unsign
 class D2TreeBuilder {
 protected:
     CNFWriter& writer_;
-    const std::vector<cnfvar_t>& leaf_variables_;
+    unsigned nleaves_;
     std::vector<cnfvar_t> d2treevars_;
 
     const std::vector<std::vector<feature_t>>& leaf_features_;
@@ -27,26 +27,27 @@ protected:
 
 public:
 
-    using feature_getter_t = std::function<const std::vector<unsigned int>& (unsigned)>;
-
     D2TreeBuilder(
             CNFWriter& writer,
-            const std::vector<cnfvar_t>& leaf_variables,
+            unsigned nleaves,
             const std::vector<std::vector<feature_t>>& leaf_features,
             unsigned min_intersection_size) :
+
             writer_(writer),
 
-            leaf_variables_(leaf_variables),
-            d2treevars_(leaf_variables_), // Start with all d2vars.
+            nleaves_(nleaves),
+            d2treevars_(nleaves, (cnfvar_t) -1), // initialize the vector with fake variable IDs
 
             leaf_features_(leaf_features),
-            internal_features_(leaf_variables_.size()), // Initialize with n empty vectors
+
+            // Initialize with n empty elements that will act as offset for the deindexing of the vector
+            internal_features_(nleaves),
 
             min_intersection_size_(min_intersection_size),
             parent_(),
             canonicals_()
     {
-        for (unsigned i = 0; i < d2treevars_.size(); ++i) canonicals_.push_back(i);
+        for (unsigned i = 0; i < nleaves; ++i)  canonicals_.push_back(i);
     }
 
     const std::vector<feature_t>& get_distinguishing_features(unsigned i) const {
@@ -90,7 +91,7 @@ public:
             for (unsigned j = i+1; j < end; ++j) {
                 if (canonicals_[j] != j) continue;
                 if (get_distinguishing_features(i) == get_distinguishing_features(j)) {
-//                    canonicals_[j] = i;
+                    canonicals_[j] = i;
                     ++num_found;
                 }
             }
@@ -133,12 +134,11 @@ public:
                     continue; // Some node in the pair already has one parent, we ignore the pair
 
                 unsigned treevar_id = (unsigned) d2treevars_.size();
-                d2treevars_.push_back(writer_.variable());
+                d2treevars_.push_back((cnfvar_t) -1);
                 parent_[n1] = parent_[n2] = treevar_id;
 
                 assert (canonicals_.size() == treevar_id);
                 canonicals_.push_back(treevar_id);
-
 
                 // Compute the intersection of S(n1) and S(n2)
                 auto& d_f1 = get_distinguishing_features(n1);
@@ -149,7 +149,7 @@ public:
                 auto intersection_size = internal_features_.back().size();
                 if (intersection_size == d_f1.size() || intersection_size == d_f2.size()) {
                     ++n_subsuming_merges;
-//                    assert(intersection_size != d_f1.size() || intersection_size != d_f2.size()); // if both were equal, then one should be subsumed by the other
+                    assert(intersection_size != d_f1.size() || intersection_size != d_f2.size()); // if both were equal, then one should be subsumed by the other
                     // TODO Reactivate?
 //                    if (intersection_size == d_f1.size()) {
 //                        canonicals_[n1] = treevar_id;
@@ -187,7 +187,8 @@ public:
 //        }
     }
 
-    unsigned generate_variables() {
+    std::vector<cnfvar_t> generate_variables() {
+        std::vector<cnfvar_t> leaf_variables;
         unsigned created = 0;
         // Create one single CNF variable for each canonical D2 variable
         for (unsigned i = 0; i < d2treevars_.size(); ++i) {
@@ -202,9 +203,12 @@ public:
             } else {
                 d2treevars_[i] = d2treevars_[can];
             }
+
+            // Store the leaf variables, which are the ones visible to the external script
+            if (i < nleaves_) leaf_variables.push_back(d2treevars_[i]);
         }
         std::cout << created << " CNF D2-variables were created" << std::endl;
-        return created;
+        return leaf_variables;
     }
 
     //! Generate the D2 tree constraints. Return the number of generated clauses
@@ -213,19 +217,19 @@ public:
         ulong num_clauses_0 = writer_.nclauses(), nclauses_on_leaf_variables = 0;
 
         for (unsigned i = 0; i < d2treevars_.size(); ++i) {
-            assert(canonicals_[i] == i);
             if (canonicals_[i] != i) continue; // The d2-pair is a duplicate of some other pair
             cnflit_t pnlit = CNFWriter::literal(d2treevars_[i], true);
+            const auto& feats_i = get_distinguishing_features(i);
 
             auto it = parent_.find(i);
             if (it == parent_.end()) {
                 // An orphan tree node
                 // If OR_{f in S(n)} selected(f) --> p(n);  for nodes n without parents
 
-                for (feature_t f:get_distinguishing_features(i)) {
+                for (feature_t f:feats_i) {
                     writer_.print_clause({pnlit, CNFWriter::literal(var_selected.at(f), false)});
 
-                    if (i < leaf_variables_.size()) nclauses_on_leaf_variables++;
+                    if (i < nleaves_) nclauses_on_leaf_variables++;
                 }
 
 
@@ -236,9 +240,8 @@ public:
 
                 cnflit_t parentlit = CNFWriter::literal(d2treevars_.at(parent), false);
                 writer_.print_clause({pnlit, parentlit});
-                if (i < leaf_variables_.size()) nclauses_on_leaf_variables++;
+                if (i < nleaves_) nclauses_on_leaf_variables++;
 
-                const auto& feats_i = get_distinguishing_features(i);
                 const auto& feats_parent = get_distinguishing_features(parent);
 
                 std::vector<unsigned> diff;
@@ -247,7 +250,7 @@ public:
 
                 for (feature_t f:diff) {
                     writer_.print_clause({pnlit, CNFWriter::literal(var_selected.at(f), false)});
-                    if (i < leaf_variables_.size()) nclauses_on_leaf_variables++;
+                    if (i < nleaves_) nclauses_on_leaf_variables++;
                 }
             }
         }
@@ -284,10 +287,10 @@ public:
             }
         }
 
-        auto total_merges = d2treevars_.size() - leaf_variables_.size();
+        auto total_merges = d2treevars_.size() - nleaves_;
         std::cout << "D2-tree - Total node vars: " << d2treevars_.size()
                   << ", of which " << total_merges
-                  << " internal and " << leaf_variables_.size() << " leafs. "
+                  << " internal and " << nleaves_ << " leaves. "
                   << unparented << " nodes are orphan." << std::endl;
         std::cout << "\t" << n_subsuming_merges << "/" << total_merges << " ("
                   << n_subsuming_merges * 100.0 / (float) total_merges << "%) subsuming merges" << std::endl;

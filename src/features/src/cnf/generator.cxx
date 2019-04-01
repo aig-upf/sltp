@@ -34,13 +34,10 @@ std::pair<bool, CNFWriter> CNFGenerator::write_maxsat(std::ostream &os, bool use
                 // Symmetry-breaking: no need to define two D2 variables for permutations of s, t:
                 if (!(is_sound_transition(t, tprime) && t < s)) {
                     auto d2_id = d2ids_.size();
-                    assert(d2_id == d2vars_.size() && d2_id == d2_features_cache_.size());
+                    assert(d2_id == d2_features_cache_.size());
 
                     auto res = d2ids_.emplace(d2idx(s, sprime, t, tprime), d2_id);
                     assert(res.second); // Make sure this D2 variable was not already declared
-
-                    // Register the actual CNF variable
-                    d2vars_.push_back(writer.variable());
 
                     // Register the set of d2-distinguishing features for this pair of transitions
                     d2_features_cache_.push_back(compute_d2_distinguishing_features(sample_, s, sprime, t, tprime));
@@ -51,12 +48,17 @@ std::pair<bool, CNFWriter> CNFGenerator::write_maxsat(std::ostream &os, bool use
         }
     }
 
-    const std::size_t nd2vars = d2vars_.size(); // The number of D2 variables is final at this point
+    const unsigned nd2vars = (unsigned) d2ids_.size(); // The number of D2 variables is final at this point
 
     /////// Build the D2 tree ///////
-    d2tree::D2TreeBuilder treebuilder(writer, d2vars_, d2_features_cache_, 5);
+    d2tree::D2TreeBuilder treebuilder(writer, nd2vars, d2_features_cache_, 5);
     if (use_d2tree) {
         treebuilder.build();
+        d2vars_ = treebuilder.generate_variables();
+    } else { // Simply initialize all D2 variables with a fresh variable
+        for (unsigned i = 0; i < nd2vars; ++i) {
+            d2vars_.push_back(writer.variable());
+        }
     }
 
     // No more variables will be created. Print total count.
