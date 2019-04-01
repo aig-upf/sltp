@@ -1,12 +1,11 @@
 
 #pragma once
 
-#include <queue>
 #include <algorithm>
 
 namespace d2tree {
 
-using sorted_nodes_t = std::priority_queue<std::tuple<unsigned, unsigned, unsigned>>;
+using sorted_nodes_t = std::vector<std::tuple<unsigned, unsigned, unsigned>>;
 
 
 class D2TreeBuilder {
@@ -54,15 +53,15 @@ public:
         return (i < leaf_features_.size()) ? leaf_features_.at(i) : internal_features_.at(i);
     }
 
-    sorted_nodes_t sort_pairs(std::size_t start, std::size_t end) {
-        std::priority_queue<std::tuple<unsigned, unsigned, unsigned>> pairs;
+    sorted_nodes_t sort_pairs(unsigned start, unsigned end) {
+        std::vector<std::tuple<unsigned, unsigned, unsigned>> pairs;
         assert(canonicals_.size() == end);
         std::cout << "\tSorting pairs from " << start << " to " << end << "...";
 
-        for (std::size_t i = start; i < end; ++i) {
+        for (unsigned i = start; i < end; ++i) {
             if (canonicals_[i] != i) continue; // i is already subsumed by a previous variable
 
-            for (std::size_t  j = i+1; j < end; ++j) {
+            for (unsigned  j = i+1; j < end; ++j) {
                 if (canonicals_[j] != j) continue;
 
                 auto& d_f1 = get_distinguishing_features(i);
@@ -71,10 +70,11 @@ public:
                 std::set_intersection(d_f1.begin(), d_f1.end(), d_f2.begin(), d_f2.end(), std::back_inserter(res));
                 auto intersection_size = res.size();
                 if (intersection_size > min_intersection_size_) {
-                    pairs.emplace(intersection_size, i, j);
+                    pairs.emplace_back(intersection_size, i, j);
                 }
             }
         }
+        std::sort(pairs.begin(), pairs.end(), std::greater<>());
         std::cout << " " << pairs.size() << " suitable pairs found" << std::endl;
         return pairs;
     }
@@ -127,8 +127,7 @@ public:
             // Compute pairs of indexes <i, j> sorted by (largest) size of the intersection S(i) \cap S(j) first
             sorted_nodes_t pairs = sort_pairs(start, end);
 
-            for (; !pairs.empty(); pairs.pop()) {
-                const auto& elem = pairs.top();
+            for (const auto& elem:pairs) {
                 unsigned n1 = std::get<1>(elem), n2 = std::get<2>(elem);
                 if (parent_.find(n1) != parent_.end() || parent_.find(n2) != parent_.end())
                     continue; // Some node in the pair already has one parent, we ignore the pair
