@@ -54,7 +54,7 @@ std::pair<bool, CNFWriter> CNFGenerator::write_maxsat(std::ostream &os, bool use
     const std::size_t nd2vars = d2vars_.size(); // The number of D2 variables is final at this point
 
     /////// Build the D2 tree ///////
-    d2tree::D2TreeBuilder treebuilder(writer, d2vars_, d2_features_cache_, 20);
+    d2tree::D2TreeBuilder treebuilder(writer, d2vars_, d2_features_cache_, 5);
     if (use_d2tree) {
         treebuilder.build();
     }

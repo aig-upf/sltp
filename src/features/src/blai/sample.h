@@ -72,8 +72,7 @@ public:
            << " (" << transitions_.num_marked_transitions() << " marked)"
            << ", goals: " << matrix_.num_goals()
            << ", features: " << matrix_.num_features()
-           << ", est. size: " << est_size << " MB.]"
-           << std::endl;
+           << ", est. size: " << est_size << " MB.]";
         return os;
     }
 };
