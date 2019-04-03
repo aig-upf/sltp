@@ -18,7 +18,10 @@ protected:
     std::vector<std::vector<feature_t>> internal_features_;
 
     unsigned min_intersection_size_;
-    std::unordered_map<unsigned, unsigned> parent_; // The parenthood relation
+
+    //! tree structure
+    std::unordered_map<unsigned, unsigned> parent_;
+    std::unordered_map<unsigned, std::vector<unsigned>> children_;
 
     // Each d2-pair can have a different canonical pair, if the set of features that d2-distinguish them are the same
     std::vector<unsigned> canonicals_;
@@ -113,16 +116,25 @@ public:
         }
     }
 
+    void register_parent(unsigned parent, unsigned child) {
+        assert (parent_.find(child) == parent_.end());
+        parent_[child] = parent;
+        children_[parent].push_back(child);
+    }
+
     void build() {
         std::cout << "D2-tree - Building tree..." << std::endl;
-        unsigned n_subsuming_merges = 0;
+        unsigned n_subsuming_merges = 0, n_duplicates = 0;
 
         unsigned start = 0, end = (unsigned) d2treevars_.size();
 
-        for (unsigned iteration = 0; ; ++iteration) {
-            std::cout << "D2-tree - Layer #" << iteration << " [" << start << ", " << end << "]:" << std::endl;
 
-            mark_duplicities(start, end);
+        // Mark duplicities within the set of original D2 variables
+        mark_duplicities(start, end);
+
+        for (unsigned layer = 0; ; ++layer) {
+            std::cout << "D2-tree - Layer #" << layer << " [" << start << ", " << end << "]:" << std::endl;
+
 
             // Compute pairs of indexes <i, j> sorted by (largest) size of the intersection S(i) \cap S(j) first
             sorted_nodes_t pairs = sort_pairs(start, end);
@@ -132,29 +144,54 @@ public:
                 if (parent_.find(n1) != parent_.end() || parent_.find(n2) != parent_.end())
                     continue; // Some node in the pair already has one parent, we ignore the pair
 
-                unsigned treevar_id = (unsigned) d2treevars_.size();
-                d2treevars_.push_back((cnfvar_t) -1);
-                parent_[n1] = parent_[n2] = treevar_id;
-
-                assert (canonicals_.size() == treevar_id);
-                canonicals_.push_back(treevar_id);
-
                 // Compute the intersection of S(n1) and S(n2)
                 auto& d_f1 = get_distinguishing_features(n1);
                 auto& d_f2 = get_distinguishing_features(n2);
-                internal_features_.emplace_back();
-                std::set_intersection(d_f1.begin(), d_f1.end(), d_f2.begin(), d_f2.end(), std::back_inserter(internal_features_.back()));
+                std::vector<feature_t> inters;
+                std::set_intersection(d_f1.begin(), d_f1.end(), d_f2.begin(), d_f2.end(), std::back_inserter(inters));
+                auto isize = inters.size();
 
-                auto intersection_size = internal_features_.back().size();
-                if (intersection_size == d_f1.size() || intersection_size == d_f2.size()) {
+                unsigned merge_id = (unsigned)-1;
+
+                bool is_duplicate = false;
+                for (unsigned i = end; i < d2treevars_.size(); ++i) {
+                    if (get_distinguishing_features(i) == inters) {
+                        // The intersection of n1 and n2 is equal to the intersection of two other nodes in the same
+                        // layer, hence we create one single parent with the four nodes as children
+                        is_duplicate = true;
+                        register_parent(i, n1);
+                        register_parent(i, n2);
+                        merge_id = i; // i is considered the result of the merge
+                        ++n_duplicates;
+                        break;
+                    }
+                }
+
+
+                // If the merge of n1 and n2 is not a duplicate, we create a new node to represent it in the tree
+                if (!is_duplicate) {
+                    merge_id = (unsigned) d2treevars_.size();
+                    d2treevars_.push_back((cnfvar_t) -1);
+                    register_parent(merge_id, n1);
+                    register_parent(merge_id, n2);
+
+                    assert (canonicals_.size() == merge_id);
+                    canonicals_.push_back(merge_id);
+                    internal_features_.push_back(std::move(inters));
+                }
+
+
+                // If one node was a strict subset of the other, e.g. n1 \subset n2, then n1 is still the canonical
+                // node for the merge, as they will both be identical. We detect this by checking size of intersection
+                if (isize == d_f1.size() || isize == d_f2.size()) {
+                    assert(isize != d_f1.size() || isize != d_f2.size()); // cannot be both equal, otherwise n1=n2
+
+                    if (isize == d_f1.size()) {
+                        canonicals_[merge_id] = n1;
+                    } else {
+                        canonicals_[merge_id] = n2;
+                    }
                     ++n_subsuming_merges;
-                    assert(intersection_size != d_f1.size() || intersection_size != d_f2.size()); // if both were equal, then one should be subsumed by the other
-                    // TODO Reactivate?
-//                    if (intersection_size == d_f1.size()) {
-//                        canonicals_[n1] = treevar_id;
-//                    } else {
-//                        canonicals_[n2] = treevar_id;
-//                    }
                 }
             }
 
@@ -171,7 +208,7 @@ public:
 
 //        flatten_tree();
 
-        report_final_stats(start, end, n_subsuming_merges);
+        report_final_stats(start, end, n_subsuming_merges, n_duplicates);
 //        debug();
 
 //        std::cout << "Nodes: " << std::endl;
@@ -276,7 +313,7 @@ public:
         return nmerges;
     }
 
-    void report_final_stats(unsigned start, unsigned end, unsigned n_subsuming_merges) const {
+    void report_final_stats(unsigned start, unsigned end, unsigned n_subsuming_merges, unsigned n_duplicates) const {
         unsigned unparented = 0, duplicates = 0;
         for (unsigned i = 0; i < d2treevars_.size(); ++i) {
             if (canonicals_[i] == i) {
@@ -293,6 +330,7 @@ public:
                   << unparented << " nodes are orphan." << std::endl;
         std::cout << "\t" << n_subsuming_merges << "/" << total_merges << " ("
                   << n_subsuming_merges * 100.0 / (float) total_merges << "%) subsuming merges" << std::endl;
+        std::cout << "\t" << n_duplicates << " duplicate merges" << std::endl;
     }
 
     void debug() const {
