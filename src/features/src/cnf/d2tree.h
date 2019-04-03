@@ -187,9 +187,9 @@ public:
                     assert(isize != d_f1.size() || isize != d_f2.size()); // cannot be both equal, otherwise n1=n2
 
                     if (isize == d_f1.size()) {
-                        canonicals_[merge_id] = n1;
+                        canonicals_[merge_id] = canonicals_[n1];
                     } else {
-                        canonicals_[merge_id] = n2;
+                        canonicals_[merge_id] = canonicals_[n2];
                     }
                     ++n_subsuming_merges;
                 }
