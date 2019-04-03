@@ -178,7 +178,8 @@ def experiment(experiment_name=None):
 
                                                   ],
                                                   test_domain=domain,
-                                                  test_instances=["inst_on_x_y_7.pddl"],
+                                                  # We cannot test this, since works only for states where A and B are on diff towers
+                                                  # test_instances=["inst_on_x_y_7.pddl"],
                                                   num_states=2000, max_width=[-1],
                                                   num_sampled_states=[50, 50, 1],
                                                   complete_only_wrt_optimal=True,
