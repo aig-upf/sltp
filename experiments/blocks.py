@@ -172,17 +172,13 @@ def experiment(experiment_name=None):
 
     exps["aaai_bw_on_x_y_completeness_opt"] = update_dict({},
                                                   instances=[
-                                                      # "inst_on_x_y_10.pddl",
-                                                      # "inst_on_x_y_11.pddl",
-                                                      # "inst_on_x_y_12.pddl",
-                                                      # "inst_on_x_y_13.pddl",
-
-                                                      # "inst_on_x_y_15.pddl",
                                                       "inst_on_x_y_16.pddl",
                                                       "inst_on_x_y_14.pddl",
                                                       "holding_a_b_unclear.pddl",
 
                                                   ],
+                                                  test_domain=domain,
+                                                  test_instances=["inst_on_x_y_7.pddl"],
                                                   num_states=2000, max_width=[-1],
                                                   num_sampled_states=[50, 50, 1],
                                                   complete_only_wrt_optimal=True,
