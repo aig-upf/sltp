@@ -17,6 +17,7 @@ def experiments():
         domain_dir="blocks",
         domain="domain.pddl",
         # test_domain="domain.pddl",
+        complete_only_wrt_optimal=True,
     )
 
     exps = dict()
@@ -35,14 +36,14 @@ def experiments():
         feature_namer=ijcai_paper_bw_feature_namer,
     )
 
-    exps["small_inc_gc"] = update_dict(exps["on_x_y"], parameter_generator=None)
+    exps["on_x_y_gc"] = update_dict(exps["on_x_y"], parameter_generator=None)
 
     # A small incremental experiment mostly for testing purposes
     exps["small_inc"] = update_dict(
         base,
         experiment_type='incremental',
         instances=["probBLOCKS-4-0.pddl", ],
-        test_instances=["probBLOCKS-3-0.pddl", ],
+        test_instances=["probBLOCKS-5-0.pddl", ],
         num_states=10000,
         num_sampled_states=None,  # Take all expanded states into account
         initial_sample_size=5,

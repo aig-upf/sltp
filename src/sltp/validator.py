@@ -1,7 +1,10 @@
 import logging
 from collections import defaultdict
+
 from tarski.dl import FeatureValueChange
 from tarski.dl.features import are_feature_changes_analogous
+
+from .util.tools import Abstraction
 
 
 class AbstractionValidator:
@@ -37,6 +40,7 @@ class AbstractionValidator:
 
     def find_flaws(self, abstraction, max_flaws, check_completeness=True):
         """ """
+        assert isinstance(abstraction, Abstraction)
         sample = self.sample
         unsound, not_represented = set(), set()
         feature_idx = self.compute_feature_idx(abstraction.actions)

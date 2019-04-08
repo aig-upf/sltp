@@ -16,8 +16,8 @@ from .returncodes import ExitCode
 from .util.misc import update_dict
 from .driver import Experiment, generate_pipeline_from_list, PlannerStep, check_int_parameter, \
     InvalidConfigParameter, TransitionSamplingStep, SubprocessStepRunner, \
-    run_and_check_output, save, MaxsatProblemGenerationStep, MaxsatProblemSolutionStep, \
-    ActionModelStep, load, Bunch, CPPFeatureGenerationStep
+    run_and_check_output, save, MaxsatProblemSolutionStep, \
+    load, Bunch, CPPFeatureGenerationStep, CPPMaxsatProblemGenerationStep, CPPActionModelStep
 
 
 def initial_sample_selection(sample, config, rng):
@@ -109,8 +109,7 @@ def setup_workspace(config, sample, k):
 
 def teardown_workspace(domain, experiment_dir, serialized_feature_filename, clean_workspace, **kwargs):
     """ Clean up the given workspace """
-    data = load(experiment_dir, ["abstract_actions", "selected_features"])
-    data["features"] = load_features(data["selected_features"], domain, serialized_feature_filename)
+    data = load(experiment_dir, ["abstraction"])
     # if clean_workspace:
     #     print(experiment_dir)
     #     shutil.rmtree(experiment_dir)  # TODO activate
@@ -131,21 +130,13 @@ def try_to_compute_abstraction(config, sample, k):
 
     steps, subconfig = generate_pipeline_from_list([
         CPPFeatureGenerationStep,
-        MaxsatProblemGenerationStep,
+        # MaxsatProblemGenerationStep,
+        CPPMaxsatProblemGenerationStep,
         MaxsatProblemSolutionStep,
-        ActionModelStep,
+        CPPActionModelStep,
         # InhouseMaxsatSolverStep,  # Blai's polynomial ad-hoc maxsat algorithm
         # ActionModelFromFeatureIndexesStep
     ], **subconfig)
-
-    #         PlannerStep,
-    #         TransitionSamplingStep,
-    #         CPPFeatureGenerationStep,
-    #         MaxsatProblemGenerationStep,
-    #         MaxsatProblemSolutionStep,
-    #         ActionModelStep,
-    #         AbstractionTestingStep,
-    #         # QNPGenerationStep,
 
     # Update some parameters and paths of the subconfig and save there transition info
     subconfig["sat_transitions_filename"] = compute_info_filename(subconfig, "sat_transitions.dat")
@@ -159,7 +150,7 @@ def try_to_compute_abstraction(config, sample, k):
 
     # All steps successfully executed, ergo we found an abstraction.
     data = teardown_workspace(**subconfig)
-    return ExitCode.Success, data
+    return ExitCode.Success, data["abstraction"]
 
 
 class IncrementalLearner:
