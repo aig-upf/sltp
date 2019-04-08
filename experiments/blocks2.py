@@ -80,15 +80,15 @@ def experiments():
     exps["arbitrary1_inc"] = update_dict(
         exps["arbitrary1"],
         experiment_type='incremental',
-        instances=["probBLOCKS-8-0.pddl", ],
+        instances=["probBLOCKS-7-0.pddl", ],
         # instances=["probBLOCKS-6-0.pddl", "probBLOCKS-7-0.pddl",]
         test_instances=[
             "probBLOCKS-4-1.pddl",
             # "probBLOCKS-6-1.pddl",
             # "probBLOCKS-10-1.pddl",
         ],
-        num_states=100000,
-        num_sampled_states=None,  # To take as a basis all states
+        num_states=50000,
+        num_sampled_states=None,  # Take all expanded states into account
         initial_sample_size=100,
         initial_concept_bound=6, max_concept_bound=10, concept_bound_step=1,
         batch_refinement_size=5,
