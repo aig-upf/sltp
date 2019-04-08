@@ -177,7 +177,7 @@ def experiment(experiment_name=None):
                                                       "holding_a_b_unclear.pddl",
 
                                                   ],
-                                                  test_domain=domain,
+                                                  # test_domain=domain,
                                                   # We cannot test this, since works only for states where A and B are on diff towers
                                                   # test_instances=["inst_on_x_y_7.pddl"],
                                                   num_states=2000, max_width=[-1],
