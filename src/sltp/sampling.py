@@ -252,7 +252,7 @@ def random_sample(config, goal_states, rng, states, transitions, parents):
     sample_size = config.num_sampled_states[0]
     if sample_size > num_states:
         raise RuntimeError(
-            "Only {} expanded statesm cannot sample {}".format(num_states, sample_size))
+            "Only {} expanded states, cannot sample {}".format(num_states, sample_size))
     # Although this might fail is some state was a dead-end? In that case we should perhaps revise the code below
     assert num_states == len(transitions)
 

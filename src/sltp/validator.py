@@ -38,6 +38,12 @@ class AbstractionValidator:
             models[state_id] = self.model_cache.get_feature_model(state_id)
         return models[state_id]
 
+    def is_applicable(self, models, sid, action):
+        """ Return true if the given abstract action is applicable in the given state """
+        model = self.get_possibly_cached_model(models, sid)
+        # We need to cast the actual feature value into a bool to compare it with the abstraction bool value
+        return all(bool(feat.denotation(model)) is val for feat, val in action.preconditions)
+
     def find_flaws(self, abstraction, max_flaws, check_completeness=True):
         """ """
         assert isinstance(abstraction, Abstraction)
@@ -48,12 +54,10 @@ class AbstractionValidator:
 
         assert all(s in sample.expanded for s in self.state_ids)  # state_ids assumed to contain only expanded states.
         for sid in self.state_ids:
-            model = self.get_possibly_cached_model(models, sid)
+
             # Check soundness
             for action in abstraction.actions:
-                # We need to cast the actual feature value into a bool to compare it with the abstraction bool value
-                is_applicable = all(bool(feat.denotation(model)) is val for feat, val in action.preconditions)
-                if is_applicable and \
+                if self.is_applicable(models, sid, action) and \
                         not any(self.action_captures(models, sid, sprime, feature_idx[action], abstraction.features)
                                 for sprime in sample.transitions[sid]):
                     # The abstract action is not sound

@@ -10,13 +10,18 @@ from .sampling import TransitionSample
 from .learn_actions import create_maxsat_translator, compute_completeness_info
 from .util.tools import load_selected_features
 from .returncodes import ExitCode
+from .validator import AbstractionValidator
 
 
 def compute_action_model(config, data, rng):
     solution = data.cnf_solution
     assert solution.solved
     selected_feature_ids = data.cnf_translator.decode_solution(solution.assignment)
-    return _compute_abstract_action_model(config, data, selected_feature_ids)
+
+    # Compute information relevant to the type of abstraction we want
+    cinfo = compute_completeness_info(data.sample, config.complete_only_wrt_optimal)
+
+    return _compute_abstract_action_model(config, data, selected_feature_ids, cinfo)
 
 
 def compute_action_model_from_feature_idxs(config, data, rng):
@@ -31,21 +36,60 @@ def compute_action_model_from_feature_idxs(config, data, rng):
     return ExitCode.Success, dict(abstract_actions=actions, selected_features=features, post_cnf_sample=sample)
 
 
+def _compute_policy_from_abstraction(config, data, abstraction, cinfo):
+    logging.info("Computing policy from abstraction")
+    sample = data.sample
+    features = abstraction.features
+    policy = dict()
+    validator = AbstractionValidator(data.model_cache, sample, None)
+    feature_idx = validator.compute_feature_idx(abstraction.actions)
+    for s, sprime in cinfo.optimal_transitions:
+        model = data.model_cache.get_feature_model(s)
+        cache = {}
+        app = [i for i, a in enumerate(abstraction.actions, start=1) if validator.is_applicable(cache, s, a) and
+               validator.action_captures(cache, s, sprime, feature_idx[a], features)]
+
+        if not app:
+            raise RuntimeError("Training set transition not captures by any action in the abstraction")
+
+        if len(app) > 1:
+            logging.warning("Two abstract actions applicable in same abstract state")  # This shouldn't happen
+
+        else:
+            abstract_s = abstract_state(model, features)
+            right_action = app[0]
+            previous = policy.get(abstract_s, None)
+            if previous is not None and previous != right_action:
+                logging.warning("Two actions appear optimal in data-driven policy: {} and {}".
+                                format(previous, right_action))  # This could happen
+            policy[abstract_s] = right_action
+
+    logging.info("Computed policy of size {}".format(len(policy)))
+    print("\t" + "\n\t".join("{}: {}".format(s, a) for s, a in policy.items()))
+    return policy
+
+
 def compute_abstract_action_model(config, data, rng):
     solution = data.cnf_solution
     assert solution.solved
 
     # CNF variables "selected(f)" take range from 1 to num_features+1
     selected_feature_ids = [i - 1 for i in range(1, data.num_features + 1) if solution.assignment[i] is True]
-    return _compute_abstract_action_model(config, data, selected_feature_ids)
-
-
-def _compute_abstract_action_model(config, data, feature_ids):
-    features = load_selected_features(feature_ids, config.domain, config.serialized_feature_filename)
-    identified = [IdentifiedFeature(f, i, config.feature_namer(str(f))) for i, f in zip(feature_ids, features)]
 
     # Compute information relevant to the type of abstraction we want
     cinfo = compute_completeness_info(data.sample, config.complete_only_wrt_optimal)
+
+    result, resdata = _compute_abstract_action_model(config, data, selected_feature_ids, cinfo)
+    if result != ExitCode.Success:
+        resdata["policy"] = None
+    else:
+        resdata["policy"] = _compute_policy_from_abstraction(config, data, resdata["abstraction"], cinfo)
+    return result, resdata
+
+
+def _compute_abstract_action_model(config, data, feature_ids, cinfo):
+    features = load_selected_features(feature_ids, config.domain, config.serialized_feature_filename)
+    identified = [IdentifiedFeature(f, i, config.feature_namer(str(f))) for i, f in zip(feature_ids, features)]
 
     # Compute the abstract state space and store it to disk
     states, actions = compute_abstraction(data.sample, cinfo, identified, data.model_cache)
@@ -97,11 +141,15 @@ def compute_state_abstraction(sample: TransitionSample, features, model_cache):
     state_abstraction = dict()
     for sid, state in sample.states.items():
         model = model_cache.get_feature_model(sid)
-        # The abstraction uses the boolean values: either F=0 or F>0
-        abstract = tuple(bool(model.denotation(f)) for f in features)
+        abstract = abstract_state(model, features)
         abstract_states.add(abstract)
         state_abstraction[sid] = abstract
     return abstract_states, state_abstraction
+
+
+def abstract_state(model, features):
+    # The abstraction uses the boolean values: either F=0 or F>0
+    return tuple(bool(model.denotation(f)) for f in features)
 
 
 def print_actions(actions, filename):
