@@ -51,7 +51,7 @@
     ./blocks.py clear_two_atoms --all  # goal: clear(x) and clear(y)
     
     # IPC Blocksworld domain: construct one arbitrary tower
-    ./blocks2.py arbitrary1 --all 
+    ./run.py blocks2:arbitrary1 --all
 
     # Taxi domain: Grid-like environment where a taxi needs to move to the cell where a passenger is,
     # pick her up, take her to some destination cell and drop her there
@@ -60,7 +60,4 @@
 ## Variations of previous benchmarks
 
     # Blocksworld: stack one block on top of another, one single training instance
-    ./blocks2.py on_x_y --all 
-    
-    # Blocksworld: stack one block on top of another, one single training instance, w./ goal-concepts
-    ./blocks2.py on_x_y_gc --all
+    ./run.py blocks2:on_x_y --all
