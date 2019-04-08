@@ -253,8 +253,18 @@ public:
         ulong num_clauses_0 = writer_.nclauses(), nclauses_on_leaf_variables = 0;
 
         for (unsigned i = 0; i < d2treevars_.size(); ++i) {
-            if (canonicals_[i] != i) continue; // The d2-pair is a duplicate of some other pair
-            cnflit_t pnlit = CNFWriter::literal(d2treevars_[i], true);
+
+            if (i < nleaves_ && canonicals_[i] != i) {
+                // TODO This check is too hacky. This is because canonicals_ is being used to signal two different
+                // things; for leave nodes, that they are exact duplicates; for intermediate nodes, that they are
+                // duplicates, but act in different roles (i.e. have different parents or children nodes), and hence
+                // all constraints must be generated
+                continue; // The d2-pair is a duplicate of some other pair
+            }
+
+            auto var = d2treevars_[canonicals_[i]];
+            assert(var != (cnfvar_t) -1);
+            cnflit_t pnlit = CNFWriter::literal(var, true);
             const auto& feats_i = get_distinguishing_features(i);
 
             auto it = parent_.find(i);
