@@ -11,9 +11,7 @@ def report_and_exit(msg):
     sys.exit(-1)
 
 
-if __name__ == "__main__":
-    expid = sys.argv[1]
-
+def do(expid, steps):
     name_parts = expid.split(":")
     if len(name_parts) != 2:
         report_and_exit('Wrong experiment ID "{}"'.format(expid))
@@ -35,4 +33,11 @@ if __name__ == "__main__":
 
     parameters = experiments[expname]
     experiment = generate_experiment(**parameters)
-    experiment.run(sys.argv[2:])
+    experiment.run(steps)
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print("USAGE: {} domain:experiment_name <steps>,\n\te.g.:\t./run.py logistics:p1 --all".format(sys.argv[0]))
+        sys.exit(-1)
+    do(sys.argv[1], sys.argv[2])

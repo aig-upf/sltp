@@ -4,26 +4,12 @@
 import argparse
 import sys
 
-import blocks
-import gridworld
-import gripper
-import logistics
-import tower
-import reward
-
-DOMAINS = {
-    "blocks": blocks,
-    "tower": tower,
-    "gripper": gripper,
-    "logistics": logistics,
-    "gridworld": gridworld,
-    "reward": reward,
-}
+from run import do
 
 
 def create_parser():
     parser = argparse.ArgumentParser(description='Let\'s run some experiments!')
-    parser.add_argument('-d', '--domain', required=True, help="Which domain to run the experiment on.", choices=DOMAINS.keys())
+    parser.add_argument('-d', '--domain', required=True, help="Which domain to run the experiment on.")
     parser.add_argument('-e', '--experiment', required=True, help="Experiment name.")
     return parser
 
@@ -31,9 +17,7 @@ def create_parser():
 def run(args):
     parser = create_parser()
     args = parser.parse_args(args)
-    domain = DOMAINS[args.domain]
-    exp = domain.experiment(args.experiment)
-    exp.run(["--all"])
+    do("{}:{}".format(args.domain, args.experiment), "--all")
 
 
 if __name__ == "__main__":

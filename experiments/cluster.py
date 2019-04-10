@@ -22,7 +22,7 @@ def create_parser():
 def main(parser, args):
     args = parser.parse_args(args)
     with open("{}.yml".format(args.exp), 'r') as f:
-        data = yaml.load(f)
+        data = yaml.load(f, Loader=yaml.BaseLoader)
         experiments = [tuple(x.split(" ")) for x in data["experiments"]]
         run = data["run"]
 
