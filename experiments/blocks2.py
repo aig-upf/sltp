@@ -52,7 +52,7 @@ def experiments():
         clean_workspace=False,
     )
 
-    exps["arbitrary1"] = update_dict(
+    exps["one_tower"] = update_dict(
         base,
         instances=["probBLOCKS-4-0.pddl"],
         test_domain="domain.pddl",
@@ -77,8 +77,27 @@ def experiments():
         feature_namer=ijcai_paper_bw_feature_namer,
     )
 
-    exps["arbitrary1_inc"] = update_dict(
-        exps["arbitrary1"],
+    exps["one_tower_inc"] = update_dict(
+        exps["one_tower"],
+        experiment_type='incremental',
+        instances=["probBLOCKS-7-0.pddl", ],
+        # instances=["probBLOCKS-6-0.pddl", "probBLOCKS-7-0.pddl",]
+        test_instances=[
+            "probBLOCKS-4-1.pddl",
+            # "probBLOCKS-6-1.pddl",
+            # "probBLOCKS-10-1.pddl",
+        ],
+        num_states=50000,
+        num_sampled_states=None,  # Take all expanded states into account
+        initial_sample_size=100,
+        initial_concept_bound=6, max_concept_bound=10, concept_bound_step=1,
+        batch_refinement_size=5,
+        # quiet=True,
+        clean_workspace=False,
+    )
+    
+    exps["one_tower_inc_2"] = update_dict(
+        exps["one_tower"],
         experiment_type='incremental',
         instances=["probBLOCKS-7-0.pddl", ],
         # instances=["probBLOCKS-6-0.pddl", "probBLOCKS-7-0.pddl",]
