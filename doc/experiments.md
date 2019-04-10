@@ -51,7 +51,7 @@
     ./blocks.py clear_two_atoms --all  # goal: clear(x) and clear(y)
     
     # IPC Blocksworld domain: construct one arbitrary tower
-    ./run.py blocks2:arbitrary1 --all
+    ./run.py blocks2:one_tower_inc --all
 
     # Taxi domain: Grid-like environment where a taxi needs to move to the cell where a passenger is,
     # pick her up, take her to some destination cell and drop her there
