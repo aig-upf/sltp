@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 ### Set name.
-#SBATCH --job-name=gen-feats
+#SBATCH --job-name=sltp
 ### Redirect stdout and stderr.
 #SBATCH --output=slurm.log
 #SBATCH --error=slurm.err

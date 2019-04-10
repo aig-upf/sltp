@@ -61,3 +61,15 @@
 
     # Blocksworld: stack one block on top of another, one single training instance
     ./run.py blocks2:on_x_y --all
+
+
+# Running experiments in a Slurm cluster
+
+Assuming you have the experiment description in a file `expname.yml`, the full pipeline can be run in
+a Slurm cluster in two steps: first, generate the experiment script automatically:
+
+    ./cluster.py --exp expname
+
+And then just run that experiment script with the standard Slurm command: 
+
+    sbatch expname.sh

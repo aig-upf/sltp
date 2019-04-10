@@ -45,7 +45,7 @@ def generate_script(num_tasks, timeout, mem, experiment_set):
     tpl = """#!/usr/bin/env bash
 
 ### Set name.
-#SBATCH --job-name=gen-feats
+#SBATCH --job-name=sltp
 ### Redirect stdout and stderr.
 #SBATCH --output=slurm.log
 #SBATCH --error=slurm.err
@@ -75,6 +75,7 @@ source ${{HOME}}/lib/virtualenvs/concepts/bin/activate
 
 export LIBRARY_PATH=$LIBRARY_PATH:{libpath}
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:{libpath}
+export FS_PATH={fspath}
 
 mkdir -p {exp_dir}
 ./cluster.py --exp {experiment_set} --task ${{SLURM_ARRAY_TASK_ID}} \
@@ -88,7 +89,7 @@ mkdir -p {exp_dir}
     with open(filename, "w") as f:
         output = os.path.join(exp_dir, "out_${{SLURM_ARRAY_TASK_ID}}".format())
         f.write(tpl.format(time=timeout, mem=mem, num_tasks=num_tasks, experiment_set=experiment_set, libpath=libpath,
-                           exp_dir=exp_dir, output=output))
+                           exp_dir=exp_dir, output=output, fspath=os.environ.get("FS_PATH", "")))
     print("Written cluster script {}".format(filename))
 
 
