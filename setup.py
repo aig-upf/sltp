@@ -64,8 +64,8 @@ def main():
             "tarski @ git+ssh://git@github.com/aig-upf/tarski.git@bc3afb9#egg=tarski-dev-0.2.0"
         ],
 
-        ext_modules=[CMakeExtension('featuregen', os.path.join(here, "src", "features"))],
-        cmdclass={'build_ext': BuildExt, },
+#        ext_modules=[CMakeExtension('featuregen', os.path.join(here, "src", "features"))],
+#        cmdclass={'build_ext': BuildExt, },
 
         extras_require={
             'dev': ['pytest', 'tox'],
