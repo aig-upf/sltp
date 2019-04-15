@@ -53,6 +53,6 @@ if(DEFINED ENV{BOOST_ROOT})
 endif()
 
 
-find_package(Boost 1.66 COMPONENTS program_options REQUIRED)
+find_package(Boost 1.65 COMPONENTS program_options REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 target_link_libraries(cnfgen LINK_PUBLIC ${Boost_LIBRARIES})
