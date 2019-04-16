@@ -40,4 +40,4 @@ if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("USAGE: {} domain:experiment_name <steps>,\n\te.g.:\t./run.py logistics:p1 --all".format(sys.argv[0]))
         sys.exit(-1)
-    do(sys.argv[1], sys.argv[2])
+    do(sys.argv[1], sys.argv[2:])
