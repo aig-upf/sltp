@@ -8,6 +8,8 @@ import time
 
 import yaml
 
+from run import do
+
 CURRENT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
@@ -15,7 +17,6 @@ def create_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp', type=str,  required=True, help="Experiment configuration")
     parser.add_argument('--task', type=int, default=None, help="Task ID, if in run mode")
-
     return parser
 
 
@@ -36,9 +37,8 @@ def main(parser, args):
         if args.task - 1 > len(experiments):
             raise RuntimeError("Task ID #{} not defined on experiment set {}.".format(args.task, args.exp))
 
-        import runner
         d, e = experiments[args.task-1]  # because slurm task IDs range from 1 to n, not from 0.
-        runner.run(["-d", d, "-e", e])
+        do("{}:{}".format(d, e))
 
 
 def generate_script(num_tasks, timeout, mem, experiment_set):

@@ -1,9 +1,6 @@
 import os
-from sltp.driver import Experiment, generate_pipeline, BENCHMARK_DIR
+from sltp.driver import Experiment, generate_pipeline, BENCHMARK_DIR, BASEDIR
 from sltp.learn_actions import OptimizationPolicy
-
-EXP_DIR = os.path.dirname(os.path.realpath(__file__))
-BASE_DIR = os.path.join(EXP_DIR, "..")
 
 
 def get_experiment_class(kwargs):
@@ -42,6 +39,9 @@ def generate_experiment(domain_dir, domain, **kwargs):
         # pipeline="maxsatcpp_old",
         # pipeline="sat",
         # pipeline="maxsat_poly",
+
+        # The directory where the experiment outputs will be left
+        workspace=os.path.join(BASEDIR, 'workspace'),
 
         # Location of the FS planner, used to do the state space sampling
         # planner_location=os.getenv("FS_PATH", os.path.expanduser("~/projects/code/fs")),

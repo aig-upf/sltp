@@ -4,7 +4,6 @@ from sltp.learn_actions import OptimizationPolicy
 
 
 EXP_DIR = os.path.dirname(os.path.realpath(__file__))
-BASE_DIR = os.path.join(EXP_DIR, "..")
 
 
 def generate_experiment(domain_dir, domain, **kwargs):

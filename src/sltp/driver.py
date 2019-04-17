@@ -28,7 +28,7 @@ from .version import get_version
 from .returncodes import ExitCode
 from .errors import CriticalPipelineError
 from .util import console
-from .util.bootstrap import setup_global_parser
+from .util.bootstrap import setup_argparser
 from .util.command import execute, create_experiment_workspace
 from .util.naming import compute_instance_tag, compute_experiment_tag, compute_serialization_name, \
     compute_maxsat_filename, compute_info_filename, compute_maxsat_variables_filename, compute_sample_filenames, \
@@ -40,7 +40,6 @@ from .util import performance
 BASEDIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 BENCHMARK_DIR = os.path.join(BASEDIR, 'domains')
 SAMPLE_DIR = os.path.join(BASEDIR, 'samples')
-EXPDATA_DIR = os.path.join(BASEDIR, 'runs')
 
 
 class InvalidConfigParameter(Exception):
@@ -49,21 +48,13 @@ class InvalidConfigParameter(Exception):
         super().__init__(msg)
 
 
-def _get_step_index(steps, step_name):
-    for index, step in enumerate(steps):
-        if step.name == step_name:
-            return index
-    logging.critical('There is no step called "{}"'.format(step_name))
-
-
-def get_step(steps, step_name):
+def get_step(steps, step_id):
     """*step_name* can be a step's name or number."""
-    if step_name.isdigit():
-        try:
-            return steps[int(step_name) - 1]
-        except IndexError:
-            logging.critical('There is no step number {}'.format(step_name))
-    return steps[_get_step_index(steps, step_name)]
+    assert isinstance(step_id, int)
+    try:
+        return steps[step_id - 1]
+    except IndexError:
+        logging.critical('There is no step number {}'.format(step_id))
 
 
 def check_int_parameter(config, name, positive=False):
@@ -129,7 +120,8 @@ class PlannerStep(Step):
     VALID_DRIVERS = ("bfs", "ff")
 
     def get_required_attributes(self):
-        return ["instances", "domain", "num_states", "planner_location", "driver", "test_instances", "num_tested_states"]
+        return ["workspace", "instances", "domain", "num_states", "planner_location", "driver", "test_instances",
+                "num_tested_states"]
 
     def get_required_data(self):
         return []
@@ -149,7 +141,7 @@ class PlannerStep(Step):
 
         config["instance_tag"] = compute_instance_tag(**config)
         config["experiment_tag"] = compute_experiment_tag(**config)
-        config["experiment_dir"] = os.path.join(EXPDATA_DIR, config["experiment_tag"])
+        config["experiment_dir"] = os.path.join(config["workspace"], config["experiment_tag"])
 
         mw = config.get("max_width", [-1] * len(config["instances"]))
         if isinstance(mw, int):
@@ -739,27 +731,24 @@ class AbstractionTestingStep(Step):
 
 
 class Experiment:
-    def __init__(self, steps, parameters):
-        self.args = None
-        self.steps = steps
+    def __init__(self, all_steps, parameters):
+        self.all_steps = all_steps
 
     def print_step_description(self):
-        return "\t\t" + "\n\t\t".join("{}. {}".format(i, s.description()) for i, s in enumerate(self.steps, 1))
+        return "\t\t" + "\n\t\t".join("{}. {}".format(i, s.description()) for i, s in enumerate(self.all_steps, 1))
 
     def hello(self, args=None):
         print(console.header("SLTP v.{}".format(get_version())))
-        argparser = setup_global_parser(step_description=self.print_step_description())
-        self.args = argparser.parse_args(args)
-        if not self.args.steps and not self.args.run_all_steps:
-            argparser.print_help()
-            sys.exit(0)
+        argparser = setup_argparser(step_description=self.print_step_description())
+        return argparser.parse_args(args)
 
     def run(self, args=None):
-        self.hello(args)
+        args = self.hello(args)
         # If no steps were given on the commandline, run all exp steps.
-        steps = [get_step(self.steps, name) for name in self.args.steps] or self.steps
+        selected = [get_step(self.all_steps, step_id) for step_id in args.steps] or self.all_steps
 
-        for stepnum, step in enumerate(steps, start=1):
+        print("Selected: {}".format(selected))
+        for stepnum, step in enumerate(selected, start=1):
             try:
                 run_and_check_output(step, stepnum, SubprocessStepRunner)
             except Exception as e:

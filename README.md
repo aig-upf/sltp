@@ -78,21 +78,20 @@ module, which should be compiled and installed transparently.
 Individual experiments are on the `experiments` folder, e.g. see `experiments/blocks.py` for an example.
 A file such as `blocks.py` contains different experiment configurations for learning in the blocks domain.
 We invoke the pipeline with <script-name> <experiment-name> <pipeline-steps-to-be-executed>,
-where the last parameter is usually `--all`, to run all steps in the pipeline.
-Example invokations would include:
-
+where the last parameter is an optional  list of experiment step IDs (e.g.: 1 2 3). All steps are run if no IDs are specified.
+Example invocations:
 
     # AAAI Experiment: BW with goal clear(x)
-	./blocks.py aaai_clear_x_simple_hybrid --all  # Theory T_G
-	./blocks.py aaai_clear_x_no_marking --all     # Theory T
+	./blocks.py aaai_clear_x_simple_hybrid  # Theory T_G
+	./blocks.py aaai_clear_x_no_marking     # Theory T
 
     # AAAI Experiment: BW with goal on(x,y)
-	./blocks.py aaai_bw_on_x_y_completeness_opt --all             # Theory T_G
-	./blocks.py aaai_bw_on_x_y_completeness_opt_no_marking --all  # Theory T
+	./blocks.py aaai_bw_on_x_y_completeness_opt             # Theory T_G
+	./blocks.py aaai_bw_on_x_y_completeness_opt_no_marking  # Theory T
 
     # AAAI Experiment: Gripper with goal on(x,y)
-	./gripper.py aaai_prob01 --all             # Theory T_G
-	./gripper.py aaai_prob01_no_marking --all  # Theory T
+	./gripper.py aaai_prob01             # Theory T_G
+	./gripper.py aaai_prob01_no_marking  # Theory T
 
     # ...
 

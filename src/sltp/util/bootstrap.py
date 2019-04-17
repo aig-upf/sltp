@@ -74,16 +74,15 @@ def get_parser(add_log_option=True, **kwargs):
     return parser
 
 
-def setup_global_parser(step_description):
-    argparser = get_parser()
-    steps_group = argparser.add_mutually_exclusive_group()
-    steps_group.add_argument('steps', metavar='step', nargs='*', default=[],
-                             help='Name or number of a step below. If none is given, print help. '
-                                  'Available steps are: \n{}'.format(step_description))
-    steps_group.add_argument(
-        '--all', dest='run_all_steps', action='store_true',
-        help='Run all steps.')
-    return argparser
+def setup_argparser(step_description=None):
+    help_msg = 'Experiment step numbers to be run. By default, run them all."'
+    help_msg += '' if step_description is None else ' Available steps are: \n{}'.format(step_description)
+    parser = get_parser()
+    parser.add_argument('domain:experiment', help="The domain and experiment within that domain")
+    parser.add_argument('--workspace', help="The directory where the experiment outputs will be left. "
+                                            "If none specified, use a default directory inside the SLTP project tree.")
+    parser.add_argument('steps', metavar='step', nargs='*', default=[], type=int, help=help_msg)
+    return parser
 
 
 def parse_and_set_log_level():
