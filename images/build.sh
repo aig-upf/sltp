@@ -37,11 +37,17 @@ git -C $SLTP_DIR checkout-index -a -f --prefix=`pwd`/sltp/
 
 # Build Docker image
 cp sltp/images/Dockerfile .
+cp sltp/images/docker-entrypoint.sh .
 docker build -t sltp .
 
 # Upload image to the amazon cluster
-docker save sltp | bzip2 | pv | ssh awscluster 'bunzip2 | docker load'
+# docker save sltp | bzip2 | pv | ssh awscluster 'bunzip2 | docker load'
+
+# Upload image to Docker Hub
+docker tag sltp:latest gfrancesm/sltp:latest
+docker push gfrancesm/sltp:latest
+
 
 # Cleanup tmp directory and go back to original directory
-cleanup
+#cleanup
 popd

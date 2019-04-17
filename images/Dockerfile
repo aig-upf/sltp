@@ -9,8 +9,7 @@
 #
 # RUN:
 #    docker run -it sltp  # Run interactive shell
-#    docker run -it sltp /root/projects/sltp/experiments/blocks.py aaai_clear_x_simple_hybrid --all
-#    docker run -it sltp /root/projects/sltp/experiments/run.py blocks2:one_tower_inc --all
+#    docker run -it sltp /root/projects/sltp/experiments/run.py blocks:aaai_clear_x_simple_hybrid
 
 
 FROM ubuntu:bionic
@@ -81,4 +80,7 @@ RUN cd $SLTP_PATH/src/features && cmake . && make -j4 && rm -rf CMakeFiles
 
 WORKDIR $SLTP_PATH
 #ENTRYPOINT ["sh", "-c", "$SLTP_PATH/experiments/run.py"]
-CMD ["bash"]
+#CMD ["bash"]
+
+COPY ./docker-entrypoint.sh /
+ENTRYPOINT ["/docker-entrypoint.sh"]

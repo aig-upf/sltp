@@ -1,37 +1,34 @@
-#! /usr/bin/env python3
-# -*- coding: utf-8 -*-
-import sys
 
-from sltp.driver import run_experiment
 from tarski.dl import ConceptCardinalityFeature, NominalConcept, ExistsConcept, PrimitiveRole, UniversalConcept, \
     NotConcept, AndConcept, PrimitiveConcept, EmpiricalBinaryConcept
 
-from defaults import generate_experiment
 from sltp.util.misc import update_dict
 
 
-def experiment(experiment_name=None):
-    domain_dir = "gripper"
-    # domain_dir = "gripper-m"
+def experiments():
     domain = "domain.pddl"
+    base = dict(
+        domain_dir="gripper",
+        domain=domain,
+    )
 
     exps = dict()
 
-    exps["sample_small"] = dict(
+    exps["sample_small"] = update_dict(base,
         instances="sample-small.pddl",
         test_domain=domain, test_instances=["prob03.pddl", "prob04.pddl"],
         num_states=100, max_concept_size=10, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=add_domain_parameters,
         feature_namer=feature_namer,)
 
-    exps["prob01"] = dict(
+    exps["prob01"] = update_dict(base,
         instances="prob01.pddl",
         num_states=300, num_sampled_states=None, random_seed=12,
         max_concept_size=10, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=add_domain_parameters,
         feature_namer=feature_namer,)
 
-    exps["prob01_goalc"] = dict(
+    exps["prob01_goalc"] = update_dict(base,
         instances=["prob01.pddl", "sample02.pddl", ],
         num_states=300, num_sampled_states=None, random_seed=12,
         max_concept_size=10, max_concept_grammar_iterations=3,
@@ -39,7 +36,7 @@ def experiment(experiment_name=None):
         feature_namer=feature_namer,)
 
     #
-    exps["prob01_rnd"] = dict(
+    exps["prob01_rnd"] = update_dict(base,
         instances="prob01.pddl",
         num_states=2000, num_sampled_states=50, random_seed=12,
         max_concept_size=10, max_concept_grammar_iterations=3,
@@ -47,7 +44,7 @@ def experiment(experiment_name=None):
         feature_namer=feature_namer,)
 
     #
-    exps["aaai_prob01"] = dict(
+    exps["aaai_prob01"] = update_dict(base,
         instances=["prob01.pddl", "sample02.pddl"],
         test_domain=domain, test_instances=["prob03.pddl"],
         num_tested_states=5000,
@@ -74,9 +71,7 @@ def experiment(experiment_name=None):
 
     exps["aaai_prob01_deb"] = update_dict(exps["aaai_prob01"], feature_generator=debug_aaai_features)
 
-    if experiment_name not in exps:
-        raise RuntimeError('No experiment named "{}" in current experiment script'.format(experiment_name))
-    return generate_experiment(domain_dir, domain, **exps[experiment_name])
+    return exps
 
 
 def add_domain_parameters(language):
@@ -121,8 +116,3 @@ def debug_aaai_features(lang):
         ConceptCardinalityFeature(f3),
         ConceptCardinalityFeature(free),
     ]
-
-
-if __name__ == "__main__":
-    exp = experiment(sys.argv[1])
-    run_experiment(exp, sys.argv[2:])

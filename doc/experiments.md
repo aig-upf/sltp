@@ -6,14 +6,14 @@
 ## AAAI paper experiments
 
     # Blocksworld: clear a single block
-    ./blocks.py aaai_clear_x_simple_hybrid  # goal: clear(x)
+    ./run.py blocks:aaai_clear_x_simple_hybrid  # goal: clear(x)
     
     # Blocksworld: stack one block on top of another
-    ./blocks.py aaai_bw_on_x_y_completeness_opt  # goal: on(x, y)
-    
+    ./run.py blocks:aaai_bw_on_x_y_completeness_opt  # goal: on(x, y)
+
     # Gripper: take all balls to a certain room
-    ./gripper.py aaai_prob01
-    
+    ./run.py gripper:aaai_prob01
+
 
 ## Other benchmarks
 

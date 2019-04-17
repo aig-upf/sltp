@@ -1,25 +1,23 @@
-#! /usr/bin/env python3
-# -*- coding: utf-8 -*-
-import sys
 
-from sltp.driver import run_experiment
 from sltp.incremental import IncrementalExperiment
 
-from defaults import generate_experiment
 from common import build_ijcai_paper_bw_concepts, add_bw_domain_parameters, ijcai_paper_bw_feature_namer, \
     add_bw_domain_parameters_2, build_on_x_y_feature_set, generate_features_n_ab, get_on_x_y_feature, \
     features_clear_x
 from sltp.util.misc import update_dict
 
 
-def experiment(experiment_name=None):
-    domain_dir = "blocks"
+def experiments():
     domain = "domain.pddl"
+    base = dict(
+        domain_dir="blocks",
+        domain=domain,
+    )
 
     exps = dict()
 
     # A small testing instance nonetheless producing an abstraction
-    exps["debugging_test"] = dict(
+    exps["debugging_test"] = update_dict(base,
         instances="instance_4_clear_x.pddl",
         num_states=20, num_sampled_states=10,
         max_concept_size=3, max_concept_grammar_iterations=1,
@@ -28,7 +26,7 @@ def experiment(experiment_name=None):
 
     # Learns a simple action model which is however overfit to 3 blocks,
     # and not sound in general
-    exps["simple_clear_3"] = dict(
+    exps["simple_clear_3"] = update_dict(base,
         instances="instance_3_clear_x.pddl",
         test_domain=domain, test_instances=["instance_8_clear_x_0.pddl"],
         num_states=100, max_concept_size=6, max_concept_grammar_iterations=None,
@@ -39,7 +37,7 @@ def experiment(experiment_name=None):
     exps["simple_clear_3_gc_blai"] = update_dict(exps["simple_clear_3_gc"], pipeline="maxsat_poly")
 
     # This example shows that with 4 blocks, even if we expand all states, the model is still overfit to the 4 blocks
-    exps["simple_clear_4"] = dict(
+    exps["simple_clear_4"] = update_dict(base,
         instances="instance_4_clear_x.pddl",
         num_states=150, max_concept_size=10, max_concept_grammar_iterations=3, num_sampled_states=None,
         concept_generator=None, parameter_generator=add_bw_domain_parameters,
@@ -48,7 +46,7 @@ def experiment(experiment_name=None):
     # With these settings we generate the desired m(x):
     # card[And(And(Forall(Star(on),Not({a})), Forall(Star(Inverse(on)),Not({a}))), And(Not(holding), Not({a})))] 18
     # And indeed learnt the correct state space!!!
-    exps["aaai_ijcai_features_on_clear_5_rnd"] = dict(
+    exps["aaai_ijcai_features_on_clear_5_rnd"] = update_dict(base,
         instances=[
             "inst_clear_x_1.pddl",
             # "inst_clear_x_2.pddl",
@@ -66,7 +64,7 @@ def experiment(experiment_name=None):
                                                   # enforce_features=get_on_x_y_feature
                                                   )
 
-    exps["aaai_clear_x_simple_hybrid"] = dict(
+    exps["aaai_clear_x_simple_hybrid"] = update_dict(base,
         instances="instance_5_clear_x_1.pddl",
         test_domain=domain, test_instances=["instance_5_clear_x_2.pddl"],
         num_states=2000, max_width=[-1],
@@ -100,7 +98,7 @@ def experiment(experiment_name=None):
                                               max_concept_size=18,
                                               )
 
-    exps["clear_x_incremental"] = dict(
+    exps["clear_x_incremental"] = update_dict(base,
         # domain_dir="blocks-downward",
         experiment_class=IncrementalExperiment,
         # instances=["probBLOCKS-5-0.pddl", "probBLOCKS-6-0.pddl", "probBLOCKS-7-0.pddl"],
@@ -122,7 +120,7 @@ def experiment(experiment_name=None):
     )
 
     # Learns a simple action model which is however overfit to 3 blocks, and not sound in general
-    exps["toy_clear_incremental"] = dict(
+    exps["toy_clear_incremental"] = update_dict(base,
         experiment_class=IncrementalExperiment,
         instances=["instance_3_clear_x.pddl"],
         max_concept_grammar_iterations=3,
@@ -144,7 +142,7 @@ def experiment(experiment_name=None):
     exps["ijcai_features_on_clear_5"] = update_dict(exps["aaai_ijcai_features_on_clear_5_rnd"], num_sampled_states=None)
 
     # Goal here is on(x,y).
-    exps["bw_on_x_y_4"] = dict(
+    exps["bw_on_x_y_4"] = update_dict(base,
         instances="instance_4_on_x_y.pddl",
         num_states=200, num_sampled_states=None, random_seed=12,
         max_concept_size=31, max_concept_grammar_iterations=4,
@@ -154,7 +152,7 @@ def experiment(experiment_name=None):
     exps["bw_on_x_y_4_rnd"] = update_dict(exps["bw_on_x_y_4"], num_sampled_states=60)
 
     # Goal here is on(x,y).
-    exps["bw_on_x_y_5"] = dict(
+    exps["bw_on_x_y_5"] = update_dict(base,
         instances="instance_5_on_x_y.pddl",
         num_states=1000, num_sampled_states=None, random_seed=12,
         max_concept_size=10, max_concept_grammar_iterations=3,
@@ -163,14 +161,14 @@ def experiment(experiment_name=None):
 
     exps["bw_on_x_y_5_gc"] = update_dict(exps["bw_on_x_y_5"], parameter_generator=None,)
 
-    exps["bw_on_x_y_5_iw"] = dict(
+    exps["bw_on_x_y_5_iw"] = update_dict(base,
         instances=["instance_9_on_x_y_1.pddl", "instance_9_on_x_y_2.pddl", "holding_a_b_unclear.pddl"],#, "instance_9_on_x_y_4.pddl"],
         num_states=1000, max_width=2,
         max_concept_size=10, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
-    exps["aaai_bw_on_x_y_completeness_opt"] = update_dict({},
+    exps["aaai_bw_on_x_y_completeness_opt"] = update_dict(base,
                                                   instances=[
                                                       "inst_on_x_y_16.pddl",
                                                       "inst_on_x_y_14.pddl",
@@ -200,14 +198,14 @@ def experiment(experiment_name=None):
     exps["aaai_bw_on_x_y_completeness_opt_no_marking_blai"] = update_dict(
         exps["aaai_bw_on_x_y_completeness_opt_no_marking"], pipeline="maxsat_poly",)
 
-    exps["bw_on_x_y_dt_iw"] = dict(
+    exps["bw_on_x_y_dt_iw"] = update_dict(base,
         instances=["on_x_y_dt_1.pddl", "holding_a_b_unclear.pddl"],
         num_states=49999, max_width=2,
         max_concept_size=10, max_concept_grammar_iterations=3,
         parameter_generator=add_bw_domain_parameters_2,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
-    exps["validate_bw_on_x_y_dt_iw"] = dict(
+    exps["validate_bw_on_x_y_dt_iw"] = update_dict(base,
         instances=["on_x_y_dt_1.pddl"],
         num_states=49999, max_width=2,
         max_concept_size=10, max_concept_grammar_iterations=3,
@@ -234,19 +232,19 @@ def experiment(experiment_name=None):
                                                  # enforce_features=None,
                                                  num_sampled_states=3000)
 
-    exps["check_ijcai_features_on_x_y"] = dict(
+    exps["check_ijcai_features_on_x_y"] = update_dict(base,
         instances="instance_5_on_x_y.pddl",
         num_states=1000, max_concept_size=1, max_concept_grammar_iterations=1, num_sampled_states=100, random_seed=2,
         concept_generator=build_on_x_y_feature_set, parameter_generator=add_bw_domain_parameters_2,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
-    exps["generate_ijcai_features_on_x_y"] = dict(
+    exps["generate_ijcai_features_on_x_y"] = update_dict(base,
         instances="instance_5_on_x_y.pddl",
         num_states=1000, max_concept_size=34, max_concept_grammar_iterations=4, num_sampled_states=50, random_seed=2,
         concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
         feature_namer=ijcai_paper_bw_feature_namer,)
 
-    exps["clear_two_atoms"] = dict(
+    exps["clear_two_atoms"] = update_dict(base,
         instances="instance_5_clear_x_y.pddl",
         test_domain=domain, test_instances=["instance_5_clear_x_2.pddl"],
         num_states=2000, max_width=[-1],
@@ -258,15 +256,4 @@ def experiment(experiment_name=None):
         feature_namer=ijcai_paper_bw_feature_namer,
     )
 
-    if experiment_name not in exps:
-        raise RuntimeError('No experiment named "{}" in current experiment script'.format(experiment_name))
-    parameters = exps[experiment_name]
-    parameters["domain_dir"] = parameters.get("domain_dir", domain_dir)
-    parameters["domain"] = parameters.get("domain", domain)
-    return generate_experiment(**parameters)
-
-
-if __name__ == "__main__":
-    exp = experiment(sys.argv[1])
-    run_experiment(exp, sys.argv[2:])
-
+    return exps

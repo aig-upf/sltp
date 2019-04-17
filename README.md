@@ -98,6 +98,16 @@ Example invocations:
 The experiment names are not as informative as could be.
 The configuration of each experiment can be inspected by looking at the experiment file.
 
+## Using the SLTP Docker image 
+We can also run experiments from within the Docker image. Assuming you want to run experiment `p1` from the `Visitall`
+domain, leaving all intermediate files and results in a `workspace` directory in the host machine: 
+    
+    mkdir workspace
+    docker run -it --mount src=`pwd`/workspace,target=/root/projects/workspace,type=bind \
+        gfrancesm/sltp sltp visitall:p1 --workspace /root/projects/workspace    
+
+
+
 
 ### Software Requirements
 

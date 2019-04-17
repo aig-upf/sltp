@@ -7,35 +7,35 @@ import tempfile
 BASEDIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 
 tests = [
-    ("gripper.py", "aaai_prob01_gc",
+    ("gripper:aaai_prob01_gc",
      ["total complexity: 8", "Num[free]", "Num[Not(Equal(at_g,at))]", "Num[Exists(carry,<universe>)]",
       "Num[Exists(at_g,at-robby)]"]),
 
-    ("blocks.py", "aaai_clear_x_simple_hybrid",
+    ("blocks:aaai_clear_x_simple_hybrid",
      ["total complexity: 8",
       # "Bool[holding]", (sometimes  Atom[handempty] is found instead)
       "Bool[And(holding,Nominal(a))]",
       "Num[Exists(Star(on),Nominal(a))]"]),
 
-    ("blocks.py", "aaai_clear_x_simple_hybrid_gc",
+    ("blocks:aaai_clear_x_simple_hybrid_gc",
      ["total complexity: 8",
       # "Bool[holding]", (sometimes  Atom[handempty] is found instead)
       "Bool[And(clear_g,holding)]",
       "Num[Exists(Star(on),clear_g)]"]),
 
-    ("blocks.py", "aaai_bw_on_x_y_completeness_opt",
-    ["total complexity: 17",
-     # "Bool[holding]",
-     "Bool[And(holding,Nominal(a))]",
-     "Num[Exists(Star(on),Nominal(b))]", "Num[Exists(Star(on),Nominal(a))]",
-     "Bool[And(Exists(on,Nominal(b)),Nominal(a))]"]),
+    ("blocks:aaai_bw_on_x_y_completeness_opt",
+     ["total complexity: 17",
+      # "Bool[holding]",
+      "Bool[And(holding,Nominal(a))]",
+      "Num[Exists(Star(on),Nominal(b))]", "Num[Exists(Star(on),Nominal(a))]",
+      "Bool[And(Exists(on,Nominal(b)),Nominal(a))]"]),
 ]
 
 
 def test(script, configuration, expected_output):
     cwd = os.path.join(BASEDIR, "experiments")
     with tempfile.NamedTemporaryFile(mode='w+t', delete=False) as f:
-        command = [os.path.join(cwd, script), configuration, "--all"]
+        command = [os.path.join(cwd, script), configuration]
         print('Calling "{}". Output redirected to "{}"'.format(' '.join(command), f.name))
         retcode = subprocess.call(command, stdout=f, stderr=f)
         if retcode:
@@ -53,8 +53,8 @@ def test(script, configuration, expected_output):
 
 
 def runtests():
-    for script, configuration, expected_output in tests:
-        test(script, configuration, expected_output)
+    for configuration, expected_output in tests:
+        test("run.py", configuration, expected_output)
     print("All tests OK")
 
 
