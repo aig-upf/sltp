@@ -3,6 +3,7 @@
 import importlib
 import sys
 
+from sltp.util import console
 from sltp.util.bootstrap import setup_argparser
 
 from defaults import generate_experiment
@@ -13,7 +14,7 @@ def report_and_exit(msg):
     sys.exit(-1)
 
 
-def do(expid, steps=[], workspace=None):
+def do(expid, steps=None, workspace=None, show_steps_only=False):
     name_parts = expid.split(":")
     if len(name_parts) != 2:
         report_and_exit('Wrong experiment ID "{}"'.format(expid))
@@ -39,13 +40,19 @@ def do(expid, steps=[], workspace=None):
 
     experiment = generate_experiment(**parameters)
 
-    # Recreate the namespace, that will likely be parsed again
-    args_ = [expid]
-    args_ = args_ if not steps else args_ + [str(s) for s in steps]
-    args_ = args_ if workspace is None else args_ + ["--workspace", workspace]
-    experiment.run(args_)
+    if show_steps_only:
+        console.print_hello()
+        print('Experiment with id "{}" is configured with the following steps:'.format(expid))
+        print(experiment.print_description())
+        return
+
+    experiment.run(steps)
+
+
+def main():
+    args = setup_argparser().parse_args(sys.argv[1:])
+    do(args.exp_id, args.steps, args.workspace, args.show)
 
 
 if __name__ == "__main__":
-    args = setup_argparser().parse_args(sys.argv[1:])
-    do(args.__dict__["domain:experiment"], args.steps, args.workspace)
+    main()

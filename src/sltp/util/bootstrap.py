@@ -74,14 +74,20 @@ def get_parser(add_log_option=True, **kwargs):
     return parser
 
 
-def setup_argparser(step_description=None):
-    help_msg = 'Experiment step numbers to be run. By default, run them all."'
-    help_msg += '' if step_description is None else ' Available steps are: \n{}'.format(step_description)
+def setup_argparser():
     parser = get_parser()
-    parser.add_argument('domain:experiment', help="The domain and experiment within that domain")
-    parser.add_argument('--workspace', help="The directory where the experiment outputs will be left. "
-                                            "If none specified, use a default directory inside the SLTP project tree.")
-    parser.add_argument('steps', metavar='step', nargs='*', default=[], type=int, help=help_msg)
+    parser.add_argument('exp_id', metavar='domain:experiment', help="The domain and experiment within that domain.")
+
+    parser.add_argument('--workspace', metavar='dir',
+                        help="The directory where the experiment outputs will be left. If none specified, use"
+                             " a default directory inside the SLTP project tree.")
+
+    parser.add_argument('--show', action='store_true',
+                        help="Show the steps available for the given experiment, but don't run anything.")
+
+    parser.add_argument('steps', metavar='step', nargs='*', default=[], type=int,
+                        help='Which of the experiment steps to run (e.g.: "3 4 5" will assume the first two steps were'
+                             ' already run and skip them). By default, run them all.')
     return parser
 
 

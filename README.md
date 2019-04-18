@@ -104,7 +104,7 @@ domain, leaving all intermediate files and results in a `workspace` directory in
     
     mkdir workspace
     docker run -it --mount src=`pwd`/workspace,target=/root/projects/workspace,type=bind \
-        gfrancesm/sltp sltp visitall:p1 --workspace /root/projects/workspace    
+        gfrancesm/sltp sltp gripper:aaai_prob01 --workspace /root/projects/workspace    
 
 
 

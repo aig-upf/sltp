@@ -3,6 +3,8 @@ import logging
 import os
 
 import numpy as np
+from sltp.util import console
+
 from .util.naming import compute_info_filename
 from .util.tools import load_selected_features, process_features
 from tarski.dl import compute_dl_vocabulary
@@ -188,10 +190,9 @@ class IncrementalExperiment(Experiment):
         super().__init__([], parameters)  # Simply ignore the steps
         self.parameters = parameters
 
-    def run(self, args=None):
-        # We ignore whatever specified in the command line and run the incremental algorithm
-        self.hello(args)
-
+    def run(self, steps=None):
+        console.print_hello()
+        # We ignore the specified steps and run the incremental algorithm
         # 1. Extract and resample the whole training set
         initial_steps, config = generate_pipeline_from_list([PlannerStep, TransitionSamplingStep], **self.parameters)
         exitcode = run_and_check_output(initial_steps[0], 0, SubprocessStepRunner)

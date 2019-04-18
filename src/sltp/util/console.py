@@ -2,6 +2,8 @@ import logging
 import shutil
 import time
 
+from ..version import get_version
+
 
 def get_terminal_size():
     return shutil.get_terminal_size()
@@ -26,3 +28,7 @@ def log_time(f, lvl=logging.INFO, msg=None):
     result = f()
     logging.log(lvl, "\t-> Elapsed CPU time: {0:.2f}".format(time.process_time() - t0))
     return result
+
+
+def print_hello():
+    print(header("SLTP v.{}".format(get_version())))

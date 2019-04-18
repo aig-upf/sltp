@@ -21,14 +21,11 @@ import multiprocessing
 import os
 import resource
 import sys
-from signal import signal, SIGPIPE, SIG_DFL
 import numpy as np
 
-from .version import get_version
 from .returncodes import ExitCode
 from .errors import CriticalPipelineError
 from .util import console
-from .util.bootstrap import setup_argparser
 from .util.command import execute, create_experiment_workspace
 from .util.naming import compute_instance_tag, compute_experiment_tag, compute_serialization_name, \
     compute_maxsat_filename, compute_info_filename, compute_maxsat_variables_filename, compute_sample_filenames, \
@@ -734,20 +731,14 @@ class Experiment:
     def __init__(self, all_steps, parameters):
         self.all_steps = all_steps
 
-    def print_step_description(self):
-        return "\t\t" + "\n\t\t".join("{}. {}".format(i, s.description()) for i, s in enumerate(self.all_steps, 1))
+    def print_description(self):
+        return "\t" + "\n\t".join("{}. {}".format(i, s.description()) for i, s in enumerate(self.all_steps, 1))
 
-    def hello(self, args=None):
-        print(console.header("SLTP v.{}".format(get_version())))
-        argparser = setup_argparser(step_description=self.print_step_description())
-        return argparser.parse_args(args)
-
-    def run(self, args=None):
-        args = self.hello(args)
+    def run(self, steps=None):
+        console.print_hello()
         # If no steps were given on the commandline, run all exp steps.
-        selected = [get_step(self.all_steps, step_id) for step_id in args.steps] or self.all_steps
+        selected = self.all_steps if not steps else [get_step(self.all_steps, step_id) for step_id in steps]
 
-        print("Selected: {}".format(selected))
         for stepnum, step in enumerate(selected, start=1):
             try:
                 run_and_check_output(step, stepnum, SubprocessStepRunner)
