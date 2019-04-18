@@ -103,9 +103,24 @@ We can also run experiments from within the Docker image. Assuming you want to r
 domain, leaving all intermediate files and results in a `workspace` directory in the host machine: 
     
     mkdir workspace
+    docker pull gfrancesm/sltp
     docker run -it --mount src=`pwd`/workspace,target=/root/projects/workspace,type=bind \
         gfrancesm/sltp sltp gripper:aaai_prob01 --workspace /root/projects/workspace    
 
+You can also run experiments that are not integrated within the standard SLTP command runner, just as you would run
+any normal script within a Docker image. Suppose you have _in the host machine_ a SLTP experiment script such as the one 
+found in the `examples` folder:
+    
+    /tmp/workspace$ ls
+    gripper.py
+
+You can run that script _within the Docker container_ as follows:
+
+    /tmp/workspace$ docker pull gfrancesm/sltp
+    /tmp/workspace$ docker run -it --mount src=`pwd`,target=/root/projects/workspace,type=bind \
+                       gfrancesm/sltp /root/projects/workspace/gripper.py aaai_prob01 --workspace /root/projects/workspace
+    
+where `aaai_prob01` is the experiment name configured in your `gripper.py` script.
 
 
 

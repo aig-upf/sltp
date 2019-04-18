@@ -15,7 +15,7 @@ fi
 
 # deletes the temp directory
 function cleanup {
-  #rm -rf "$WORK_DIR"
+  rm -rf "$WORK_DIR"
   echo "Deleted temp working directory $WORK_DIR"
 }
 

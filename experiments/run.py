@@ -7,7 +7,7 @@ import sys
 from sltp.util import console
 from sltp.util.bootstrap import setup_argparser
 
-from defaults import generate_experiment
+from sltp.util.defaults import generate_experiment
 
 
 def import_from_file(filename):

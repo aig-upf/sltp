@@ -5,10 +5,9 @@ import sys
 
 from sltp.driver import run_experiment
 
-from defaults import generate_experiment
+from sltp.util.defaults import generate_experiment
 from sltp.util.misc import update_dict
-from tarski.dl import AndConcept, NominalConcept, PrimitiveConcept, NotConcept, ExistsConcept, InverseRole, \
-    PrimitiveRole, StarRole, UniversalConcept, GoalConcept, MinDistanceFeature, ConceptCardinalityFeature, RestrictRole
+from tarski.dl import AndConcept, PrimitiveConcept, NotConcept, PrimitiveRole, UniversalConcept, MinDistanceFeature, ConceptCardinalityFeature, RestrictRole
 
 
 def add_domain_parameters(language):

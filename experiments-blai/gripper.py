@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 import sys
 
-from defaults import generate_experiment
-from sltp.util.misc import update_dict
+from sltp.util.defaults import generate_experiment
 
 
 def experiment(experiment_name=None):

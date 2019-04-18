@@ -58,6 +58,7 @@ def solve(rundir, cnf_filename, solver='wpm3', timeout=None):
     if error:
         raise RuntimeError("There was an error running the MAXSAT solver. Check error logs")
 
+    print(output)
     return parse_maxsat_output(output)
 
 

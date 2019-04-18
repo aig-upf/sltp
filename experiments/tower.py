@@ -4,8 +4,8 @@ import sys
 
 from tarski.dl import ForallConcept, StarRole, NotConcept, PrimitiveRole, NominalConcept, InverseRole, AndConcept
 
-from defaults import generate_experiment
-from common import build_ijcai_paper_bw_concepts, ijcai_paper_bw_feature_namer, no_parameter
+from sltp.util.defaults import generate_experiment
+from common import ijcai_paper_bw_feature_namer, no_parameter
 from sltp.util.misc import update_dict
 
 
