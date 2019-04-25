@@ -77,17 +77,16 @@ export LIBRARY_PATH=$LIBRARY_PATH:{libpath}
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:{libpath}
 export FS_PATH={fspath}
 
-mkdir -p {exp_dir}
-./cluster.py --exp {experiment_set} --task ${{SLURM_ARRAY_TASK_ID}} \
-    > {output}.log  \
-    2>{output}.err
+EXPDIR={exp_dir}
+mkdir -p ${{EXPDIR}}
+./cluster.py --exp {experiment_set} --task ${{SLURM_ARRAY_TASK_ID}}  > {output}.log 2>{output}.err
 """
 
     filename = "{}.sh".format(experiment_set)
     libpath = os.path.expanduser("~/local/lib")
     exp_dir = os.path.join(CURRENT_DIR, "{}_{}".format(experiment_set, time.strftime("%y%m%d")))
     with open(filename, "w") as f:
-        output = os.path.join(exp_dir, "out_${{SLURM_ARRAY_TASK_ID}}".format())
+        output = "${EXPDIR}/out_${SLURM_ARRAY_TASK_ID}"
         f.write(tpl.format(time=timeout, mem=mem, num_tasks=num_tasks, experiment_set=experiment_set, libpath=libpath,
                            exp_dir=exp_dir, output=output, fspath=os.environ.get("FS_PATH", "")))
     print("Written cluster script {}".format(filename))
