@@ -22,7 +22,7 @@ def experiments():
         test_instances=[
             'child-snack_pfile01.pddl',
         ],
-        num_states=200000,
+        num_states="until_first_goal",
         num_tested_states=20000,
         num_sampled_states=None,  # Take all expanded states into account
         initial_sample_size=100, batch_refinement_size=5,
@@ -44,7 +44,7 @@ def experiments():
         test_instances=[
             'child-snack_pfile01.pddl',
         ],
-        num_states=100,
+        num_states="until_first_goal",
         num_tested_states=500,
         num_sampled_states=None,  # Take all expanded states into account
         initial_sample_size=20, batch_refinement_size=5,

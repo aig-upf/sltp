@@ -18,7 +18,7 @@ def experiments():
             'sample2.pddl',
         ],
         test_instances=["prob0{}.pddl".format(i) for i in (1, 2, 3, 4, 5)],
-        num_states=5000,
+        num_states="until_first_goal",
         num_tested_states=50000,
         num_sampled_states=300,
         complete_only_wrt_optimal=True,

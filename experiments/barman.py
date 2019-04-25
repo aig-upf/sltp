@@ -16,7 +16,7 @@ def experiments():
         base,
         instances=['sample01.pddl', ],
         test_instances=["pfile01-00{}.pddl".format(i) for i in (1, 2, 3)],
-        num_states=200000,
+        num_states="until_first_goal",
         num_tested_states=50000,
         num_sampled_states=300,
         max_concept_size=8,
@@ -28,7 +28,7 @@ def experiments():
         exps["p1"],
         experiment_type='incremental',
         test_instances=["pfile01-00{}.pddl".format(i) for i in (1, 2, 3)],
-        num_states=200000,
+        num_states="until_first_goal",
         num_tested_states=50000,
         num_sampled_states=None,  # Take all expanded states into account
         initial_sample_size=100, batch_refinement_size=5,
