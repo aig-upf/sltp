@@ -77,6 +77,7 @@ def experiments():
         feature_namer=ijcai_paper_bw_feature_namer,
     )
 
+    # Goal: build one single given tower of blocks from a random initial configuration
     exps["one_tower_inc"] = update_dict(
         exps["one_tower"],
         experiment_type='incremental',
@@ -88,11 +89,10 @@ def experiments():
         ],
         num_states=40000,
         num_sampled_states=None,  # Take all expanded states into account
-        initial_sample_size=100,
+        initial_sample_size=100, batch_refinement_size=5,
         initial_concept_bound=6, max_concept_bound=10, concept_bound_step=1,
-        batch_refinement_size=5,
-        # quiet=True,
         clean_workspace=False,
+        # quiet=True,
     )
 
     return exps

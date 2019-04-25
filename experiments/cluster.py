@@ -24,8 +24,8 @@ def main(parser, args):
     args = parser.parse_args(args)
     with open("{}.yml".format(args.exp), 'r') as f:
         data = yaml.load(f, Loader=yaml.BaseLoader)
-        experiments = [tuple(x.split(" ")) for x in data["experiments"]]
         run = data["run"]
+        experiments = data["experiments"]
 
     if not experiments:
         raise RuntimeError("No experiments found in the configuration file")
@@ -37,8 +37,8 @@ def main(parser, args):
         if args.task - 1 > len(experiments):
             raise RuntimeError("Task ID #{} not defined on experiment set {}.".format(args.task, args.exp))
 
-        d, e = experiments[args.task-1]  # because slurm task IDs range from 1 to n, not from 0.
-        do("{}:{}".format(d, e))
+        expid = experiments[args.task-1]  # because slurm task IDs range from 1 to n, not from 0.
+        do(expid)
 
 
 def generate_script(num_tasks, timeout, mem, experiment_set):

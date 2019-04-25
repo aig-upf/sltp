@@ -19,7 +19,7 @@ from .util.misc import update_dict
 from .driver import Experiment, generate_pipeline_from_list, PlannerStep, check_int_parameter, \
     InvalidConfigParameter, TransitionSamplingStep, SubprocessStepRunner, \
     run_and_check_output, save, MaxsatProblemSolutionStep, \
-    load, Bunch, CPPFeatureGenerationStep, CPPMaxsatProblemGenerationStep, CPPActionModelStep
+    load, save, Bunch, CPPFeatureGenerationStep, CPPMaxsatProblemGenerationStep, CPPActionModelStep, AbstractionTestingStep
 
 
 def initial_sample_selection(sample, config, rng):
@@ -82,6 +82,7 @@ def full_learning(config, sample, rng):
         working_sample = sample.resample(working_sample_idxs)  # This will "close" the sample set with children states
 
     logging.info("The computed abstraction is sound & complete wrt all of the training instances")
+    save(config.experiment_dir, dict(abstraction=abstraction))
     return ExitCode.Success
 
 
@@ -200,4 +201,8 @@ class IncrementalExperiment(Experiment):
 
         learner = IncrementalLearner(**config)
         exitcode = learner.run()
+        if exitcode == ExitCode.Success:
+            testing_steps, config = generate_pipeline_from_list([AbstractionTestingStep], **config)
+            exitcode = run_and_check_output(testing_steps[0], 999, SubprocessStepRunner)
+
         return exitcode

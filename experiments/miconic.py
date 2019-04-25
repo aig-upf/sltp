@@ -7,6 +7,7 @@ def experiments():
         domain_dir="miconic",
         domain="domain.pddl",
         test_domain="domain.pddl",
+        complete_only_wrt_optimal=True,
     )
 
     exps = dict()
@@ -24,11 +25,11 @@ def experiments():
             's2-4.pddl',
             's3-1.pddl',
         ],
-        num_states=2000,
-        num_tested_states=20000,
-        num_sampled_states=200,
-        complete_only_wrt_optimal=True,
-        max_concept_size=8,
+        num_states=200000,
+        num_tested_states=50000,
+        num_sampled_states=None,  # Take all expanded states into account
+        initial_concept_bound=8, max_concept_bound=16, concept_bound_step=1,
+        batch_refinement_size=5,
         concept_generator=None,
         parameter_generator=None,
     )

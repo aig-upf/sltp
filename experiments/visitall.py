@@ -7,6 +7,7 @@ def experiments():
         domain_dir="visitall-opt11-strips",
         domain="domain.pddl",
         test_domain="domain.pddl",
+        complete_only_wrt_optimal=True,
     )
 
     exps = dict()
@@ -22,7 +23,6 @@ def experiments():
         num_states=2000,
         num_tested_states=20000,
         num_sampled_states=200,
-        complete_only_wrt_optimal=True,
         max_concept_size=8,
         distance_feature_max_complexity=8,
         concept_generator=None,

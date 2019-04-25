@@ -7,22 +7,23 @@ def experiments():
         domain_dir="grid",
         domain="domain.pddl",
         test_domain="domain.pddl",
+        complete_only_wrt_optimal=True,
     )
 
     exps = dict()
 
     exps["p1"] = update_dict(
         base,
+        experiment_type='incremental',
         instances=[
             "prob01.pddl"
         ],
         test_instances=[
-            # 'prob02.pddl',
+            'prob02.pddl',
         ],
-        num_states=10000,
-        num_tested_states=20000,
-        num_sampled_states=300,
-        complete_only_wrt_optimal=True,
+        num_states=200000,
+        num_tested_states=50000,
+        num_sampled_states=None,  # Take all expanded states into account
         max_concept_size=8,
         concept_generator=None,
         parameter_generator=None,

@@ -5,4 +5,12 @@ run:
   time: "8:0:0"
 
 experiments:
-  - blocks2 one_tower_inc
+  - "blocks2:one_tower_inc"
+  - "logistics:p1"
+  - "barman:p1_inc"
+  - "childsnack:p1"
+  - "spanner:p1"
+  - "miconic:p1"
+  - "visitall:p1"
+  - "depot:p1"
+  - "satellite:p1"

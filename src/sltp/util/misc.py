@@ -90,3 +90,11 @@ def print_relation(data, index):
 
 def print_tuple(tup, index):
     return "({})".format(", ".join(index.value(x) for x in tup))
+
+
+def extend_namer_to_all_features(namer):
+    """ Extend possible feature names to both their numeric and boolean versions"""
+    items = list(namer.items())
+    atoms = [(k, v) for k, v in items if k.startswith("Atom[")]
+    return dict(atoms + [("Bool[{}]".format(k), v) for k, v in items] + [("Num[{}]".format(k), v) for k, v in items])
+

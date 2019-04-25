@@ -7,26 +7,34 @@ def experiments():
         domain_dir="spanner-small",
         domain="domain.pddl",
         test_domain="domain.pddl",
+        complete_only_wrt_optimal=True,
     )
 
     exps = dict()
 
     exps["p1"] = update_dict(
         base,
+        experiment_type='incremental',
         instances=[
-            "prob-4-4-3-1540907456.pddl"
+            "prob-4-4-3-1540907456.pddl",
+            "prob-6_4_2.pddl",
+            "prob-6_4_10.pddl"
         ],
         test_instances=[
             "prob-10-10-10-1540903568.pddl"
         ],
-        num_states=2000,
+        num_states=40000,
+        num_sampled_states=None,  # Take all expanded states into account
         num_tested_states=50000,
-        num_sampled_states=500,
-        complete_only_wrt_optimal=True,
-        max_concept_size=8,
+        initial_concept_bound=8, max_concept_bound=16, concept_bound_step=1,
+        batch_refinement_size=5,
         distance_feature_max_complexity=8,
         concept_generator=None,
-        parameter_generator=add_domain_parameters,  # No goal concepts!
+
+        # No goal concepts would be necessary here, but we let the spanner experiments run with them so that they are
+        # homogeneous with the rest of experiments
+        # parameter_generator=add_domain_parameters,  # This would prevent goal concepts from being generated
+        parameter_generator=None,
     )
 
     exps["p1_p"] = update_dict(
