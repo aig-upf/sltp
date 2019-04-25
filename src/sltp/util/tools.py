@@ -1,7 +1,7 @@
 import itertools
 from collections import defaultdict
 
-from tarski.dl import ConceptCardinalityFeature, EmpiricalBinaryConcept, FeatureValueChange
+from tarski.dl import ConceptCardinalityFeature, EmpiricalBinaryConcept, FeatureValueChange, MinDistanceFeature
 from tarski.dl.features import Feature, NullaryAtomFeature
 
 from ..language import parse_pddl
@@ -115,30 +115,27 @@ class ActionEffect:
 
     def print_named(self, namer=lambda s: s):
         name = namer(self.feature.name())
-        if self.change == FeatureValueChange.ADD:
-            return name
-        if self.change == FeatureValueChange.DEL:
-            return "NOT {}".format(name)
-        if self.change == FeatureValueChange.ADD_OR_NIL:
-            return "ADD* {}".format(name)
-        if self.change == FeatureValueChange.INC:
-            return "INC {}".format(name)
-        if self.change == FeatureValueChange.DEC:
-            return "DEC {}".format(name)
-        if self.change == FeatureValueChange.INC_OR_NIL:
-            return "INC* {}".format(name)
+        feat = self.feature.feature
+        if isinstance(feat, (NullaryAtomFeature, EmpiricalBinaryConcept)):
+            if self.change == FeatureValueChange.INC:
+                return name
+            if self.change == FeatureValueChange.DEC:
+                return "NOT {}".format(name)
+        elif isinstance(feat, (ConceptCardinalityFeature, MinDistanceFeature)):
+            if self.change == FeatureValueChange.INC:
+                return "INC {}".format(name)
+            if self.change == FeatureValueChange.DEC:
+                return "DEC {}".format(name)
         raise RuntimeError("Unexpected effect type")
 
     def print_qnp_named(self, namer=lambda s: s):
         name = namer(self.feature.name())
-        if self.change in (FeatureValueChange.ADD, FeatureValueChange.INC):
+        if self.change == FeatureValueChange.INC:
             return "{} 1".format(name)
 
-        if self.change in (FeatureValueChange.DEL, FeatureValueChange.DEC):
+        if self.change in FeatureValueChange.DEC:
             return "{} 0".format(name)
 
-        if self.change in (FeatureValueChange.INC_OR_NIL, FeatureValueChange.ADD_OR_NIL):
-            assert False, "Relaxed INC semantics not supported for QNP"
         raise RuntimeError("Unexpected effect type")
 
 
@@ -187,10 +184,5 @@ def minimize_dnf(dnf):
 
 def generate_effect(feature, qchange):
     assert qchange in (-1, 1)
-
-    if feature_type(feature) is bool:
-        change = {-1: FeatureValueChange.DEL, 1: FeatureValueChange.ADD}[qchange]
-    else:  # else type must be int
-        change = {-1: FeatureValueChange.DEC, 1: FeatureValueChange.INC}[qchange]
-
+    change = {-1: FeatureValueChange.DEC, 1: FeatureValueChange.INC}[qchange]
     return ActionEffect(feature, change)

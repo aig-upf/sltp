@@ -7,7 +7,7 @@ from sltp.extensions import uncompress_extension, compress_extension
 from sltp.util.misc import try_number
 from tarski import PredicateSymbol, FunctionSymbol
 from tarski.dl import UniversalConcept, EmptyConcept, NullaryAtom, PrimitiveConcept, PrimitiveRole, GoalRole, \
-    GoalConcept, GoalNullaryAtom, NominalConcept, EmpiricalBinaryConcept
+    GoalConcept, GoalNullaryAtom, NominalConcept, EmpiricalBinaryConcept, NullaryAtomFeature
 from tarski.syntax import Sort
 
 _STANDARD_DL_MAPPING = {0: NullaryAtom, 1: PrimitiveConcept, 2: PrimitiveRole}
@@ -168,11 +168,5 @@ class FeatureModel:
         self.concept_model = concept_model
 
     def denotation(self, feature):
-        # TODO ADD CACHE?
         val = feature.denotation(self.concept_model)
-        return bool(val) if isinstance(feature, EmpiricalBinaryConcept) else val
-
-
-def compute_feature_denotation(feature, model):
-    cast = bool if isinstance(feature, EmpiricalBinaryConcept) else lambda x: x
-    return cast(feature.denotation(model))
+        return bool(val) if isinstance(feature, (EmpiricalBinaryConcept, NullaryAtomFeature)) else val

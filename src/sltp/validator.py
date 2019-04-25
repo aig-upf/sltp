@@ -2,7 +2,6 @@ import logging
 from collections import defaultdict
 
 from tarski.dl import FeatureValueChange
-from tarski.dl.features import are_feature_changes_analogous
 
 from .util.tools import Abstraction
 
@@ -24,7 +23,7 @@ class AbstractionValidator:
             x0 = f.denotation(self.get_possibly_cached_model(models, s))
             x1 = f.denotation(self.get_possibly_cached_model(models, sprime))
             diff = f.feature.diff(x0, x1)
-            if not are_feature_changes_analogous(diff, effect_of_action_on_f):
+            if diff != effect_of_action_on_f:
                 return False
 
         return True
