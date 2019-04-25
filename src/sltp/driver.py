@@ -96,11 +96,15 @@ class Step:
 
 def _run_planner(config, data, rng):
     # Run the planner on all training and test instances
-    def run(d, i, o, w, n):
-        params = '-i {} --domain {} --driver {} --options=max_expansions={},width.max={}' \
-            .format(i, d, config.driver, n, w)
-        execute(command=[sys.executable, "run.py"] + params.split(' '),
-                stdout=o, cwd=config.planner_location)
+    def run(d, i, o, w, num_states):
+        if num_states == "until_first_goal":
+            num_string = "until_first_goal=true"
+        else:
+            assert isinstance(num_states, int)
+            num_string = "max_expansions={}".format(num_states)
+
+        params = '-i {} --domain {} --driver {} --options={},width.max={}'.format(i, d, config.driver, num_string, w)
+        execute(command=[sys.executable, "run.py"] + params.split(' '), stdout=o, cwd=config.planner_location)
 
     for i, o, w in zip(config.instances, config.sample_files, config.max_width):
         run(config.domain, i, o, w, config.num_states)
@@ -134,7 +138,6 @@ class PlannerStep(Step):
         if not os.path.isdir(config["planner_location"]):
             raise InvalidConfigParameter('Specified planner location "{}" does not exist'
                                          .format(config["planner_location"]))
-        check_int_parameter(config, "num_states", positive=True)
 
         config["instance_tag"] = compute_instance_tag(**config)
         config["experiment_tag"] = compute_experiment_tag(**config)

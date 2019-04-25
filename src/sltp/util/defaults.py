@@ -70,7 +70,8 @@ def generate_experiment(domain_dir, domain, **kwargs):
         # Note: ATM random sampling is deactivated
         sampling="all",
 
-        # Number of states to be expanded in the sampling procedure
+        # Number of states to be expanded in the sampling procedure. Either a positive integer, or the string
+        # "until_first_goal", with obvious meaning
         num_states=50,
 
         # Number randomly sampled states among the set of expanded states. The default of None means
