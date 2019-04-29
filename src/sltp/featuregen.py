@@ -116,13 +116,13 @@ def print_sample_info(sample, infos, model_cache, all_predicates, all_functions,
         # First line: sample name
         print("dummy-sample-name", file=f)
 
-        # Second line: all predicate names
-        print(" ".join("{}/{}".format(name, arity) for name, arity in sorted(all_predicates)), file=f)
-
-        # Third line: all function names
-        print(" ".join("{}/{}".format(name, arity) for name, arity in sorted(all_functions)), file=f)
+        # Second line: all predicate and function names (note diff treatment of their arity)
+        predfuns = [(name, ar) for name, ar in all_predicates] + [(name, ar + 1) for name, ar in all_functions]
+        print(" ".join("{}/{}".format(name, arity) for name, arity in sorted(predfuns)), file=f)
 
         # Next: List of all predicates and functions mentioned in the goal
+        # Next line disables the "in-goal" functionality that enforces goal-identifying features of the form
+        # p_g - p = 0, for all predicates p
         goal_predicate_info = {}
         print(" ".join("{}".format(name) for name, arity in sorted(goal_predicate_info)), file=f)
 
@@ -291,9 +291,11 @@ def extract_features(config, sample):
         all_predicates.update((p.name, p.arity) for p in lang.predicates if not p.builtin)
         all_functions.update((p.name, p.arity) for p in lang.functions if not p.builtin)
 
-        # Add goal predicates
-        goal_predicate_info = set((goal_predicate_name(p.name), p.arity)
+        # Add goal predicates and functions
+        goal_predicate_info = set((goal_predicate_name(p.name), p.uniform_arity())
                                   for p in lang.predicates if not p.builtin and p.name in all_goal_predicates)
+        goal_predicate_info.update((goal_predicate_name(f.name), f.uniform_arity())
+                                   for f in lang.functions if not f.builtin and f.name in all_goal_predicates)
         all_predicates.update(goal_predicate_info)
 
         # Add type predicates

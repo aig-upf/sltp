@@ -129,14 +129,10 @@ namespace SLTP { namespace DL {
         std::getline(is, sample_name); // Whole line is sample name
 
         // Second line: list of all predicate names (shared by all instances)
+        // (Note: this will include functions as well, if used in the problem representation)
         std::string predicate_line;
         std::getline(is, predicate_line);
         std::vector<Predicate> predicates(std::move(parse_predicates(predicate_line, predicate_index)));
-
-        // Third line: list of all function names (shared by all instances)
-        std::string function_line;
-        std::getline(is, function_line);
-        // Note: Not supporting functions yet - we don't do anything with this line
 
         // Next: List of all predicates and functions mentioned in the goal
         std::string line;
