@@ -55,7 +55,7 @@
 
     # Taxi domain: Grid-like environment where a taxi needs to move to the cell where a passenger is,
     # pick her up, take her to some destination cell and drop her there
-    # ./taxi.py simple  # Not working: pipeline needs to be adjusted for FSTRIPS domains
+    ./run.py taxi:simple
 
 ## Variations of previous benchmarks
 

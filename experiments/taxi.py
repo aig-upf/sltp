@@ -1,33 +1,35 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
-import sys
-
+from sltp.util.misc import update_dict
 from tarski.dl import PrimitiveConcept, GoalConcept, PrimitiveRole
 
-from sltp.util.defaults import generate_experiment
 
+def experiments():
 
-def experiment(experiment_name=None):
-    domain_dir = "taxi"
-    domain = "domain.pddl"
+    base = dict(
+        domain_dir="taxi",
+        domain="domain.pddl",
+        test_domain="domain.pddl",
+        complete_only_wrt_optimal=True,
+    )
 
     exps = dict()
 
-    exps["simple"] = dict(
-        instances="instance_3.pddl",
-        test_domain=domain, test_instances=["instance_5.pddl"],
-        num_states=300,
-        max_concept_size=10,
-        distance_feature_max_complexity=5,
-        parameter_generator=None,
+    exps["simple"] = update_dict(
+        base,
+        instances=['instance_5.pddl', ],
+        test_instances=["instance_7.pddl", ],
+        num_states="until_first_goal",
+        num_tested_states=50000,
+        num_sampled_states=300,
+        max_concept_size=8,
+        distance_feature_max_complexity=8,
         feature_namer=feature_namer,
         concept_generator=build_expected_concepts,
-        complete_only_wrt_optimal=True
+        parameter_generator=None,
     )
 
-    if experiment_name not in exps:
-        raise RuntimeError('No experiment named "{}" in current experiment script'.format(experiment_name))
-    return generate_experiment(domain_dir, domain, **exps[experiment_name])
+    return exps
 
 
 def feature_namer(feature):
@@ -43,8 +45,3 @@ def build_expected_concepts(lang):
     concepts = [PrimitiveConcept(loct), PrimitiveConcept(locp), GoalConcept(locp)]
     roles = [PrimitiveRole(adj)]
     return [], concepts, roles  # atoms, concepts, roles
-
-
-if __name__ == "__main__":
-    exp = experiment(sys.argv[1])
-    exp.run(sys.argv[2:])

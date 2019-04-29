@@ -14,10 +14,6 @@
     (:init
         (= (loct ) c_0_6)
         (= (locp ) c_4_0)
-        (= (loc_fuel ) c_6_3)
-        (= (destination ) c_1_3)
-        (= (current_fuel ) 8)
-        (= (max_fuel_level ) 10)
         (adjacent c_2_1 c_3_1)
         (adjacent c_6_2 c_6_3)
         (adjacent c_4_6 c_4_5)
@@ -189,12 +185,8 @@
     )
 
     (:goal
-        (= (locp ) (destination ))
+        (= (locp ) c_1_3)
     )
 
-    
-    (:bounds
-        (fuel_level - int[0..10]))
-    
 )
 
