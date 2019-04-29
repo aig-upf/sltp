@@ -13,6 +13,7 @@ struct Options {
     string execname_;
     string workspace_;
     unsigned complexity_bound_;
+    unsigned dist_complexity_bound_;
 
     Options(int argc, const char **argv) {
         // Print call
@@ -22,23 +23,26 @@ struct Options {
         cout << endl;
 
         execname_ = *argv;
-        if( argc != 3 ) {
+        if( argc != 4 ) {
             print_usage(cout);
             exit(1);
         }
 
         // read arguments
         complexity_bound_ = (unsigned) stoul(argv[1], nullptr, 10);
-        workspace_ = string(argv[2]);
+        dist_complexity_bound_ = (unsigned) stoul(argv[2], nullptr, 10);
+        workspace_ = string(argv[3]);
         //cout << "Using workspace directory '" << workspace_ << "' and output file '" << output_file_ << "'" << endl;
     }
 
     void print_usage(ostream &os) const {
         os << endl
-           << "Usage: " << execname_ << " <K> <input-file> <output-file>" << endl
+           << "Usage: " << execname_ << " <K> <DK> <workspace>" << endl
            << endl
            << "where" << endl
-           << "    <K> is the maximum feature complexity of the generated features."
+           << "    <K> is the maximum feature complexity of the standard features."
+           << endl
+           << "    <DK> is the maximum feature complexity of the distance features."
            << endl
            << "    <workspace> is the path to a directory with all the necessary input"
            << endl
@@ -96,7 +100,8 @@ int main(int argc, const char **argv) {
          << ", #states=" << sample->num_states()
          << endl;
 #endif
-    SLTP::DL::Factory factory("test", nominals, options.complexity_bound_);
+    SLTP::DL::Factory factory("test", nominals,
+            options.complexity_bound_, options.dist_complexity_bound_);
 
     SLTP::DL::Cache cache;
     factory.generate_basis(sample);

@@ -1616,6 +1616,7 @@ class Factory {
     std::vector<const Concept*> basis_concepts_;
 
     int complexity_bound_;
+    int dist_complexity_bound_;
 
     mutable std::vector<const Role*> roles_;
 
@@ -1628,10 +1629,12 @@ class Factory {
     std::unordered_set<unsigned> goal_features_;
 
   public:
-    Factory(std::string name, const std::vector<std::string>& nominals, int complexity_bound)
+    Factory(std::string name, const std::vector<std::string>& nominals, int complexity_bound, int dist_complexity_bound)
       : name_(std::move(name)),
         nominals_(nominals),
-        complexity_bound_(complexity_bound) {
+        complexity_bound_(complexity_bound),
+        dist_complexity_bound_(dist_complexity_bound)
+    {
     }
     virtual ~Factory() = default;
 
@@ -1644,9 +1647,6 @@ class Factory {
     }
     void insert_basis(const Concept *concept) {
         basis_concepts_.push_back(concept);
-    }
-    void set_complexity_bound(int complexity_bound) {
-        complexity_bound_ = complexity_bound;
     }
 
     void reset(bool remove) {
@@ -2107,8 +2107,8 @@ class Factory {
             generate_cardinality_feature_if_not_redundant(c, cache, sample, seen_denotations);
         }
 
-        // create distance features - temporarily deactivated
-//        generate_distance_features(concepts, cache, sample);
+        // create distance features
+        generate_distance_features(concepts, cache, sample);
         print_feature_count();
     }
 
@@ -2185,6 +2185,8 @@ class Factory {
     }
 
     void generate_distance_features(const std::vector<const Concept*>& concepts, Cache &cache, const Sample &sample) {
+        if (dist_complexity_bound_<=0) return;
+
         feature_cache_t seen_denotations;
 
         // identify concepts with singleton denotation across all states
@@ -2197,7 +2199,6 @@ class Factory {
             for( int j = 0; singleton_denotations && (j < sample.num_states()); ++j )
                 singleton_denotations = (*d)[j]->cardinality() == 1;
             if( singleton_denotations ) {
-                //std::cout << "GOOD (START) CONCEPT: " << c.as_str_with_complexity() << std::endl;
                 start_concepts.push_back(c);
             }
         }
@@ -2208,7 +2209,7 @@ class Factory {
         for (const Role* r:roles_) {
             for (const Concept* c:concepts) {
                 RoleRestriction role_restriction(r, c);
-                if( 3 + role_restriction.complexity() > complexity_bound_ ) continue;
+                if( 3 + role_restriction.complexity() > dist_complexity_bound_ ) continue;
                 const sample_denotation_t *d = role_restriction.denotation(cache, sample, false);
                 if( !is_superfluous(cache_for_role_restrictions, d) ) {
                     assert(cache_for_role_restrictions.cache1().find(d) == cache_for_role_restrictions.cache1().end());
@@ -2231,7 +2232,7 @@ class Factory {
                 for( int k = 0; k < int(role_restrictions.size()); ++k ) {
                     const RoleRestriction &role = *role_restrictions[k];
                     DistanceFeature df(&start, end, &role);
-                    if( df.complexity() > complexity_bound_ ) continue;
+                    if( df.complexity() > dist_complexity_bound_ ) continue;
                     //std::cout << "TESTING: " << df.as_str_with_complexity() << std::endl;
 
                     // fill cache with denotations for start and end concepts
