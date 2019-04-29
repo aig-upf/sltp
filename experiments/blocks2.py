@@ -4,10 +4,20 @@ from common import ijcai_paper_bw_feature_namer, add_bw_domain_parameters_2
 from sltp.util.misc import update_dict
 
 
-def genfeatures():
+# def genfeatures():
+#     return [
+#         "Boolean[holding]",
+#         "Numerical[And(Forall(on_g,And(Equal(Star(on),Star(on_g)),clear)),clear)]",
+#     ]
+
+def genfeatures(lang):
     return [
-        "Boolean[holding]",
-        "Numerical[And(Forall(on_g,And(Equal(Star(on),Star(on_g)),clear)),clear)]",
+        "Num[Equal(Star(on_g),Star(Inverse(on)))]",
+        "Bool[holding]",
+        "Num[Exists(on,Equal(Star(on_g),Star(Inverse(on))))]",
+        "Bool[And(Equal(on_g,on),Forall(on,<empty>))]",
+        "Num[Exists(Star(on_g),clear)]",
+        "Num[Exists(Star(on_g),And(Equal(Star(on_g),Star(on)),clear))]",
     ]
 
 
@@ -93,6 +103,23 @@ def experiments():
         initial_concept_bound=6, max_concept_bound=10, concept_bound_step=1,
         clean_workspace=False,
         # quiet=True,
+    )
+
+    exps["one_tower_test"] = update_dict(
+        exps["one_tower"],
+        instances=["probBLOCKS-4-0.pddl", "probBLOCKS-7-0.pddl", "probBLOCKS-8-1.pddl", "probBLOCKS-9-2.pddl", ],
+        test_instances=[
+            "probBLOCKS-10-0.pddl",
+            "probBLOCKS-10-1.pddl",
+            "probBLOCKS-10-2.pddl",
+            "probBLOCKS-11-0.pddl",
+            "probBLOCKS-11-1.pddl",
+            "probBLOCKS-11-2.pddl",
+        ],
+        num_states="until_first_goal",
+        num_sampled_states=1000,
+        feature_generator=genfeatures,
+        num_tested_states=20000,
     )
 
     return exps
