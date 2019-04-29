@@ -1,11 +1,9 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 from sltp.util.misc import update_dict
-from tarski.dl import PrimitiveConcept, GoalConcept, PrimitiveRole
 
 
 def experiments():
-
     base = dict(
         domain_dir="taxi",
         domain="domain.pddl",
@@ -22,10 +20,10 @@ def experiments():
         num_states="until_first_goal",
         num_tested_states=50000,
         num_sampled_states=300,
-        max_concept_size=8,
-        distance_feature_max_complexity=8,
+        max_concept_size=6,
+        distance_feature_max_complexity=6,
         feature_namer=feature_namer,
-        concept_generator=build_expected_concepts,
+        feature_generator=expected_features,
         parameter_generator=None,
     )
 
@@ -38,10 +36,11 @@ def feature_namer(feature):
     }.get(s, s)
 
 
-def build_expected_concepts(lang):
-    """  """
-    # obj_t = lang.Object
-    loct, locp, adj = lang.get("loct", "locp", "adjacent")
-    concepts = [PrimitiveConcept(loct), PrimitiveConcept(locp), GoalConcept(locp)]
-    roles = [PrimitiveRole(adj)]
-    return [], concepts, roles  # atoms, concepts, roles
+def expected_features(lang):
+    return [
+        "Bool[And(loct,locp)]",
+        "Bool[And(locp,Nominal(inside_taxi))]",
+        "Bool[And(locp,locp_g)]",
+        "Dist[loct;adjacent;locp]",
+        "Dist[loct;adjacent;locp_g]",
+    ]
