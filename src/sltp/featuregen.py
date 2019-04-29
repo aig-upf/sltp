@@ -29,6 +29,7 @@ from .matrices import NP_FEAT_VALUE_TYPE, cast_feature_value_to_numpy_value, log
 from .models import DLModel
 from .features import parse_all_instances, compute_models, InstanceInformation
 from .util.command import execute
+from .util.serialization import unserialize_feature
 from .returncodes import ExitCode
 
 
@@ -272,11 +273,11 @@ def extract_features(config, sample):
 
     # If user provides handcrafted features, no need to go further than here
     if config.feature_generator is not None:
-        logging.info('Skipping automatic feature generation: User provided set of handcrafted features')
-        features = config.feature_generator(language)
+        features = deal_with_serialized_features(language, config.feature_generator, config.serialized_feature_filename)
         generate_output_from_handcrafted_features(sample, config, features, model_cache)
         return ExitCode.Success, dict(enforced_feature_idxs=[], in_goal_features=[], sat_feature_mapping={},
-                                      model_cache=model_cache,)
+                                      num_features=len(features),
+                                      model_cache=model_cache)
 
     all_goal_predicates = set(itertools.chain.from_iterable(info.goal_predicates for info in infos))
     if any(all_goal_predicates != info.goal_predicates for info in infos):
@@ -325,6 +326,19 @@ def extract_features(config, sample):
                                   num_features=nfeatures,
                                   model_cache=model_cache,
                                   sat_feature_mapping=sat_feature_mapping)
+
+
+def deal_with_serialized_features(language, feature_generator, serialized_feature_filename):
+    logging.info('Skipping automatic feature generation: User provided set of handcrafted features')
+    features = feature_generator(language)
+    if features and isinstance(features[0], str):  # Features given as strings, unserialize them
+        features = [unserialize_feature(language, f) for f in features]
+
+    # Print the features to the appropriate place to be unserialized later on
+    with open(serialized_feature_filename, 'w') as file:
+        for f in features:
+            print("{}\t{}".format(f, f.complexity()), file=file)
+    return features
 
 
 def print_blai_sat_feature_matrix(filename, matrix, state_ids, goals, names, complexities, types):

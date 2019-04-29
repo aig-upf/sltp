@@ -37,7 +37,10 @@ def unserialize_features(language, filename, indexes=None):
     return features
 
 
-def unserialize_feature(language, string, complexity):
+def unserialize_feature(language, string, complexity=None):
+    """ Construct an SLTP feature from the given serialized string representation
+    If given, set the complexity of the feature to the given value.
+    """
     ftype, concept, _ = string.replace("[", "]").split("]")  # Split feature name in 3 parts by '[', ']'
     assert not _
     if ftype == "Atom":
@@ -46,12 +49,14 @@ def unserialize_feature(language, string, complexity):
         return NullaryAtomFeature(NullaryAtom(p))
     elif ftype == "Bool":
         c = parse_concept(language, concept)
-        c.size = complexity
+        if complexity is not None:
+            c.size = complexity
         return EmpiricalBinaryConcept(ConceptCardinalityFeature(c))
 
     elif ftype == "Num":
         c = parse_concept(language, concept)
-        c.size = complexity
+        if complexity is not None:
+            c.size = complexity
         return ConceptCardinalityFeature(c)
 
     elif ftype == "Dist":
