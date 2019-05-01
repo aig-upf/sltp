@@ -284,18 +284,17 @@ namespace SLTP { namespace DL {
         std::ofstream of1 = std::ofstream(fname1);
         if( of1.fail() ) throw std::runtime_error("Could not open filename '" + fname1 + "'");
 
-        std::cout << "Serializing all generated concepts to " << fname1 << std::endl;
+        // Print all generated features to be unserialized from the Python frontend
+        std::string fname2 = workspace + "/serialized-features.io";
+        std::ofstream of2 = std::ofstream(fname2);
+        if( of2.fail() ) throw std::runtime_error("Could not open filename '" + fname2 + "'");
+
+        std::cout << "Serializing all concepts and features to:\n\t" << fname1 << "\n\t" << fname2 << std::endl;
         for (const Concept* c:concepts) {
             of1 << c->as_str() << "\t" << c->complexity() << std::endl;
         }
         of1.close();
 
-        // Print all generated features to be unserialized from the Python frontend
-        std::string fname = workspace + "/serialized-features.io";
-        std::ofstream of2 = std::ofstream(fname);
-        if( of2.fail() ) throw std::runtime_error("Could not open filename '" + fname + "'");
-
-        std::cout << "Serializing all generated concepts to " << fname << std::endl;
         for (const Feature* f:features_) {
             of2 << f->as_str() << "\t" << f->complexity() << std::endl;
         }

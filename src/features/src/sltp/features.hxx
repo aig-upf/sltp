@@ -1,6 +1,5 @@
 
-#ifndef FEATURES_HXX
-#define FEATURES_HXX
+#pragma once
 
 #include <cassert>
 #include <deque>
@@ -15,8 +14,9 @@
 #include <fstream>
 #include <boost/bimap.hpp>
 
-
+#include <sltp/base.hxx>
 #include <sltp/utils.hxx>
+#include <sltp/algorithms.hxx>
 
 namespace SLTP {
 
@@ -36,27 +36,6 @@ class Role;
 class Feature;
 class State;
 
-// A state denotation for concept C is a subset of objects
-// implemented as a bitmap (ie. vector<bool>). These are
-// cached so that at most one copy of a bitmap exists.
-struct state_denotation_t : public std::vector<bool> {
-    state_denotation_t(size_t n, bool value) : std::vector<bool>(n, value) { }
-    size_t cardinality() const {
-        size_t n = 0;
-        for( size_t i = 0; i < size(); ++i )
-            n += (*this)[i];
-        return n;
-    }
-};
-
-// A (full) sample denotation for concept C is a vector of
-// state denotations, one per each state in the sample.
-// Since we cache state denotations, a sample denotation
-// is implemented as a vector of pointers to bitmaps.
-using sample_denotation_t = std::vector<const state_denotation_t*>;
-
-using feature_state_denotation_t = int;
-using feature_sample_denotation_t = std::vector<feature_state_denotation_t>;
 using feature_cache_t = std::unordered_map<feature_sample_denotation_t, const Feature*, utils::container_hash<feature_sample_denotation_t> >;
 
 // We cache sample and state denotations. The latter are cached
@@ -341,8 +320,9 @@ class Instance {
     const std::string& name() const {
         return name_;
     }
-    int num_objects() const {
-        return objects_.size();
+
+    unsigned num_objects() const {
+        return (unsigned) objects_.size();
     }
     int num_atoms() const {
         return atoms_.size();
@@ -1286,7 +1266,7 @@ class RoleRestriction : public Role {
     const Role* role() const { return role_; }
 
     std::string as_str() const override {
-        return std::string("Restriction(") + role_->as_str() + "," + restriction_->as_str() + ")";
+        return std::string("Restrict(") + role_->as_str() + "," + restriction_->as_str() + ")";
     }
 };
 
@@ -1476,7 +1456,7 @@ class DistanceFeature : public Feature {
   protected:
     const Concept *start_;
     const Concept *end_;
-    const RoleRestriction *role_;
+    const Role *role_;
 
     mutable bool valid_cache_;
     mutable std::vector<int> cached_distances_;
@@ -1484,7 +1464,7 @@ class DistanceFeature : public Feature {
     mutable bool all_values_greater_than_zero_;
 
   public:
-    DistanceFeature(const Concept *start, const Concept *end, const RoleRestriction *role)
+    DistanceFeature(const Concept *start, const Concept *end, const Role *role)
       : Feature(),
         start_(start),
         end_(end),
@@ -1508,18 +1488,19 @@ class DistanceFeature : public Feature {
     }
     int value(const Cache &cache, const Sample &sample, const State &state) const override {
         assert(sample.state(state.id()).id() == state.id());
+        const auto m = sample.num_states();
         if( !valid_cache_ ) {
             const sample_denotation_t *start_d = cache.find_sample_denotation(start_->as_str());
-            assert((start_d != nullptr) && (start_d->size() == sample.num_states()));
+            assert((start_d != nullptr) && (start_d->size() == m));
             const sample_denotation_t *end_d = cache.find_sample_denotation(end_->as_str());
-            assert((end_d != nullptr) && (end_d->size() == sample.num_states()));
+            assert((end_d != nullptr) && (end_d->size() == m));
             const sample_denotation_t *role_d = cache.find_sample_denotation(role_->as_str());
-            assert((role_d != nullptr) && (role_d->size() == sample.num_states()));
+            assert((role_d != nullptr) && (role_d->size() == m));
 
             denotation_is_constant_ = true;
             all_values_greater_than_zero_ = true;
-            cached_distances_ = std::vector<int>(sample.num_states(), std::numeric_limits<int>::max());
-            for( int i = 0; i < sample.num_states(); ++i ) {
+            cached_distances_ = std::vector<int>(m, std::numeric_limits<int>::max());
+            for( int i = 0; i < m; ++i ) {
                 const State &state = sample.state(i);
                 assert(state.id() == i);
                 const state_denotation_t *start_sd = (*start_d)[i];
@@ -1551,58 +1532,39 @@ class DistanceFeature : public Feature {
         return all_values_greater_than_zero_;
     }
 
-    int compute_distance(int num_objects,
-                         const state_denotation_t &start_sd,
-                         const state_denotation_t &end_sd,
-                         const state_denotation_t &role_sd) const {
-        // create adjacency lists
-        std::vector<std::vector<int> > adj(num_objects);
-        for( int i = 0; i < num_objects; ++i ) {
-            for( int j = 0; j < num_objects; ++j ) {
-                if( role_sd[i * num_objects + j] )
-                    adj[i].emplace_back(j);
-            }
-        }
+    bool is_boolean() const override { return false; }
+};
 
-        // locate start vertex
-        int start = -1;
-        for( int i = 0; i < num_objects; ++i ) {
-            if( start_sd[i] ) {
-                start = i;
-                break;
-            }
-        }
-        assert(start != -1);
 
-        // check whether distance is 0
-        if( end_sd[start] ) return 0;
+class ConditionalFeature : public Feature {
+protected:
+    const Feature* condition_;
+    const Feature* body_;
 
-        // apply breadth-first search from start vertex
-        std::vector<int> distances(num_objects, -1);
-        distances[start] = 0;
+public:
+    ConditionalFeature(const Feature* condition, const Feature* body) :
+        Feature(), condition_(condition), body_(body) { }
 
-        std::deque<std::pair<int, int> > q;
-        for( int i = 0; i < adj[start].size(); ++i ) {
-            if( end_sd[adj[start][i]] )
-                return 1;
-            else
-                q.emplace_back(adj[start][i], 1);
-        }
+    ~ConditionalFeature() override = default;
+    const Feature* clone() const override {
+        return new ConditionalFeature(condition_, body_);
+    }
 
-        while( !q.empty() ) {
-            std::pair<int, int> p = q.front();
-            q.pop_front();
-            if( distances[p.first] == -1 ) {
-                distances[p.first] = p.second;
-                for( int i = 0; i < adj[p.first].size(); ++i ) {
-                    if( end_sd[adj[p.first][i]] )
-                        return 1 + p.second;
-                    else
-                        q.emplace_back(adj[p.first][i], 1 + p.second);
-                }
-            }
-        }
-        return std::numeric_limits<int>::max();
+    int complexity() const override {
+        return 1 + condition_->complexity() + body_->complexity();
+    }
+    int value(const Cache &cache, const Sample &sample, const State &state) const override {
+        return value_from_components(cache, sample, state, condition_, body_);
+    }
+
+    static int value_from_components(const Cache &cache, const Sample &sample, const State &state,
+                                     const Feature* condition, const Feature* body) {
+        const auto condval = condition->value(cache, sample, state);
+        return (condval) ? body->value(cache, sample, state) : std::numeric_limits<int>::max();
+    }
+
+    std::string as_str() const override {
+        return std::string("If{") + condition_->as_str() + "}{" + body_->as_str() + "}{Infty}";
     }
 
     bool is_boolean() const override { return false; }
@@ -1610,13 +1572,13 @@ class DistanceFeature : public Feature {
 
 class Factory {
   protected:
-    const std::string name_;
     const std::vector<std::string> nominals_;
     std::vector<const Role*> basis_roles_;
     std::vector<const Concept*> basis_concepts_;
 
     int complexity_bound_;
     int dist_complexity_bound_;
+    int cond_complexity_bound_;
 
     mutable std::vector<const Role*> roles_;
 
@@ -1629,18 +1591,13 @@ class Factory {
     std::unordered_set<unsigned> goal_features_;
 
   public:
-    Factory(std::string name, const std::vector<std::string>& nominals, int complexity_bound, int dist_complexity_bound)
-      : name_(std::move(name)),
+    Factory(const std::vector<std::string>& nominals, int complexity_bound, int dist_complexity_bound, int cond_complexity_bound) :
         nominals_(nominals),
         complexity_bound_(complexity_bound),
-        dist_complexity_bound_(dist_complexity_bound)
-    {
-    }
+        dist_complexity_bound_(dist_complexity_bound),
+        cond_complexity_bound_(cond_complexity_bound)
+    {}
     virtual ~Factory() = default;
-
-    const std::string& name() const {
-        return name_;
-    }
 
     void insert_basis(const Role *role) {
         basis_roles_.push_back(role);
@@ -2079,7 +2036,7 @@ class Factory {
         auto all_concepts = consolidate_concepts();
         assert(all_concepts.size() == num_concepts);
 
-        std::cout << "DL::Factory: name=" << name_ << ", #concepts-final=" << num_concepts << std::endl;
+        std::cout << "DL::Factory: #concepts-final=" << num_concepts << std::endl;
         return all_concepts;
     }
 
@@ -2109,36 +2066,54 @@ class Factory {
 
         // create distance features
         generate_distance_features(concepts, cache, sample);
+
+        // create conditional features from boolean conditions and numeric bodies
+        for (std::size_t i = 0, n = features_.size(); i < n; ++i) {
+            const auto* cond = features_[i];
+            if (!cond->is_boolean() || cond->complexity() + 1 + 1> cond_complexity_bound_) continue;
+
+            for (std::size_t j = i+1; j < n; ++j) {
+                const auto* body = features_[j];
+                if (body->is_boolean() || cond->complexity() + body->complexity() + 1> cond_complexity_bound_) continue;
+                generate_conditional_feature_if_not_redundant(cond, body, cache, sample, seen_denotations);
+            }
+        }
+
         print_feature_count();
     }
 
     void print_feature_count() const {
-        unsigned num_nullary_features = 0, num_boolean_features = 0, num_numeric_features = 0, num_distance_features = 0;
-        auto m = features_.size();
+        unsigned num_nullary_features = 0, num_boolean_features = 0, num_numeric_features = 0,
+                    num_distance_features = 0, num_conditional_features = 0;
+        auto nf = features_.size();
         for (auto f:features_) {
             if (dynamic_cast<const NullaryAtomFeature*>(f)) num_nullary_features++;
             else if (dynamic_cast<const BooleanFeature*>(f)) num_boolean_features++;
             else if (dynamic_cast<const NumericalFeature*>(f)) num_numeric_features++;
             else if (dynamic_cast<const DistanceFeature*>(f)) num_distance_features++;
+            else if (dynamic_cast<const ConditionalFeature*>(f)) num_conditional_features++;
+            else throw std::runtime_error("Unknown feature type");
         }
 
-        assert(num_nullary_features+num_boolean_features+num_numeric_features+num_distance_features == m);
-        std::cout << "FEATURES: #features=" << m
+        assert(nf == num_nullary_features+num_boolean_features+num_numeric_features
+                     +num_distance_features+num_conditional_features);
+        std::cout << "FEATURES: #features=" << nf
                   << ", #nullary="   << num_nullary_features
                   << ", #boolean="   << num_boolean_features
                   << ", #numerical=" << num_numeric_features
                   << ", #distance="  << num_distance_features
+                  << ", #conditional="  << num_conditional_features
                   << std::endl;
     }
 
     bool generate_cardinality_feature_if_not_redundant(const Concept* c, Cache &cache, const Sample &sample, feature_cache_t& seen_denotations) {
-
+        const auto m = sample.num_states();
         const sample_denotation_t *d = cache.find_sample_denotation(c->as_str());
-        assert((d != nullptr) && (d->size() == sample.num_states()));
+        assert((d != nullptr) && (d->size() == m));
 
         // generate feature denotation associated to concept's sample denotation
         feature_sample_denotation_t fd;
-        fd.reserve(sample.num_states());
+        fd.reserve(m);
 
         // track whether feature would be boolean or numeric, or non-informative
         bool boolean_feature = true;
@@ -2146,9 +2121,6 @@ class Factory {
         bool all_values_greater_than_zero = true;
         int previous_value = -1;
 
-//        std::cout << "Trying: " << c->as_str() << std::endl;
-
-        const auto m = sample.num_states();
         for(unsigned j = 0; j < m; ++j) {
             const State &state = sample.state(j);
             assert(state.id() == j);
@@ -2184,8 +2156,44 @@ class Factory {
         return false;
     }
 
+    void generate_conditional_feature_if_not_redundant(const Feature* condition, const Feature* body,
+            Cache &cache, const Sample &sample, feature_cache_t& seen_denotations) {
+        assert(condition->is_boolean() && !body->is_boolean());
+
+        const auto m = sample.num_states();
+        feature_sample_denotation_t fd;
+        fd.reserve(m);
+
+        bool denotation_is_constant = true;
+        bool all_values_greater_than_zero = true;
+        int previous_value = -1;
+
+        for(unsigned j = 0; j < m; ++j) {
+            const State &state = sample.state(j);
+            int value = ConditionalFeature::value_from_components(cache, sample, state, condition, body);
+            denotation_is_constant = (previous_value == -1) || (denotation_is_constant && (previous_value == value));
+            all_values_greater_than_zero = all_values_greater_than_zero && (value > 0);
+            previous_value = value;
+            fd.push_back(value);
+        }
+
+        if( !denotation_is_constant && !all_values_greater_than_zero ) {
+            auto it = seen_denotations.find(fd);
+            if( it == seen_denotations.end() ) { // The feature denotation is new, keep the feature
+                const auto *feature = new ConditionalFeature(condition, body);
+                assert(feature->complexity() <= cond_complexity_bound_);
+                features_.emplace_back(feature);
+                seen_denotations.emplace(fd, feature);
+                return;
+            }
+        }
+        return;
+    }
+
     void generate_distance_features(const std::vector<const Concept*>& concepts, Cache &cache, const Sample &sample) {
         if (dist_complexity_bound_<=0) return;
+
+        auto m = sample.num_states();
 
         feature_cache_t seen_denotations;
 
@@ -2194,9 +2202,9 @@ class Factory {
         std::vector<const Concept*> start_concepts;
         for (const Concept* c:concepts) {
             const sample_denotation_t *d = cache.find_sample_denotation(c->as_str());
-            assert((d != nullptr) && (d->size() == sample.num_states()));
+            assert((d != nullptr) && (d->size() == m));
             bool singleton_denotations = true;
-            for( int j = 0; singleton_denotations && (j < sample.num_states()); ++j )
+            for( int j = 0; singleton_denotations && (j < m); ++j )
                 singleton_denotations = (*d)[j]->cardinality() == 1;
             if( singleton_denotations ) {
                 start_concepts.push_back(c);
@@ -2204,18 +2212,17 @@ class Factory {
         }
 
         // create role restrictions to be used in distance features
-        Cache cache_for_role_restrictions;
-        std::vector<const RoleRestriction*> role_restrictions;
+        std::vector<const Role*> dist_roles(roles_);  // Start with all base roles
         for (const Role* r:roles_) {
             for (const Concept* c:concepts) {
                 RoleRestriction role_restriction(r, c);
-                if( 3 + role_restriction.complexity() > dist_complexity_bound_ ) continue;
+                if( role_restriction.complexity()+3 > dist_complexity_bound_ ) continue;
                 const sample_denotation_t *d = role_restriction.denotation(cache, sample, false);
-                if( !is_superfluous(cache_for_role_restrictions, d) ) {
-                    assert(cache_for_role_restrictions.cache1().find(d) == cache_for_role_restrictions.cache1().end());
-                    role_restrictions.push_back(static_cast<const RoleRestriction*>(role_restriction.clone()));
-                    cache_for_role_restrictions.find_or_insert_sample_denotation(*d, role_restriction.as_str());
-                    assert(cache_for_role_restrictions.cache1().find(d) != cache_for_role_restrictions.cache1().end());
+                if( !is_superfluous(cache, d) ) {
+                    assert(cache.cache1().find(d) == cache.cache1().end());
+                    dist_roles.push_back(role_restriction.clone());
+                    cache.find_or_insert_sample_denotation(*d, role_restriction.as_str());
+                    assert(cache.cache1().find(d) != cache.cache1().end());
                     //std::cout << "ACCEPT RR(sz=" << cache_for_role_restrictions.cache1().size() << "): " + role_restriction.as_str_with_complexity() << std::endl;
                 } else {
                     //std::cout << "PRUNE RR: " + role_restriction.as_str() << std::endl;
@@ -2226,29 +2233,28 @@ class Factory {
 
         // create distance features
         int num_distance_features = 0;
-        for( int i = 0; i < int(start_concepts.size()); ++i ) {
-            const Concept &start = *start_concepts[i];
+        for(const Concept* start:start_concepts) {
             for (const Concept* end:concepts) {
-                for( int k = 0; k < int(role_restrictions.size()); ++k ) {
-                    const RoleRestriction &role = *role_restrictions[k];
-                    DistanceFeature df(&start, end, &role);
+                if (start == end) continue;
+                for (const Role* role:dist_roles) {
+                    DistanceFeature df(start, end, role);
                     if( df.complexity() > dist_complexity_bound_ ) continue;
                     //std::cout << "TESTING: " << df.as_str_with_complexity() << std::endl;
 
                     // fill cache with denotations for start and end concepts
-                    const sample_denotation_t *ds = cache.find_sample_denotation(start.as_str());
-                    assert((ds != nullptr) && (ds->size() == sample.num_states()));
-                    cache_for_role_restrictions.find_or_insert_sample_denotation(*ds, start.as_str());
+                    const sample_denotation_t *ds = cache.find_sample_denotation(start->as_str());
+                    assert((ds != nullptr) && (ds->size() == m));
+                    cache.find_or_insert_sample_denotation(*ds, start->as_str());
                     const sample_denotation_t *de = cache.find_sample_denotation(end->as_str());
-                    assert((de != nullptr) && (de->size() == sample.num_states()));
-                    cache_for_role_restrictions.find_or_insert_sample_denotation(*de, end->as_str());
+                    assert((de != nullptr) && (de->size() == m));
+                    cache.find_or_insert_sample_denotation(*de, end->as_str());
 
                     // check whether df is novel
-                    feature_sample_denotation_t fd(sample.num_states());
-                    for( int index = 0; index < sample.num_states(); ++index ) {
+                    feature_sample_denotation_t fd(m);
+                    for( int index = 0; index < m; ++index ) {
                         assert(sample.state(index).id() == index);
                         const State &state = sample.state(index);
-                        int value = df.value(cache_for_role_restrictions, sample, state);
+                        int value = df.value(cache, sample, state);
                         fd[index] = value;
                     }
 
@@ -2353,7 +2359,7 @@ class Factory {
     }
 
     void output_feature_matrix(std::ostream &os, const Cache &cache, const Sample &sample) const {
-        int num_features = features_.size();
+        auto num_features = features_.size();
         for( int i = 0; i < sample.num_states(); ++i ) {
             const State &state = sample.state(i);
 
@@ -2368,7 +2374,7 @@ class Factory {
     }
 
     void output_feature_info(std::ostream &os, const Cache &cache, const Sample &sample) const {
-        int num_features = features_.size();
+        auto num_features = features_.size();
 
         // Line #1: feature names
         for( int i = 0; i < num_features; ++i ) {
@@ -2420,9 +2426,4 @@ class Factory {
     }
 };
 
-}; // DL namespace
-
-}; // SLTP namespace
-
-#endif
-
+} }; // namespaces

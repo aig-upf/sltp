@@ -1,8 +1,8 @@
 import itertools
 from collections import defaultdict
 
-from tarski.dl import ConceptCardinalityFeature, EmpiricalBinaryConcept, FeatureValueChange, MinDistanceFeature
-from tarski.dl.features import Feature, NullaryAtomFeature
+from tarski.dl import Feature, ConceptCardinalityFeature, EmpiricalBinaryConcept, FeatureValueChange, \
+    NullaryAtomFeature, MinDistanceFeature, ConditionalFeature
 
 from ..language import parse_pddl
 from .serialization import unserialize_features
@@ -121,7 +121,7 @@ class ActionEffect:
                 return name
             if self.change == FeatureValueChange.DEC:
                 return "NOT {}".format(name)
-        elif isinstance(feat, (ConceptCardinalityFeature, MinDistanceFeature)):
+        elif isinstance(feat, (ConceptCardinalityFeature, MinDistanceFeature, ConditionalFeature)):
             if self.change == FeatureValueChange.INC:
                 return "INC {}".format(name)
             if self.change == FeatureValueChange.DEC:

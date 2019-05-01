@@ -14,6 +14,7 @@ struct Options {
     string workspace_;
     unsigned complexity_bound_;
     unsigned dist_complexity_bound_;
+    unsigned cond_complexity_bound_;
 
     Options(int argc, const char **argv) {
         // Print call
@@ -23,7 +24,7 @@ struct Options {
         cout << endl;
 
         execname_ = *argv;
-        if( argc != 4 ) {
+        if( argc != 5 ) {
             print_usage(cout);
             exit(1);
         }
@@ -31,24 +32,21 @@ struct Options {
         // read arguments
         complexity_bound_ = (unsigned) stoul(argv[1], nullptr, 10);
         dist_complexity_bound_ = (unsigned) stoul(argv[2], nullptr, 10);
-        workspace_ = string(argv[3]);
+        cond_complexity_bound_ = (unsigned) stoul(argv[3], nullptr, 10);
+        workspace_ = string(argv[4]);
         //cout << "Using workspace directory '" << workspace_ << "' and output file '" << output_file_ << "'" << endl;
     }
 
     void print_usage(ostream &os) const {
         os << endl
-           << "Usage: " << execname_ << " <K> <DK> <workspace>" << endl
-           << endl
-           << "where" << endl
-           << "    <K> is the maximum feature complexity of the standard features."
-           << endl
-           << "    <DK> is the maximum feature complexity of the distance features."
-           << endl
-           << "    <workspace> is the path to a directory with all the necessary input"
-           << endl
-           << "                files from which to start the feature generation process."
-           << endl
-           ;
+        << "Usage: " << execname_ << " <K> <DK> <CK> <workspace>" << endl << endl
+        << "where" << endl
+        << "    <K> is the maximum feature complexity of the standard features." << endl
+        << "    <DK> is the maximum feature complexity of the distance features." << endl
+        << "    <CK> is the maximum feature complexity of the conditional features." << endl
+        << "    <workspace> is the path to a directory with all the necessary input" << endl
+        << "                files from which to start the feature generation process." << endl
+        ;
     }
 };
 
@@ -100,8 +98,8 @@ int main(int argc, const char **argv) {
          << ", #states=" << sample->num_states()
          << endl;
 #endif
-    SLTP::DL::Factory factory("test", nominals,
-            options.complexity_bound_, options.dist_complexity_bound_);
+    SLTP::DL::Factory factory(nominals, options.complexity_bound_,
+            options.dist_complexity_bound_, options.cond_complexity_bound_);
 
     SLTP::DL::Cache cache;
     factory.generate_basis(sample);

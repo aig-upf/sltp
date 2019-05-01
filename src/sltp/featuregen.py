@@ -309,7 +309,10 @@ def extract_features(config, sample):
     logging.info('Invoking C++ feature generation module'.format())
     featuregen_location = os.path.join(BASE_DIR, "..", "features")
     cmd = os.path.realpath(os.path.join(featuregen_location, "featuregen"))
-    args = [str(config.max_concept_size), str(config.distance_feature_max_complexity), config.experiment_dir]
+    args = [str(config.max_concept_size),
+            str(config.distance_feature_max_complexity),
+            str(config.cond_feature_max_complexity),
+            config.experiment_dir]
     generate_debug_scripts(config.experiment_dir, cmd, args)
     retcode = execute([cmd] + args)
 

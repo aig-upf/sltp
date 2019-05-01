@@ -96,8 +96,9 @@ def generate_experiment(domain_dir, domain, **kwargs):
         # Default is [], i.e. just run the generation process without enforcing anything
         enforce_features=[],
 
-        # Max. allowed complexity for distance features (default: 0)
+        # Max. allowed complexity for distance and conditional features (default: 0)
         distance_feature_max_complexity=0,
+        cond_feature_max_complexity=0,
 
         # Method to generate domain parameters (goal or otherwise). If None, goal predicates will
         # be used (default: None)

@@ -17,6 +17,8 @@ set(SOURCE_FILES
         src/featuregen.cpp
         src/sltp/features
         src/sltp/utils.hxx
+        src/sltp/algorithms
+        src/sltp/base
 )
 
 

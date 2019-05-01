@@ -5,7 +5,7 @@ from tarski import PredicateSymbol, FunctionSymbol
 from tarski.dl import NullaryAtom, EmpiricalBinaryConcept, ConceptCardinalityFeature, PrimitiveConcept, \
     UniversalConcept, NotConcept, ExistsConcept, ForallConcept, PrimitiveRole, EmptyConcept, AndConcept, GoalRole, \
     GoalConcept, InverseRole, EqualConcept, StarRole, NullaryAtomFeature, NominalConcept, MinDistanceFeature, \
-    RestrictRole
+    RestrictRole, ConditionalFeature
 from tarski.syntax import Sort
 
 
@@ -41,6 +41,12 @@ def unserialize_feature(language, string, complexity=None):
     """ Construct an SLTP feature from the given serialized string representation
     If given, set the complexity of the feature to the given value.
     """
+    if string.startswith("If{"):  # special treatment for recursive If features
+        assert string.endswith("}{Infty}")  # So far we only handle conditional features of else-infty type
+        concept = string[3:-8]
+        condition, body = [unserialize_feature(language, s) for s in concept.split('}{')]
+        return ConditionalFeature(condition, body)
+
     ftype, concept, _ = string.replace("[", "]").split("]")  # Split feature name in 3 parts by '[', ']'
     assert not _
     if ftype == "Atom":
@@ -64,7 +70,7 @@ def unserialize_feature(language, string, complexity=None):
         assert len(parts) == 3
         params = [parse_concept(language, c) for c in parts]
         return MinDistanceFeature(*params)
-
+    
     raise RuntimeError("Don't know how to unserialize feature \"{}\"".format(string))
 
 
@@ -125,7 +131,7 @@ def build_concept(language, node):
         concept = build_concept(language, node.children[1])
         return ForallConcept(role, concept)
 
-    elif node.name == "Restriction":
+    elif node.name == "Restrict":
         assert len(node.children) == 2
         role = build_concept(language, node.children[0])
         concept = build_concept(language, node.children[1])
