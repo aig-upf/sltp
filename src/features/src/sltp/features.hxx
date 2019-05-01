@@ -2070,11 +2070,11 @@ class Factory {
         // create conditional features from boolean conditions and numeric bodies
         for (std::size_t i = 0, n = features_.size(); i < n; ++i) {
             const auto* cond = features_[i];
-            if (!cond->is_boolean() || cond->complexity() + 1 + 1> cond_complexity_bound_) continue;
+            if (!cond->is_boolean() || cond->complexity() + 1 + 1 > cond_complexity_bound_) continue;
 
             for (std::size_t j = i+1; j < n; ++j) {
                 const auto* body = features_[j];
-                if (body->is_boolean() || cond->complexity() + body->complexity() + 1> cond_complexity_bound_) continue;
+                if (body->is_boolean() || cond->complexity() + body->complexity() + 1 > cond_complexity_bound_) continue;
                 generate_conditional_feature_if_not_redundant(cond, body, cache, sample, seen_denotations);
             }
         }

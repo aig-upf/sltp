@@ -19,9 +19,11 @@
     )
 
     (:functions
-        (loct ) - cell ;; The location of the taxi
-        (locp ) - cell ;; The location of the passenger
+        (loct ) - cell
+        (locp ) - cell
     )
+
+    
 
     
     (:action pick-passenger
@@ -29,7 +31,7 @@
      :precondition (= (locp ) (loct ))
      :effect (and
         (assign (locp ) inside_taxi))
-    ) 
+    )
 
 
     (:action drop-passenger
@@ -37,7 +39,7 @@
      :precondition (= (locp ) inside_taxi)
      :effect (and
         (assign (locp ) (loct )))
-    ) 
+    )
 
 
     (:action move
@@ -45,13 +47,6 @@
      :precondition (adjacent (loct ) ?to)
      :effect (and
         (assign (loct ) ?to))
-    ) 
+    )
 
-
-    ;; (:action noop
-    ;;  :parameters (?x - cell)
-    ;;  :precondition (= (loct ) ?x)
-    ;;  :effect (and
-    ;;     (assign (loct ) ?x))
-    ;; )
 )

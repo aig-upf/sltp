@@ -4,10 +4,9 @@ import itertools
 import os
 import random
 
-from tarski.fstrips import create_fstrips_problem, language, DelEffect, AddEffect
+from tarski.fstrips import create_fstrips_problem, language
 from tarski.io import FstripsWriter
 from tarski.theories import Theory
-from tarski.syntax import forall, implies, exists, land, Tautology
 
 _CURRENT_DIR_ = os.path.dirname(os.path.realpath(__file__))
 
@@ -124,18 +123,18 @@ def generate_domain(gridsize, add_noop=False, add_fuel=True):
         problem.init.set(max_fuel_level, levels[-1])
         problem.init.set(loc_fuel, cd.pop())
 
-
     return problem, [it]
 
 
 def main():
 
-    for gridsize in [3, 5]:
-        problem, constants = generate_domain(gridsize, add_noop=True, add_fuel=False)
-        writer = FstripsWriter(problem)
-        writer.write(domain_filename=os.path.join(_CURRENT_DIR_, "domain.pddl"),  # We can overwrite the domain
-                     instance_filename=os.path.join(_CURRENT_DIR_, "instance_{}.pddl".format(gridsize)),
-                     domain_constants=constants)
+    for gridsize in [3, 5, 7]:
+        for run in range(0, 3):
+            problem, constants = generate_domain(gridsize, add_noop=False, add_fuel=False)
+            writer = FstripsWriter(problem)
+            writer.write(domain_filename=os.path.join(_CURRENT_DIR_, "domain.pddl"),  # We can overwrite the domain
+                         instance_filename=os.path.join(_CURRENT_DIR_, "instance_{}_{}.pddl".format(gridsize, run)),
+                         domain_constants=constants)
 
 
 if __name__ == "__main__":

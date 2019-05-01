@@ -15,15 +15,15 @@ def experiments():
     exps["simple"] = update_dict(
         base,
         instances=['instance_5.pddl', ],
-        test_instances=["instance_7.pddl", ],
+        test_instances=["instance_7_{}.pddl".format(run) for run in range(0, 3)],
         num_states="until_first_goal",
         num_tested_states=50000,
         num_sampled_states=300,
         max_concept_size=6,
         distance_feature_max_complexity=6,
-        cond_feature_max_complexity=6,
+        cond_feature_max_complexity=6+2,
         feature_namer=feature_namer,
-        feature_generator=expected_features,
+        # feature_generator=expected_features,
         parameter_generator=None,
     )
 
