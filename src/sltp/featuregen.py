@@ -24,7 +24,7 @@ from collections import defaultdict
 from tarski.dl import PrimitiveConcept, UniversalConcept, NullaryAtom, NominalConcept, GoalConcept, GoalRole, \
     EmptyConcept, GoalNullaryAtom
 
-from . import BASE_DIR
+from . import SLTP_SRC_DIR
 from .matrices import NP_FEAT_VALUE_TYPE, cast_feature_value_to_numpy_value, log_feature_denotations
 from .models import DLModel
 from .features import parse_all_instances, compute_models, InstanceInformation
@@ -307,7 +307,7 @@ def extract_features(config, sample):
 
     # Invoke C++ feature generation module
     logging.info('Invoking C++ feature generation module'.format())
-    featuregen_location = os.path.join(BASE_DIR, "..", "features")
+    featuregen_location = os.path.join(SLTP_SRC_DIR, "..", "features")
     cmd = os.path.realpath(os.path.join(featuregen_location, "featuregen"))
     args = [str(config.max_concept_size),
             str(config.distance_feature_max_complexity),

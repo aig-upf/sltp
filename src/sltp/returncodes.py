@@ -13,6 +13,15 @@ class ExitCode(Enum):
 
     AbstractionFailsOnTestInstances = 20
 
+    # The policy encounters a loop:
+    AbstractPolicyNonTerminatingOnTestInstances = 26
+
+    # The policy dictates some abstract action which is not sound wrt some state found in the test instances:
+    AbstractPolicyNotSoundOnTestInstances = 27
+
+    # The policy is not total on the set of reached states:
+    AbstractPolicyNotCompleteOnTestInstances = 28
+
     FeatureGenerationUnknownError = 30
     CNFGenerationUnknownError = 31
 

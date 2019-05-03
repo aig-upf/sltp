@@ -1,10 +1,8 @@
 import logging
 import os
 
-import numpy as np
-
 from .util.tools import IdentifiedFeature, AbstractAction, Abstraction, optimize_abstract_action_model, \
-    prettyprint_precs_and_effects, generate_effect
+    prettyprint_precs_and_effects, generate_effect, abstract_state, generate_qualitative_effects_from_transition
 from .errors import CriticalPipelineError
 from .sampling import TransitionSample
 from .learn_actions import create_maxsat_translator, compute_completeness_info
@@ -21,7 +19,7 @@ def compute_action_model(config, data, rng):
     # Compute information relevant to the type of abstraction we want
     cinfo = compute_completeness_info(data.sample, config.complete_only_wrt_optimal)
 
-    return _compute_abstract_action_model(config, data, selected_feature_ids, cinfo)
+    return compute_abstraction(config, data, selected_feature_ids, cinfo)
 
 
 def compute_action_model_from_feature_idxs(config, data, rng):
@@ -36,17 +34,16 @@ def compute_action_model_from_feature_idxs(config, data, rng):
     return ExitCode.Success, dict(abstract_actions=actions, selected_features=features, post_cnf_sample=sample)
 
 
-def _compute_policy_from_abstraction(config, data, abstraction, cinfo):
+def _compute_abstract_policy(data, features, actions, cinfo):
     logging.info("Computing policy from abstraction")
     sample = data.sample
-    features = abstraction.features
     policy = dict()
     validator = AbstractionValidator(data.model_cache, sample, None)
-    feature_idx = validator.compute_feature_idx(abstraction.actions)
+    feature_idx = validator.compute_feature_idx(actions)
     for s, sprime in cinfo.optimal_transitions:
         model = data.model_cache.get_feature_model(s)
         cache = {}
-        app = [i for i, a in enumerate(abstraction.actions, start=1) if validator.is_applicable(cache, s, a) and
+        app = [i for i, a in enumerate(actions) if validator.is_applicable(cache, s, a) and
                validator.action_captures(cache, s, sprime, feature_idx[a], features)]
 
         if not app:
@@ -54,12 +51,14 @@ def _compute_policy_from_abstraction(config, data, abstraction, cinfo):
 
         if len(app) > 1:
             logging.warning("Two abstract actions applicable in same abstract state")  # This shouldn't happen
+            assert False  # TODO Decide what to do wrt the policy
 
         else:
             abstract_s = abstract_state(model, features)
             right_action = app[0]
             previous = policy.get(abstract_s, None)
             if previous is not None and previous != right_action:
+                # TODO Decide what to do wrt the policy
                 logging.warning("Two actions appear optimal in data-driven policy: {} and {}".
                                 format(previous, right_action))  # This could happen
             policy[abstract_s] = right_action
@@ -79,20 +78,15 @@ def compute_abstract_action_model(config, data, rng):
     # Compute information relevant to the type of abstraction we want
     cinfo = compute_completeness_info(data.sample, config.complete_only_wrt_optimal)
 
-    result, resdata = _compute_abstract_action_model(config, data, selected_feature_ids, cinfo)
-    if result != ExitCode.Success:
-        resdata["policy"] = None
-    else:
-        resdata["policy"] = _compute_policy_from_abstraction(config, data, resdata["abstraction"], cinfo)
-    return result, resdata
+    return compute_abstraction(config, data, selected_feature_ids, cinfo)
 
 
-def _compute_abstract_action_model(config, data, feature_ids, cinfo):
+def compute_abstraction(config, data, feature_ids, cinfo):
     features = load_selected_features(feature_ids, config.domain, config.serialized_feature_filename)
     identified = [IdentifiedFeature(f, i, config.feature_namer(str(f))) for i, f in zip(feature_ids, features)]
 
     # Compute the abstract state space and store it to disk
-    states, actions = compute_abstraction(data.sample, cinfo, identified, data.model_cache)
+    states, actions = compute_abstract_state_space(data.sample, cinfo, identified, data.model_cache)
     print_actions(actions, os.path.join(config.experiment_dir, 'actions.txt'))
 
     # Minimize the abstract action model and store it to disk
@@ -101,11 +95,12 @@ def _compute_abstract_action_model(config, data, feature_ids, cinfo):
     print_actions(actions, opt_filename)
     logging.info("Minimized action model with {} actions saved in {}".format(len(actions), opt_filename))
 
-    abstraction = Abstraction(features=identified, actions=actions)
+    abstract_policy = _compute_abstract_policy(data, identified, actions, cinfo)
+    abstraction = Abstraction(features=identified, actions=actions, abstract_policy=abstract_policy)
     return ExitCode.Success, dict(abstraction=abstraction)
 
 
-def compute_abstraction(sample, cinfo, features, model_cache):
+def compute_abstract_state_space(sample, cinfo, features, model_cache):
     if not features:
         raise CriticalPipelineError("0-cost CNF solution - the encoding has likely some error")
 
@@ -121,10 +116,7 @@ def compute_abstraction(sample, cinfo, features, model_cache):
 
         s_m = model_cache.get_feature_model(s)
         sprime_m = model_cache.get_feature_model(sprime)
-        qchanges = [np.sign(sprime_m.denotation(f) - s_m.denotation(f)) for f in features]
-
-        # Generate the action effects from those changes which are not NIL
-        abstract_effects = [generate_effect(f, c) for f, c in zip(features, qchanges) if c != 0]
+        abstract_effects = generate_qualitative_effects_from_transition(features, s_m, sprime_m)
 
         precondition_bitmap = frozenset(zip(features, abstr_s))
         abstract_actions.add(AbstractAction(precondition_bitmap, abstract_effects))
@@ -145,11 +137,6 @@ def compute_state_abstraction(sample: TransitionSample, features, model_cache):
         abstract_states.add(abstract)
         state_abstraction[sid] = abstract
     return abstract_states, state_abstraction
-
-
-def abstract_state(model, features):
-    # The abstraction uses the boolean values: either F=0 or F>0
-    return tuple(bool(model.denotation(f)) for f in features)
 
 
 def print_actions(actions, filename):

@@ -720,7 +720,7 @@ class AbstractionTestingStep(Step):
         return config
 
     def get_required_data(self):
-        return ["abstraction", "policy"]
+        return ["abstraction"]
 
     def description(self):
         return "Testing of the computed abstraction"

@@ -2,7 +2,7 @@ import logging
 import os
 import time
 
-from . import BASE_DIR
+from . import SLTP_SRC_DIR
 from .util.command import execute, read_file
 from .returncodes import ExitCode
 
@@ -11,7 +11,7 @@ def run(config, data, rng):
 
     # Invoke C++ feature generation module
     logging.info('Invoking C++ CNF generation module'.format())
-    featuregen_location = os.path.join(BASE_DIR, "..", "features")
+    featuregen_location = os.path.join(SLTP_SRC_DIR, "..", "features")
     cmd = os.path.realpath(os.path.join(featuregen_location, "cnfgen"))
     args = ["--workspace", config.experiment_dir]
     if config.prune_redundant_states:

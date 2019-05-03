@@ -1,6 +1,8 @@
 import itertools
 from collections import defaultdict
 
+import numpy as np
+
 from tarski.dl import Feature, ConceptCardinalityFeature, EmpiricalBinaryConcept, FeatureValueChange, \
     NullaryAtomFeature, MinDistanceFeature, ConditionalFeature
 
@@ -49,9 +51,11 @@ class IdentifiedFeature:
 
 class AbstractAction:
     def __init__(self, preconditions, effects, name=None):
+        assert isinstance(effects, frozenset)
         self.name = name
         self.preconditions = preconditions
-        self.effects = frozenset(effects)
+        self.effects = effects
+        # self.changeset = {e.feature: e.change for e in effects}  # Compute a (redundant) index of the effects
         self.hash = hash((self.__class__, self.preconditions, self.effects))
 
     def __hash__(self):
@@ -87,12 +91,22 @@ def feature_type(feature):
 
 
 class Abstraction:
-    def __init__(self, features, actions):
+    def __init__(self, features, actions, abstract_policy):
         assert all(isinstance(f, IdentifiedFeature) for f in features)
         assert all(isinstance(a, AbstractAction) for a in actions)
 
         self.features = features
         self.actions = actions
+        self.abstract_policy = abstract_policy
+
+    def abstract_state(self, model):
+        return abstract_state(model, self.features)
+
+    def optimal_action(self, model):
+        """ Return the action to take in the given state according to the policy represented by this abstraction """
+        state = self.abstract_state(model)
+        aidx = self.abstract_policy.get(state, None)
+        return state, (None if aidx is None else self.actions[aidx])
 
 
 class ActionEffect:
@@ -186,3 +200,16 @@ def generate_effect(feature, qchange):
     assert qchange in (-1, 1)
     change = {-1: FeatureValueChange.DEC, 1: FeatureValueChange.INC}[qchange]
     return ActionEffect(feature, change)
+
+
+def generate_qualitative_effects_from_transition(features, m0, m1):
+    qchanges = [np.sign(m1.denotation(f) - m0.denotation(f)) for f in features]
+
+    # Generate the action effects only from those changes which are not NIL
+    return frozenset(generate_effect(f, c) for f, c in zip(features, qchanges) if c != 0)
+
+
+def abstract_state(model, features):
+    """ Return the (boolean) abstraction of the given state (model) over the given features """
+    # The abstraction uses the boolean values: either F=0 or F>0
+    return tuple(bool(model.denotation(f)) for f in features)
