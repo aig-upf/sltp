@@ -720,7 +720,7 @@ class AbstractionTestingStep(Step):
         return config
 
     def get_required_data(self):
-        return ["abstraction"]
+        return ["abstraction", "policy"]
 
     def description(self):
         return "Testing of the computed abstraction"
@@ -783,20 +783,10 @@ PIPELINES = dict(
         PlannerStep,
         TransitionSamplingStep,
         ConceptGenerationStep,
-        FeatureMatrixGenerationStep,
-        MaxsatProblemGenerationStep,
+        FeatureMatrixGenerationStep,  # TODO: Remove step completely
+        MaxsatProblemGenerationStep,  # TODO: Remove step completely
         MaxsatProblemSolutionStep,
-        ActionModelStep,
-        AbstractionTestingStep,
-        # QNPGenerationStep,
-    ],
-    maxsatcpp_old=[
-        PlannerStep,
-        TransitionSamplingStep,
-        CPPFeatureGenerationStep,
-        MaxsatProblemGenerationStep,
-        MaxsatProblemSolutionStep,
-        ActionModelStep,
+        ActionModelStep,  # TODO: Remove step completely
         AbstractionTestingStep,
         # QNPGenerationStep,
     ],
@@ -828,8 +818,4 @@ PIPELINES = dict(
         SatProblemSolutionStep,
         SatSolutionDecodingStep,
     ],
-    # observations=[
-    #     DFAGenerationStep,
-    #     SATStateFactorizationStep,
-    # ],
 )
