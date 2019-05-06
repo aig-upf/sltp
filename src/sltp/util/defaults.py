@@ -28,10 +28,14 @@ def generate_experiment(domain_dir, domain, **kwargs):
 
     if "test_domain" in kwargs:
         kwargs["test_domain"] = os.path.join(BENCHMARK_DIR, domain_dir, kwargs["test_domain"])
-        kwargs["test_instances"] = [os.path.join(BENCHMARK_DIR, domain_dir, i) for i in kwargs["test_instances"]]
+        kwargs["test_instances"] = \
+            [os.path.join(BENCHMARK_DIR, domain_dir, i) for i in kwargs.get("test_instances", [])]
+        kwargs["test_policy_instances"] = \
+            [os.path.join(BENCHMARK_DIR, domain_dir, i) for i in kwargs.get("test_policy_instances")]
     else:
         kwargs["test_domain"] = None
         kwargs["test_instances"] = []
+        kwargs["test_policy_instances"] = []
 
     defaults = dict(
         # pipeline="maxsat",

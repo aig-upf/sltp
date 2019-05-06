@@ -10,13 +10,12 @@ from .validator import AbstractionValidator
 from . import PYPERPLAN_DIR
 
 
-def run(config, data, rng):
-    if config.test_domain is None:
-        logging.info("No testing instances were specified")
-        return ExitCode.Success, dict()
-    logging.info("Testing learnt abstraction on instances: {}".format(config.test_instances))
+def test_abstraction_soundness(config, data):
+    if not config.test_sample_files:
+        logging.info("No test instances specified for testing of abstraction soundness")
+        return ExitCode.Success
 
-    # First test whether the abstraction is sound on the test instances
+    logging.info("Testing learnt abstraction on sample of states from instances: {}".format(config.test_instances))
     assert isinstance(data.abstraction, Abstraction)
     sample, _ = read_transitions_from_files(config.test_sample_files)
     model_cache = generate_model_cache(config.test_domain, config.test_instances, sample, config.parameter_generator)
@@ -25,21 +24,39 @@ def run(config, data, rng):
     flaws = validator.find_flaws(data.abstraction, 1, check_completeness=False)
     if flaws:
         logging.error("The computed abstraction is not sound".format())
-        return ExitCode.AbstractionFailsOnTestInstances, dict()
+        return ExitCode.AbstractionFailsOnTestInstances
 
     logging.info("The computed abstraction is sound & complete in all test instances!".format())
+    return ExitCode.Success
 
+
+def test_policy(config, data) :
+    logging.info("Testing abstract policy on instances: {}".format(config.test_policy_instances))
     pyperplan = _import_pyperplan()
-    for instance in config.test_instances:
-        logging.info('Testing computed abstract policy heuristic on instance "{}"'.format(instance))
+    for instance in config.test_policy_instances:
+        logging.info('Testing abstract policy on instance "{}"'.format(instance))
 
         try:
             _run_pyperplan(pyperplan, config.test_domain, instance, data.abstraction, config.parameter_generator)
         except PolicySearchException as e:
             logging.warning("Testing of abstract policy failed with code: {}".format(e.code))
-            return e.code, dict()
+            return e.code
 
-    return ExitCode.Success, dict()
+
+def run(config, data, rng):
+    if config.test_domain is None:
+        logging.info("No testing instances were specified")
+        return ExitCode.Success, dict()
+
+    # First test whether the abstraction is sound on the test instances
+    res = test_abstraction_soundness(config, data)
+    if res != ExitCode.Success:
+        return res, dict()
+
+    # Then test that the policy has the properties we desire (sound, complete, terminating) on a possibly disjoint
+    # set of test instances
+    res = test_policy(config, data)
+    return res, dict()
 
 
 def _import_pyperplan():
@@ -92,6 +109,7 @@ def create_abstract_policy(model_factory, static_atoms, abstraction):
         # Obtain the abstract action dictated by the policy
         abs_state, abs_action = abstraction.optimal_action(m0)
         if abs_action is None:
+            logging.warning("Policy is incomplete on state:\n{}".format(state))
             raise PolicySearchException(ExitCode.AbstractPolicyNotCompleteOnTestInstances)
 
         assert isinstance(abs_action, AbstractAction)

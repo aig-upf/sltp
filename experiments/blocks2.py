@@ -26,7 +26,7 @@ def experiments():
     base = dict(
         domain_dir="blocks",
         domain="domain.pddl",
-        # test_domain="domain.pddl",
+        test_domain="domain.pddl",
         complete_only_wrt_optimal=True,
     )
 
@@ -38,7 +38,8 @@ def experiments():
         num_states=40000, max_width=[-1],
         num_sampled_states=[500],
         # Note: Testing here is not simple, as we'd want to test only when X and Y are on different towers
-        # test_domain=domain, test_instances=["inst_on_x_y_16.pddl"], num_tested_states=10000,
+        # test_instances=["inst_on_x_y_16.pddl"], num_tested_states=10000,
+        test_policy_instances=["inst_on_x_y_16.pddl"],
         complete_only_wrt_optimal=True,
         max_concept_size=8,
         concept_generator=None,
@@ -65,7 +66,6 @@ def experiments():
     exps["one_tower"] = update_dict(
         base,
         instances=["probBLOCKS-4-0.pddl"],
-        test_domain="domain.pddl",
         test_instances=[
             "probBLOCKS-5-0.pddl",
             "probBLOCKS-5-1.pddl",

@@ -708,7 +708,7 @@ class SATStateFactorizationStep(Step):
 class AbstractionTestingStep(Step):
     """  """
     def get_required_attributes(self):
-        return ["experiment_dir", "test_instances", "test_domain"]
+        return ["experiment_dir", "test_instances", "test_policy_instances", "test_domain"]
 
     def process_config(self, config):
         if config["test_domain"] is not None:
@@ -716,6 +716,8 @@ class AbstractionTestingStep(Step):
                 raise InvalidConfigParameter('"test_domain" must be either None or the path to an existing domain file')
             if any(not os.path.isfile(i) for i in config["test_instances"]):
                 raise InvalidConfigParameter('"test_instances" must point to existing files')
+            if any(not os.path.isfile(i) for i in config["test_policy_instances"]):
+                raise InvalidConfigParameter('"test_policy_instances" must point to existing files')
 
         return config
 
