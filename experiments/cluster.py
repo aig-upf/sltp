@@ -52,7 +52,7 @@ def generate_script(num_tasks, timeout, mem, experiment_set):
 ### Let later steps append their logs to the output and error files.
 #SBATCH --open-mode=append
 ### Set partition.
-#SBATCH --partition=infai_1
+#SBATCH --partition=infai_2
 ### Set quality-of-service group.
 #SBATCH --qos=normal
 ### Set time limit (in min).
