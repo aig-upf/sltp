@@ -5,7 +5,7 @@ import sys
 from tarski.dl import ForallConcept, StarRole, NotConcept, PrimitiveRole, NominalConcept, InverseRole, AndConcept
 
 from sltp.util.defaults import generate_experiment
-from common import ijcai_paper_bw_feature_namer, no_parameter
+from common import bwnamer, no_parameter
 from sltp.util.misc import update_dict
 
 
@@ -18,7 +18,7 @@ def experiment(experiment_name=None):
         num_states=200, max_concept_size=10, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=no_parameter,
         complete_only_wrt_optimal=True,
-        feature_namer=ijcai_paper_bw_feature_namer,)
+        feature_namer=bwnamer,)
 
     sample_4_2 = sample_4_1.copy()
     sample_4_2.update(dict(max_concept_size=15))
@@ -30,7 +30,7 @@ def experiment(experiment_name=None):
         max_concept_size=10, max_concept_grammar_iterations=3,
         # concept_generator=build_x_tower_concepts,
         parameter_generator=one_block_fs,
-        feature_namer=ijcai_paper_bw_feature_namer,)
+        feature_namer=bwnamer,)
 
     sample_5_base_2 = sample_5_base.copy()
     sample_5_base_2.update(dict(num_sampled_states=60, random_seed=10))
@@ -41,7 +41,7 @@ def experiment(experiment_name=None):
         num_states=2000, num_sampled_states=40, random_seed=12,
         max_concept_size=15, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=no_parameter,
-        feature_namer=ijcai_paper_bw_feature_namer,)
+        feature_namer=bwnamer,)
 
     ssample_5_rnd_2 = update_dict(sample_5_rnd, num_sampled_states=70, random_seed=812)
 
@@ -51,7 +51,7 @@ def experiment(experiment_name=None):
         num_states=2000, num_sampled_states=200,
         max_concept_size=15, max_concept_grammar_iterations=3,
         concept_generator=None, parameter_generator=no_parameter,
-        feature_namer=ijcai_paper_bw_feature_namer,)
+        feature_namer=bwnamer,)
 
     parameters = {
         "sample_4_1": sample_4_1,

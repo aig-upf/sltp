@@ -1,6 +1,5 @@
-#! /usr/bin/env python3
-# -*- coding: utf-8 -*-
-from common import ijcai_paper_bw_feature_namer, add_bw_domain_parameters_2
+
+from common import bwnamer, add_bw_domain_parameters_2, ipc_instances
 from sltp.util.misc import update_dict
 
 
@@ -34,17 +33,17 @@ def experiments():
 
     exps["on_x_y"] = update_dict(
         base,
-        instances=["inst_on_x_y_14.pddl"],
+        instances=["inst_on_x_y_14.pddl", "inst_on_x_y_16.pddl", ],
         num_states=40000, max_width=[-1],
         num_sampled_states=[500],
         # Note: Testing here is not simple, as we'd want to test only when X and Y are on different towers
         # test_instances=["inst_on_x_y_16.pddl"], num_tested_states=10000,
-        test_policy_instances=["inst_on_x_y_16.pddl"],
+        # test_policy_instances=ipc_instances(),
         complete_only_wrt_optimal=True,
         max_concept_size=8,
         concept_generator=None,
         parameter_generator=add_bw_domain_parameters_2,
-        feature_namer=ijcai_paper_bw_feature_namer,
+        feature_namer=bwnamer,
     )
 
     exps["on_x_y_gc"] = update_dict(exps["on_x_y"], parameter_generator=None)
@@ -72,11 +71,12 @@ def experiments():
             "probBLOCKS-6-0.pddl",
             "probBLOCKS-6-1.pddl",
             # "probBLOCKS-10-0.pddl",
-            "probBLOCKS-10-1.pddl",
+            # "probBLOCKS-10-1.pddl",
             # "probBLOCKS-10-2.pddl",
-            "probBLOCKS-14-0.pddl",
+            # "probBLOCKS-14-0.pddl",
             # "probBLOCKS-14-1.pddl",
         ],
+        test_policy_instances=ipc_instances(),
         num_states=2000,
         num_tested_states=50000,
         num_sampled_states=300,
@@ -84,7 +84,7 @@ def experiments():
         max_concept_size=6,
         concept_generator=None,
         parameter_generator=None,
-        feature_namer=ijcai_paper_bw_feature_namer,
+        feature_namer=bwnamer,
     )
 
     # Goal: build one single given tower of blocks from a random initial configuration

@@ -64,7 +64,6 @@ def _compute_abstract_policy(data, features, actions, cinfo):
             policy[abstract_s] = right_action
 
     logging.info("Computed policy of size {}".format(len(policy)))
-    print("\t" + "\n\t".join("{}: {}".format(s, a) for s, a in policy.items()))
     return policy
 
 
@@ -85,18 +84,19 @@ def compute_abstraction(config, data, feature_ids, cinfo):
     features = load_selected_features(feature_ids, config.domain, config.serialized_feature_filename)
     identified = [IdentifiedFeature(f, i, config.feature_namer(str(f))) for i, f in zip(feature_ids, features)]
 
-    # Compute the abstract state space and store it to disk
+    # Compute the abstract state space and optimize it
     states, actions = compute_abstract_state_space(data.sample, cinfo, identified, data.model_cache)
-    print_actions(actions, os.path.join(config.experiment_dir, 'actions.txt'))
-
-    # Minimize the abstract action model and store it to disk
+    # print_actions(actions, os.path.join(config.experiment_dir, 'unoptimized_actions.txt'))
     states, actions = optimize_abstract_action_model(states, actions)
-    opt_filename = os.path.join(config.experiment_dir, 'optimized.txt')
-    print_actions(actions, opt_filename)
-    logging.info("Minimized action model with {} actions saved in {}".format(len(actions), opt_filename))
+    logging.info("Optimized action model to {} actions".format(len(actions)))
 
+    # Compute a "direct" polocy from the actual abstraction
     abstract_policy = _compute_abstract_policy(data, identified, actions, cinfo)
     abstraction = Abstraction(features=identified, actions=actions, abstract_policy=abstract_policy)
+
+    # Print out the resulting abstraction & policy
+    dump_abstraction(abstraction, config.abstraction_filename)
+
     return ExitCode.Success, dict(abstraction=abstraction)
 
 
@@ -139,10 +139,29 @@ def compute_state_abstraction(sample: TransitionSample, features, model_cache):
     return abstract_states, state_abstraction
 
 
-def print_actions(actions, filename):
-    with open(filename, 'w') as f:
-        for i, action in enumerate(actions, 1):
-            precs, effs = prettyprint_precs_and_effects(action)
-            action_str = "\tPRE: {}\n\tEFFS: {}".format(precs, effs)
-            print("\nAction {}:\n{}".format(i, action_str), file=f)
+def print_actions(actions, out):
+    for i, action in enumerate(actions):
+        precs, effs = prettyprint_precs_and_effects(action)
+        action_str = "\tPRE: {}\n\tEFFS: {}".format(precs, effs)
+        print("\nAction {}:\n{}".format(i, action_str), file=out)
 
+
+def dump_abstraction(abstraction, filename):
+    feats = abstraction.features
+    policy = abstraction.abstract_policy
+
+    with open(filename, 'w') as out:
+        print("Features (total complexity: {}): ".format(sum(f.complexity() for f in feats)), file=out)
+        print('\t' + '\n\t'.join("F{}. {} [k={}, id={}]"
+                                 .format(i, f, f.complexity(), f.id) for i, f in enumerate(feats)), file=out)
+        print("\n", file=out)
+        print_actions(abstraction.actions, out)
+
+        print("\n", file=out)
+        print("Policy: ", file=out)
+        rules = sorted(policy.items(), key=lambda x: x[1])
+        statepr = lambda s: ", ".join("F{}: {}".format(i, s) for i, s in enumerate(s))
+        print("\t" + "\n\t".join("R{}. {} => Action {}".format(i, statepr(s), a)
+                                 for i, (s, a) in enumerate(rules)), file=out)
+
+    logging.info("Printed abstraction details to file {}".format(filename))

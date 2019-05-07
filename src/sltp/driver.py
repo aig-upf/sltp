@@ -464,6 +464,7 @@ class CPPActionModelStep(Step):
 
     def process_config(self, config):
         config["qnp_abstraction_filename"] = compute_info_filename(config, "abstraction.qnp")
+        config["abstraction_filename"] = compute_info_filename(config, "abstraction.txt")
         return config
 
     def get_required_data(self):

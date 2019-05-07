@@ -41,6 +41,7 @@ def test_policy(config, data) :
         except PolicySearchException as e:
             logging.warning("Testing of abstract policy failed with code: {}".format(e.code))
             return e.code
+    logging.info("Abstract policy solves all tested instances")
 
 
 def run(config, data, rng):
@@ -55,8 +56,8 @@ def run(config, data, rng):
 
     # Then test that the policy has the properties we desire (sound, complete, terminating) on a possibly disjoint
     # set of test instances
-    res = test_policy(config, data)
-    return res, dict()
+    test_policy(config, data)
+    return ExitCode.Success, dict()
 
 
 def _import_pyperplan():

@@ -1,3 +1,7 @@
+
+import itertools
+
+from sltp.util.misc import extend_namer_to_all_features
 from tarski.dl import NominalConcept, PrimitiveRole, InverseRole, StarRole, PrimitiveConcept, NotConcept, AndConcept, \
     ExistsConcept, ConceptCardinalityFeature
 
@@ -145,25 +149,29 @@ def get_on_x_y_feature(lang):
     return [ConceptCardinalityFeature(on_x_y)]
 
 
-def ijcai_paper_bw_feature_namer(feature):
+def bwnamer(feature):
     s = str(feature)
-    return {
-        "bool[And(clear, {a})]": "clear(a)",
-        "bool[holding]": "holding(·)",
-        "bool[And(Exists(on,{b}), {a})]": "on(a, b)",
-        "bool[And(Exists(Inverse(on),{a}), {b})]": "on(a, b)_2",
-        "bool[And({a}, holding)]": "holding(a)",
-        "bool[And(holding, {a})]": "holding(a)",
-        "bool[And(holding, {b})]": "holding(b)",
-        "bool[And(Not({a}), holding)]": "H",
-        "bool[Exists(Inverse(on),{a})]": "Z",
-        "card[Exists(Star(on),{a})]": "n(a)",
-        "card[Exists(Star(on),{b})]": "n(b)",
-        "bool[And(ontable, {a})]": "ontable(a)",
-        "bool[And(Forall(on,{b}), {a})]": "a_on_b_ontable_or_held",
-        "card[And(And(And(Not(Exists(Star(on),{a})), Not(Exists(Star(Inverse(on)),{a}))), Not({a})), Not(holding))]": "m(a)",
-        "card[And(And(Forall(Star(on),Not({a})), Forall(Star(Inverse(on)),Not({a}))), And(Not(holding), Not({a})))]": "m(a)",
-    }.get(s, s)
+    base = {
+        "And(clear,Nominal(a))": "clear(a)",
+        "And(clear,Nominal(b))": "clear(b)",
+        "holding": "holding(·)",
+        "And(Nominal(a),holding)": "holding(a)",
+        "And(holding,Nominal(a))": "holding(a)",
+        "And(holding,Nominal(b))": "holding(b)",
+        "And(Exists(on,Nominal(b)),Nominal(a))": "on(a,b)",
+        "And(Exists(Inverse(on),Nominal(a)),Nominal(b))": "on(a,b)",
+        "And(Exists(Star(on),Nominal(b)),Nominal(a))": "above(a,b)",
+        "And(Not(Nominal(a)),holding)": "H",
+        "Exists(Inverse(on),Nominal(a))": "Z",
+        "Exists(Star(on),Nominal(a))": "n(a)",
+        "Exists(Star(on),Nominal(b))": "n(b)",
+        "And(ontable,Nominal(a))": "ontable(a)",
+        "And(Forall(on,Nominal(b)),Nominal(a))": "a_on_b_ontable_or_held",
+        "And(And(And(Not(Exists(Star(on),Nominal(a))),Not(Exists(Star(Inverse(on)),Nominal(a)))),Not(Nominal(a))),Not(holding))": "m(a)",
+        "And(And(Forall(Star(on),Not(Nominal(a))),Forall(Star(Inverse(on)),Not(Nominal(a)))),And(Not(holding),Not(Nominal(a))))": "m(a)",
+        "Exists(Star(on),Exists(on,Nominal(b)))": "n-at-least-2-above-b",
+    }
+    return extend_namer_to_all_features(base).get(s, s)
 
 
 def features_clear_x(lang):
@@ -212,3 +220,9 @@ def add_bw_domain_parameters_2(language):
 
 def no_parameter(lang):
     return []
+
+
+def ipc_instances():
+    tpl = "probBLOCKS-{}-{}.pddl"
+    return [tpl.format(b, i) for b, i in itertools.product(range(5, 11), range(0, 3))] +\
+           [tpl.format(b, i) for b, i in itertools.product(range(11, 16), range(0, 2))]
