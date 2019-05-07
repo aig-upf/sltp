@@ -23,9 +23,10 @@ def experiments():
         test_instances=[
             "prob-10-10-10-1540903568.pddl"
         ],
-        num_states=40000,
+        test_policy_instances=all_test_instances(),
+        num_states="until_first_goal",
         num_sampled_states=None,  # Take all expanded states into account
-        num_tested_states=50000,
+        num_tested_states=20000,
         initial_concept_bound=8, max_concept_bound=16, concept_bound_step=1,
         batch_refinement_size=5,
         distance_feature_max_complexity=8,
@@ -45,3 +46,14 @@ def experiments():
 
 def add_domain_parameters(language):
     return []
+
+
+def all_test_instances():
+    instances = []
+    total = 1
+    for i in range(1, 7):
+        for _ in range(5):  # Each x has 5 subproblems
+            instances.append("pfile0{}-{:03d}.pddl".format(i, total))
+            total += 1
+    assert total == 31
+    return instances

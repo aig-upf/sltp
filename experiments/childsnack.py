@@ -22,6 +22,7 @@ def experiments():
         test_instances=[
             'child-snack_pfile01.pddl',
         ],
+        test_policy_instances=all_test_instances(),
         num_states="until_first_goal",
         num_tested_states=20000,
         num_sampled_states=None,  # Take all expanded states into account
@@ -63,11 +64,23 @@ def feature_namer(feature):
         "served": "n-served",
         "notexist": "n-prepared-sndw",
         "no_gluten_sandwich": "n-no_gluten_sandwich",
-        "at_kitchen_sandwich": "n-sdwch-at-kitchen",
+        "at_kitchen_sandwich": "n-sandwich-at-kitchen",
         "Exists(ontray,<universe>)": "n-sdwch-ontray",
         "And(allergic_gluten,served)": "n-allergic-served",
         "Exists(at,Nominal(kitchen))": "n-trays-on-kitchen",
         "And(Not(served),not_allergic_gluten)": "n-normal-unserved",
+        "And(Not(served),child)": "n-unserved-children"
     }
 
     return extend_namer_to_all_features(base).get(s, s)
+
+
+def all_test_instances():
+    return ['child-snack_pfile01-2.pddl', 'child-snack_pfile02.pddl', 'child-snack_pfile04-2.pddl',
+            'child-snack_pfile05.pddl', 'child-snack_pfile07-2.pddl', 'child-snack_pfile08.pddl',
+            'child-snack_pfile10-2.pddl', 'child-snack_pfile01.pddl', 'child-snack_pfile03-2.pddl',
+            'child-snack_pfile04.pddl', 'child-snack_pfile06-2.pddl', 'child-snack_pfile07.pddl',
+            'child-snack_pfile09-2.pddl', 'child-snack_pfile10.pddl', 'child-snack_pfile02-2.pddl',
+            'child-snack_pfile03.pddl', 'child-snack_pfile05-2.pddl', 'child-snack_pfile06.pddl',
+            'child-snack_pfile08-2.pddl', 'child-snack_pfile09.pddl']
+

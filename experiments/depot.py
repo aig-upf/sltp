@@ -28,8 +28,9 @@ def experiments():
             'p07.pddl',
             'p08.pddl',
         ],
-        num_states=200000,
-        num_tested_states=50000,
+        test_policy_instances=all_test_instances(),
+        num_states="until_first_goal",
+        num_tested_states=20000,
         num_sampled_states=None,  # Take all expanded states into account
         initial_concept_bound=8, max_concept_bound=16, concept_bound_step=1,
         batch_refinement_size=5,
@@ -38,3 +39,8 @@ def experiments():
     )
 
     return exps
+
+
+def all_test_instances():
+    return ["p{:02d}.pddl".format(i) for i in range(1, 23)]
+

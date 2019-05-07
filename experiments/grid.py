@@ -21,10 +21,12 @@ def experiments():
         test_instances=[
             'prob02.pddl',
         ],
-        num_states=200000,
-        num_tested_states=50000,
+        test_policy_instances=all_test_instances(),
+        num_states="until_first_goal",
+        num_tested_states=20000,
         num_sampled_states=None,  # Take all expanded states into account
-        max_concept_size=8,
+        initial_sample_size=100, batch_refinement_size=5,
+        initial_concept_bound=6, max_concept_bound=12, concept_bound_step=1,
         concept_generator=None,
         parameter_generator=None,
     )
@@ -33,3 +35,7 @@ def experiments():
         exps["p1"], pipeline="maxsat_poly")
 
     return exps
+
+
+def all_test_instances():
+    return ["prob0{}.pddl".format(i) for i in range(1, 6)]

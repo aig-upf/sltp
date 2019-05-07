@@ -20,8 +20,9 @@ def experiments():
         test_instances=[
             'p05-pfile5.pddl',
         ],
-        num_states=200000,
-        num_tested_states=50000,
+        test_policy_instances=all_test_instances(),
+        num_states="until_first_goal",
+        num_tested_states=20000,
         num_sampled_states=None,  # Take all expanded states into account
         initial_concept_bound=8, max_concept_bound=16, concept_bound_step=1,
         concept_generator=None,
@@ -29,3 +30,8 @@ def experiments():
     )
 
     return exps
+
+
+def all_test_instances():
+    return ["p{:02d}-pfile{}.pddl".format(i, i) for i in range(1, 21)]
+

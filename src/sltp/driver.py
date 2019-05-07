@@ -102,7 +102,6 @@ def _run_planner(config, data, rng):
         else:
             assert isinstance(num_states, int)
             num_string = "max_expansions={}".format(num_states)
-
         params = '-i {} --domain {} --driver {} --options={},width.max={}'.format(i, d, config.driver, num_string, w)
         execute(command=[sys.executable, "run.py"] + params.split(' '), stdout=o, cwd=config.planner_location)
 

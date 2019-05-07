@@ -135,6 +135,9 @@ def generate_experiment(domain_dir, domain, **kwargs):
         # The Experiment class to be used (e.g. standard, or incremental)
         experiment_class=get_experiment_class(kwargs),
 
+        # The size of the initial batch of states for the incremental sampling approach
+        initial_sample_size=100,
+
         # The max. number of states in the Flaw set when validating an incremental abstraction
         batch_refinement_size=10,
 
