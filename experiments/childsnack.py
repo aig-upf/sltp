@@ -16,14 +16,13 @@ def experiments():
     exps["p1"] = update_dict(
         base,
         experiment_type='incremental',
-        instances=[
-            'sample01.pddl',
-        ],
+        instances=['sample{:02d}.pddl'.format(i) for i in range(1, 5)],
         test_instances=[
-            'child-snack_pfile01.pddl',
+            # 'child-snack_pfile01-2.pddl',
         ],
         test_policy_instances=all_test_instances(),
-        num_states="until_first_goal",
+        # num_states="until_first_goal",
+        num_states="all",
         num_tested_states=20000,
         num_sampled_states=None,  # Take all expanded states into account
         initial_sample_size=100, batch_refinement_size=5,
@@ -61,26 +60,38 @@ def experiments():
 def feature_namer(feature):
     s = str(feature)
     base = {
-        "served": "n-served",
-        "notexist": "n-prepared-sndw",
-        "no_gluten_sandwich": "n-no_gluten_sandwich",
-        "at_kitchen_sandwich": "n-sandwich-at-kitchen",
-        "Exists(ontray,<universe>)": "n-sdwch-ontray",
-        "And(allergic_gluten,served)": "n-allergic-served",
-        "Exists(at,Nominal(kitchen))": "n-trays-on-kitchen",
-        "And(Not(served),not_allergic_gluten)": "n-normal-unserved",
-        "And(Not(served),child)": "n-unserved-children"
+        "served": "num-served-children",
+        "And(Not(served),child)": "num-unserved-children",
+        "notexist": "num-unprepared-sandwiches",
+        "no_gluten_sandwich": "num-sandwiches-wo-gluten",
+        "at_kitchen_bread": "num-breads-at-kitchen",
+        "at_kitchen_content": "num-fillings-at-kitchen",
+        "at_kitchen_sandwich": "num-sandwiches-at-kitchen",
+        "Exists(ontray,<universe>)": "num-sandwiches-on-some-tray",
+        "And(allergic_gluten,served)": "num-allergic-served",
+        "Exists(at,Nominal(kitchen))": "num-trays-on-kitchen",
+        "And(Not(served),not_allergic_gluten)": "num-unallergic-unserved",
+        "And(Not(served),allergic_gluten)": "num-allergic-unserved",
+        "And(Not(no_gluten_content),content-portion)": "num-gluten-free-fillings",
+        "And(Not(no_gluten_bread),bread-portion)": "num-gluten-free-breads",
+        "And(Not(no_gluten_sandwich),sandwich)": "num-sandwiches-with-gluten",
+        "Exists(at,Exists(Inverse(waiting),<universe>))": "num-trays-on-place-with-some-child",
+        "Exists(ontray,Exists(at,Nominal(kitchen)))": "num-sandwiches-on-some-tray-in-kitchen",
+        # "": "",
     }
+
+    # 	9. Num[Exists(at,Exists(Inverse(waiting),<universe>))] [k=5, id=37]
+    # 	10. Num[Exists(ontray,Exists(at,Nominal(kitchen)))] [k=5, id=42]
 
     return extend_namer_to_all_features(base).get(s, s)
 
 
 def all_test_instances():
-    return ['child-snack_pfile01-2.pddl', 'child-snack_pfile02.pddl', 'child-snack_pfile04-2.pddl',
-            'child-snack_pfile05.pddl', 'child-snack_pfile07-2.pddl', 'child-snack_pfile08.pddl',
-            'child-snack_pfile10-2.pddl', 'child-snack_pfile01.pddl', 'child-snack_pfile03-2.pddl',
-            'child-snack_pfile04.pddl', 'child-snack_pfile06-2.pddl', 'child-snack_pfile07.pddl',
-            'child-snack_pfile09-2.pddl', 'child-snack_pfile10.pddl', 'child-snack_pfile02-2.pddl',
-            'child-snack_pfile03.pddl', 'child-snack_pfile05-2.pddl', 'child-snack_pfile06.pddl',
-            'child-snack_pfile08-2.pddl', 'child-snack_pfile09.pddl']
+    return ['child-snack_pfile01.pddl', 'child-snack_pfile01-2.pddl', 'child-snack_pfile02.pddl',
+            'child-snack_pfile04-2.pddl', 'child-snack_pfile05.pddl', 'child-snack_pfile07-2.pddl',
+            'child-snack_pfile08.pddl', 'child-snack_pfile10-2.pddl', 'child-snack_pfile01.pddl',
+            'child-snack_pfile03-2.pddl', 'child-snack_pfile04.pddl', 'child-snack_pfile06-2.pddl',
+            'child-snack_pfile07.pddl', 'child-snack_pfile09-2.pddl', 'child-snack_pfile10.pddl',
+            'child-snack_pfile02-2.pddl', 'child-snack_pfile03.pddl', 'child-snack_pfile05-2.pddl',
+            'child-snack_pfile06.pddl', 'child-snack_pfile08-2.pddl', 'child-snack_pfile09.pddl']
 

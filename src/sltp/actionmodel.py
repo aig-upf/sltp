@@ -58,7 +58,7 @@ def _compute_abstract_policy(data, features, actions, cinfo):
             right_action = app[0]
             previous = policy.get(abstract_s, None)
             if previous is not None and previous != right_action:
-                # TODO Decide what to do wrt the policy
+                # TODO Decide what to do wrt the policy. At the moment we just pick one arbitrary action
                 logging.warning("Two actions appear optimal in data-driven policy: {} and {}".
                                 format(previous, right_action))  # This could happen
             policy[abstract_s] = right_action
