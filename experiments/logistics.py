@@ -1,4 +1,4 @@
-from sltp.util.misc import update_dict
+from sltp.util.misc import update_dict, extend_namer_to_all_features
 
 
 def experiments():
@@ -8,6 +8,7 @@ def experiments():
         domain="domain.pddl",
         test_domain="domain.pddl",
         complete_only_wrt_optimal=True,
+        feature_namer=feature_namer,
     )
 
     exps = dict()
@@ -16,13 +17,14 @@ def experiments():
     exps["p1"] = update_dict(
         base,
         experiment_type='incremental',
-        instances=[
-            'sample2.pddl',
+        instances=['sample{}.pddl'.format(i) for i in [2]],
+        test_instances=[
+            "prob{:02d}.pddl".format(i) for i in range(2, 5)
         ],
-        test_instances=["prob0{}.pddl".format(i) for i in range(1, 6)],
         test_policy_instances=all_instances(),
-        num_states="until_first_goal",
-        num_tested_states=10000,
+        # num_states="until_first_goal",
+        num_states="all",
+        num_tested_states=20000,
         num_sampled_states=None,  # Take all expanded states into account
         initial_sample_size=100, batch_refinement_size=5,
         initial_concept_bound=6, max_concept_bound=10, concept_bound_step=1,
@@ -44,6 +46,28 @@ def experiments():
 
     return exps
 
+
+def feature_namer(feature):
+    s = str(feature)
+    base = {
+        # "": "",
+        "Exists(in,<universe>)": "num-loaded-packages",
+        "And(Not(Equal(at_g,at)),obj)": "num-packages-not-in-destiny",
+        "Exists(at_g,Exists(Inverse(at),airplane))": "num-packages-whose-destiny-has-an-airplane",
+        "Exists(at_g,Exists(Inverse(at),<universe>))": "num-packages-with-destiny",
+        "Exists(at_g,airport)": "num-packages-whose-destiny-has-an-airport",
+        "Exists(in,airplane)": "num-packages-in-airplane",
+        # "And(Equal(at_g,Inverse(at)),airport)": "",
+        "And(Exists(at,airport),obj)": "num-packages-at-city-with-airport",
+        # "Exists(at,Forall(Inverse(at),truck))": "",
+    }
+
+    return extend_namer_to_all_features(base).get(s, s)
+
+# 	2. Bool[And(Equal(at_g,Inverse(at)),airport)] [k=5, id=17]
+# 	4. Num[Exists(at,Forall(Inverse(at),truck))] [k=6, id=57]
+# 	5. Num[Not(And(Forall(Inverse(at_g),Equal(at_g,at)),Forall(in,<empty>)))] [k=8, id=158]
+# 	6. Num[Exists(at,And(Exists(Inverse(at),truck),airport))] [k=8, id=231]
 
 def all_instances():
     return ["prob0{}.pddl".format(i) for i in range(1, 3)]
