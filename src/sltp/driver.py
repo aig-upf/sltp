@@ -99,6 +99,8 @@ def _run_planner(config, data, rng):
     def run(d, i, o, w, num_states):
         if num_states == "until_first_goal":
             num_string = "until_first_goal=true"
+        elif num_states == "all":
+            num_string = "max_expansions=-1"
         else:
             assert isinstance(num_states, int)
             num_string = "max_expansions={}".format(num_states)
