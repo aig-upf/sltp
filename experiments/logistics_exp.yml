@@ -5,4 +5,4 @@ run:
   time: "8:0:0"
 
 experiments:
-  - "logistics:p1"
+  - "logistics:p2"

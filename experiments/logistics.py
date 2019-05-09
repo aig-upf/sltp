@@ -33,6 +33,8 @@ def experiments():
         parameter_generator=None,
     )
 
+    exps["p2"] = update_dict(exps["p1"], instances=['sample3.pddl'])
+
     exps["p1_p"] = update_dict(
         exps["p1"], pipeline="maxsat_poly")
 
