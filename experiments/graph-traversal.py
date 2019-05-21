@@ -51,9 +51,6 @@ def main():
 
         feature_namer=feature_namer,
 
-        relax_numeric_increase=True,
-        # relax_numeric_increase=False,
-
         # What optimization criteria to use in the max-sat problem
         optimization=OptimizationPolicy.TOTAL_FEATURE_COMPLEXITY,
         # optimization=OptimizationPolicy.NUM_FEATURES

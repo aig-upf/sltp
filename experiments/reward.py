@@ -53,7 +53,6 @@ def experiment(experiment_name=None):
         num_states=1500, max_concept_size=8, max_concept_grammar_iterations=3,
         distance_feature_max_complexity=8,
         feature_namer=feature_namer,
-        # relax_numeric_increase=True,
         # feature_generator=build_expected_features,
         concept_generator=None, parameter_generator=add_domain_parameters
     )

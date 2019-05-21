@@ -87,9 +87,6 @@ def generate_experiment(domain_dir, domain, **kwargs):
         # be used (default: None)
         parameter_generator=None,
 
-        # Use the relaxed (weak) increase semantics
-        # relax_numeric_increase=False,  # Not used ATM
-
         # Optionally, use a method that gives handcrafted names to the features
         # (default: None, which will use their string representation)
         feature_namer=default_feature_namer,
