@@ -219,7 +219,7 @@ def run(config, data, rng):
 def generate_model_cache(domain, instances, sample, parameter_generator):
     parsed_problems = parse_all_instances(domain, instances)
     language, nominals, model_cache, infos = compute_models(domain, sample, parsed_problems, parameter_generator)
-    return model_cache
+    return language, model_cache
 
 
 def parse_all_instances(domain, instances):

@@ -18,7 +18,7 @@ def test_abstraction_soundness(config, data):
     logging.info("Testing learnt abstraction on sample of states from instances: {}".format(config.test_instances))
     assert isinstance(data.abstraction, Abstraction)
     sample, _ = read_transitions_from_files(config.test_sample_files)
-    model_cache = generate_model_cache(config.test_domain, config.test_instances, sample, config.parameter_generator)
+    _, model_cache = generate_model_cache(config.test_domain, config.test_instances, sample, config.parameter_generator)
 
     validator = AbstractionValidator(model_cache, sample, list(sample.expanded))
     flaws = validator.find_flaws(data.abstraction, 1, check_completeness=False)
