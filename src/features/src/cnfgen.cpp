@@ -24,6 +24,7 @@ struct Options {
     bool prune_redundant_states;
     bool verbose;
     bool use_d2tree;
+    std::vector<unsigned> enforced_features;
 
     Options(int argc, const char **argv) {
         po::options_description description("Generate a weighted max-sat instance from given feature "
@@ -39,6 +40,9 @@ struct Options {
 
                 ("prune-redundant-states,p",
                         "Whether to prune those states that appear redundant for the given feature pool.")
+
+                ("enforce-features,e", po::value<std::string>()->default_value(""),
+                 "Comma-separated (no spaces!) list of IDs of feature we want to enforce in the abstraction.")
 
                 ("d2tree,d",
                   "Whether to use the encoding based on the D2 tree.")
@@ -64,6 +68,21 @@ struct Options {
         prune_redundant_states = vm.count("prune-redundant-states") > 0;
         verbose = vm.count("verbose") > 0;
         use_d2tree = vm.count("d2tree") > 0;
+
+        // Split the comma-separated list of enforced feature IDS
+        auto enforced_str = vm["enforce-features"].as<std::string>();
+//        std::cout << "\nenforced_str: " << enforced_str << std::endl;
+        if (!enforced_str.empty()) {
+            std::stringstream ss(enforced_str);
+            while (ss.good()) {
+                std::string substr;
+                getline(ss, substr, ',');
+                if (!substr.empty()) {
+                    enforced_features.push_back((unsigned) atoi(substr.c_str()));
+                }
+            }
+        }
+//        for (auto x:enforced_features) std::cout << "\n" << x << std::endl;
     }
 };
 
@@ -116,7 +135,7 @@ int main(int argc, const char **argv) {
     // know only when we finish writing all clauses
     CNFGenerator gen(*sample);
     auto wsatstream = get_ofstream(options.workspace + "/theory.wsat.tmp");
-    auto res = gen.write_maxsat(wsatstream, options.use_d2tree);
+    auto res = gen.write_maxsat(wsatstream, options.enforced_features, options.use_d2tree);
     wsatstream.close();
 
     // Write some characteristics of the CNF to a different file

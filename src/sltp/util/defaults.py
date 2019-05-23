@@ -108,8 +108,12 @@ def generate_experiment(domain_dir, domain, **kwargs):
         # be used (default: None)
         parameter_generator=None,
 
-        # Use the relaxed (weak) increase semantics
-        # relax_numeric_increase=False,  # Not used ATM
+        # Whether to create goal-identifying features (e.g. of the form p_g AND not p_s for every unary predicate
+        # apperaring in the goal)
+        create_goal_features_automatically=False,
+
+        # Generator of goal-like expressions
+        goal_selector=None,
 
         # Optionally, use a method that gives handcrafted names to the features
         # (default: None, which will use their string representation)

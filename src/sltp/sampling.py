@@ -4,7 +4,8 @@ import logging
 
 from collections import defaultdict, OrderedDict
 
-from sltp.outputs import print_sat_transition_matrix, print_transition_matrix, print_state_set
+from .goal_selection import select_goal_maximizing_states
+from .outputs import print_sat_transition_matrix, print_transition_matrix, print_state_set
 
 from .util.command import read_file
 from .util.naming import filename_core
@@ -20,7 +21,6 @@ class TransitionSample:
         # self.problem = dict()
         self.roots = set()  # The set of all roots
         self.instance_roots = []  # The root of each instance
-        self.instance_goals = []  # The goals of each instance
         self.goals = set()
         self.unsolvable = set()
         self.optimal_transitions = set()
@@ -50,7 +50,6 @@ class TransitionSample:
 
     def mark_as_goals(self, goals):
         self.goals.update(goals)
-        self.instance_goals.append(goals.copy())
 
     def mark_as_unsolvable(self, states):
         self.unsolvable.update(states)
@@ -129,7 +128,11 @@ class TransitionSample:
         return resampled
 
     def get_one_goal_per_instance(self):
-        return set(min(x) for x in self.instance_goals if x)
+        """ Return the min-id state for each instance that is marked as a goal """
+        instance_goals = [[]]*len(self.roots)
+        for sid in self.goals:
+            instance_goals[self.instance[sid]].append(sid)
+        return set(min(x) for x in instance_goals if x)
 
 
 def mark_optimal(goal_states, root_states, parents):
@@ -189,10 +192,10 @@ def sample_generated_states(config, rng):
     logging.info('Loading state space samples...')
     sample, goals_by_instance = read_transitions_from_files(config.sample_files)
 
-    if not sample.goals:
+    if not config.create_goal_features_automatically and not config.goal_selector and not sample.goals:
         raise RuntimeError("No goal found in the sample - increase # expanded states!")
 
-    mark_optimal_transitions(config.optimal_selection_strategy, sample, goals_by_instance)
+    mark_optimal_transitions(config.optimal_selection_strategy, sample)
     logging.info("Entire sample: {}".format(sample.info()))
 
     # if config.num_sampled_states is None and config.max_width < 1 and not config.complete_only_wrt_optimal:
@@ -215,6 +218,12 @@ def sample_generated_states(config, rng):
         sample = sample.resample(set(selected))
         logging.info("Sample after resampling: {}".format(sample.info()))
 
+    goal_maximizing_states = select_goal_maximizing_states(config, sample)
+    if goal_maximizing_states:
+        # sample.mark_as_goals(goal_maximizing_states)
+        optimal = mark_optimal(goal_maximizing_states, sample.roots, sample.parents)
+        sample.mark_as_optimal(optimal)
+
     log_sampled_states(sample, config.resampled_states_filename)
     print_transition_matrices(sample, config)
     print_state_set(sample.goals, config.goal_states_filename)
@@ -230,7 +239,7 @@ def print_transition_matrices(sample, config):
     print_transition_matrix(state_ids, sample.transitions, config.transitions_filename)
 
 
-def mark_optimal_transitions(selection_strategy, sample: TransitionSample, goals_by_instance):
+def mark_optimal_transitions(selection_strategy, sample: TransitionSample):
     """ Marks which transitions are optimal in a transition system according to some selection criterium,F
     such as marking *all* optimal transitions, or marking just one *single* optimal path.
      """

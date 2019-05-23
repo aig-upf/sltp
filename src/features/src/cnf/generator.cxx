@@ -4,7 +4,7 @@
 
 
 //! Generate and write the actual CNF instance as we go
-std::pair<bool, CNFWriter> CNFGenerator::write_maxsat(std::ostream &os, bool use_d2tree) {
+std::pair<bool, CNFWriter> CNFGenerator::write_maxsat(std::ostream &os, const std::vector<unsigned>& enforce_features, bool use_d2tree) {
     CNFWriter writer(os);
 
     /////// Create the CNF variables ///////
@@ -114,6 +114,12 @@ std::pair<bool, CNFWriter> CNFGenerator::write_maxsat(std::ostream &os, bool use
             writer.print_clause(clause);
             n_goal_clauses += 1;
         }
+    }
+
+    // For goal-identifying features that we want to enforce in the solution, we add a unary clause "selected(f)"
+    for (auto f:enforce_features) {
+        writer.print_clause({CNFWriter::literal(var_selected.at(f), true)});
+        n_goal_clauses += 1;
     }
 
     if (use_d2tree) {

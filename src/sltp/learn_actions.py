@@ -308,7 +308,8 @@ class ModelTranslator:
         #     self.writer.clause([self.writer.literal(self.var_selected[enforced], True)])
         assert not enforced_feature_idxs
 
-        logging.info("Enforcing features: {}".format(", ".join(str(self.var_selected[x]) for x in in_goal_features)))
+        logging.info("The following features will be enforced into the abstraction because they are goal-identifying:"
+                     "\n\t{}".format(", ".join(str(self.var_selected[x]) for x in in_goal_features)))
         for enforced in in_goal_features:
             self.writer.clause([self.writer.literal(self.var_selected[enforced], True)])
 

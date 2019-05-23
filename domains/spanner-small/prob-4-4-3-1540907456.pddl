@@ -1,6 +1,6 @@
 (define (problem prob-4-4-3) (:domain spanner) (:objects 
      bob - man
- spanner1 spanner2 spanner3 spanner4 - spanner
+     spanner1 spanner2 spanner3 spanner4 - spanner
      nut1 nut2 nut3 nut4 - nut
      location1 location2 location3 - location
      shed gate - location

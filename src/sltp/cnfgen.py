@@ -14,10 +14,16 @@ def run(config, data, rng):
     featuregen_location = os.path.join(SLTP_SRC_DIR, "..", "features")
     cmd = os.path.realpath(os.path.join(featuregen_location, "cnfgen"))
     args = ["--workspace", config.experiment_dir]
+
+    if data.in_goal_features:
+        args += ["--enforce-features", ",".join(map(str, data.in_goal_features))]
+
     if config.prune_redundant_states:
         args.append("--prune-redundant-states")
+
     if config.use_d2tree:
         args.append("--d2tree")
+
     retcode = execute([cmd] + args)
 
     if retcode != 0:

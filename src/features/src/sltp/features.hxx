@@ -1603,6 +1603,7 @@ class Factory {
         basis_roles_.push_back(role);
     }
     void insert_basis(const Concept *concept) {
+//        std::cout << "insert_basis: " << *concept << std::endl;
         basis_concepts_.push_back(concept);
     }
 
@@ -1850,10 +1851,11 @@ class Factory {
         std::cout << "BASIS: #concepts=" << basis_concepts_.size()
                   << ", #roles=" << basis_roles_.size()
                   << std::endl;
+//        report_dl_data(std::cout);
     }
 
-    void generate_goal_concepts_and_roles(Cache &cache, const Sample &sample, std::vector<const Concept*>& goal_concepts) {
-        assert(goal_concepts.empty());
+    std::vector<const Concept*> generate_goal_concepts_and_roles(Cache &cache, const Sample &sample) {
+        std::vector<const Concept*> goal_concepts;
 
         const Sample::PredicateIndex& predicate_idx = sample.predicate_index();
         for (const predicate_id_t& pid:sample.goal_predicates()) {
@@ -1879,10 +1881,10 @@ class Factory {
 
                 // Insert the denotations into the cache
 //                for (const auto elem:std::vector<const Concept*>({and_c})) {
-//                for (const auto elem:std::vector<const Concept*>({c, not_c, c_g, and_c})) {
-//                    const sample_denotation_t *d = elem->denotation(cache, sample, false);
-//                    cache.find_or_insert_sample_denotation(*d, elem->as_str());
-//                }
+                for (const auto elem:std::vector<const Concept*>({c, not_c, c_g, and_c})) {
+                    const sample_denotation_t *d = elem->denotation(cache, sample, false);
+                    cache.find_or_insert_sample_denotation(*d, elem->as_str());
+                }
 //                for (const auto elem:std::vector<const Concept*>({c, not_c, c_g})) {
 //                    cache.remove_sample_denotation(elem->as_str());
 //                }
@@ -1922,6 +1924,7 @@ class Factory {
                 goal_concepts.push_back(ex_c);
             }
         }
+        return goal_concepts;
     }
 
     int generate_roles(Cache &cache, const Sample &sample) const {
@@ -2044,12 +2047,14 @@ class Factory {
         feature_cache_t seen_denotations;
 
         // Insert first the features that allow us to express the goal
+        // goal_features will contain the indexes of those features
         goal_features_.clear();
         for (auto c:forced_goal_features) {
-            if (generate_cardinality_feature_if_not_redundant(c, cache, sample, seen_denotations)) {
+            if (generate_cardinality_feature_if_not_redundant(c, cache, sample, seen_denotations, false)) {
                 goal_features_.insert(features_.size()-1);
             }
         }
+        std::cout << "A total of " << goal_features_.size() << " features were marked as goal-identifying" << std::endl;
 
         // create features that derive from nullary predicates
         // TODO Keep track of the denotation of nullary-atom features and prune them if necessary
@@ -2106,7 +2111,7 @@ class Factory {
                   << std::endl;
     }
 
-    bool generate_cardinality_feature_if_not_redundant(const Concept* c, Cache &cache, const Sample &sample, feature_cache_t& seen_denotations) {
+    bool generate_cardinality_feature_if_not_redundant(const Concept* c, Cache &cache, const Sample &sample, feature_cache_t& seen_denotations, bool can_be_pruned=true) {
         const auto m = sample.num_states();
         const sample_denotation_t *d = cache.find_sample_denotation(c->as_str());
         assert((d != nullptr) && (d->size() == m));
@@ -2135,25 +2140,35 @@ class Factory {
         }
 
 //        if (all_values_greater_than_zero) std::cout << "ALL>0: " << c->as_str() << std::endl;
+        if (can_be_pruned && (denotation_is_constant || all_values_greater_than_zero)) return false;
 
-        if( !denotation_is_constant && !all_values_greater_than_zero ) {
-            auto it = seen_denotations.find(fd);
-            if( it == seen_denotations.end() ) { // The feature denotation is new, keep the feature
-                const Feature *feature = boolean_feature ? static_cast<Feature*>(new BooleanFeature(c)) :
-                                         static_cast<Feature*>(new NumericalFeature(c));
-                features_.emplace_back(feature);
-                seen_denotations.emplace(fd, feature);
-                //std::cout << "ACCEPT: " << feature->as_str_with_complexity() << std::endl;
-                return true;
-            } else {
-                // Make sure that we are not pruning a feature of lower complexity in favor of a feature of higher
-                // complexity!
-                assert(it->second->complexity() <= c->complexity());
-//                    std::cout << "REJECT: " << c->as_str() << std::endl;
-//                    std::cout << "PRUNED-BY: " << it->second->as_str() << std::endl;
-            }
+        auto it = seen_denotations.find(fd);
+        if( it == seen_denotations.end() ) { // The feature denotation is new, keep the feature
+            const Feature *feature = boolean_feature ? static_cast<Feature*>(new BooleanFeature(c)) :
+                                     static_cast<Feature*>(new NumericalFeature(c));
+            features_.emplace_back(feature);
+            seen_denotations.emplace(fd, feature);
+            //std::cout << "ACCEPT: " << feature->as_str_with_complexity() << std::endl;
+            return true;
         }
-        return false;
+
+        // Make sure that we don't prune a feature of lower complexity in favor of a feature of higher complexity
+        assert(it->second->complexity() <= c->complexity());
+
+        // From here on, the we know the feature is redundant, but still it may be that we want to force it (e.g.
+        // because it is goal-identifying).
+
+//        std::cout << "REJECT: " << c->as_str() << std::endl;
+//        std::cout << "PRUNED-BY: " << it->second->as_str() << std::endl;
+        if (can_be_pruned) {
+            return false; // If can be pruned, we don't generate anything and return false
+
+        } else { // Otherwise, we generate it (even if it is redundant, and return true
+            const Feature *feature = boolean_feature ? static_cast<Feature*>(new BooleanFeature(c)) :
+                                     static_cast<Feature*>(new NumericalFeature(c));
+            features_.emplace_back(feature);
+            return true;
+        }
     }
 
     void generate_conditional_feature_if_not_redundant(const Feature* condition, const Feature* body,

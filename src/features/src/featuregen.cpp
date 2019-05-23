@@ -104,8 +104,8 @@ int main(int argc, const char **argv) {
     SLTP::DL::Cache cache;
     factory.generate_basis(sample);
     // TODO Make this optional adding an extra command-line option:
-    std::vector<const SLTP::DL::Concept*> forced_goal_features;
-    factory.generate_goal_concepts_and_roles(cache, sample, forced_goal_features);
+    auto forced_goal_features = factory.generate_goal_concepts_and_roles(cache, sample);
+
     factory.generate_roles(cache, sample);
 
     auto concepts = factory.generate_concepts(cache, sample);

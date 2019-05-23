@@ -81,8 +81,8 @@ def serialize_static_info(model: DLModel, info: InstanceInformation):
 
 
 def print_sample_info(sample, infos, model_cache, all_predicates, all_functions, nominals,
-                      all_objects, goal_predicate_info, workspace):
-
+                      all_objects, goal_predicate_info, config):
+    workspace = config.experiment_dir
     sample_fn = os.path.join(workspace, "sample.io")
     state_info = []
     atoms_per_instance = defaultdict(set)
@@ -107,8 +107,10 @@ def print_sample_info(sample, infos, model_cache, all_predicates, all_functions,
         # Next: List of all predicates and functions mentioned in the goal
         # Next line disables the "in-goal" functionality that enforces goal-identifying features of the form
         # p_g - p = 0, for all predicates p
-        goal_predicate_info = {}
-        print(" ".join("{}".format(name) for name, arity in sorted(goal_predicate_info)), file=f)
+        if config.create_goal_features_automatically:
+            print(" ".join("{}".format(name) for name, arity in sorted(goal_predicate_info)), file=f)
+        else:
+            print("", file=f)
 
         # Next: per-instance information.
         # Number of instances:
@@ -287,7 +289,7 @@ def extract_features(config, sample):
 
     # Write sample information
     print_sample_info(sample, infos, model_cache, all_predicates, all_functions, nominals,
-                      all_objects, goal_predicate_info, config.experiment_dir)
+                      all_objects, goal_predicate_info, config)
 
     # Invoke C++ feature generation module
     logging.info('Invoking C++ feature generation module'.format())

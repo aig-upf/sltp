@@ -9,7 +9,7 @@
 using feature_t = uint32_t;
 
 inline void undist_goal_warning(unsigned s, unsigned t) {
-    std::cout <<  "No feature can distinguish state " << s << " from state " << t << ", but only one of tthem is a goal"
+    std::cout <<  "No feature can distinguish state " << s << " from state " << t << ", but only one of them is a goal"
               <<  ". The MAXSAT encoding will be UNSAT" << std::endl;
 }
 
@@ -137,7 +137,7 @@ public:
     }
 
     //! Generate and write the actual CNF instance as we go
-        std::pair<bool, CNFWriter> write_maxsat(std::ostream &os, bool use_d2tree = true);
+        std::pair<bool, CNFWriter> write_maxsat(std::ostream &os, const std::vector<unsigned>& enforce_features, bool use_d2tree = true);
 };
 
 using isomorphism_t = std::unordered_map<unsigned, unsigned>;
