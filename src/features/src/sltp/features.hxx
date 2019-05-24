@@ -103,10 +103,12 @@ class Cache {
     const cache1_t& cache1() const {
         return cache1_;
     }
+
     const sample_denotation_t* find_sample_denotation(const sample_denotation_t &d) const {
         cache1_t::const_iterator it = cache1_.find(&d);
         return it == cache1_.end() ? nullptr : it->first;
     }
+
     const sample_denotation_t* find_or_insert_sample_denotation(const sample_denotation_t &d, const std::string &name) {
         cache1_t::const_iterator it = cache1_.find(&d);
         if( it == cache1_.end() ) {
@@ -1647,14 +1649,23 @@ class Factory {
     bool is_superfluous(Cache &cache, const sample_denotation_t *d) const {
         return cache.find_sample_denotation(*d) != nullptr;
     }
+
     std::pair<bool, const sample_denotation_t*>
       is_superfluous_or_exceeds_complexity_bound(const Base &base, Cache &cache, const Sample &sample) const {
         if(base.complexity() > complexity_bound_) {
+//            std::cout << base.as_str() << " superfluous because complexity " << base.complexity() << ">" << complexity_bound_ << std::endl;
             return std::make_pair(true, nullptr);
         }
 
         const sample_denotation_t *d = base.denotation(cache, sample, false);
-        return std::make_pair(is_superfluous(cache, d), d);
+        auto denotation_idx = cache.cache1();
+        auto it = denotation_idx.find(d);
+
+        if (it != denotation_idx.end()) {
+//            std::cout << base.as_str() << " superfluous because equivalent to " << it->second << std::endl;
+            return std::make_pair(true, d);
+        }
+        return std::make_pair(false, d);
     }
 
     // apply one iteration of the concept generation grammar
@@ -1728,8 +1739,9 @@ class Factory {
             for (auto concept:concepts_in_last_layer_by_complexity[k]) {
                 NotConcept not_concept(concept);
                 auto p = is_superfluous_or_exceeds_complexity_bound(not_concept, cache, sample);
-                if (!p.first) insert_new_concept(cache, not_concept.clone(), p.second);
-                //else std::cout << "PRUNE: " + not_concept.as_str() << std::endl;
+                if (!p.first) {
+                    insert_new_concept(cache, not_concept.clone(), p.second);
+                }
                 delete p.second;
                 num_pruned_concepts += p.first;
             }
