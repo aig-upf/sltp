@@ -129,10 +129,10 @@ class TransitionSample:
 
     def get_one_goal_per_instance(self):
         """ Return the min-id state for each instance that is marked as a goal """
-        instance_goals = [[]]*len(self.roots)
+        instance_goals = defaultdict(list)
         for sid in self.goals:
             instance_goals[self.instance[sid]].append(sid)
-        return set(min(x) for x in instance_goals if x)
+        return set(min(instance_goals[x]) for x in range(0, len(self.roots)) if instance_goals[x])
 
 
 def mark_optimal(goal_states, root_states, parents):
@@ -175,6 +175,9 @@ def log_sampled_states(sample, filename):
             is_unsolvable = "U" if id_ in sample.unsolvable else ""
             print("#{}{}{}{}{}{} (parents: {}, children: {}):\n\t{}".
                   format(id_, is_root, is_goal, is_optimal, is_expanded, is_unsolvable, state_parents, state_children, atoms), file=f)
+
+        print("Symbols:\n*: goal, \n^: expanded, \n=: root, \n"
+              "+: source of some transition marked as optimal,\nU: unsolvable", file=f)
     logging.info('Resampled states logged at "{}"'.format(filename))
 
 
