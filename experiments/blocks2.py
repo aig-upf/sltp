@@ -91,10 +91,11 @@ def experiments():
     exps["one_tower_inc"] = update_dict(
         exps["one_tower"],
         experiment_type='incremental',
-        instances=["probBLOCKS-4-0.pddl", "probBLOCKS-7-0.pddl", "probBLOCKS-8-1.pddl", "probBLOCKS-9-2.pddl", ],
+        # instances=["probBLOCKS-4-0.pddl", "probBLOCKS-7-0.pddl", "probBLOCKS-8-1.pddl", "probBLOCKS-9-2.pddl", ],
+        instances=["probBLOCKS-4-0.pddl", "probBLOCKS-4-1.pddl", "probBLOCKS-5-0.pddl", "probBLOCKS-5-1.pddl", "probBLOCKS-6-0.pddl", "probBLOCKS-6-1.pddl"],
         test_instances=[
             # "probBLOCKS-4-1.pddl",
-            "probBLOCKS-6-1.pddl",
+            # "probBLOCKS-6-1.pddl",
             "probBLOCKS-10-1.pddl",
         ],
         num_states=40000,
