@@ -1,3 +1,4 @@
+import itertools
 import logging
 from collections import defaultdict
 
@@ -25,12 +26,20 @@ class AbstractionValidator:
             diff = f.feature.diff(x0, x1)
             if diff != effect_of_action_on_f:
                 return False
-
         return True
 
     def action_set_captures(self, models, s, sprime, action_eff_set, feature_set):
         """ Return true iff some action in the given abstract action set captures transition (s, s') """
         return any(self.action_captures(models, s, sprime, effs, feature_set) for a, effs in action_eff_set.items())
+
+    def distinguishable(self, models, s1, s2, features):
+        """ Return true iff the abstraction is able to distinguish the two given states s1 and s2 """
+        m1 = self.get_possibly_cached_model(models, s1)
+        m2 = self.get_possibly_cached_model(models, s2)
+        for f in features:
+            if bool(f.denotation(m1)) != bool(f.denotation(m2)):
+                return True
+        return False
 
     def get_possibly_cached_model(self, models, state_id):
         if state_id not in models:
@@ -44,16 +53,28 @@ class AbstractionValidator:
         return all(bool(feat.denotation(model)) is val for feat, val in action.preconditions)
 
     def find_flaws(self, abstraction, max_flaws, check_completeness=True):
-        """ """
+        """ Look for states where the abstraction is not sound, (optionally) complete, or not able to distinguish
+         a goal from a non-goal state """
         assert isinstance(abstraction, Abstraction)
         sample = self.sample
-        unsound, not_represented = set(), set()
+        unsound, not_represented, undistinguishable = set(), set(), set()
         feature_idx = self.compute_feature_idx(abstraction.actions)
         models = dict()  # We will store here the model corresponding to each state
 
         assert all(s in sample.expanded for s in self.state_ids)  # state_ids assumed to contain only expanded states.
-        for sid in self.state_ids:
 
+        # Check that goal can be distinguished with selected features
+        for gsid, sid in itertools.product(self.sample.goals, self.state_ids):
+            if not self.distinguishable(models, gsid, sid, abstraction.features):
+                logging.warning("Pair of undistinguishable states: {}".format((gsid, sid)))
+                undistinguishable.add(gsid)
+                undistinguishable.add(sid)
+
+            if len(undistinguishable) >= max_flaws:
+                break
+
+        # Check soundness and completeness
+        for sid in self.state_ids:
             # Check soundness
             for action in abstraction.actions:
                 if self.is_applicable(models, sid, action) and \
@@ -79,7 +100,9 @@ class AbstractionValidator:
             if len(unsound) >= max_flaws:
                 break
 
-        return unsound if unsound else not_represented
+        # Return separately unsouund/incomplete, on one hand, and undistinguishable, on the other.
+        # Give priority to unsound over incomplete
+        return (unsound if unsound else not_represented), undistinguishable
 
     @staticmethod
     def compute_feature_idx(actions):

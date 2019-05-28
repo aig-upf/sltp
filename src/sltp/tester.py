@@ -21,9 +21,12 @@ def test_abstraction_soundness(config, data):
     _, model_cache = generate_model_cache(config.test_domain, config.test_instances, sample, config.parameter_generator)
 
     validator = AbstractionValidator(model_cache, sample, list(sample.expanded))
-    flaws = validator.find_flaws(data.abstraction, 1, check_completeness=False)
+    flaws, undist = validator.find_flaws(data.abstraction, 1, check_completeness=False)
     if flaws:
         logging.error("The computed abstraction is not sound".format())
+        return ExitCode.AbstractionFailsOnTestInstances
+    elif undist:
+        logging.error("The computed abstraction cannot distinguish all goal states".format())
         return ExitCode.AbstractionFailsOnTestInstances
 
     logging.info("The computed abstraction is sound & complete in all test instances!".format())

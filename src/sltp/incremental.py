@@ -68,15 +68,20 @@ def full_learning(config, sample, rng):
         logging.info("Abstraction with k={} found for sample set of size {} ".format(k, working_sample.num_states()))
 
         # Look for flaws in the full sample set
-        flaws = validator.find_flaws(abstraction, config.batch_refinement_size, check_completeness=False)
-        if not flaws:
+        flaws, undist = validator.find_flaws(abstraction, config.batch_refinement_size, check_completeness=False)
+        if not flaws and not undist:
             break
-        logging.info("{} flaws found in the computed abstraction: {}".format(len(flaws), sorted(flaws)))
 
-        if set(flaws).intersection(working_sample_idxs):
+        # A sanity check: we shouldn't be finding any unsound states among the ones that are already
+        # part of the current sample
+        if flaws.intersection(working_sample_idxs):
             msg = "Set of flaws {} intersects with working sample!".format(flaws)
             logging.warning(msg)
             raise RuntimeError(msg)
+
+        flaws.update(undist)
+        logging.info("{} flaws found in the computed abstraction: {}".format(len(flaws), sorted(flaws)))
+
         # Augment the sample set with the flaws found for the current abstraction
         working_sample_idxs.update(flaws)
         working_sample = sample.resample(working_sample_idxs)  # This will "close" the sample set with children states
