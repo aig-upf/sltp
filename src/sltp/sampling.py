@@ -1,7 +1,5 @@
 import itertools
-import json
 import logging
-
 from collections import defaultdict, OrderedDict
 
 from .goal_selection import select_goal_maximizing_states
@@ -26,7 +24,7 @@ class TransitionSample:
         self.optimal_transitions = set()
         self.expanded = set()
         self.instance = dict()  # A mapping between states and the problem instances they came from
-        self.transition_schemas = dict()  # A mapping between transitions and the action schema that induced them
+        # self.transition_schemas = dict()  # A mapping between transitions and the action schema that induced them
         self.remapping = dict()
 
     def add_transitions(self, states, transitions, schemas, instance_id):
@@ -37,9 +35,9 @@ class TransitionSample:
         for s in states:
             assert s not in self.instance
             self.instance[s] = instance_id
-        for t, a in schemas.items():
-            assert t not in self.transition_schemas
-            self.transition_schemas[t] = a
+        # for t, a in schemas.items():
+        #     assert t not in self.transition_schemas
+        #     self.transition_schemas[t] = a
         # TODO: This is not correct, will fail whenever we have states in the sample that have indeed been expanded
         # TODO: but have no children:
         self.expanded.update(s for s in states if len(transitions[s]) > 0)
@@ -115,7 +113,7 @@ class TransitionSample:
                 for t in targets:
                     assert t in remapping  # because we have added all children of the selected nodes
                     transitions[mapped_source].add(remapping[t])
-                    schemas[(mapped_source, remapping[t])] = self.transition_schemas[(source, t)]
+                    # schemas[(mapped_source, remapping[t])] = self.transition_schemas[(source, t)]
 
         resampled = TransitionSample()
         resampled.add_transitions(states, transitions, schemas, 0)
@@ -349,8 +347,8 @@ def remap_state_ids(states, goals, transitions, unsolvable, schemas, remap):
     new_schemas = dict()
     for source, targets in transitions.items():
         new_transitions[remap(source)] = {remap(t) for t in targets}
-        for target in targets:
-            new_schemas[(remap(source), remap(target))] = schemas[(source, target)]
+        # for target in targets:
+        #     new_schemas[(remap(source), remap(target))] = schemas[(source, target)]
 
     return new_states, new_goals, new_transitions, new_schemas, new_unsolvable
 
@@ -378,64 +376,51 @@ def read_transitions_from_files(filenames):
 
 
 def read_single_sample_file(filename):
-    states_by_id = {}
-    # states_by_str = {}
+    state_atoms = {}
     transitions = defaultdict(set)
     transitions_inv = defaultdict(set)
-    seen = set()
     goal_states = set()
-    unsolvable_states = set()
-    schemas = dict()
+    deadends = set()
+    unsolvable_states = set()  # At the moment we no longer record these
+    schemas = dict()  # At the moment we no longer record these
 
-    def register_transition(state):
-        transitions[state['parent']].add(state['id'])
-        transitions_inv[state['id']].add(state['parent'])
-        schemas[(state['parent'], state['id'])] = state['schema']
+    nlines = 0  # The number of useful lines processed
+    for line in read_file(filename):
+        if line.startswith('(E)'):  # An edge, with format "(E) 5 12"
+            pid, cid = (int(x) for x in line[4:].split(' '))
+            transitions[pid].add(cid)
+            transitions_inv[cid].add(pid)
+            # Currently we do not log the schema name simply for performance reasons, but should be easy to do it again
+            # schemas[(state['parent'], state['id'])] = state['schema']
+            nlines += 1
 
-    def register_state(state):
-        # states_by_str[state['atoms_string']] = data
-        states_by_id[state['id']] = state['normalized_atoms']
-        seen.add(state['id'])
-        if j['goal']:
-            goal_states.add(state['id'])
-        if 'unsolvable' in j and j['unsolvable']:
-            unsolvable_states.add(state['id'])
+        elif line.startswith('(N)'):  # A node
+            # Format "(N) <id> <is_goal> <is_deadend> <space-separated-atom-list>", e.g.:
+            # (N) 12
+            elems = line[4:].split(' ')
+            sid = int(elems[0])
+            if int(elems[1]):
+                goal_states.add(sid)
+            if int(elems[2]):
+                deadends.add(sid)
 
-    raw_file = [line.replace(' ', '') for line in read_file(filename) if line[0:6] == '{"id":']
-    for raw_line in raw_file:
-        j = json.loads(raw_line)
-        j['normalized_atoms'] = tuple(normalize_atom_name(atom) for atom in j['atoms'])
-        # j['atoms_string'] = str(j['normalized_atoms'])
+            state_atoms[sid] = tuple(normalize_atom_name(atom) for atom in elems[3:])
+            nlines += 1
 
-        if j['id'] in seen:
-            # We hit a repeated state in the search, so we simply need to record the transition
-            register_transition(j)
-            continue
-
-        # The state must be _really_ new
-        # assert j['atoms_string'] not in states_by_str
-        register_state(j)
-
-        if j['parent'] != j['id']:  # i.e. if not in the root node, which has 0 as its "fake" parent
-            # BELOW CHECK NO LONGER CORRECT, AS REPEATED NODES ARE ALSO RECORDED WHEN ENCOUNTERED IN DIFF TRANSITIONS
-            # assert json.loads(raw_file[j['parent']])['id'] == j['parent']  # Just a check
-            register_transition(j)
-
-    # check soundness
+    # Make sure all edge IDs have actually been declared as a state
     for src in transitions:
-        assert src in states_by_id
-        for dst in transitions[src]:
-            assert dst in states_by_id
+        assert src in state_atoms and all(dst in state_atoms for dst in transitions[src])
 
-    assert sum([len(t) for t in transitions.values()]) == sum([len(t) for t in transitions_inv.values()])
+    # Make sure that the number of outgoing and incoming edges coincide
+    num_tx = sum(len(t) for t in transitions.values())
+    assert num_tx == sum(len(t) for t in transitions_inv.values())
 
     logging.info('%s: #lines-raw-file=%d, #states-by-id=%d, #transition-entries=%d, #transitions=%d' %
-                 (filename_core(filename), len(raw_file), len(states_by_id), len(transitions),
-                  sum([len(targets) for targets in transitions.values()])))
+                 (filename_core(filename), nlines, len(state_atoms), len(transitions), num_tx))
 
     ordered = OrderedDict()  # Make sure we return an ordered dictionary
-    for id_ in sorted(states_by_id.keys()):
-        ordered[id_] = states_by_id[id_]
+    for id_ in sorted(state_atoms.keys()):
+        ordered[id_] = state_atoms[id_]
     return ordered, goal_states, transitions, unsolvable_states, schemas
 
 
