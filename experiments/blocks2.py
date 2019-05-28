@@ -3,23 +3,6 @@ from common import bwnamer, add_bw_domain_parameters_2, ipc_instances
 from sltp.util.misc import update_dict
 
 
-# def genfeatures():
-#     return [
-#         "Boolean[holding]",
-#         "Numerical[And(Forall(on_g,And(Equal(Star(on),Star(on_g)),clear)),clear)]",
-#     ]
-
-def genfeatures(lang):
-    return [
-        "Num[Equal(Star(on_g),Star(Inverse(on)))]",
-        "Bool[holding]",
-        "Num[Exists(on,Equal(Star(on_g),Star(Inverse(on))))]",
-        "Bool[And(Equal(on_g,on),Forall(on,<empty>))]",
-        "Num[Exists(Star(on_g),clear)]",
-        "Num[Exists(Star(on_g),And(Equal(Star(on_g),Star(on)),clear))]",
-    ]
-
-
 def experiments():
 
     base = dict(
@@ -96,7 +79,7 @@ def experiments():
         test_instances=[
             # "probBLOCKS-4-1.pddl",
             # "probBLOCKS-6-1.pddl",
-            "probBLOCKS-10-1.pddl",
+            # "probBLOCKS-10-1.pddl",
         ],
         num_states=40000,
         num_sampled_states=None,  # Take all expanded states into account
@@ -108,19 +91,40 @@ def experiments():
 
     exps["one_tower_test"] = update_dict(
         exps["one_tower"],
-        instances=["probBLOCKS-4-0.pddl", "probBLOCKS-7-0.pddl", "probBLOCKS-8-1.pddl", "probBLOCKS-9-2.pddl", ],
+        instances=["probBLOCKS-4-0.pddl", "probBLOCKS-4-1.pddl", "probBLOCKS-5-0.pddl", "probBLOCKS-5-1.pddl", "probBLOCKS-6-0.pddl", "probBLOCKS-6-1.pddl"],
         test_instances=[
-            "probBLOCKS-10-0.pddl",
-            "probBLOCKS-10-1.pddl",
-            "probBLOCKS-10-2.pddl",
-            "probBLOCKS-11-0.pddl",
-            "probBLOCKS-11-1.pddl",
-            "probBLOCKS-11-2.pddl",
+            # "probBLOCKS-10-0.pddl",
+            # "probBLOCKS-10-1.pddl",
+            # "probBLOCKS-10-2.pddl",
+            # "probBLOCKS-11-0.pddl",
+            # "probBLOCKS-11-1.pddl",
+            # "probBLOCKS-11-2.pddl",
         ],
-        num_states="until_first_goal",
+        num_states=40000,
         num_sampled_states=1000,
-        feature_generator=genfeatures,
-        num_tested_states=20000,
+        feature_generator=feature_testing,
     )
 
     return exps
+
+
+def feature_testing(lang):
+    return [
+        "Atom[handempty]",
+        "Bool[And(Equal(on_g,on),Forall(on,<empty>))]",
+        "Bool[And(Equal(Star(on_g),Star(Inverse(on))),Forall(on_g,<empty>))]",
+        "Num[Exists(Star(on_g),clear)]",
+        "Num[Exists(Star(on_g),And(Equal(Star(on_g),Star(on)),clear))]",
+
+    ]
+
+
+def genfeatures(lang):
+    return [
+        "Bool[holding]",
+        "Bool[And(Equal(on_g,on),Forall(on,<empty>))]",
+        "Num[Equal(Star(on_g),Star(Inverse(on)))]",
+        "Num[Exists(on,Equal(Star(on_g),Star(Inverse(on))))]",
+        "Num[Exists(Star(on_g),clear)]",
+        "Num[Exists(Star(on_g),And(Equal(Star(on_g),Star(on)),clear))]",
+    ]

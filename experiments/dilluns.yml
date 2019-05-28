@@ -6,5 +6,5 @@ run:
 
 experiments:
   - "blocks2:one_tower_inc"
-  - "logistics:p1"
-  - "logistics:p2"
+#  - "logistics:p1"
+#  - "logistics:p2"
