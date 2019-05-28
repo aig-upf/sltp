@@ -2438,7 +2438,7 @@ class Factory {
 
     void log_all_concepts_and_features(const std::vector<const Concept*>& concepts,
             const SLTP::DL::Cache &cache, const SLTP::DL::Sample &sample,
-            const std::string& workspace);
+            const std::string& workspace, bool print_denotations);
 
     //! Return all generated concepts in a single, *unlayered* vector, and sorted by increasing complexity
     std::vector<const Concept*> consolidate_concepts() const {

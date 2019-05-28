@@ -207,78 +207,81 @@ namespace SLTP { namespace DL {
 
     void Factory::log_all_concepts_and_features(
             const std::vector<const Concept*>& concepts,
-            const Cache &cache, const Sample &sample, const string &workspace) {
-#if 0
-        // Print concept denotations
-        std::string output(workspace + "/concept-denotations.io.txt");
-        std::ofstream of(output);
-        if( of.fail() ) throw std::runtime_error("Could not open filename '" + output + "'");
+            const Cache &cache, const Sample &sample, const string &workspace,
+            bool print_denotations) {
 
-        for(unsigned i = 0; i < sample.num_states(); ++i) {
-            const State &state = sample.state(i);
-            const Instance::ObjectIndex& oidx = state.instance().object_index();
+        if (print_denotations) {
+            std::cout << "Printing concept, role and feature denotations to " << workspace
+                      << "/*-denotations.io.txt" << std::endl;
+            // Print concept denotations
+            std::string output(workspace + "/concept-denotations.io.txt");
+            std::ofstream of(output);
+            if (of.fail()) throw std::runtime_error("Could not open filename '" + output + "'");
 
-            for (const Concept* c:concepts) {
-                const state_denotation_t& denotation = cache.retrieve_concept_denotation(*c, state);
-                of << "s_" << i << "[" << c->as_str() << "] = {";
-                bool need_comma = false;
-                for (unsigned atom = 0; atom < denotation.size(); ++atom) {
-                    if (denotation[atom]) {
-                        if( need_comma ) of << ", ";
-                        of << oidx.right.at(atom);
-                        need_comma = true;
+            for (unsigned i = 0; i < sample.num_states(); ++i) {
+                const State &state = sample.state(i);
+                const Instance::ObjectIndex &oidx = state.instance().object_index();
+
+                for (const Concept *c:concepts) {
+                    const state_denotation_t &denotation = cache.retrieve_concept_denotation(*c, state);
+                    of << "s_" << i << "[" << c->as_str() << "] = {";
+                    bool need_comma = false;
+                    for (unsigned atom = 0; atom < denotation.size(); ++atom) {
+                        if (denotation[atom]) {
+                            if (need_comma) of << ", ";
+                            of << oidx.right.at(atom);
+                            need_comma = true;
+                        }
                     }
+                    of << "}" << std::endl;
                 }
-                of << "}" << std::endl;
             }
-        }
-        of.close();
+            of.close();
 
 
-        // Print role denotations
-        output = workspace + "/role-denotations.io.txt";
-        of = std::ofstream(output);
-        if( of.fail() ) throw std::runtime_error("Could not open filename '" + output + "'");
+            // Print role denotations
+            output = workspace + "/role-denotations.io.txt";
+            of = std::ofstream(output);
+            if (of.fail()) throw std::runtime_error("Could not open filename '" + output + "'");
 
-        for(unsigned i = 0; i < sample.num_states(); ++i) {
-            const State &state = sample.state(i);
-            const Instance::ObjectIndex& oidx = state.instance().object_index();
-            unsigned m = state.num_objects();
+            for (unsigned i = 0; i < sample.num_states(); ++i) {
+                const State &state = sample.state(i);
+                const Instance::ObjectIndex &oidx = state.instance().object_index();
+                unsigned m = state.num_objects();
 
-            for (const Role* r:roles_) {
-                const state_denotation_t& denotation = cache.retrieve_role_denotation(*r, state);
-                of << "s_" << i << "[" << r->as_str() << "] = {";
-                bool need_comma = false;
+                for (const Role *r:roles_) {
+                    const state_denotation_t &denotation = cache.retrieve_role_denotation(*r, state);
+                    of << "s_" << i << "[" << r->as_str() << "] = {";
+                    bool need_comma = false;
 
-                for (unsigned idx = 0; idx < denotation.size(); ++idx) {
-                    if (denotation[idx]) {
-                        if( need_comma ) of << ", ";
-                        unsigned o1 = idx / m;
-                        unsigned o2 = idx % m;
-                        of << "(" << oidx.right.at(o1) << ", " << oidx.right.at(o2) << ")";
-                        need_comma = true;
+                    for (unsigned idx = 0; idx < denotation.size(); ++idx) {
+                        if (denotation[idx]) {
+                            if (need_comma) of << ", ";
+                            unsigned o1 = idx / m;
+                            unsigned o2 = idx % m;
+                            of << "(" << oidx.right.at(o1) << ", " << oidx.right.at(o2) << ")";
+                            need_comma = true;
+                        }
                     }
+                    of << "}" << std::endl;
                 }
-                of << "}" << std::endl;
             }
-        }
-        of.close();
+            of.close();
 
-        // Print feature denotations
-        output = workspace + "/feature-denotations.io.txt";
-        of = std::ofstream(output);
-        if( of.fail() ) throw std::runtime_error("Could not open filename '" + output + "'");
+            // Print feature denotations
+            output = workspace + "/feature-denotations.io.txt";
+            of = std::ofstream(output);
+            if (of.fail()) throw std::runtime_error("Could not open filename '" + output + "'");
 
-        for(unsigned i = 0; i < sample.num_states(); ++i) {
-            const State &state = sample.state(i);
+            for (unsigned i = 0; i < sample.num_states(); ++i) {
+                const State &state = sample.state(i);
 
-            for (const Feature* f:features_) {
-                of << "s_" << i << "[" << f->as_str() << "] = " << f->value(cache, sample, state) << std::endl;
+                for (const Feature *f:features_) {
+                    of << "s_" << i << "[" << f->as_str() << "] = " << f->value(cache, sample, state) << std::endl;
+                }
             }
+            of.close();
         }
-        of.close();
-
-#endif
         // Print all generated concepts
         std::string fname1 = workspace + "/serialized-concepts.io";
         std::ofstream of1 = std::ofstream(fname1);

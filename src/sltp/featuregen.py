@@ -201,9 +201,10 @@ def generate_output_from_handcrafted_features(sample, config, features, model_ca
         matrix[i] = [cast_feature_value_to_numpy_value(int(x)) for x in denotations]
 
     # These next 3 lines just to print the denotation of all features
-    # state_ids = sample.get_sorted_state_ids()
-    # models = {sid: model_cache.get_feature_model(sid) for sid in sample.states}
-    # log_feature_denotations(state_ids, features, models, config.feature_denotation_filename, None)
+    if config.print_all_denotations:
+        state_ids = sample.get_sorted_state_ids()
+        models = {sid: model_cache.get_feature_model(sid) for sid in sample.states}
+        log_feature_denotations(state_ids, features, models, config.feature_denotation_filename, None)
 
     sat_feature_mapping, in_goal_features = print_actual_output(sample, config, [], names, complexities, matrix, types)
     return sat_feature_mapping, in_goal_features, len(names)
@@ -295,12 +296,16 @@ def extract_features(config, sample):
     logging.info('Invoking C++ feature generation module'.format())
     featuregen_location = os.path.join(SLTP_SRC_DIR, "..", "features")
     cmd = os.path.realpath(os.path.join(featuregen_location, "featuregen"))
-    args = [str(config.max_concept_size),
-            str(config.distance_feature_max_complexity),
-            str(config.cond_feature_max_complexity),
-            config.experiment_dir]
+    args = " --complexity-bound {}".format(config.max_concept_size) \
+           + " --dist-complexity-bound {}".format(config.distance_feature_max_complexity) \
+           + " --cond-complexity-bound {}".format(config.cond_feature_max_complexity) + \
+           " --workspace {}".format(config.experiment_dir)
+
+    if config.print_all_denotations:
+        args += "--print-denotations".format(),
+
     generate_debug_scripts(config.experiment_dir, cmd, args)
-    retcode = execute([cmd] + args)
+    retcode = execute([cmd] + args.split())
 
     if retcode != 0:
         return ExitCode.FeatureGenerationUnknownError, dict()

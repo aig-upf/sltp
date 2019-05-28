@@ -56,4 +56,5 @@ endif()
 
 find_package(Boost 1.65 COMPONENTS program_options REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
+target_link_libraries(featuregen LINK_PUBLIC ${Boost_LIBRARIES})
 target_link_libraries(cnfgen LINK_PUBLIC ${Boost_LIBRARIES})

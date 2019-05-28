@@ -171,6 +171,9 @@ def generate_experiment(domain_dir, domain, **kwargs):
 
         # Use the D2-Tree for the CNF encoding
         use_d2tree=True,
+
+        # Some debugging help to print the denotations of all features over all states (expensive!)
+        print_all_denotations=False,
     )
 
     parameters = {**defaults, **kwargs}  # Copy defaults, overwrite with user-specified parameters

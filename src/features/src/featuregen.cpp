@@ -7,46 +7,64 @@
 
 #include <sltp/features.hxx>
 
-using namespace std;
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/parsers.hpp>
+#include <boost/program_options/variables_map.hpp>
 
+using namespace std;
+namespace po = boost::program_options;
+
+
+//! Command-line option processing
 struct Options {
-    string execname_;
-    string workspace_;
-    unsigned complexity_bound_;
-    unsigned dist_complexity_bound_;
-    unsigned cond_complexity_bound_;
+    std::string workspace;
+    unsigned complexity_bound;
+    unsigned dist_complexity_bound;
+    unsigned cond_complexity_bound;
+    bool print_denotations;
 
     Options(int argc, const char **argv) {
-        // Print call
-        cout << "Call:";
-        for( int i = 0; i < argc; ++i )
-            cout << " " << argv[i];
-        cout << endl;
+        po::options_description description("Generate a pool of non-redundante candidate features given"
+                                            " a sample of states.\n\nOptions");
 
-        execname_ = *argv;
-        if( argc != 5 ) {
-            print_usage(cout);
+        description.add_options()
+                ("help,h", "Display this help message and exit.")
+                ("verbose,v", "Show extra debugging messages.")
+
+                ("workspace,w", po::value<std::string>()->required(),
+                 "Directory where the input and output files will be expected / left.")
+
+                ("complexity-bound", po::value<unsigned>()->required(),
+                        "Maximum feature complexity for standard features.")
+                ("dist-complexity-bound", po::value<unsigned>()->required(),
+                        "Maximum feature complexity for distance features.")
+                 ("cond-complexity-bound", po::value<unsigned>()->required(),
+                         "Maximum feature complexity for conditional features.")
+
+                ("print-denotations", "Whether print the denotations of all generated features.")
+                ;
+
+        po::variables_map vm;
+
+        try {
+            po::store(po::command_line_parser(argc, argv).options(description).run(), vm);
+
+            if (vm.count("help")) {
+                std::cout << description << "\n";
+                exit(0);
+            }
+            po::notify(vm);
+        } catch (const std::exception &ex) {
+            std::cout << "Error with command-line options:" << ex.what() << std::endl;
+            std::cout << std::endl << description << std::endl;
             exit(1);
         }
 
-        // read arguments
-        complexity_bound_ = (unsigned) stoul(argv[1], nullptr, 10);
-        dist_complexity_bound_ = (unsigned) stoul(argv[2], nullptr, 10);
-        cond_complexity_bound_ = (unsigned) stoul(argv[3], nullptr, 10);
-        workspace_ = string(argv[4]);
-        //cout << "Using workspace directory '" << workspace_ << "' and output file '" << output_file_ << "'" << endl;
-    }
-
-    void print_usage(ostream &os) const {
-        os << endl
-        << "Usage: " << execname_ << " <K> <DK> <CK> <workspace>" << endl << endl
-        << "where" << endl
-        << "    <K> is the maximum feature complexity of the standard features." << endl
-        << "    <DK> is the maximum feature complexity of the distance features." << endl
-        << "    <CK> is the maximum feature complexity of the conditional features." << endl
-        << "    <workspace> is the path to a directory with all the necessary input" << endl
-        << "                files from which to start the feature generation process." << endl
-        ;
+        workspace = vm["workspace"].as<std::string>();
+        complexity_bound = vm["complexity-bound"].as<unsigned>();
+        dist_complexity_bound = vm["dist-complexity-bound"].as<unsigned>();
+        cond_complexity_bound = vm["cond-complexity-bound"].as<unsigned>();
+        print_denotations = vm.count("print-denotations") > 0;
     }
 };
 
@@ -74,13 +92,13 @@ void output_results(const Options &options,
                     const SLTP::DL::Cache &cache) {
 
     // Print feature matrix
-    string output(options.workspace_ + "/feature-matrix.io");
+    string output(options.workspace + "/feature-matrix.io");
     ofstream output_file(output);
     if( output_file.fail() ) throw runtime_error("Could not open filename '" + output + "'");
     factory.output_feature_matrix(output_file, cache, sample);
 
     // Print feature metadata
-    output = options.workspace_ + "/feature-info.io";
+    output = options.workspace + "/feature-info.io";
     ofstream infofile(output);
     if( infofile.fail() ) throw runtime_error("Could not open filename '" + output + "'");
     factory.output_feature_info(infofile, cache, sample);
@@ -89,8 +107,8 @@ void output_results(const Options &options,
 int main(int argc, const char **argv) {
     Options options(argc, argv);
 
-    const SLTP::DL::Sample sample = parse_input_sample(options.workspace_ + "/sample.io");
-    std::vector<std::string> nominals = parse_nominals(options.workspace_ + "/nominals.io");
+    const SLTP::DL::Sample sample = parse_input_sample(options.workspace + "/sample.io");
+    std::vector<std::string> nominals = parse_nominals(options.workspace + "/nominals.io");
 #if 0
     cout << "SAMPLE: #objects=" << sample->num_objects()
          << ", #predicates=" << sample->num_predicates()
@@ -98,8 +116,8 @@ int main(int argc, const char **argv) {
          << ", #states=" << sample->num_states()
          << endl;
 #endif
-    SLTP::DL::Factory factory(nominals, options.complexity_bound_,
-            options.dist_complexity_bound_, options.cond_complexity_bound_);
+    SLTP::DL::Factory factory(nominals, options.complexity_bound,
+            options.dist_complexity_bound, options.cond_complexity_bound);
 
     SLTP::DL::Cache cache;
     factory.generate_basis(sample);
@@ -111,7 +129,7 @@ int main(int argc, const char **argv) {
     auto concepts = factory.generate_concepts(cache, sample);
     factory.generate_features(concepts, cache, sample, forced_goal_features);
 //    factory.report_dl_data(cout);
-    factory.log_all_concepts_and_features(concepts, cache, sample, options.workspace_);
+    factory.log_all_concepts_and_features(concepts, cache, sample, options.workspace, options.print_denotations);
 
     output_results(options, factory, sample, cache);
 
