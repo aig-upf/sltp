@@ -90,7 +90,7 @@ def experiments():
     )
 
     exps["one_tower_inc_all"] = update_dict(
-        exps["one_tower_test"],
+        exps["one_tower_inc"],
         num_states="all",
     )
 
