@@ -89,6 +89,11 @@ def experiments():
         # quiet=True,
     )
 
+    exps["one_tower_inc_all"] = update_dict(
+        exps["one_tower_test"],
+        num_states="all",
+    )
+
     exps["one_tower_test"] = update_dict(
         exps["one_tower"],
         instances=["probBLOCKS-4-0.pddl", "probBLOCKS-4-1.pddl", "probBLOCKS-5-0.pddl", "probBLOCKS-5-1.pddl", "probBLOCKS-6-0.pddl", "probBLOCKS-6-1.pddl"],
