@@ -251,7 +251,7 @@ def sample_expanded_and_goal_states(sample_size, goal_states, num_states, parent
     rng.shuffle(non_enforced)
     all_shuffled = list(enforced) + non_enforced
     return all_shuffled[:sample_size]
-"{
+
 
 def compute_parents(transitions):
     parents = defaultdict(set)
