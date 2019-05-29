@@ -83,7 +83,7 @@ def experiments():
         ],
         num_states=40000,
         num_sampled_states=None,  # Take all expanded states into account
-        initial_sample_size=100, batch_refinement_size=5,
+        initial_sample_size=100, batch_refinement_size=20,
         initial_concept_bound=6, max_concept_bound=10, concept_bound_step=1,
         clean_workspace=False,
         # quiet=True,
