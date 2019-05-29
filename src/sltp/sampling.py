@@ -357,7 +357,7 @@ def read_single_sample_file(filename):
         if 'unsolvable' in j and j['unsolvable']:
             unsolvable_states.add(state['id'])
 
-    raw_file = [line.replace(' ', '') for line in read_file(filename) if line[0:6] == '{"id":']
+    raw_file = [line.replace(' ', '') for line in read_file(filename) if line[0:6] == '{']
     for raw_line in raw_file:
         j = json.loads(raw_line)
         j['normalized_atoms'] = tuple(normalize_atom_name(atom) for atom in j['atoms'])
