@@ -251,7 +251,7 @@ def sample_expanded_and_goal_states(sample_size, goal_states, num_states, parent
     rng.shuffle(non_enforced)
     all_shuffled = list(enforced) + non_enforced
     return all_shuffled[:sample_size]
-
+"{
 
 def compute_parents(transitions):
     parents = defaultdict(set)
@@ -357,7 +357,7 @@ def read_single_sample_file(filename):
         if 'unsolvable' in j and j['unsolvable']:
             unsolvable_states.add(state['id'])
 
-    raw_file = [line.replace(' ', '') for line in read_file(filename) if line[0:6] == '{']
+    raw_file = [line.replace(' ', '') for line in read_file(filename)]
     for raw_line in raw_file:
         j = json.loads(raw_line)
         j['normalized_atoms'] = tuple(normalize_atom_name(atom) for atom in j['atoms'])
