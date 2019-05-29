@@ -28,6 +28,10 @@ public:
     const FeatureMatrix& matrix() const { return matrix_; }
     const TransitionSample& transitions() const { return transitions_; }
 
+    bool is_deadend(unsigned s) const {
+        return matrix().expanded(s) && transitions().successors(s).empty();
+    }
+
     //! Remap the states in the current sample, whose IDs are assumed to span the full range [0..n],
     //! into a smaller range [0..m] with the m states that are either contained in `selected` or a successor of them
     Sample* resample(const std::unordered_set<unsigned>& selected) const {

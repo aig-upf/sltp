@@ -105,11 +105,10 @@ int main(int argc, const char **argv) {
     auto transitions = Sample::TransitionSample::read_dump(ifs_transitions, options.verbose);
     ifs_transitions.close();
 
-    // If indicated by the user, prune those states that appear redundant for the given feature pool
     auto sample = std::make_unique<Sample::Sample>(std::move(matrix), std::move(transitions));
-
     std::cout << "Training sample: " << *sample << std::endl;
 
+    // If indicated by the user, prune those states that appear redundant for the given feature pool
     if (options.prune_redundant_states) {
         auto isomorphisms = compute_redundant_states(*sample);
 
@@ -153,7 +152,8 @@ int main(int argc, const char **argv) {
     std::cout << "\tD2-definition: " <<  gen.n_d2_clauses << std::endl;
     std::cout << "\tBridge: " <<  gen.n_bridge_clauses << std::endl;
     std::cout << "\tGoal-distinguishing: " <<  gen.n_goal_clauses << std::endl;
-    std::cout << "\tTOTAL: " <<  gen.n_selected_clauses + gen.n_d2_clauses + gen.n_bridge_clauses + gen.n_goal_clauses << std::endl;
+    std::cout << "\tDead-end-distinguishing: " <<  gen.n_deadend_clauses << std::endl;
+    std::cout << "\tTOTAL: " <<  gen.n_selected_clauses + gen.n_d2_clauses + gen.n_bridge_clauses + gen.n_goal_clauses + gen.n_deadend_clauses << std::endl;
 
     bool unsat = res.first;
     if(unsat) {

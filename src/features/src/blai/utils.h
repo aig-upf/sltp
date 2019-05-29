@@ -1,13 +1,14 @@
 // (c) 2017 Blai Bonet
 
-#ifndef UTILS_H
-#define UTILS_H
+#pragma once
 
 #include <stdio.h>
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <string>
 #include <vector>
+#include <sstream>
+#include <iterator>
 
 namespace Utils {
 
@@ -87,7 +88,10 @@ inline std::string as_string(const int *block) {
     return str + "}";
 }
 
-}; // namespace Utils
+template<typename T>
+std::vector<T> split(const std::string& line) {
+    std::istringstream is(line);
+    return std::vector<T>(std::istream_iterator<T>(is), std::istream_iterator<T>());
+}
 
-#endif
-
+} // namespace Utils

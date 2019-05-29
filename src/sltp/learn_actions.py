@@ -169,10 +169,7 @@ class ModelTranslator:
 
     def create_bridge_clauses(self, s_t_distinguishing, s, t):
         # If there are no transitions (t, t') in the sample set, then we do not post the bridge constraint.
-        # if t not in self.transitions or not self.transitions[t]:
-        # TODO WE MIGHT NEED A BETTER WAY OF IDENTIFYING NON-EXPANDED STATES AND DISTINGUISHING THEM FROM
-        # TODO STATES WHICH HAVE NO SUCCESSOR
-        if not self.sample.transitions[s] or not self.sample.transitions[t]:
+        if s not in self.sample.expanded or t not in self.sample.expanded:
             return
 
         assert s != t

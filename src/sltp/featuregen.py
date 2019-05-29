@@ -223,7 +223,7 @@ def print_actual_output(sample, config, in_goal_features, names, complexities, m
                                                         matrix, state_ids, sample.goals,
                                                         names, complexities, types)
 
-    print_feature_matrix(config.feature_matrix_filename, matrix, state_ids, sample.goals, names, complexities)
+    print_feature_matrix(config.feature_matrix_filename, matrix, state_ids, sample.goals, sample.expanded, names, complexities)
     return sat_feature_mapping, in_goal_features
 
 
@@ -304,8 +304,9 @@ def extract_features(config, sample):
     if config.print_all_denotations:
         args += "--print-denotations".format(),
 
+    args = args.split()
     generate_debug_scripts(config.experiment_dir, cmd, args)
-    retcode = execute([cmd] + args.split())
+    retcode = execute([cmd] + args)
 
     if retcode != 0:
         return ExitCode.FeatureGenerationUnknownError, dict()
@@ -380,7 +381,7 @@ def print_blai_sat_feature_matrix(filename, matrix, state_ids, goals, names, com
     return all_feature_idxs  # A mapping between the new and the old feature indexes
 
 
-def print_feature_matrix(filename, matrix, state_ids, goals, names, complexities):
+def print_feature_matrix(filename, matrix, state_ids, goals, expanded, names, complexities):
     ngoals, nfeatures = len(goals), len(names)
     assert nfeatures == len(complexities) == matrix.shape[1]
     logging.info("Printing matrix of {} features x {} states to '{}'".format(nfeatures, len(state_ids), filename))
@@ -397,6 +398,9 @@ def print_feature_matrix(filename, matrix, state_ids, goals, names, complexities
 
         # Line #4: <list of goal state IDs>
         print("{}".format(" ".join(map(str, goals))), file=f)
+
+        # Line #5: <list of expanded state IDs>
+        print("{}".format(" ".join(map(str, expanded))), file=f)
 
         # next lines: one per each state with format: <state-index> <#features-in-state> <list-features>
         # each feature has format: <feature-index>:<value>

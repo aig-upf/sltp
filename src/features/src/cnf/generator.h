@@ -9,8 +9,15 @@
 using feature_t = uint32_t;
 
 inline void undist_goal_warning(unsigned s, unsigned t) {
-    std::cout <<  "No feature can distinguish state " << s << " from state " << t << ", but only one of them is a goal"
-              <<  ". The MAXSAT encoding will be UNSAT" << std::endl;
+    std::cout << Utils::warning()
+        <<  "No feature can distinguish state " << s << " from state " << t << ", but only one of them is a goal"
+        <<  ". The MAXSAT encoding will be UNSAT" << std::endl;
+}
+
+inline void undist_deadend_warning(unsigned s, unsigned t) {
+    std::cout << Utils::warning()
+        <<  "No feature can distinguish state " << s << " from state " << t << ", but (only) one of them is a"
+        <<  " dead-end. The MAXSAT encoding will be UNSAT" << std::endl;
 }
 
 //! Return a sorted vector with those features that d1-distinguish s from t
@@ -46,7 +53,8 @@ protected:
 
     //! For convenient and performant access, a list of goal and non-goal states + a list of expanded states
     std::vector<unsigned> goals_, nongoals_;
-    std::vector<unsigned> expanded_states_;
+
+    std::vector<unsigned> deadends_;
 
     d2map_t d2ids_;
     std::vector<cnfvar_t> d2vars_;
@@ -61,6 +69,7 @@ public:
     unsigned n_d2_clauses;
     unsigned n_bridge_clauses;
     unsigned n_goal_clauses;
+    unsigned n_deadend_clauses;
 
 public:
     explicit CNFGenerator(const Sample::Sample& sample) :
@@ -70,21 +79,21 @@ public:
         n_selected_clauses(0),
         n_d2_clauses(0),
         n_bridge_clauses(0),
-        n_goal_clauses(0)
+        n_goal_clauses(0),
+        n_deadend_clauses(0)
     {
         for (unsigned s = 0; s < ns_; ++s) {
             if (is_goal(s)) goals_.push_back(s);
             else nongoals_.push_back(s);
+        }
 
-            if (!sample_.transitions_.successors(s).empty()) {
-                // TODO This check is not fully correct, we should annotate the planner output with this information
-                // TODO so that we do not take a dead-end for a not expanded state
-                expanded_states_.push_back(s);
-            }
+        for (unsigned s = 0; s < ns_; ++s) {
+            if (sample_.is_deadend(s)) deadends_.push_back(s);
         }
     }
 
     bool is_goal(unsigned s) const { return sample_.matrix().goal(s); }
+    bool is_expanded(unsigned s) const { return sample_.matrix().expanded(s); }
 
     bool is_sound_transition(unsigned s, unsigned sprime) const {
         return sample_.transitions().marked(s, sprime);

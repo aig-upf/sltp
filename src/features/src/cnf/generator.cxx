@@ -29,6 +29,12 @@ std::pair<bool, CNFWriter> CNFGenerator::write_maxsat(std::ostream &os, const st
             // Bridge constraints not reflexive
             if (s == t) continue;
 
+            // As the sample might be incomplete, we only consider bridge clauses for states t that have been expanded
+            if (!is_expanded(t)) continue;
+
+            // If t is a dead-end (and s, because it is a source of a transition, is not), then we'll have to
+            // necessarily D1-distinguish s from t. Again, for this reason no bridge clause is necessary
+            if (successors(t).empty()) continue;
 
             for (unsigned tprime:successors(t)) {
                 // Symmetry-breaking: no need to define two D2 variables for permutations of s, t:
@@ -48,7 +54,7 @@ std::pair<bool, CNFWriter> CNFGenerator::write_maxsat(std::ostream &os, const st
         }
     }
 
-    const unsigned nd2vars = (unsigned) d2ids_.size(); // The number of D2 variables is final at this point
+    auto nd2vars = (unsigned) d2ids_.size(); // The number of D2 variables is final at this point
 
     /////// Build the D2 tree ///////
     d2tree::D2TreeBuilder treebuilder(writer, nd2vars, d2_features_cache_, 5);
@@ -113,6 +119,26 @@ std::pair<bool, CNFWriter> CNFGenerator::write_maxsat(std::ostream &os, const st
 
             writer.print_clause(clause);
             n_goal_clauses += 1;
+        }
+    }
+
+
+    for (const transition_t& tx1:sound_transitions()) {
+        unsigned s = tx1.first;
+        for (unsigned t:deadends_) {
+            const auto& d1feats = d1_distinguishing_features(s, t);
+            if (d1feats.empty()) {
+                undist_deadend_warning(s, t);
+                return {true, writer};
+            }
+
+            cnfclause_t clause;
+            for (unsigned f:d1feats) {
+                clause.push_back(CNFWriter::literal(var_selected.at(f), true));
+            }
+
+            writer.print_clause(clause);
+            n_deadend_clauses += 1;
         }
     }
 
@@ -192,18 +218,26 @@ std::vector<feature_t> compute_d2_distinguishing_features(const Sample::Sample& 
 
 //! Check whether t appears isomorphic to s, and in that case, add it to the given list of isomorphisms
 void check_isomorphic(const Sample::Sample& sample, unsigned s, unsigned t, isomorphism_t& isomorphisms) {
+    // if either s or t are isomorphic of some other state no need to recheck, will be detected in due time
     if (isomorphisms.find(s) != isomorphisms.end() || isomorphisms.find(t) != isomorphisms.end()) return;
 
     auto distinguishing = compute_d1_distinguishing_features(sample, s, t);
+    if (!distinguishing.empty()) return; // s and t are distinguishable, ergo not isomorphic
 
-    if (distinguishing.empty()) { // s and t are not distinguishable
-        if (sample.matrix().goal(s) != sample.matrix().goal(t)) { // Only one of the two is a goal
-            undist_goal_warning(s, t);
-        }
+    if (sample.matrix().goal(s) != sample.matrix().goal(t)) {
+        // Only one of the two is a goal: the SAT theory will be unsat
+        undist_goal_warning(s, t);
+        return;
+    }
 
-        if (all_tx_have_analogs(sample, s, t) && all_tx_have_analogs(sample, t, s)) {
-            isomorphisms.emplace(t, s);  // t can be pruned in favor of s
-        }
+    if (sample.is_deadend(s) != sample.is_deadend(t)) {
+        // Only one of the two is a deadend: the SAT theory will be unsat
+        undist_deadend_warning(s, t);
+        return;
+    }
+
+    if (all_tx_have_analogs(sample, s, t) && all_tx_have_analogs(sample, t, s)) {
+        isomorphisms.emplace(t, s);  // t can be pruned in favor of s
     }
 }
 

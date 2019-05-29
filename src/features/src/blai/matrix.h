@@ -10,6 +10,7 @@
 #include <unordered_set>
 #include <vector>
 #include <algorithm>
+#include "utils.h"
 
 namespace Sample {
 
@@ -26,6 +27,7 @@ class FeatureMatrix {
         std::vector<std::pair<std::string, unsigned>> feature_data_;
         std::unordered_map<std::string, unsigned> feature_name_to_id_;
         std::unordered_set<unsigned> goals_;
+        std::unordered_set<unsigned> expanded_;
         std::vector<std::vector<feature_value_t>> rowdata_;
         std::vector<bool> binary_features_;
         std::vector<bool> numeric_features_;
@@ -62,6 +64,11 @@ class FeatureMatrix {
             return goals_.find(s) != goals_.end();
         }
 
+        bool expanded(unsigned s) const {
+            assert (s < rowdata_.size());
+            return expanded_.find(s) != expanded_.end();
+        }
+
         feature_value_t entry(unsigned s, unsigned f) const {
             return rowdata_[s][f];
         }
@@ -90,10 +97,14 @@ class FeatureMatrix {
         FeatureMatrix resample(const std::unordered_map<unsigned, unsigned>& mapping) const {
             auto nstates = mapping.size();
 
-            std::unordered_set<unsigned> goals;
+            std::unordered_set<unsigned> goals, expanded;
             for (unsigned s:goals_) {
                 auto it = mapping.find(s);
                 if (it != mapping.end()) goals.insert(it->second);
+            }
+            for (unsigned s:expanded_) {
+                auto it = mapping.find(s);
+                if (it != mapping.end()) expanded.insert(it->second);
             }
 
             FeatureMatrix matrix(nstates, num_features_, goals.size());
@@ -103,9 +114,9 @@ class FeatureMatrix {
             matrix.binary_features_ = binary_features_;
             matrix.numeric_features_ = numeric_features_;
 
-
             // Remap state data
             matrix.goals_ = goals;
+            matrix.expanded_ = expanded;
 
             // The mapping [0, n] -> [0, m], for n > m, needs to be surjective and map
             // to a "gap-free" range
@@ -125,7 +136,9 @@ class FeatureMatrix {
         }
 
         // readers
-        void read(std::istream &is) {
+        void read(std::ifstream &is) {
+            std::string line;
+
             // read features
             for (unsigned i = 0; i < num_features_; ++i) {
                 std::string feature;
@@ -143,13 +156,19 @@ class FeatureMatrix {
                 feature_data_[i].second = cost;
             }
 
-            // read goals
+            // read goals (TODO: Should be in Sample class)
             for (unsigned i = 0; i < num_goals_; ++i) {
                 unsigned s;
                 is >> s;
                 goals_.insert(s);
             }
             assert(goals_.size() == num_goals_);
+
+            // read expanded states (TODO: Should be in Sample class)
+            std::getline(is, line); // Eat up one line break
+            std::getline(is, line); // Read the actual line
+            auto expanded = Utils::split<unsigned>(line);
+            expanded_.insert(expanded.begin(), expanded.end());
 
             // Read the actual feature matrix data
             rowdata_.reserve(num_states_);
@@ -190,7 +209,7 @@ class FeatureMatrix {
             }
         }
 
-        static FeatureMatrix read_dump(std::istream &is, bool verbose) {
+        static FeatureMatrix read_dump(std::ifstream &is, bool verbose) {
             unsigned num_states, num_features, num_goals;
             is >> num_states >> num_features >> num_goals;
             FeatureMatrix matrix(num_states, num_features, num_goals);

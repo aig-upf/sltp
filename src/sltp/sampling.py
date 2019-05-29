@@ -23,12 +23,13 @@ class TransitionSample:
         self.unsolvable = set()
         self.optimal_transitions = set()
         self.expanded = set()
+        self.deadends = set()
         self.instance = dict()  # A mapping between states and the problem instances they came from
         # self.transition_schemas = dict()  # A mapping between transitions and the action schema that induced them
         self.remapping = dict()
 
-    def add_transitions(self, states, transitions, schemas, instance_id):
-        # TODO Could check for ID overlappings, but would be expensive
+    def add_transitions(self, states, transitions, schemas, instance_id, deadends):
+        assert not any(s in self.states for s in states.keys())  # Don't allow repeated states
         self.states.update(states)
         self.transitions.update(transitions)
         self.parents.update(compute_parents(transitions))
@@ -38,9 +39,9 @@ class TransitionSample:
         # for t, a in schemas.items():
         #     assert t not in self.transition_schemas
         #     self.transition_schemas[t] = a
-        # TODO: This is not correct, will fail whenever we have states in the sample that have indeed been expanded
-        # TODO: but have no children:
-        self.expanded.update(s for s in states if len(transitions[s]) > 0)
+        self.deadends.update(deadends)
+        # We consider a state expanded if it has some child or it is marked as a deadend
+        self.expanded.update(s for s in states if (len(transitions[s]) > 0 or s in self.deadends))
 
     def mark_as_root(self, state):
         self.roots.add(state)
@@ -94,6 +95,7 @@ class TransitionSample:
         # Pick the selected elements from the data structures
         goals = {remapping[x] for x in ordered_sample if x in self.goals}
         unsolvable = {remapping[x] for x in ordered_sample if x in self.unsolvable}
+        deadends = {remapping[x] for x in ordered_sample if x in self.deadends}
         roots = {remapping[x] for x in ordered_sample if x in self.roots}
         optimal = {(remapping[x], remapping[y]) for x, y in self.optimal_transitions
                    if x in remapping and y in remapping}
@@ -116,7 +118,7 @@ class TransitionSample:
                     # schemas[(mapped_source, remapping[t])] = self.transition_schemas[(source, t)]
 
         resampled = TransitionSample()
-        resampled.add_transitions(states, transitions, schemas, 0)
+        resampled.add_transitions(states, transitions, schemas, 0, deadends)
         resampled.instance = instance
         resampled.mark_as_goals(goals)
         resampled.mark_as_optimal(optimal)
@@ -168,13 +170,14 @@ def log_sampled_states(sample, filename):
             atoms = ", ".join(print_atom(atom) for atom in state)
             is_goal = "*" if id_ in sample.goals else ""
             is_expanded = "^" if id_ in sample.expanded else ""
+            is_deadend = "º" if id_ in sample.deadends else ""
             is_root = "=" if id_ in sample.roots else ""
             is_optimal = "+" if id_ in optimal_s else ""
             is_unsolvable = "U" if id_ in sample.unsolvable else ""
-            print("#{}{}{}{}{}{} (parents: {}, children: {}):\n\t{}".
-                  format(id_, is_root, is_goal, is_optimal, is_expanded, is_unsolvable, state_parents, state_children, atoms), file=f)
+            print("#{}{}{}{}{}{}{} (parents: {}, children: {}):\n\t{}".
+                  format(id_, is_root, is_goal, is_optimal, is_expanded, is_deadend, is_unsolvable, state_parents, state_children, atoms), file=f)
 
-        print("Symbols:\n*: goal, \n^: expanded, \n=: root, \n"
+        print("Symbols:\n*: goal, \n^: expanded, \nº: dead-end, \n=: root, \n"
               "+: source of some transition marked as optimal,\nU: unsolvable", file=f)
     logging.info('Resampled states logged at "{}"'.format(filename))
 
@@ -298,35 +301,6 @@ def compute_parents(transitions):
     return parents
 
 
-def remap_sample_expanded_states(sampled_expanded, states, goal_states, transitions, optimal_transitions, root_states, unsolvable):
-    # all_in_sample will contain all states we want to sample plus their children state IDs
-    all_in_sample = set(sampled_expanded)
-    for s in sampled_expanded:
-        all_in_sample.update(transitions[s])
-
-    ordered_sample = list(sorted(all_in_sample))
-    idx = {x: i for i, x in enumerate(ordered_sample)}
-
-    # Pick the selected elements from the data structures
-    new_goal_states = {idx[x] for x in ordered_sample if x in goal_states}
-    new_unsolvable = {idx[x] for x in ordered_sample if x in unsolvable}
-    new_root = {idx[x] for x in ordered_sample if x in root_states}
-    new_optimal_transitions = {(idx[x], idx[y]) for x, y in optimal_transitions}
-
-    new_states = OrderedDict()
-    for i, s in states.items():
-        assert i == s[0]
-        if i in idx:
-            new_states[idx[i]] = (idx[i], s[1])
-
-    new_transitions = defaultdict(set)
-    for source, targets in transitions.items():
-        if source in sampled_expanded:
-            new_transitions[idx[source]] = {idx[t] for t in targets}
-
-    return new_states, new_goal_states, new_transitions, new_optimal_transitions, new_root, new_unsolvable
-
-
 def normalize_atom_name(name):
     tmp = name.replace('()', '').replace(')', '').replace('(', ',')
     if "=" in tmp:  # We have a functional atom
@@ -335,10 +309,11 @@ def normalize_atom_name(name):
     return tmp.split(',')
 
 
-def remap_state_ids(states, goals, transitions, unsolvable, schemas, remap):
+def remap_state_ids(states, goals, transitions, unsolvable, schemas, deadends, remap):
 
     new_goals = {remap(x) for x in goals}
     new_unsolvable = {remap(x) for x in unsolvable}
+    new_deadends = {remap(x) for x in deadends}
     new_states = OrderedDict()
     for i, s in states.items():
         new_states[remap(i)] = s
@@ -350,7 +325,7 @@ def remap_state_ids(states, goals, transitions, unsolvable, schemas, remap):
         # for target in targets:
         #     new_schemas[(remap(source), remap(target))] = schemas[(source, target)]
 
-    return new_states, new_goals, new_transitions, new_schemas, new_unsolvable
+    return new_states, new_goals, new_transitions, new_schemas, new_unsolvable, new_deadends
 
 
 def read_transitions_from_files(filenames):
@@ -360,12 +335,13 @@ def read_transitions_from_files(filenames):
     sample = TransitionSample()
     for instance_id, filename in enumerate(filenames, 0):
         starting_state_id = sample.num_states()
-        s, g, tx, unsolv, schemas = read_single_sample_file(filename)
+        s, g, tx, unsolv, schemas, deadends = read_single_sample_file(filename)
         assert next(iter(s.keys())) == 0  # Make sure state IDs in the sample file start by 0
-        s, g, tx, schemas, unsolv = remap_state_ids(s, g, tx, unsolv, schemas, remap=lambda state: state + starting_state_id)
+        s, g, tx, schemas, unsolv, deadends = remap_state_ids(s, g, tx, unsolv, schemas, deadends,
+                                                              remap=lambda state: state + starting_state_id)
         assert next(iter(s)) == starting_state_id
 
-        sample.add_transitions(s, tx, schemas, instance_id)
+        sample.add_transitions(s, tx, schemas, instance_id, deadends)
         sample.mark_as_root(starting_state_id)
         sample.mark_as_goals(g)
         sample.mark_as_unsolvable(unsolv)
@@ -399,9 +375,9 @@ def read_single_sample_file(filename):
             # (N) 12
             elems = line[4:].split(' ')
             sid = int(elems[0])
-            if int(elems[1]):
+            if int(elems[1]):  # The state is a goal state
                 goal_states.add(sid)
-            if int(elems[2]):
+            if int(elems[2]):  # The state is a dead-end
                 deadends.add(sid)
 
             state_atoms[sid] = tuple(normalize_atom_name(atom) for atom in elems[3:])
@@ -421,7 +397,7 @@ def read_single_sample_file(filename):
     ordered = OrderedDict()  # Make sure we return an ordered dictionary
     for id_ in sorted(state_atoms.keys()):
         ordered[id_] = state_atoms[id_]
-    return ordered, goal_states, transitions, unsolvable_states, schemas
+    return ordered, goal_states, transitions, unsolvable_states, schemas, deadends
 
 
 def run(config, data, rng):
