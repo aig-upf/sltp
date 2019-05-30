@@ -1,11 +1,10 @@
 import logging
-import os
 
 from .util.tools import IdentifiedFeature, AbstractAction, Abstraction, optimize_abstract_action_model, \
-    prettyprint_precs_and_effects, generate_effect, abstract_state, generate_qualitative_effects_from_transition
+    prettyprint_precs_and_effects, abstract_state, generate_qualitative_effects_from_transition
 from .errors import CriticalPipelineError
 from .sampling import TransitionSample
-from .learn_actions import create_maxsat_translator, compute_completeness_info
+from .learn_actions import compute_completeness_info
 from .util.tools import load_selected_features
 from .returncodes import ExitCode
 from .validator import AbstractionValidator
@@ -20,18 +19,6 @@ def compute_action_model(config, data, rng):
     cinfo = compute_completeness_info(data.sample, config.complete_only_wrt_optimal)
 
     return compute_abstraction(config, data, selected_feature_ids, cinfo)
-
-
-def compute_action_model_from_feature_idxs(config, data, rng):
-    sat_feature_mapping = data.sat_feature_mapping
-    # Remap to the old indexes, which are the ones used in the Features vector
-    selected_features = sorted(sat_feature_mapping[i] for i in data.selected_feature_idxs)
-    # We create the translator just to compute the action model. TODO It'd be better to fully decouple both steps,
-    # so that we don't need to perform unnecessary initialization operations here.
-    translator, sample = create_maxsat_translator(config, data.sample)
-    states, actions, features = translator.compute_action_model(selected_features, config)
-    # data.cnf_translator.compute_qnp(states, actions, features, config, data)
-    return ExitCode.Success, dict(abstract_actions=actions, selected_features=features, post_cnf_sample=sample)
 
 
 def _compute_abstract_policy(data, features, actions, cinfo):

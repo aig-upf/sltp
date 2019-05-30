@@ -6,11 +6,8 @@ import math
 import sys
 
 import numpy as np
-from sltp.features import DLModelCache
 
 from tarski.dl import EmpiricalBinaryConcept, NullaryAtomFeature, ConceptCardinalityFeature, MinDistanceFeature
-
-from .returncodes import ExitCode
 
 
 PRUNE_DUPLICATE_FEATURES = True
@@ -35,33 +32,6 @@ def cast_feature_value_to_numpy_value(value):
         raise RuntimeError("Cannot cast feature value {} into numpy value".format(value))
 
     return value
-
-
-def print_feature_matrix(config, state_ids, features, models):
-    filename = config.feature_matrix_filename
-    logging.info("Printing feature matrix of {} features x {} states to '{}'".
-                 format(len(features), len(state_ids), filename))
-
-    # Convert features to a numpy array with n rows and m columns, where n=num states, m=num features
-    matrix = np.empty(shape=(len(state_ids), len(features)), dtype=NP_FEAT_VALUE_TYPE)
-
-    with open(filename, 'w') as f:
-        for i, s in enumerate(state_ids, 0):
-            assert i == s
-            matrix[i] = [cast_feature_value_to_numpy_value(models[s].denotation(feat)) for feat in features]
-            line = "{} {}".format(s, " ".join(int_printer(models[s].denotation(feat)) for feat in features))
-            print(line, file=f)
-
-    bin_matrix = np.array(matrix, dtype=np.bool)
-
-    np.save(config.feature_matrix_filename, matrix)
-    np.save(config.bin_feature_matrix_filename, bin_matrix)
-
-    np.save(config.feature_complexity_filename,
-            np.array([f.complexity() for f in features], dtype=NP_FEAT_VALUE_TYPE))
-
-    np.save(config.feature_names_filename,
-            np.array([str(f) for f in features], dtype=np.unicode_))
 
 
 def print_feature_info(config, features):
@@ -116,99 +86,6 @@ def print_sat_feature_matrix(config, state_ids, goals, features, models):
             )), file=f)
 
     return all_feature_idxs  # A mapping between the new and the old feature indexes
-
-
-def generate_features(config, data, rng):
-    sample = data.sample
-    state_ids = data.sample.get_sorted_state_ids()
-    # First keep only those features which are able to distinguish at least some pair of states
-    features, models = compute_feature_extensions(state_ids, data.features, data.model_cache,
-                                                  config.prune_positive_features, config.prune_infty_features)
-    print_feature_info(config, features)
-    print_feature_matrix(config, state_ids, features, models)
-
-    log_features(features, config.feature_filename)
-    # selected = None
-    # log_feature_denotations(state_ids, features, models, config.feature_denotation_filename, selected)
-
-    sat_feature_mapping = print_sat_feature_matrix(config, state_ids, sample.goals, features, models)
-    return ExitCode.Success, dict(features=features, sat_feature_mapping=sat_feature_mapping)
-
-
-def log_features(features, feature_filename):
-    logging.info("Feature set saved in file {}".format(feature_filename))
-    with open(feature_filename, 'w') as f:
-        for i, feat in enumerate(features, 0):
-            f.write("{}:\t{}\n".format(i, feat))
-            # serialized = serialize_to_string(feat)
-            # f.write("{}:\t{}\n".format(feat, serialized))
-
-
-def compute_feature_extensions(states, features, model_cache: DLModelCache, prune_positive_features,
-                               prune_infty_features):
-    """ Cache all feature denotations and prune those which have constant denotation at the same time """
-    models = {sid: model_cache.get_feature_model(sid) for sid in states}
-    ns, nf = len(states), len(features)
-    logging.info("Computing feature denotations over a total of "
-                 "{} states and {} features ({:0.1f}K matrix entries)".format(ns, nf, nf*ns/1000))
-    accepted = []
-    traces = dict()
-
-    # Sort feature by increasing complexity, so that we prune more complex ones in favor of less complex ones
-    features = sorted(features, key=lambda feat: feat.complexity())
-
-    for f in features:
-        all_equal, all_0_or_1, all_gt_0, some_infty = True, True, True, False
-        previous = None
-        all_denotations = []
-        for s in states:
-            denotation = models[s].denotation(f)
-            if previous is not None and previous != denotation:
-                all_equal = False
-            if denotation not in (0, 1):
-                all_0_or_1 = False
-            if denotation == 0:
-                all_gt_0 = False
-            if denotation == sys.maxsize:
-                some_infty = True
-            previous = denotation
-            all_denotations.append(denotation)
-
-        # If the denotation of the feature is exactly the same in all states, we remove it
-        if all_equal:
-            logging.debug("Feature \"{}\" has constant denotation ({}) over all states and will be ignored"
-                          .format(f, previous))
-            continue
-
-        # If the denotation of the feature is always > 0, we remove it
-        if prune_positive_features and all_gt_0:
-            logging.debug("Feature \"{}\" has denotation always > 0 over all states and will be ignored"
-                          .format(f,))
-            continue
-
-        if prune_infty_features and some_infty:
-            logging.debug("Feature \"{}\" has infinite denotation in at least one state".format(f))
-            continue
-
-        if PRUNE_DUPLICATE_FEATURES:
-            trace = tuple(all_denotations)
-            duplicated = traces.get(trace, None)
-            if duplicated is None:
-                traces[trace] = f
-            else:
-                logging.debug('Feature "{}" has same denotation trace as feature "{}" and will be ignored'
-                              .format(f, duplicated))
-                # logging.debug(" ".join(map(str, trace)))
-                continue
-
-        if all_0_or_1 and not isinstance(f, (NullaryAtomFeature, MinDistanceFeature)):
-            accepted.append(EmpiricalBinaryConcept(f))
-        else:
-            accepted.append(f)
-
-    logging.info("{}/{} features have constant or duplicated denotations and have been pruned"
-                 .format(len(features)-len(accepted), len(features)))
-    return accepted, models
 
 
 def log_feature_denotations(state_ids, features, models, feature_denotation_filename, selected=None):

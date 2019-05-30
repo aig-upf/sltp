@@ -211,13 +211,6 @@ def generate_output_from_handcrafted_features(sample, config, features, model_ca
 
 
 def print_actual_output(sample, config, in_goal_features, names, complexities, matrix, types):
-    import numpy as np
-    bin_matrix = np.array(matrix, dtype=np.bool)
-    np.save(config.feature_matrix_filename, matrix)
-    np.save(config.bin_feature_matrix_filename, bin_matrix)
-    np.save(config.feature_complexity_filename, np.array(complexities, dtype=NP_FEAT_VALUE_TYPE))
-    np.save(config.feature_names_filename, np.array(names, dtype=np.unicode_))
-
     state_ids = sample.get_sorted_state_ids()
     sat_feature_mapping = print_blai_sat_feature_matrix(config.sat_feature_matrix_filename,
                                                         matrix, state_ids, sample.goals,

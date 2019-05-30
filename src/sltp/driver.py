@@ -233,33 +233,6 @@ class ConceptGenerationStep(Step):
 
 def setup_feature_generation_filenames(config):
     config["feature_matrix_filename"] = compute_info_filename(config, "feature-matrix.dat")
-    config["bin_feature_matrix_filename"] = compute_info_filename(config, "feature-matrix-bin.dat")
-    config["feature_complexity_filename"] = compute_info_filename(config, "feature-complexity.dat")
-    config["feature_names_filename"] = compute_info_filename(config, "feature-names.dat")
-
-
-class FeatureMatrixGenerationStep(Step):
-    """ Generate and output the feature and transition matrices for the problem  """
-    def get_required_attributes(self):
-        return ["experiment_dir", "prune_positive_features", "prune_infty_features"]
-
-    def process_config(self, config):
-        setup_feature_generation_filenames(config)
-        config["feature_filename"] = compute_info_filename(config, "features.txt")
-        config["sat_feature_matrix_filename"] = compute_info_filename(config, "sat_matrix.dat")
-        config["feature_info_filename"] = compute_info_filename(config, "feature-info.dat")
-        config["feature_denotation_filename"] = compute_info_filename(config, "feature-denotations.txt")
-        return config
-
-    def get_required_data(self):
-        return ["features", "model_cache", "sample"]
-
-    def description(self):
-        return "Generation of the feature and transition matrices"
-
-    def get_step_runner(self):
-        from .matrices import generate_features
-        return generate_features
 
 
 class CPPFeatureGenerationStep(Step):
@@ -318,27 +291,6 @@ class CPPMaxsatProblemGenerationStep(Step):
     def get_step_runner(self):
         from . import cnfgen
         return cnfgen.run
-
-
-class MaxsatProblemGenerationStep(Step):
-    """ Generate the max-sat problem from a given set of generated features """
-    def get_required_attributes(self):
-        return ["experiment_dir", "prune_redundant_states", "use_d2tree"]
-
-    def process_config(self, config):
-        config["cnf_filename"] = compute_maxsat_filename(config)
-        config["maxsat_variables_file"] = compute_maxsat_variables_filename(config)
-        return config
-
-    def get_required_data(self):
-        return ["sample", "enforced_feature_idxs", "in_goal_features"]
-
-    def description(self):
-        return "Generation of the max-sat problem"
-
-    def get_step_runner(self):
-        from . import learn_actions
-        return learn_actions.generate_maxsat_problem
 
 
 class MaxsatProblemSolutionStep(Step):
@@ -419,27 +371,6 @@ class SatSolutionDecodingStep(Step):
         return encoder.decode
 
 
-class ActionModelStep(Step):
-    """ Generate an abstract action model from the solution of the max-sat encoding """
-
-    def get_required_attributes(self):
-        return ['serialized_feature_filename']
-
-    def process_config(self, config):
-        config["qnp_abstraction_filename"] = compute_info_filename(config, "abstraction.qnp")
-        return config
-
-    def get_required_data(self):
-        return ["cnf_translator", "cnf_solution", "sample", "model_cache"]
-
-    def description(self):
-        return "Computation of the action model"
-
-    def get_step_runner(self):
-        from . import actionmodel
-        return actionmodel.compute_action_model
-
-
 class CPPActionModelStep(Step):
     """ Generate an abstract action model from the solution of the max-sat encoding """
 
@@ -500,8 +431,10 @@ class QNPGenerationStep(Step):
         return "Generation of the QNP encoding"
 
     def get_step_runner(self):
-        from . import qnp
-        return qnp.generate_encoding
+        #  TODO
+        # from . import qnp
+        # return qnp.generate_encoding
+        return None
 
 
 class InhouseMaxsatSolverStep(Step):
@@ -667,29 +600,6 @@ class SATStateFactorizationStep(Step):
         # return factorization.learn_factorization
 
 
-# class DFAGenerationStep(Step):
-#     """ Generate the DFA from observation traces """
-#
-#     def get_required_attributes(self):
-#         return ["experiment_dir"]
-#
-#     def process_config(self, config):
-#         config["cnf_filename"] = compute_maxsat_filename(config)
-#         config["maxsat_variables_file"] = compute_maxsat_variables_filename(config)
-#         return config
-#
-#     def get_required_data(self):
-#         return ["goal_states", "transitions", "state_ids", "enforced_feature_idxs", "optimal_transitions"]
-#
-#     def description(self):
-#         return "DFA generation from observation traces"
-#
-#     def get_step_runner(self):
-#         from . import factorization
-#         return None
-#         # return learn_actions.generate_maxsat_problem
-
-
 class AbstractionTestingStep(Step):
     """  """
     def get_required_attributes(self):
@@ -770,10 +680,7 @@ PIPELINES = dict(
         PlannerStep,
         TransitionSamplingStep,
         ConceptGenerationStep,
-        FeatureMatrixGenerationStep,  # TODO: Remove step completely
-        MaxsatProblemGenerationStep,  # TODO: Remove step completely
         MaxsatProblemSolutionStep,
-        ActionModelStep,  # TODO: Remove step completely
         AbstractionTestingStep,
         # QNPGenerationStep,
     ],
@@ -797,12 +704,12 @@ PIPELINES = dict(
         ActionModelFromFeatureIndexesStep,
         AbstractionTestingStep,
     ],
-    sat=[
-        PlannerStep,
-        ConceptGenerationStep,
-        FeatureMatrixGenerationStep,
-        SatProblemGenerationStep,
-        SatProblemSolutionStep,
-        SatSolutionDecodingStep,
-    ],
+    # sat=[
+    #     PlannerStep,
+    #     ConceptGenerationStep,
+    #     FeatureMatrixGenerationStep,
+    #     SatProblemGenerationStep,
+    #     SatProblemSolutionStep,
+    #     SatSolutionDecodingStep,
+    # ],
 )
