@@ -27,7 +27,7 @@ class FeatureMatrix {
         std::vector<std::pair<std::string, unsigned>> feature_data_;
         std::unordered_map<std::string, unsigned> feature_name_to_id_;
         std::unordered_set<unsigned> goals_;
-        std::unordered_set<unsigned> expanded_;
+        std::unordered_set<unsigned> deadends_;
         std::vector<std::vector<feature_value_t>> rowdata_;
         std::vector<bool> binary_features_;
         std::vector<bool> numeric_features_;
@@ -42,6 +42,9 @@ class FeatureMatrix {
                   numeric_features_(num_features_, false)
         {}
 
+        FeatureMatrix(const FeatureMatrix&) = default;
+        FeatureMatrix(FeatureMatrix&&) = default;
+
         virtual ~FeatureMatrix() = default;
 
         std::size_t num_states() const { return num_states_; }
@@ -49,6 +52,8 @@ class FeatureMatrix {
         std::size_t num_features() const { return num_features_; }
 
         std::size_t num_goals() const { return num_goals_; }
+
+        const std::unordered_set<unsigned>& deadends() const { return deadends_; }
 
         const std::string& feature_name(unsigned i) const {
             assert(i < num_features_);
@@ -64,9 +69,9 @@ class FeatureMatrix {
             return goals_.find(s) != goals_.end();
         }
 
-        bool expanded(unsigned s) const {
+        bool is_deadend(unsigned s) const {
             assert (s < rowdata_.size());
-            return expanded_.find(s) != expanded_.end();
+            return deadends_.find(s) != deadends_.end();
         }
 
         feature_value_t entry(unsigned s, unsigned f) const {
@@ -97,14 +102,14 @@ class FeatureMatrix {
         FeatureMatrix resample(const std::unordered_map<unsigned, unsigned>& mapping) const {
             auto nstates = mapping.size();
 
-            std::unordered_set<unsigned> goals, expanded;
+            std::unordered_set<unsigned> goals, deadend;
             for (unsigned s:goals_) {
                 auto it = mapping.find(s);
                 if (it != mapping.end()) goals.insert(it->second);
             }
-            for (unsigned s:expanded_) {
+            for (unsigned s:deadends_) {
                 auto it = mapping.find(s);
-                if (it != mapping.end()) expanded.insert(it->second);
+                if (it != mapping.end()) deadend.insert(it->second);
             }
 
             FeatureMatrix matrix(nstates, num_features_, goals.size());
@@ -116,7 +121,7 @@ class FeatureMatrix {
 
             // Remap state data
             matrix.goals_ = goals;
-            matrix.expanded_ = expanded;
+            matrix.deadends_ = deadend;
 
             // The mapping [0, n] -> [0, m], for n > m, needs to be surjective and map
             // to a "gap-free" range
@@ -167,8 +172,8 @@ class FeatureMatrix {
             // read expanded states (TODO: Should be in Sample class)
             std::getline(is, line); // Eat up one line break
             std::getline(is, line); // Read the actual line
-            auto expanded = Utils::split<unsigned>(line);
-            expanded_.insert(expanded.begin(), expanded.end());
+            auto deadend = Utils::split<unsigned>(line);
+            deadends_.insert(deadend.begin(), deadend.end());
 
             // Read the actual feature matrix data
             rowdata_.reserve(num_states_);

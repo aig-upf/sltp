@@ -29,12 +29,11 @@ std::pair<bool, CNFWriter> CNFGenerator::write_maxsat(std::ostream &os, const st
             // Bridge constraints not reflexive
             if (s == t) continue;
 
-            // As the sample might be incomplete, we only consider bridge clauses for states t that have been expanded
-            if (!is_expanded(t)) continue;
-
             // If t is a dead-end (and s, because it is a source of a transition, is not), then we'll have to
-            // necessarily D1-distinguish s from t. Again, for this reason no bridge clause is necessary
-            if (successors(t).empty()) continue;
+            // necessarily D1-distinguish s from t. For this reason no bridge clause is necessary.
+            // OTOH, if the sample is incomplete, we don't want to place bridge clauses for states t
+            // that have NOT been expanded. In either case, the following loop will have zero iterations,
+            // but the difference is that we'll enforce later on the D1-distinguishability of dead-ends
 
             for (unsigned tprime:successors(t)) {
                 // Symmetry-breaking: no need to define two D2 variables for permutations of s, t:
@@ -122,10 +121,10 @@ std::pair<bool, CNFWriter> CNFGenerator::write_maxsat(std::ostream &os, const st
         }
     }
 
-
+    // Force D1(s1, s2) to be true if exactly one of the two states is a dead-end
     for (const transition_t& tx1:sound_transitions()) {
         unsigned s = tx1.first;
-        for (unsigned t:deadends_) {
+        for (unsigned t:sample_.matrix().deadends()) {
             const auto& d1feats = d1_distinguishing_features(s, t);
             if (d1feats.empty()) {
                 undist_deadend_warning(s, t);

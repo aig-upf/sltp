@@ -39,6 +39,8 @@ public:
               trdata_(num_states)
           {}
     ~TransitionSample() = default;
+    TransitionSample(const TransitionSample&) = default;
+    TransitionSample(TransitionSample&&) = default;
 
     std::size_t num_states() const { return num_states_; }
     std::size_t num_transitions() const { return num_transitions_; }

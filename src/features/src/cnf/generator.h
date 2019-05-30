@@ -54,8 +54,6 @@ protected:
     //! For convenient and performant access, a list of goal and non-goal states + a list of expanded states
     std::vector<unsigned> goals_, nongoals_;
 
-    std::vector<unsigned> deadends_;
-
     d2map_t d2ids_;
     std::vector<cnfvar_t> d2vars_;
 
@@ -86,14 +84,9 @@ public:
             if (is_goal(s)) goals_.push_back(s);
             else nongoals_.push_back(s);
         }
-
-        for (unsigned s = 0; s < ns_; ++s) {
-            if (sample_.is_deadend(s)) deadends_.push_back(s);
-        }
     }
 
     bool is_goal(unsigned s) const { return sample_.matrix().goal(s); }
-    bool is_expanded(unsigned s) const { return sample_.matrix().expanded(s); }
 
     bool is_sound_transition(unsigned s, unsigned sprime) const {
         return sample_.transitions().marked(s, sprime);

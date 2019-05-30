@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 #include <random>
 #include <string>
@@ -20,16 +21,20 @@ public:
     const FeatureMatrix matrix_;
     const TransitionSample transitions_;
 
-    Sample(FeatureMatrix&& matrix, TransitionSample&& transitions)
-      : matrix_(matrix), transitions_(transitions)
-    {}
+    Sample(FeatureMatrix&& matrix, TransitionSample&& transitions) :
+      matrix_(std::move(matrix)), transitions_(std::move(transitions))
+    {
+//        std::cout << "Dead-end states: ";
+//        for (auto s:matrix_.deadends()) std::cout << " " << s;
+//        std::cout << std::endl;
+    }
     virtual ~Sample() = default;
 
     const FeatureMatrix& matrix() const { return matrix_; }
     const TransitionSample& transitions() const { return transitions_; }
 
     bool is_deadend(unsigned s) const {
-        return matrix().expanded(s) && transitions().successors(s).empty();
+        return matrix_.is_deadend(s);
     }
 
     //! Remap the states in the current sample, whose IDs are assumed to span the full range [0..n],
@@ -37,7 +42,7 @@ public:
     Sample* resample(const std::unordered_set<unsigned>& selected) const {
 
         // Add all successors of selected states
-        std::set<unsigned> closed; // set must be ordered
+        std::set<unsigned> closed; // set must be sorted
         for (unsigned s:selected) {
             closed.insert(s);
             const auto& succ = transitions_.successors(s);
@@ -70,13 +75,14 @@ public:
     std::ostream& print(std::ostream &os) const {
 
         auto est_size = matrix_.num_features() * matrix_.num_states() * sizeof(FeatureMatrix::feature_value_t) /
-                        (8 * 1024 * 1024);
-        os << "Training sample [states: " << transitions_.num_states()
+                        (1024.0 * 1024.0);
+        os << "TransitionSample[states: " << transitions_.num_states()
            << ", transitions: " << transitions_.num_transitions()
            << " (" << transitions_.num_marked_transitions() << " marked)"
+           << ", deadends: " << matrix_.deadends().size()
            << ", goals: " << matrix_.num_goals()
            << ", features: " << matrix_.num_features()
-           << ", est. size: " << est_size << " MB.]";
+           << ", est. size: " << std::setprecision(2) << std::fixed << est_size << " MB.]";
         return os;
     }
 };
