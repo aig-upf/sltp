@@ -35,6 +35,14 @@ def experiments():
 
     exps["p2"] = update_dict(exps["p1"], instances=['sample3.pddl'])
 
+    exps["p2_max"] = update_dict(
+        exps["p2"],
+
+        goal_selector=goal_selector,
+        create_goal_features_automatically=True,
+    )
+
+
     exps["p1_p"] = update_dict(
         exps["p1"], pipeline="maxsat_poly")
 
@@ -58,10 +66,10 @@ def feature_namer(feature):
 
     return extend_namer_to_all_features(base).get(s, s)
 
-# 	2. Bool[And(Equal(at_g,Inverse(at)),airport)] [k=5, id=17]
-# 	4. Num[Exists(at,Forall(Inverse(at),truck))] [k=6, id=57]
-# 	5. Num[Not(And(Forall(Inverse(at_g),Equal(at_g,at)),Forall(in,<empty>)))] [k=8, id=158]
-# 	6. Num[Exists(at,And(Exists(Inverse(at),truck),airport))] [k=8, id=231]
 
 def all_instances():
     return ["prob0{}.pddl".format(i) for i in range(1, 3)]
+
+
+def goal_selector(lang):
+    return "And(Equal(at_g,at),obj)"

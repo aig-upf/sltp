@@ -1,3 +1,4 @@
+from collections import defaultdict
 
 from common import bwnamer, add_bw_domain_parameters_2, ipc_instances
 from sltp.util.misc import update_dict
@@ -97,7 +98,18 @@ def experiments():
     exps["one_tower_inc_all_g"] = update_dict(
         exps["one_tower_inc"],
         num_states="all",
+
+        # goal_selector=goal_selector,
+        goal_selector=maximize_num_blocks_on_same_tower,
         create_goal_features_automatically=True,
+    )
+
+    exps["one_tower_goal_selection"] = update_dict(
+        exps["one_tower_inc"],
+        instances=["probBLOCKS-7-0.pddl"],
+        num_states=40000,
+        goal_selector=maximize_num_blocks_on_same_tower,
+        create_goal_features_automatically=False,
     )
 
     exps["one_tower_test"] = update_dict(
@@ -139,3 +151,26 @@ def genfeatures(lang):
         "Num[Exists(Star(on_g),clear)]",
         "Num[Exists(Star(on_g),And(Equal(Star(on_g),Star(on)),clear))]",
     ]
+
+
+def goal_selector(lang):
+    # return "RoleDifference(on_g,on)"
+    return "Equal(on_g,on)"
+
+
+def maximize_num_blocks_on_same_tower(lang, state):
+    atoms = [a for a in state if a[0] != 'handempty' and a[0] != 'clear']
+    inv_on = {a[2]: a[1] for a in atoms if a[0] == 'on'}  # on^-1 relation
+    tower_counts = defaultdict(int)
+
+    for a in atoms:
+        if a[0] == 'ontable':
+            base = theoneabove = a[1]
+            while theoneabove is not None:
+                tower_counts[base] += 1
+                theoneabove = inv_on.get(theoneabove, None)
+
+    return max(tower_counts.values())
+
+
+maximize_num_blocks_on_same_tower.procedural = True

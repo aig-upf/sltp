@@ -5,7 +5,7 @@ from tarski import PredicateSymbol, FunctionSymbol
 from tarski.dl import NullaryAtom, EmpiricalBinaryConcept, ConceptCardinalityFeature, PrimitiveConcept, \
     UniversalConcept, NotConcept, ExistsConcept, ForallConcept, PrimitiveRole, EmptyConcept, AndConcept, GoalRole, \
     GoalConcept, InverseRole, EqualConcept, StarRole, NullaryAtomFeature, NominalConcept, MinDistanceFeature, \
-    RestrictRole, ConditionalFeature
+    RestrictRole, ConditionalFeature, RoleDifference
 from tarski.syntax import Sort
 
 
@@ -147,6 +147,12 @@ def build_concept(language, node):
         assert len(node.children) == 1
         r1 = build_concept(language, node.children[0])
         return StarRole(r1)
+
+    elif node.name == "RoleDifference":
+        assert len(node.children) == 2
+        r1 = build_concept(language, node.children[0])
+        r2 = build_concept(language, node.children[1])
+        return RoleDifference(r1, r2)
 
     else:
         raise RuntimeError("Don't know how to deserialize concept / feature: {}".format(node))

@@ -134,6 +134,11 @@ class TransitionSample:
             instance_goals[self.instance[sid]].append(sid)
         return set(min(instance_goals[x]) for x in range(0, len(self.roots)) if instance_goals[x])
 
+    def remove_goals(self):
+        """ Delete goal-related info from the sample """
+        self.goals = set()
+        self.optimal_transitions = set()
+
 
 def mark_optimal(goal_states, root_states, parents):
     """ Collect all those states that lie on one arbitrary optimal path to the goal """
@@ -222,9 +227,10 @@ def sample_generated_states(config, rng):
         sample = sample.resample(set(selected))
         logging.info("Sample after resampling: {}".format(sample.info()))
 
-    goal_maximizing_states = select_goal_maximizing_states(config, sample)
+    goal_maximizing_states = select_goal_maximizing_states(config, sample, rng)
     if goal_maximizing_states:
-        # sample.mark_as_goals(goal_maximizing_states)
+        sample.remove_goals()
+        sample.mark_as_goals(goal_maximizing_states)
         optimal = mark_optimal(goal_maximizing_states, sample.roots, sample.parents)
         sample.mark_as_optimal(optimal)
 
