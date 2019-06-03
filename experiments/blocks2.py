@@ -110,6 +110,7 @@ def experiments():
         num_states=40000,
         goal_selector=maximize_num_blocks_on_same_tower,
         create_goal_features_automatically=False,
+        use_d2tree=False, # seems to be too expensive!
     )
 
     exps["one_tower_test"] = update_dict(
