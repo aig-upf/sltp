@@ -82,16 +82,16 @@ where the last parameter is an optional  list of experiment step IDs (e.g.: 1 2 
 Example invocations:
 
     # AAAI Experiment: BW with goal clear(x)
-	python ./blocks.py aaai_clear_x_simple_hybrid  # Theory T_G
-	python ./blocks.py aaai_clear_x_no_marking     # Theory T
+    ./run.py blocks:aaai_clear_x_simple_hybrid  # Theory T_G
+    ./run.py blocks:aaai_clear_x_no_marking     # Theory T
 
     # AAAI Experiment: BW with goal on(x,y)
-	python ./blocks.py aaai_bw_on_x_y_completeness_opt             # Theory T_G
-	python ./blocks.py aaai_bw_on_x_y_completeness_opt_no_marking  # Theory T
+    ./run.py blocks:aaai_bw_on_x_y_completeness_opt  # Theory T_G
+    ./run.py blocks:aaai_bw_on_x_y_completeness_opt_no_marking     # Theory T
 
-    # AAAI Experiment: Gripper with goal on(x,y)
-	python ./gripper.py aaai_prob01             # Theory T_G
-	python ./gripper.py aaai_prob01_no_marking  # Theory T
+    # AAAI Experiment: Gripper
+    ./run.py gripper:aaai_prob01  # Theory T_G
+    ./run.py gripper:aaai_prob01_no_marking     # Theory T
 
     # ...
 
