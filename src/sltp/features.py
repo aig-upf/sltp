@@ -8,15 +8,16 @@ from collections import defaultdict
 import tarski as tsk
 
 from bitarray import bitarray
+from tarski.grounding.ops import approximate_symbol_fluency
+
 from .models import DLModelFactory, FeatureModel
-from sltp.util.misc import compute_universe_from_pddl_model, state_as_atoms, types_as_atoms, print_relation, print_set
+from .util.misc import compute_universe_from_pddl_model, state_as_atoms, types_as_atoms, print_relation, print_set
 from tarski.syntax.transform.errors import TransformationError
 from tarski.syntax.transform.simplifications import transform_to_ground_atoms
 
 from .language import parse_pddl
 from tarski.dl import Concept, Role, InverseRole, StarRole, \
     ConceptCardinalityFeature, MinDistanceFeature, SyntacticFactory, NullaryAtomFeature, compute_dl_vocabulary
-from tarski import fstrips, FunctionSymbol
 
 from .extensions import DLDenotationTraceIndex
 from .returncodes import ExitCode
@@ -230,16 +231,8 @@ def parse_all_instances(domain, instances):
 def compute_static_atoms(problem):
     """ Compute a list with all of the predicate / function symbols from the problem that are static """
     init_atoms = state_as_atoms(problem.init)
-    index = fstrips.TaskIndex(problem.language.name, problem.name)
-    # Not sure the fstrips.TaskIndex code is too reliable... static detection seems to be buggy.
-    # Let's better do that ourselves with a basic fluent detection routine.
-    index.process_symbols(problem)
 
-    fluents, statics = index.compute_fluent_and_statics()
-
-    # TODO Fix the following hack. This will require offering a uniform interface in the tarski TaskIndex,
-    # TODO which at the moment is being refactored.
-    fluent_symbols = {x.name for x in fluents}
+    fluent_symbols, static_symbols = approximate_symbol_fluency(problem)
 
     static_atoms = set()
     static_predicates = set()

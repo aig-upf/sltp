@@ -1,11 +1,11 @@
 import logging
 import pickle
 
-from tarski import PredicateSymbol, FunctionSymbol
+from tarski import Predicate, Function
 from tarski.dl import NullaryAtom, EmpiricalBinaryConcept, ConceptCardinalityFeature, PrimitiveConcept, \
     UniversalConcept, NotConcept, ExistsConcept, ForallConcept, PrimitiveRole, EmptyConcept, AndConcept, GoalRole, \
     GoalConcept, InverseRole, EqualConcept, StarRole, NullaryAtomFeature, NominalConcept, MinDistanceFeature, \
-    RestrictRole, ConditionalFeature, RoleDifference
+    RestrictRole  #, ConditionalFeature, RoleDifference
 from tarski.syntax import Sort
 
 
@@ -42,6 +42,7 @@ def unserialize_feature(language, string, complexity=None):
     If given, set the complexity of the feature to the given value.
     """
     if string.startswith("If{"):  # special treatment for recursive If features
+        assert False
         assert string.endswith("}{Infty}")  # So far we only handle conditional features of else-infty type
         concept = string[3:-8]
         condition, body = [unserialize_feature(language, s) for s in concept.split('}{')]
@@ -95,7 +96,7 @@ def build_concept(language, node):
             node = node[:-2]
 
         obj = language.get(node)
-        assert isinstance(obj, (PredicateSymbol, FunctionSymbol, Sort))
+        assert isinstance(obj, (Predicate, Function, Sort))
         arity = 1 if isinstance(obj, Sort) else obj.uniform_arity()
         assert arity in (1, 2)
         if is_goal:
@@ -149,6 +150,7 @@ def build_concept(language, node):
         return StarRole(r1)
 
     elif node.name == "RoleDifference":
+        assert False
         assert len(node.children) == 2
         r1 = build_concept(language, node.children[0])
         r2 = build_concept(language, node.children[1])

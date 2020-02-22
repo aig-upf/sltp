@@ -61,7 +61,7 @@ def main():
             'psutil',
             'bitarray',
             'numpy',
-            "tarski @ git+ssh://git@github.com/aig-upf/tarski.git@2f34edd#egg=tarski-dev-0.2.0"
+            "tarski @ git+ssh://git@github.com/aig-upf/tarski.git@1c107d5#egg=tarski-devel"
         ],
 
 #        ext_modules=[CMakeExtension('featuregen', os.path.join(here, "src", "features"))],
