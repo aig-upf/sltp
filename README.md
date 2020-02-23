@@ -122,13 +122,92 @@ You can run that script _within the Docker container_ as follows:
     
 where `aaai_prob01` is the experiment name configured in your `gripper.py` script.
 
+### Sampling
+The SLTP pipeline uses a modified version of the FS planner (see installation instructions above)
+in order to sample the (reachable part of the) state spaces of given PDDL instances. The sampling
+steps of the pipeline write a few files with a textual representation of the state space. To see
+an example, run e.g. from the `experiments` directory:
+
+    $ ./run.py gripper:aaai_prob01 1 2 
+    ================================================================================
+    (pid: 17590) STARTING STEP #1: Sampling of the state space
+    ================================================================================
+    ...
+    ================================================================================
+    (pid: 17606) STARTING STEP #2: Generation of the training sample
+    ================================================================================
+    ...
+    2020-02-23 20:21:18 INFO     Sample after resampling: roots: 2, states: 381, transitions: 812 (28 optimal), goals: 4, unsolvable: 0
+    2020-02-23 20:21:18 INFO     Resampled states logged at "/home/frances/projects/code/sltp/workspace/2020022320.gripper.prob01_sample02.2000.cs-8/resampled.txt"
+    2020-02-23 20:21:18 INFO     Printing transition matrix with 381 states and 812 transitions to '/home/frances/projects/code/sltp/workspace/2020022320.gripper.prob01_sample02.2000.cs-8/transition-matrix.dat'
+
+The above command runs two different pipeline steps: one for calling `n` times the FS planner on `n`
+given problem instances; the second step, reads all outputs, and consolidates them into a single set
+of transition samples, assigning all states a unique ID, etc. The result of this consolidation is 
+output, in the example above, to file
+`/home/frances/projects/code/sltp/workspace/2020022320.gripper.prob01_sample02.2000.cs-8/resampled.txt`
+The format of the file is relatively human-readable. Each state has an id such as #7, plus a number
+of symbols that denote different (possibly complementary) properties of the state. These can be:
+
+    "*": the state is a goal
+    "^": the state has been fully expanded
+    "º": the state is a dead-end
+    "=": the state is a root of one of the sampled instances
+    "+": the state lies on an optimal path to the goal of its instance
+
+This sampling pipeline step also generates a second output file, in a somewhat more machine-readable
+file, but also with less informatoin. In the example above, this file is 
+`/home/frances/projects/code/sltp/workspace/2020022320.gripper.prob01_sample02.2000.cs-8/transition-matrix.dat` 
+This file contains one line per every expanded state, such as e.g.:
+
+    11 2 5 31
+
+This line corresponds to state with id 11, and denotes that state 11 has children states 2, 5 and
+31. 
+
+### Generating Features
+In order to be able to build the C++ feature generator, run `cmake . && make` on directory
+`src/features`. As it stands now, this generator generates features up to a certain syntactic 
+complexity bound and *based on a given set of transition samples* (i.e. sampled state space).
+Ideally, one could also want to generate features independently of any transitions or state spaces,
+but at the moment the generator creates only features that are non-redundant based on the denotation
+over the whole set of sampled transitions, hence the requirement of having those transitions.
+Two features are considered redundant if they have exactly the same denotation over all sampled
+states.
+
+As an example, the feature generation step for some set of Gripper can be run with  
+ 
+    $ ./run.py gripper:aaai_prob01  1 2 3
+    ================================================================================
+    (pid: 18828) STARTING STEP #1: Sampling of the state space
+    ================================================================================
+    ...
+    ...
+    ================================================================================
+    (pid: 18848) STARTING STEP #3: C++ feature generation module
+    ================================================================================
+    2020-02-23 20:54:08 INFO     Generating non-redundant concepts from sample set: roots: 2, states: 381, transitions: 812 (28 optimal), goals: 4, unsolvable: 0
+    2020-02-23 20:54:08 INFO     Invoking C++ feature generation module
+    ...
+    DL::Factory: #concepts-final=60
+    A total of 0 features were marked as goal-identifying
+    FEATURES: #features=7, #nullary=0, #boolean=2, #numerical=5, #distance=0, #conditional=0
+    ...
+    2020-02-23 20:54:08 INFO     Reading feature information from /home/frances/projects/code/sltp/workspace/2020022320.gripper.prob01_sample02.2000.cs-8/feature-info.io
+    ...
+    2020-02-23 20:54:08 INFO     Reading denotation matrix from /home/frances/projects/code/sltp/workspace/2020022320.gripper.prob01_sample02.2000.cs-8/feature-matrix.io
+
+The above command runs 3 different steps; the first two generate the sample (see above section);
+the third is the one that actually generates all non-redundant concepts and features.
+The relevant output of this step is, in the example above, file 
+`/home/frances/projects/code/sltp/workspace/2020022320.gripper.prob01_sample02.2000.cs-8/feature-matrix.io`
+This file is the denotation matrix of the generated features. The value at row i, column j
+is the denotation of the j-th generated feature in state #i.
+File `/home/frances/projects/code/sltp/workspace/2020022320.gripper.prob01_sample02.2000.cs-8/feature-info.io`
+also contains the textual representation of each feature. 
+
 
 
 ### Software Requirements
-
-* Python 3.6+ with the following dependencies:
-  - pip
-  - setuptools
-  - python-dev
-  - numpy
+SLTP has been tested on Python 3.6+ / Ubuntu
 
