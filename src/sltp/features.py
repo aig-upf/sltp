@@ -232,7 +232,8 @@ def compute_static_atoms(problem):
     """ Compute a list with all of the predicate / function symbols from the problem that are static """
     init_atoms = state_as_atoms(problem.init)
 
-    fluent_symbols, static_symbols = approximate_symbol_fluency(problem)
+    fluent_symbols, _ = approximate_symbol_fluency(problem)
+    fluent_symbols = set(s.name for s in fluent_symbols)
 
     static_atoms = set()
     static_predicates = set()
