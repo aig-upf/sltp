@@ -48,7 +48,7 @@ using feature_cache_t = std::unordered_map<feature_sample_denotation_t, const Fe
 //
 // We also cache atoms that are used to represent states in the sample.
 class Cache {
-  public:
+public:
     struct cache_support_t {
         // cache for sample denotations
         bool operator()(const sample_denotation_t *d1, const sample_denotation_t *d2) const {
@@ -84,13 +84,13 @@ class Cache {
     using cache3_t = std::unordered_set<const state_denotation_t*, cache_support_t, cache_support_t>;
     using cache4_t = std::unordered_map<std::string, const Atom*>;
 
-  protected:
+protected:
     cache1_t cache1_;
     cache2_t cache2_;
     cache3_t cache3_;
     cache4_t cache4_;
 
-  public:
+public:
     Cache() = default;
     ~Cache() = default;
 
@@ -194,11 +194,11 @@ class Cache {
 // We represent states as subets of atoms
 // An atom is a predicate and a vector of objects to ground the predicates.
 class Object {
-  protected:
+protected:
     const object_id_t id_;
     const std::string name_;
 
-  public:
+public:
     Object(unsigned id, const std::string &name) : id_(id), name_(name) { }
     int id() const {
         return id_;
@@ -216,7 +216,7 @@ struct Predicate {
     const std::string name_;
     const int arity_;
     Predicate(unsigned id, const std::string &name, int arity)
-      : id_(id), name_(name), arity_(arity) {
+            : id_(id), name_(name), arity_(arity) {
     }
     predicate_id_t id() const {
         return id_;
@@ -250,13 +250,13 @@ struct Predicate {
 };
 
 class Atom {
-  protected:
+protected:
     const predicate_id_t predicate_;
     const std::vector<object_id_t> objects_;
 
-  public:
+public:
     Atom(const predicate_id_t &predicate, std::vector<object_id_t> &&objects)
-      : predicate_(predicate), objects_(std::move(objects)) {
+            : predicate_(predicate), objects_(std::move(objects)) {
     }
 
     predicate_id_t pred_id() const {
@@ -287,14 +287,14 @@ class Atom {
 // An instance stores information shared by the states that
 // belong to the instance: objects and atoms mostly
 class Instance {
-  public:
+public:
     // map from object name to object id in instance
 //    using ObjectIndex = std::unordered_map<std::string, object_id_t>;
     using ObjectIndex = boost::bimap<std::string, object_id_t>;
     // map from atom of the form <pred_id, oid_1, ..., oid_n> to atom id in instance
     using AtomIndex = std::unordered_map<std::vector<unsigned>, atom_id_t, utils::container_hash<std::vector<unsigned> > >;
 
-  protected:
+protected:
     const std::string name_;
     const std::vector<Object> objects_;
     const std::vector<Atom> atoms_;
@@ -305,17 +305,17 @@ class Instance {
     // mapping from <predicate name, obj_name, ..., obj_name> to the ID of the corresponding GroundPredicate
     AtomIndex atom_index_;
 
-  public:
+public:
     Instance(const std::string &name,
              std::vector<Object> &&objects,
              std::vector<Atom> &&atoms,
              ObjectIndex &&object_index,
              AtomIndex &&atom_index)
-      : name_(name),
-        objects_(std::move(objects)),
-        atoms_(std::move(atoms)),
-        object_index_(std::move(object_index)),
-        atom_index_(std::move(atom_index)) {
+            : name_(name),
+              objects_(std::move(objects)),
+              atoms_(std::move(atoms)),
+              object_index_(std::move(object_index)),
+              atom_index_(std::move(atom_index)) {
     }
     Instance(const Instance& ins) = default;
     Instance(Instance &&ins) = default;
@@ -348,14 +348,14 @@ class Instance {
 
 // A state is a collections of atoms
 class State {
-  protected:
+protected:
     const Instance &instance_;
     const state_id_t id_;
     std::vector<atom_id_t> atoms_;
 
-  public:
+public:
     explicit State(const Instance &instance, unsigned id, std::vector<atom_id_t> &&atoms)
-      : instance_(instance), id_(id), atoms_(std::move(atoms)) {
+            : instance_(instance), id_(id), atoms_(std::move(atoms)) {
     }
     State(const State &state) = default;
     State(State &&state) = default;
@@ -382,10 +382,10 @@ class State {
 // sample contains the predicates used in the states, the objects,
 // and the atoms
 class Sample {
-  public:
+public:
     using PredicateIndex = std::unordered_map<std::string, predicate_id_t>;
 
-  protected:
+protected:
     const std::string name_;
     const std::vector<Predicate> predicates_;
     const std::vector<Instance> instances_;
@@ -403,20 +403,20 @@ class Sample {
            std::vector<State> &&states,
            std::vector<predicate_id_t> &&goal_predicates,
            PredicateIndex &&predicate_index)
-      : name_(name),
-        predicates_(std::move(predicates)),
-        instances_(std::move(instances)),
-        states_(std::move(states)),
-        goal_predicates_(std::move(goal_predicates)),
-        predicate_index_(std::move(predicate_index)) {
+            : name_(name),
+              predicates_(std::move(predicates)),
+              instances_(std::move(instances)),
+              states_(std::move(states)),
+              goal_predicates_(std::move(goal_predicates)),
+              predicate_index_(std::move(predicate_index)) {
         std::cout << "SAMPLE:"
                   << " #predicates=" << predicates_.size()
-                  << ", #instances=" << instances_.size() 
-                  << ", #states=" << states_.size() 
+                  << ", #instances=" << instances_.size()
+                  << ", #states=" << states_.size()
                   << std::endl;
     }
 
-  public:
+public:
     Sample(const Sample &sample) = default;
     Sample(Sample &&sample) = default;
     ~Sample() = default;
@@ -484,11 +484,11 @@ inline std::string Atom::as_str(const Sample &sample) const {
 //};
 
 class Base {
-  protected:
+protected:
     // unsigned id_;
     int complexity_;
 
-  public:
+public:
     explicit Base(int complexity) : complexity_(complexity) { }
     // const unsigned id() const { return id_; }
     const int complexity() const { return complexity_; }
@@ -512,24 +512,24 @@ class Base {
 };
 
 class Concept : public Base {
-  public:
+public:
     explicit Concept(int complexity) : Base(complexity) { }
     virtual ~Concept() = default;
     virtual const Concept* clone() const = 0;
 };
 
 class Role : public Base {
-  public:
+public:
     explicit Role(int complexity) : Base(complexity) { }
     virtual ~Role() = default;
     virtual const Role* clone() const = 0;
 };
 
 class PrimitiveConcept : public Concept {
-  protected:
+protected:
     const Predicate *predicate_;
 
-  public:
+public:
     explicit PrimitiveConcept(const Predicate *predicate) : Concept(PRIMITIVE_COMPLEXITY), predicate_(predicate) { }
     ~PrimitiveConcept() override = default;
     const Concept* clone() const override {
@@ -645,7 +645,7 @@ public:
 
 
 class EmptyConcept : public Concept {
-  public:
+public:
     EmptyConcept() : Concept(0) { }
     ~EmptyConcept() override = default;
     const Concept* clone() const override {
@@ -679,16 +679,16 @@ class EmptyConcept : public Concept {
 };
 
 class AndConcept : public Concept {
-  protected:
+protected:
     const Concept *concept1_;
     const Concept *concept2_;
 
-  public:
+public:
     AndConcept(const Concept *concept1, const Concept *concept2) :
-      Concept(1 + concept1->complexity() + concept2->complexity()),
+            Concept(1 + concept1->complexity() + concept2->complexity()),
 //        Concept(1 + concept1->complexity() * concept2->complexity()),
-        concept1_(concept1),
-        concept2_(concept2) {
+            concept1_(concept1),
+            concept2_(concept2) {
     }
     ~AndConcept() override = default;
     const Concept* clone() const override {
@@ -733,13 +733,13 @@ class AndConcept : public Concept {
 };
 
 class NotConcept : public Concept {
-  protected:
+protected:
     const Concept *concept_;
 
-  public:
+public:
     explicit NotConcept(const Concept *concept)
-      : Concept(1 + concept->complexity()),
-        concept_(concept) {
+    : Concept(1 + concept->complexity()),
+    concept_(concept) {
     }
     ~NotConcept() override = default;
     const Concept* clone() const override {
@@ -780,15 +780,15 @@ class NotConcept : public Concept {
 };
 
 class ExistsConcept : public Concept {
-  protected:
+protected:
     const Concept *concept_;
     const Role *role_;
 
-  public:
+public:
     ExistsConcept(const Concept *concept, const Role *role)
-      : Concept(1 + concept->complexity() + role->complexity()),
-        concept_(concept),
-        role_(role) {
+    : Concept(1 + concept->complexity() + role->complexity()),
+    concept_(concept),
+    role_(role) {
     }
     ~ExistsConcept() override = default;
     const Concept* clone() const override {
@@ -846,15 +846,15 @@ class ExistsConcept : public Concept {
 };
 
 class ForallConcept : public Concept {
-  protected:
+protected:
     const Concept *concept_;
     const Role *role_;
 
-  public:
+public:
     ForallConcept(const Concept *concept, const Role *role)
-      : Concept(1 + concept->complexity() + role->complexity()),
-        concept_(concept),
-        role_(role) {
+    : Concept(1 + concept->complexity() + role->complexity()),
+    concept_(concept),
+    role_(role) {
     }
     ~ForallConcept() override = default;
     const Concept* clone() const override {
@@ -983,10 +983,10 @@ public:
 
 
 class PrimitiveRole : public Role {
-  protected:
+protected:
     const Predicate *predicate_;
 
-  public:
+public:
     explicit PrimitiveRole(const Predicate *predicate) : Role(PRIMITIVE_COMPLEXITY), predicate_(predicate) { }
     ~PrimitiveRole() override { }
     const Role* clone() const override {
@@ -1029,10 +1029,10 @@ class PrimitiveRole : public Role {
 };
 
 class PlusRole : public Role {
-  protected:
+protected:
     const Role *role_;
 
-  public:
+public:
     explicit PlusRole(const Role *role) : Role(1 + role->complexity()), role_(role) { }
     ~PlusRole() override = default;
     const Role* clone() const override {
@@ -1103,15 +1103,15 @@ class PlusRole : public Role {
 };
 
 class StarRole : public Role {
-  protected:
+protected:
     const Role *role_;
     const PlusRole *plus_role_;
 
-  public:
+public:
     explicit StarRole(const Role *role)
-      : Role(1 + role->complexity()),
-        role_(role),
-        plus_role_(new PlusRole(role)) {
+            : Role(1 + role->complexity()),
+              role_(role),
+              plus_role_(new PlusRole(role)) {
     }
     ~StarRole() override {
         delete plus_role_;
@@ -1160,10 +1160,10 @@ class StarRole : public Role {
 };
 
 class InverseRole : public Role {
-  protected:
+protected:
     const Role *role_;
 
-  public:
+public:
     explicit InverseRole(const Role *role) : Role(1 + role->complexity()), role_(role) { }
     ~InverseRole() override = default;
     const Role* clone() const override {
@@ -1215,15 +1215,15 @@ class InverseRole : public Role {
 // RoleRestriction are only used for distance features
 // and thus they are generated when generating such features
 class RoleRestriction : public Role {
-  protected:
+protected:
     const Role *role_;
     const Concept *restriction_;
 
-  public:
+public:
     RoleRestriction(const Role *role, const Concept *restriction)
-      : Role(1 + role->complexity() + restriction->complexity()),
-        role_(role),
-        restriction_(restriction) {
+            : Role(1 + role->complexity() + restriction->complexity()),
+              role_(role),
+              restriction_(restriction) {
     }
     ~RoleRestriction() override = default;
     const Role* clone() const override {
@@ -1336,7 +1336,7 @@ public:
 };
 
 class Feature {
-  public:
+public:
     Feature() = default;
     virtual ~Feature() = default;
     virtual const Feature* clone() const = 0;
@@ -1392,10 +1392,10 @@ public:
 };
 
 class BooleanFeature : public Feature {
-  protected:
+protected:
     const Concept *concept_;
 
-  public:
+public:
     explicit BooleanFeature(const Concept *concept) : Feature(), concept_(concept) { }
     ~BooleanFeature() override = default;
     const Feature* clone() const override {
@@ -1426,10 +1426,10 @@ class BooleanFeature : public Feature {
 };
 
 class NumericalFeature : public Feature {
-  protected:
+protected:
     const Concept *concept_;
 
-  public:
+public:
     explicit NumericalFeature(const Concept *concept) : Feature(), concept_(concept) { }
     ~NumericalFeature() override = default;
     const Feature* clone() const override {
@@ -1459,7 +1459,7 @@ class NumericalFeature : public Feature {
 };
 
 class DistanceFeature : public Feature {
-  protected:
+protected:
     const Concept *start_;
     const Concept *end_;
     const Role *role_;
@@ -1469,15 +1469,15 @@ class DistanceFeature : public Feature {
     mutable bool denotation_is_constant_;
     mutable bool all_values_greater_than_zero_;
 
-  public:
+public:
     DistanceFeature(const Concept *start, const Concept *end, const Role *role)
-      : Feature(),
-        start_(start),
-        end_(end),
-        role_(role),
-        valid_cache_(false),
-        denotation_is_constant_(false),
-        all_values_greater_than_zero_(false) {
+            : Feature(),
+              start_(start),
+              end_(end),
+              role_(role),
+              valid_cache_(false),
+              denotation_is_constant_(false),
+              all_values_greater_than_zero_(false) {
     }
     ~DistanceFeature() override = default;
     const Feature* clone() const override {
@@ -1549,7 +1549,7 @@ protected:
 
 public:
     ConditionalFeature(const Feature* condition, const Feature* body) :
-        Feature(), condition_(condition), body_(body) { }
+            Feature(), condition_(condition), body_(body) { }
 
     ~ConditionalFeature() override = default;
     const Feature* clone() const override {
@@ -1577,7 +1577,7 @@ public:
 };
 
 class Factory {
-  protected:
+protected:
     const std::vector<std::string> nominals_;
     int concept_generation_timeout;
     std::vector<const Role*> basis_roles_;
@@ -1597,13 +1597,13 @@ class Factory {
     //! Indices of features generated from goal concepts
     std::unordered_set<unsigned> goal_features_;
 
-  public:
+public:
     Factory(const std::vector<std::string>& nominals, int complexity_bound, int dist_complexity_bound, int cond_complexity_bound, int concept_generation_timeout) :
-        nominals_(nominals),
-        concept_generation_timeout(concept_generation_timeout),
-        complexity_bound_(complexity_bound),
-        dist_complexity_bound_(dist_complexity_bound),
-        cond_complexity_bound_(cond_complexity_bound)
+            nominals_(nominals),
+            concept_generation_timeout(concept_generation_timeout),
+            complexity_bound_(complexity_bound),
+            dist_complexity_bound_(dist_complexity_bound),
+            cond_complexity_bound_(cond_complexity_bound)
     {}
     virtual ~Factory() = default;
 
@@ -1657,7 +1657,7 @@ class Factory {
     }
 
     std::pair<bool, const sample_denotation_t*>
-      is_superfluous_or_exceeds_complexity_bound(const Base &base, Cache &cache, const Sample &sample) const {
+    is_superfluous_or_exceeds_complexity_bound(const Base &base, Cache &cache, const Sample &sample) const {
         if(base.complexity() > complexity_bound_) {
 //            std::cout << base.as_str() << " superfluous because complexity " << base.complexity() << ">" << complexity_bound_ << std::endl;
             return std::make_pair(true, nullptr);
@@ -2124,7 +2124,7 @@ class Factory {
 
     void print_feature_count() const {
         unsigned num_nullary_features = 0, num_boolean_features = 0, num_numeric_features = 0,
-                    num_distance_features = 0, num_conditional_features = 0;
+                num_distance_features = 0, num_conditional_features = 0;
         auto nf = features_.size();
         for (auto f:features_) {
             if (dynamic_cast<const NullaryAtomFeature*>(f)) num_nullary_features++;
@@ -2207,7 +2207,7 @@ class Factory {
     }
 
     void generate_conditional_feature_if_not_redundant(const Feature* condition, const Feature* body,
-            Cache &cache, const Sample &sample, feature_cache_t& seen_denotations) {
+                                                       Cache &cache, const Sample &sample, feature_cache_t& seen_denotations) {
         assert(condition->is_boolean() && !body->is_boolean());
 
         const auto m = sample.num_states();
@@ -2460,8 +2460,8 @@ class Factory {
     }
 
     void log_all_concepts_and_features(const std::vector<const Concept*>& concepts,
-            const SLTP::DL::Cache &cache, const SLTP::DL::Sample &sample,
-            const std::string& workspace, bool print_denotations);
+                                       const SLTP::DL::Cache &cache, const SLTP::DL::Sample &sample,
+                                       const std::string& workspace, bool print_denotations);
 
     //! Return all generated concepts in a single, *unlayered* vector, and sorted by increasing complexity
     std::vector<const Concept*> consolidate_concepts() const {
