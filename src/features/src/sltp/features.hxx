@@ -18,6 +18,8 @@
 #include <sltp/utils.hxx>
 #include <sltp/algorithms.hxx>
 
+#include <ctime>
+
 namespace SLTP {
 
 namespace DL {
@@ -1577,6 +1579,7 @@ public:
 class Factory {
   protected:
     const std::vector<std::string> nominals_;
+    int concept_generation_timeout;
     std::vector<const Role*> basis_roles_;
     std::vector<const Concept*> basis_concepts_;
 
@@ -1595,8 +1598,9 @@ class Factory {
     std::unordered_set<unsigned> goal_features_;
 
   public:
-    Factory(const std::vector<std::string>& nominals, int complexity_bound, int dist_complexity_bound, int cond_complexity_bound) :
+    Factory(const std::vector<std::string>& nominals, int complexity_bound, int dist_complexity_bound, int cond_complexity_bound, int concept_generation_timeout) :
         nominals_(nominals),
+        concept_generation_timeout(concept_generation_timeout),
         complexity_bound_(complexity_bound),
         dist_complexity_bound_(dist_complexity_bound),
         cond_complexity_bound_(cond_complexity_bound)
@@ -1670,10 +1674,20 @@ class Factory {
         return std::make_pair(false, d);
     }
 
+    bool check_timeout(const std::clock_t& start_time) const {
+        if (concept_generation_timeout <= 0) return false;
+        double elapsed = (std::clock() - start_time) / (double) CLOCKS_PER_SEC;
+        if (elapsed > concept_generation_timeout) {
+            std::cout << "\tTimeout of " << concept_generation_timeout << " sec. reached while generating concepts" << std::endl;
+            return true;
+        }
+        return false;
+    }
+
     // apply one iteration of the concept generation grammar
     // new concepts are left on a new last layer in concepts_
     // new concepts are non-redundant if sample != nullptr
-    unsigned advance_step(Cache &cache, const Sample &sample) const {
+    unsigned advance_step(Cache &cache, const Sample &sample, const std::clock_t& start_time) const {
         unsigned num_pruned_concepts = 0;
         if( concepts_.empty() ) { // On the first iteration, we simply process the basis concepts and return
             concepts_.emplace_back();
@@ -1735,6 +1749,7 @@ class Factory {
                     delete p.second;
                     num_pruned_concepts += p.first;
                 }
+                if (check_timeout(start_time)) return -1;
             }
         }
 
@@ -1749,6 +1764,7 @@ class Factory {
                 delete p.second;
                 num_pruned_concepts += p.first;
             }
+            if (check_timeout(start_time)) return -1;
         }
 
         for (int k = 0; k <= (integer_bound-1); ++k) {
@@ -1786,6 +1802,7 @@ class Factory {
                     }
                 }
             }
+            if (check_timeout(start_time)) return -1;
         }
 
 
@@ -1820,6 +1837,7 @@ class Factory {
                     }
                 }
             }
+            if (check_timeout(start_time)) return -1;
         }
         return num_pruned_concepts;
     }
@@ -2025,21 +2043,26 @@ class Factory {
         return roles_.size();
     }
 
-    std::vector<const Concept*> generate_concepts(Cache &cache, const Sample &sample) const {
+    std::vector<const Concept*> generate_concepts(Cache &cache, const Sample &sample, const std::clock_t& start_time) const {
         int num_concepts = 0;
         bool some_new_concepts = true;
+        bool timeout_reached = false;
         for( int iteration = 0; some_new_concepts; ++iteration ) {
-            std::cout << "DL::Factory: iteration=" << iteration
+            std::cout << "DL::concept-generation: iteration=" << iteration
                       << ", #concepts=" << num_concepts
                       << ", #concepts-in-last-layer=" << (concepts_.empty() ? 0 : concepts_.back().size())
                       << std::endl;
 
             int num_concepts_before_step = num_concepts;
-            int num_pruned_concepts = advance_step(cache, sample);
+
+            // Let the fun begin:
+            int num_pruned_concepts = advance_step(cache, sample, start_time);
+            timeout_reached = num_pruned_concepts < 0;
+
             num_concepts += concepts_.empty() ? 0 : concepts_.back().size();
             some_new_concepts = num_concepts > num_concepts_before_step;
 
-            std::cout << "DL::Factory: advance-step:"
+            std::cout << "\tResult of iteration:"
                       << " #concepts-in-layer=" << concepts_.back().size()
                       << ", #pruned-concepts=" << num_pruned_concepts
                       << std::endl;

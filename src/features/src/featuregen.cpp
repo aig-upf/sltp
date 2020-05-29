@@ -18,6 +18,7 @@ namespace po = boost::program_options;
 //! Command-line option processing
 struct Options {
     std::string workspace;
+    int timeout;
     unsigned complexity_bound;
     unsigned dist_complexity_bound;
     unsigned cond_complexity_bound;
@@ -34,15 +35,19 @@ struct Options {
                 ("workspace,w", po::value<std::string>()->required(),
                  "Directory where the input and output files will be expected / left.")
 
+                ("timeout", po::value<int>()->default_value(-1), "The timeout, in seconds. Default: no timeout.")
+
                 ("complexity-bound", po::value<unsigned>()->required(),
                         "Maximum feature complexity for standard features.")
+
                 ("dist-complexity-bound", po::value<unsigned>()->required(),
                         "Maximum feature complexity for distance features.")
+
                  ("cond-complexity-bound", po::value<unsigned>()->required(),
                          "Maximum feature complexity for conditional features.")
 
                 ("print-denotations", "Whether print the denotations of all generated features.")
-                ;
+        ;
 
         po::variables_map vm;
 
@@ -61,6 +66,7 @@ struct Options {
         }
 
         workspace = vm["workspace"].as<std::string>();
+        timeout = vm["timeout"].as<int>();
         complexity_bound = vm["complexity-bound"].as<unsigned>();
         dist_complexity_bound = vm["dist-complexity-bound"].as<unsigned>();
         cond_complexity_bound = vm["cond-complexity-bound"].as<unsigned>();
@@ -105,6 +111,7 @@ void output_results(const Options &options,
 }
 
 int main(int argc, const char **argv) {
+    auto start_time = std::clock();
     Options options(argc, argv);
 
     const SLTP::DL::Sample sample = parse_input_sample(options.workspace + "/sample.io");
@@ -117,7 +124,7 @@ int main(int argc, const char **argv) {
          << endl;
 #endif
     SLTP::DL::Factory factory(nominals, options.complexity_bound,
-            options.dist_complexity_bound, options.cond_complexity_bound);
+            options.dist_complexity_bound, options.cond_complexity_bound, options.timeout);
 
     SLTP::DL::Cache cache;
     factory.generate_basis(sample);
@@ -126,7 +133,7 @@ int main(int argc, const char **argv) {
 
     factory.generate_roles(cache, sample);
 
-    auto concepts = factory.generate_concepts(cache, sample);
+    auto concepts = factory.generate_concepts(cache, sample, start_time);
     factory.generate_features(concepts, cache, sample, forced_goal_features);
 //    factory.report_dl_data(cout);
     factory.log_all_concepts_and_features(concepts, cache, sample, options.workspace, options.print_denotations);
