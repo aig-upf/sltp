@@ -107,7 +107,7 @@ class Cache {
     }
 
     const sample_denotation_t* find_sample_denotation(const sample_denotation_t &d) const {
-        cache1_t::const_iterator it = cache1_.find(&d);
+        auto it = cache1_.find(&d);
         return it == cache1_.end() ? nullptr : it->first;
     }
 
@@ -138,7 +138,7 @@ class Cache {
     //
     // concept name -> sample denotation
     const sample_denotation_t* find_sample_denotation(const std::string &name) const {
-        cache2_t::const_iterator it = cache2_.find(name);
+        auto it = cache2_.find(name);
         return it == cache2_.end() ? nullptr : it->second;
     }
 
@@ -163,7 +163,7 @@ class Cache {
     //
     // state denotation -> pointer
     const state_denotation_t* find_state_denotation(const state_denotation_t &sd) const {
-        cache3_t::const_iterator it = cache3_.find(&sd);
+        auto it = cache3_.find(&sd);
         return it == cache3_.end() ? nullptr : *it;
     }
 
@@ -182,7 +182,7 @@ class Cache {
     //
     // name -> atom
     const Atom* find_atom(const std::string &name) const {
-        cache4_t::const_iterator it = cache4_.find(name);
+        auto it = cache4_.find(name);
         return it == cache4_.end() ? nullptr : it->second;
     }
     const Atom* find_or_insert_atom(const Atom &atom);
@@ -1034,13 +1034,13 @@ class PlusRole : public Role {
 
   public:
     explicit PlusRole(const Role *role) : Role(1 + role->complexity()), role_(role) { }
-    ~PlusRole() override { }
+    ~PlusRole() override = default;
     const Role* clone() const override {
         return new PlusRole(*this);
     }
 
     // apply Johnson's algorithm for transitive closure
-    void transitive_closure(int num_objects, state_denotation_t &sd) const {
+    static void transitive_closure(int num_objects, state_denotation_t &sd) {
         // create adjacency lists
         std::vector<std::vector<int> > adj(num_objects);
         for( int i = 0; i < num_objects; ++i ) {
@@ -1637,7 +1637,7 @@ class Factory {
         concepts_.pop_back();
     }
 
-    void insert_new_denotation_by_name(Cache &cache, const std::string &name, const sample_denotation_t *d) const {
+    static void insert_new_denotation_by_name(Cache &cache, const std::string &name, const sample_denotation_t *d) {
         cache.find_or_insert_sample_denotation_by_name(name, *d);
     }
     int insert_new_concept(Cache &cache, const Concept *concept, const sample_denotation_t *d) const {
@@ -1652,7 +1652,7 @@ class Factory {
         return roles_.size();
     }
 
-    bool is_superfluous(Cache &cache, const sample_denotation_t *d) const {
+    static bool is_superfluous(Cache &cache, const sample_denotation_t *d) {
         return cache.find_sample_denotation(*d) != nullptr;
     }
 
@@ -1719,7 +1719,6 @@ class Factory {
         }
 
         // create new concept layer
-        int integer_bound = (int) complexity_bound_;
         concepts_.emplace_back();
 
         if (is_first_non_basis_iteration) {
@@ -1754,7 +1753,7 @@ class Factory {
         }
 
 
-        for (int k = 0; k <= (integer_bound-1); ++k) {
+        for (int k = 0; k <= (complexity_bound_-1); ++k) {
             for (auto concept:concepts_in_last_layer_by_complexity[k]) {
                 NotConcept not_concept(concept);
                 auto p = is_superfluous_or_exceeds_complexity_bound(not_concept, cache, sample);
@@ -1767,7 +1766,7 @@ class Factory {
             if (check_timeout(start_time)) return -1;
         }
 
-        for (int k = 0; k <= (integer_bound-1); ++k) {
+        for (int k = 0; k <= (complexity_bound_-1); ++k) {
             for (const Concept* concept:concepts_in_last_layer_by_complexity[k]) {
 
                 // Negate concepts in the last layer, only if they are not already negations
@@ -1782,7 +1781,7 @@ class Factory {
 
 
                 // generate exist and forall combining a role with a concept in the last layer
-                for (int k2 = 0; k2 <= (integer_bound-k-1); ++k2) {
+                for (int k2 = 0; k2 <= (complexity_bound_-k-1); ++k2) {
                     for (auto role:roles_by_complexity[k2]) {
                         ExistsConcept exists_concept(concept, role);
                         std::pair<bool, const sample_denotation_t *> p = is_superfluous_or_exceeds_complexity_bound(
@@ -1808,11 +1807,11 @@ class Factory {
 
         // generate conjunctions of (a) a concept in previous layer with a concept of the last layer, and
         // (b) two concepts of the last layer, avoiding symmetries
-        for (int k = 0; k <= (integer_bound-1); ++k) {
+        for (int k = 0; k <= (complexity_bound_-1); ++k) {
             for (unsigned i_k = 0; i_k < concepts_in_last_layer_by_complexity[k].size(); ++i_k) {
                 const auto& concept1 = concepts_in_last_layer_by_complexity[k][i_k];
 
-                for (int k2 = 0; k2 <= (integer_bound-k); ++k2) { // TODO Change if measuring AND-concept complexity by multiplication!
+                for (int k2 = 0; k2 <= (complexity_bound_-k); ++k2) { // TODO Change if measuring AND-concept complexity by multiplication!
                     for (auto concept2:concepts_in_previous_layers_by_complexity[k2]) {
                         AndConcept and_concept(concept1, concept2);
                         std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(and_concept, cache, sample);
@@ -1824,7 +1823,7 @@ class Factory {
                 }
 
 
-                for (int k2 = k; k2 <= (integer_bound-k); ++k2) { // TODO Change if measuring AND-concept complexity by multiplication!
+                for (int k2 = k; k2 <= (complexity_bound_-k); ++k2) { // TODO Change if measuring AND-concept complexity by multiplication!
                     unsigned start_at = (k == k2) ? i_k+1: 0; // Break symmetries within same complexity bucket
                     for (unsigned i_k2 = start_at; i_k2 < concepts_in_last_layer_by_complexity[k2].size(); ++i_k2) {
                         const auto& concept2 = concepts_in_last_layer_by_complexity[k2][i_k2];
