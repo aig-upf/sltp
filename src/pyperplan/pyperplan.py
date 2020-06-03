@@ -181,7 +181,7 @@ def search_plan(domain_file, problem_file, search, heuristic_class, search_name,
 
     if not heuristic_class is None:
         heuristic = heuristic_class(task)
-    search_start_time = time.clock()
+    search_start_time = time.perf_counter()
 
     if search_name == "full":
         solution = _search(task, search, heuristic, search_name, max_nodes=max_nodes)
@@ -189,7 +189,7 @@ def search_plan(domain_file, problem_file, search, heuristic_class, search_name,
         solution = _search(task, search, heuristic, search_name, use_preferred_ops=True)
     else:
         solution = _search(task, search, heuristic, search_name)
-    logging.info('Wall-clock search time: {0:.2}'.format(time.clock() -
+    logging.info('Wall-clock search time: {0:.2}'.format(time.perf_counter() -
                                                          search_start_time))
     return solution
 
