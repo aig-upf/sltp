@@ -289,10 +289,11 @@ def extract_features(config, sample):
     logging.info('Invoking C++ feature generation module'.format())
     featuregen_location = os.path.join(SLTP_SRC_DIR, "..", "features")
     cmd = os.path.realpath(os.path.join(featuregen_location, "featuregen"))
-    args = " --complexity-bound {}".format(config.max_concept_size) \
-           + " --dist-complexity-bound {}".format(config.distance_feature_max_complexity) \
-           + " --cond-complexity-bound {}".format(config.cond_feature_max_complexity) + \
-           " --workspace {}".format(config.experiment_dir)
+    args = f" --complexity-bound {config.max_concept_size}" \
+           + f" --timeout {config.concept_generation_timeout}" \
+           + f" --dist-complexity-bound {config.distance_feature_max_complexity}" \
+           + f" --cond-complexity-bound {config.cond_feature_max_complexity}" + \
+           f" --workspace {config.experiment_dir}"
 
     if config.print_all_denotations:
         args += "--print-denotations".format(),

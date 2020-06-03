@@ -238,7 +238,7 @@ def setup_feature_generation_filenames(config):
 class CPPFeatureGenerationStep(Step):
     """ Generate exhaustively a set of all features up to a given complexity from the transition (state) sample """
     def get_required_attributes(self):
-        return ["domain", "experiment_dir", "max_concept_size"]
+        return ["domain", "experiment_dir", "max_concept_size", "concept_generation_timeout"]
 
     def get_required_data(self):
         return ["sample"]
