@@ -94,7 +94,8 @@ def _run_planner(config, data, rng):
         run(config.domain, i, o, w, config.num_states)
 
     for i, o in zip(config.test_instances, config.test_sample_files):
-        run(config.test_domain, i, o, -1, config.num_tested_states)
+        if config.num_tested_states > 0:
+            run(config.test_domain, i, o, -1, config.num_tested_states)
 
     return ExitCode.Success, dict()
 
