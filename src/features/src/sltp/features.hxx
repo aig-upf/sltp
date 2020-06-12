@@ -1747,8 +1747,8 @@ public:
                     if (!p.first) insert_new_concept(cache, eq_concept.clone(), p.second);
                     delete p.second;
                     num_pruned_concepts += p.first;
+                    if (check_timeout(start_time)) return -1;
                 }
-                if (check_timeout(start_time)) return -1;
             }
         }
 
@@ -1762,8 +1762,8 @@ public:
                 }
                 delete p.second;
                 num_pruned_concepts += p.first;
+                if (check_timeout(start_time)) return -1;
             }
-            if (check_timeout(start_time)) return -1;
         }
 
         for (int k = 0; k <= (complexity_bound_-1); ++k) {
@@ -1798,10 +1798,11 @@ public:
                         //else std::cout << "PRUNE: " + forall_concept.as_str() << std::endl;
                         delete q.second;
                         num_pruned_concepts += q.first;
+                        if (check_timeout(start_time)) return -1;
                     }
                 }
+                if (check_timeout(start_time)) return -1;
             }
-            if (check_timeout(start_time)) return -1;
         }
 
 
@@ -1819,6 +1820,7 @@ public:
                         //else std::cout << "PRUNE: " + and_concept.as_str() << std::endl;
                         delete p.second;
                         num_pruned_concepts += p.first;
+                        if (check_timeout(start_time)) return -1;
                     }
                 }
 
@@ -1833,10 +1835,10 @@ public:
                         //else std::cout << "PRUNE: " + and_concept.as_str() << std::endl;
                         delete p.second;
                         num_pruned_concepts += p.first;
+                        if (check_timeout(start_time)) return -1;
                     }
                 }
             }
-            if (check_timeout(start_time)) return -1;
         }
         return num_pruned_concepts;
     }
