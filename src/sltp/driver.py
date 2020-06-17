@@ -87,7 +87,7 @@ def _run_planner(config, data, rng):
         else:
             assert isinstance(num_states, int)
             num_string = "max_expansions={}".format(num_states)
-        params = '-i {} --domain {} --driver {} --options={},width.max={}'.format(i, d, config.driver, num_string, w)
+        params = f'-i {i} --domain {d} --driver {config.driver} --workspace={config.experiment_dir}/planner --options={num_string},width.max={w}'
         execute(command=[sys.executable, "run.py"] + params.split(' '), stdout=o, cwd=config.planner_location)
 
     for i, o, w in zip(config.instances, config.sample_files, config.max_width):

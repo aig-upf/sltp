@@ -174,6 +174,9 @@ def generate_experiment(domain_dir, domain, **kwargs):
 
         # Some debugging help to print the denotations of all features over all states (expensive!)
         print_all_denotations=False,
+
+        # By default don't timeout the concept generation process
+        concept_generation_timeout=-1,
     )
 
     parameters = {**defaults, **kwargs}  # Copy defaults, overwrite with user-specified parameters
