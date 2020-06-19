@@ -34,7 +34,7 @@ def _compute_abstract_policy(data, features, actions, cinfo):
                validator.action_captures(cache, s, sprime, feature_idx[a], features)]
 
         if not app:
-            raise RuntimeError("Training set transition not captures by any action in the abstraction")
+            raise RuntimeError("Training set transition not captured by any action in the abstraction")
 
         if len(app) > 1:
             logging.warning("Two abstract actions applicable in same abstract state")  # This shouldn't happen
