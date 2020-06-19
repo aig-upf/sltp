@@ -274,7 +274,7 @@ class CPPFeatureGenerationStep(Step):
 
 
 class CPPMaxsatProblemGenerationStep(Step):
-    """ Generate exhaustively a set of all features up to a given complexity from the transition (state) sample """
+    """ Generate the standard SLTP Max-sat CNF encoding """
     def get_required_attributes(self):
         return ["experiment_dir", "prune_redundant_states", "use_d2tree"]
 
@@ -288,6 +288,27 @@ class CPPMaxsatProblemGenerationStep(Step):
 
     def description(self):
         return "C++ CNF generation module"
+
+    def get_step_runner(self):
+        from . import cnfgen
+        return cnfgen.run
+
+
+class TransitionSeparationCNFGenerationStep(Step):
+
+    def get_required_attributes(self):
+        return ["experiment_dir", "prune_redundant_states", "use_d2tree"]
+
+    def get_required_data(self):
+        return ["in_goal_features"]
+
+    def process_config(self, config):
+        config["top_filename"] = compute_info_filename(config, "top.dat")
+        config["cnf_filename"] = compute_maxsat_filename(config)
+        return config
+
+    def description(self):
+        return "Generation of the transition separation CNF"
 
     def get_step_runner(self):
         from . import cnfgen
@@ -685,6 +706,7 @@ PIPELINES = dict(
         AbstractionTestingStep,
         # QNPGenerationStep,
     ],
+
     maxsatcpp=[
         PlannerStep,
         TransitionSamplingStep,
@@ -695,6 +717,7 @@ PIPELINES = dict(
         AbstractionTestingStep,
         # QNPGenerationStep,
     ],
+
     maxsat_poly=[
         PlannerStep,
         TransitionSamplingStep,
@@ -705,6 +728,7 @@ PIPELINES = dict(
         ActionModelFromFeatureIndexesStep,
         AbstractionTestingStep,
     ],
+
     # sat=[
     #     PlannerStep,
     #     ConceptGenerationStep,
@@ -713,4 +737,14 @@ PIPELINES = dict(
     #     SatProblemSolutionStep,
     #     SatSolutionDecodingStep,
     # ],
+
+    transition_classifier=[
+        PlannerStep,
+        TransitionSamplingStep,
+        CPPFeatureGenerationStep,
+        TransitionSeparationCNFGenerationStep,
+        # MaxsatProblemSolutionStep,
+        # CPPActionModelStep,
+        # AbstractionTestingStep,
+    ],
 )
