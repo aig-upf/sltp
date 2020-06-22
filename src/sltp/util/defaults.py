@@ -170,7 +170,7 @@ def generate_experiment(domain_dir, domain, **kwargs):
         prune_redundant_states=True,
 
         # Use the D2-Tree for the CNF encoding
-        use_d2tree=True,
+        maxsat_encoding="d2tree",
 
         # Some debugging help to print the denotations of all features over all states (expensive!)
         print_all_denotations=False,

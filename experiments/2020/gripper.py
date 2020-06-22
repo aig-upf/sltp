@@ -22,6 +22,7 @@ def experiments():
         concept_generator=None,
         parameter_generator=gripper_parameters,
         feature_namer=gripper_names,
+        maxsat_encoding="separation"
     )
 
     return exps
