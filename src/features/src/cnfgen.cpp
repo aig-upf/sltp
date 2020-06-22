@@ -82,8 +82,6 @@ struct Options {
         else throw po::validation_error(po::validation_error::invalid_option_value, "encoding");
 
 
-        throw std::runtime_error(enc);
-
         // Split the comma-separated list of enforced feature IDS
         auto enforced_str = vm["enforce-features"].as<std::string>();
 //        std::cout << "\nenforced_str: " << enforced_str << std::endl;
