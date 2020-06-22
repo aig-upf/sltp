@@ -21,8 +21,7 @@ def run(config, data, rng):
     if config.prune_redundant_states:
         args.append("--prune-redundant-states")
 
-    if config.use_d2tree:
-        args.append("--d2tree")
+    args += ["--encoding", config.maxsat_encoding]
 
     retcode = execute([cmd] + args)
 
@@ -44,7 +43,3 @@ def run(config, data, rng):
             print(line.replace("TOP", str(top)), file=output)
 
     return ExitCode.Success, dict()
-
-
-
-

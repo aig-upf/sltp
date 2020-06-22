@@ -20,10 +20,17 @@ namespace po = boost::program_options;
 
 //! Command-line option processing
 struct Options {
+    enum class Encoding {
+        Basic,
+        D2Tree,
+        TransitionSeparation
+    };
+
     std::string workspace;
     bool prune_redundant_states;
     bool verbose;
-    bool use_d2tree;
+    Encoding encoding;
+
     std::vector<unsigned> enforced_features;
 
     Options(int argc, const char **argv) {
@@ -44,8 +51,8 @@ struct Options {
                 ("enforce-features,e", po::value<std::string>()->default_value(""),
                  "Comma-separated (no spaces!) list of IDs of feature we want to enforce in the abstraction.")
 
-                ("d2tree,d",
-                  "Whether to use the encoding based on the D2 tree.")
+                ("encoding", po::value<std::string>()->default_value("basic"),
+                     "The encoding to be used (options: {basic, d2tree, separation}).")
                 ;
 
         po::variables_map vm;
@@ -67,7 +74,15 @@ struct Options {
         workspace = vm["workspace"].as<std::string>();
         prune_redundant_states = vm.count("prune-redundant-states") > 0;
         verbose = vm.count("verbose") > 0;
-        use_d2tree = vm.count("d2tree") > 0;
+
+        auto enc = vm["encoding"].as<std::string>();
+        if (enc == "basic") encoding = Encoding::Basic;
+        else if (enc == "d2tree") encoding = Encoding::D2Tree;
+        else if  (enc == "separation") encoding = Encoding::TransitionSeparation;
+        else throw po::validation_error(po::validation_error::invalid_option_value, "encoding");
+
+
+        throw std::runtime_error(enc);
 
         // Split the comma-separated list of enforced feature IDS
         auto enforced_str = vm["enforce-features"].as<std::string>();
@@ -84,6 +99,8 @@ struct Options {
         }
 //        for (auto x:enforced_features) std::cout << "\n" << x << std::endl;
     }
+
+    bool use_d2tree() const { return encoding == Encoding::D2Tree; }
 };
 
 
@@ -134,7 +151,7 @@ int main(int argc, const char **argv) {
     // know only when we finish writing all clauses
     CNFGenerator gen(*sample);
     auto wsatstream = get_ofstream(options.workspace + "/theory.wsat.tmp");
-    auto res = gen.write_maxsat(wsatstream, options.enforced_features, options.use_d2tree);
+    auto res = gen.write_maxsat(wsatstream, options.enforced_features, options.use_d2tree());
     wsatstream.close();
 
     // Write some characteristics of the CNF to a different file
