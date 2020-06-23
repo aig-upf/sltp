@@ -1752,22 +1752,8 @@ public:
             }
         }
 
-
         for (int k = 0; k <= (complexity_bound_-1); ++k) {
-            for (auto concept:concepts_in_last_layer_by_complexity[k]) {
-                NotConcept not_concept(concept);
-                auto p = is_superfluous_or_exceeds_complexity_bound(not_concept, cache, sample);
-                if (!p.first) {
-                    insert_new_concept(cache, not_concept.clone(), p.second);
-                }
-                delete p.second;
-                num_pruned_concepts += p.first;
-                if (check_timeout(start_time)) return -1;
-            }
-        }
-
-        for (int k = 0; k <= (complexity_bound_-1); ++k) {
-            for (const Concept* concept:concepts_in_last_layer_by_complexity[k]) {
+            for (const auto* concept:concepts_in_last_layer_by_complexity[k]) {
 
                 // Negate concepts in the last layer, only if they are not already negations
                 if (!dynamic_cast<const NotConcept*>(concept)) {
@@ -2045,7 +2031,7 @@ public:
     }
 
     std::vector<const Concept*> generate_concepts(Cache &cache, const Sample &sample, const std::clock_t& start_time) const {
-        int num_concepts = 0;
+        std::size_t num_concepts = 0;
         bool some_new_concepts = true;
         bool timeout_reached = false;
         for( int iteration = 0; some_new_concepts; ++iteration ) {
@@ -2054,10 +2040,10 @@ public:
                       << ", #concepts-in-last-layer=" << (concepts_.empty() ? 0 : concepts_.back().size())
                       << std::endl;
 
-            int num_concepts_before_step = num_concepts;
+            std::size_t num_concepts_before_step = num_concepts;
 
             // Let the fun begin:
-            int num_pruned_concepts = advance_step(cache, sample, start_time);
+            std::size_t num_pruned_concepts = advance_step(cache, sample, start_time);
             timeout_reached = num_pruned_concepts < 0;
 
             num_concepts += concepts_.empty() ? 0 : concepts_.back().size();
