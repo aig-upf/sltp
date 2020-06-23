@@ -1,4 +1,5 @@
-from sltp.util.misc import update_dict, extend_namer_to_all_features
+from sltp.util.misc import update_dict
+from sltp.util.names import spanner_names
 
 
 def experiments():
@@ -8,7 +9,7 @@ def experiments():
         domain="domain.pddl",
         test_domain="domain.pddl",
         complete_only_wrt_optimal=True,
-        feature_namer=feature_namer,
+        feature_namer=spanner_names,
     )
 
     exps = dict()
@@ -51,45 +52,6 @@ def experiments():
 
 def add_domain_parameters(language):
     return []
-
-
-def feature_namer(feature):
-    s = str(feature)
-    base = {
-        # "": "",
-        "And(tightened_g,Not(tightened))": "n-untightened-nuts",
-        "Exists(carrying,<universe>)": "n-carried-spanners",
-        "Forall(Inverse(link),<empty>)": "first-cell",  # Neat!
-        "Exists(at,Forall(Inverse(link),<empty>))": "n-things-on-first-cell",
-        "And(Exists(at,Exists(Inverse(at),man)),Not(man))": "n-spanners-in-same-cell-as-man",
-        "And(Exists(at,Exists(Inverse(at),man)),spanner)":  "n-spanners-in-same-cell-as-man",
-        "Exists(at,Exists(link,Exists(Inverse(at),<universe>)))": "",
-        "loose": "n-untightened-nuts",
-        "Exists(at,Exists(link,Exists(Inverse(at),man)))": "n-spanners-on-cell-left-to-man",
-        "": "",
-        "": "",
-    }
-    return extend_namer_to_all_features(base).get(s, s)
-
-# 	3. Num[Exists(at,Exists(link,Exists(Inverse(at),<universe>)))] [k=7, id=27] ???
-
-# 	4. Bool[Exists(at,Exists(link,Forall(link,Forall(link,<empty>))))] [k=8, id=55]
-# 	5. Num[Exists(at,Exists(link,Exists(Inverse(at),man)))] [k=8, id=63]
-# 	6. Bool[And(Exists(at,Exists(link,Forall(Inverse(at),<empty>))),man)] [k=9, id=108]
-
-# 	8. Bool[And(Exists(link,Forall(Inverse(at),man)),Forall(Inverse(link),<empty>))] [k=10, id=264]
-
-# 	10. Num[Exists(at,Exists(link,Exists(link,Exists(Inverse(at),man))))] [k=10, id=280]
-
-
-# 	3. Num[Not(Forall(at,Forall(link,Forall(Inverse(at),spanner))))] [k=9, id=115]
-# 	4. Bool[And(Exists(at,Forall(link,Exists(Inverse(at),<universe>))),man)] [k=9, id=139]
-# 	5. Bool[And(Exists(at,Exists(link,Forall(link,Exists(link,<universe>)))),man)] [k=10, id=297]
-
-# 	6. Bool[And(Exists(at,Exists(link,Exists(Inverse(at),spanner))),spanner)] [k=10, id=308]
-# 	9. Num[    Exists(at,Exists(link,Exists(link,Exists(Inverse(at),spanner))))] [k=10, id=274]
-
-# 	7. Num[Exists(at,Exists(link,Exists(link,Exists(Inverse(at),spanner))))] [k=10, id=427]
 
 
 def goal_selector(lang):

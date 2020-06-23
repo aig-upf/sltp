@@ -4,6 +4,7 @@ from sltp.util.names import gripper_names, gripper_parameters
 
 def experiments():
     base = dict(
+        # domain_dir="gripper-m",
         domain_dir="gripper",
         domain="domain.pddl",
     )
@@ -13,16 +14,20 @@ def experiments():
     exps["small"] = update_dict(
         base,
         pipeline="transition_classifier",
-        instances="sample-small.pddl",
+        instances=["sample-2balls.pddl"],
+        # instances=["sample-small.pddl"],
         test_domain="domain.pddl",
-        test_instances=["prob03.pddl", "prob04.pddl"],
-        num_states=100,
-        max_concept_size=10,
-        max_concept_grammar_iterations=3,
+        # test_instances=["prob03.pddl", "prob04.pddl"],
+        test_instances=[],
+        num_states="all",
+        max_concept_size=15,
         concept_generator=None,
         parameter_generator=gripper_parameters,
+        # parameter_generator=None
         feature_namer=gripper_names,
-        maxsat_encoding="separation"
+        maxsat_encoding="separation",
+        complete_only_wrt_optimal=True,
+        optimal_selection_strategy="complete"
     )
 
     return exps

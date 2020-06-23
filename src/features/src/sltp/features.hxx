@@ -1702,8 +1702,6 @@ public:
         }
 
 
-        // On subsequent iterations...
-        bool is_first_non_basis_iteration = (concepts_.size() == 1);
         // Classify concepts and roles by their complexity - we will use this to minimize complexity checks later
         std::vector<std::vector<const Role*>> roles_by_complexity(complexity_bound_+1);
         std::vector<std::vector<const Concept*>> concepts_in_last_layer_by_complexity(complexity_bound_+1);
@@ -1721,6 +1719,7 @@ public:
         // create new concept layer
         concepts_.emplace_back();
 
+        bool is_first_non_basis_iteration = (concepts_.size() == 1);
         if (is_first_non_basis_iteration) {
             // Insert equal concepts based on the already-fixed set of roles.
             for (const auto r1:roles_) {

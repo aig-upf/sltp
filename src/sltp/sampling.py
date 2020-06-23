@@ -1,6 +1,7 @@
 import itertools
 import logging
-from collections import defaultdict, OrderedDict
+import math
+from collections import defaultdict, OrderedDict, deque
 
 from .goal_selection import select_goal_maximizing_states
 from .outputs import print_sat_transition_matrix, print_transition_matrix, print_state_set
@@ -141,7 +142,7 @@ class TransitionSample:
 
 
 def mark_optimal(goal_states, root_states, parents):
-    """ Collect all those states that lie on one arbitrary optimal path to the goal """
+    """ Collect all those transitions that lie on one arbitrary optimal path to the goal """
     optimal_transitions = set()
     for goal in goal_states:
         previous = current = goal
@@ -156,6 +157,35 @@ def mark_optimal(goal_states, root_states, parents):
     return optimal_transitions
 
 
+def run_backwards_brfs(g, parents, mincosts, minactions):
+    queue = deque([g])
+    mincosts[g] = 0
+    minactions[g] = []
+
+    # Run a breadth-first search backwards from each goal
+    while queue:
+        cur = queue.popleft()
+        curcost = mincosts[cur]
+
+        for par in parents[cur]:
+            parcost = mincosts.get(par, math.inf)
+            if parcost > curcost + 1:
+                queue.append(par)
+                mincosts[par] = curcost + 1
+                minactions[par] = [cur]
+            elif parcost == curcost + 1:
+                minactions[par].append(cur)
+
+
+def mark_all_optimal(goals, parents):
+    """ Collect all transitions that lie on at least one optimal path from some state to a goal. """
+    mincosts, minactions = {}, {}
+    for g in goals:
+        run_backwards_brfs(g, parents, mincosts, minactions)
+
+    return minactions
+
+
 def print_atom(atom):
     assert len(atom) > 0
     if len(atom) == 1:
@@ -164,14 +194,16 @@ def print_atom(atom):
 
 
 def log_sampled_states(sample, filename):
-    # We need to recompute the parenthood relation with the remapped states to log it!
     optimal_s = set(x for x, _ in sample.optimal_transitions)
 
     with open(filename, 'w') as f:
         for id_, state in sample.states.items():
+            # We need to recompute the parenthood relation with the remapped states to log it!
             parents = sample.parents[id_] if id_ in sample.parents else []
             state_parents = ", ".join(sorted(map(str, parents)))
-            state_children = ", ".join(sorted(map(str, sample.transitions[id_])))
+
+            tx = sorted(sample.transitions[id_])
+            state_children = ", ".join(f'{x}{"+" if (id_, x) in sample.optimal_transitions else ""}' for x in tx)
             atoms = ", ".join(print_atom(atom) for atom in state)
             is_goal = "*" if id_ in sample.goals else ""
             is_expanded = "^" if id_ in sample.expanded else ""
@@ -179,8 +211,8 @@ def log_sampled_states(sample, filename):
             is_root = "=" if id_ in sample.roots else ""
             is_optimal = "+" if id_ in optimal_s else ""
             is_unsolvable = "U" if id_ in sample.unsolvable else ""
-            print("#{}{}{}{}{}{}{} (parents: {}, children: {}):\n\t{}".
-                  format(id_, is_root, is_goal, is_optimal, is_expanded, is_deadend, is_unsolvable, state_parents, state_children, atoms), file=f)
+            print(f"#{id_}{is_root}{is_goal}{is_optimal}{is_expanded}{is_deadend}{is_unsolvable}"
+                  f"(parents: {state_parents}, children: {state_children}):\n\t{atoms}", file=f)
 
         print("Symbols:\n*: goal, \n^: expanded, \nº: dead-end, \n=: root, \n"
               "+: source of some transition marked as optimal,\nU: unsolvable", file=f)
@@ -206,18 +238,6 @@ def sample_generated_states(config, rng):
 
     mark_optimal_transitions(config.optimal_selection_strategy, sample)
     logging.info("Entire sample: {}".format(sample.info()))
-
-    # if config.num_sampled_states is None and config.max_width < 1 and not config.complete_only_wrt_optimal:
-    #     return states, goal_states, transitions
-    # Let's deactivate random sampling temporarily, as we're not using it
-    # optimal, optimal_transitions = set(), set()
-    # if config.sampling == "random":
-    #     assert config.num_sampled_states is not None
-    #     assert not config.complete_only_wrt_optimal
-    #     selected = random_sample(config, goal_states, rng, states, transitions, parents)
-    #
-    # else:
-    # assert config.sampling in ("all", "optimal")
 
     if config.num_sampled_states is not None:
         # Resample the full sample and extract only a few specified states
@@ -250,19 +270,25 @@ def print_transition_matrices(sample, config):
 
 
 def mark_optimal_transitions(selection_strategy, sample: TransitionSample):
-    """ Marks which transitions are optimal in a transition system according to some selection criterium,F
+    """ Marks which transitions are optimal in a transition system according to some selection criterion
     such as marking *all* optimal transitions, or marking just one *single* optimal path.
      """
     if selection_strategy == "arbitrary":
         # For each instance, we keep the first-reached goal, as a way of selecting an arbitrary optimal path.
         goals = sample.get_one_goal_per_instance()
         optimal = mark_optimal(goals, sample.roots, sample.parents)
-        sample.mark_as_optimal(optimal)
-        return
 
-    if selection_strategy == "complete":
-        assert 0, "To implement"
-    raise RuntimeError("Unknown optimal selection strategy")
+    elif selection_strategy == "complete":
+        # Mark all transitions that are optimal from some non-dead-end state
+        optimal_nested = mark_all_optimal(sample.goals, sample.parents)
+        optimal = set()
+        for s, targets in optimal_nested.items():
+            _ = [optimal.add((s, t)) for t in targets]
+
+    else:
+        raise RuntimeError(f'Unknown optimal selection strategy "{selection_strategy}"')
+
+    sample.mark_as_optimal(optimal)
 
 
 def random_sample(config, goal_states, rng, states, transitions, parents):

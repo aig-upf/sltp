@@ -99,8 +99,16 @@ struct Options {
     }
 
     bool use_d2tree() const { return encoding == Encoding::D2Tree; }
+    bool use_separation_encoding() const { return encoding == Encoding::TransitionSeparation; }
 };
 
+std::pair<bool, CNFWriter> write_maxsat(std::ostream &os, CNFGenerator& gen, const Options& options) {
+    if (options.use_separation_encoding()) {
+        return gen.write_separation_maxsat(os, options.enforced_features);
+    } else {
+        return gen.write_basic_maxsat(os, options.enforced_features, options.use_d2tree());
+    }
+}
 
 int main(int argc, const char **argv) {
     float start_time = Utils::read_time_in_seconds();
@@ -149,7 +157,9 @@ int main(int argc, const char **argv) {
     // know only when we finish writing all clauses
     CNFGenerator gen(*sample);
     auto wsatstream = get_ofstream(options.workspace + "/theory.wsat.tmp");
-    auto res = gen.write_maxsat(wsatstream, options.enforced_features, options.use_d2tree());
+
+    auto res = write_maxsat(wsatstream, gen, options);
+
     wsatstream.close();
 
     // Write some characteristics of the CNF to a different file

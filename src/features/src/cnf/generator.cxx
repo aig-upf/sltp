@@ -4,7 +4,7 @@
 
 
 //! Generate and write the actual CNF instance as we go
-std::pair<bool, CNFWriter> CNFGenerator::write_maxsat(std::ostream &os, const std::vector<unsigned>& enforce_features, bool use_d2tree) {
+std::pair<bool, CNFWriter> CNFGenerator::write_basic_maxsat(std::ostream &os, const std::vector<unsigned>& enforce_features, bool use_d2tree) {
     CNFWriter writer(os);
 
     /////// Create the CNF variables ///////
@@ -287,4 +287,89 @@ bool all_tx_have_analogs(const Sample::Sample& sample, unsigned s, unsigned t) {
         if (!tx_has_analog) return false;
     }
     return true;
+}
+
+
+//! Generate and write the actual CNF instance as we go
+std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(std::ostream &os, const std::vector<unsigned>& enforce_features) {
+    CNFWriter writer(os);
+
+    /////// Create the CNF variables ///////
+    // Selected(f) for each feature f
+    std::vector<cnfvar_t> var_selected;
+    for (unsigned f = 0; f < nf_; ++f) {
+//            std::cout << "#" << f << ": " << sample_.matrix().feature_name(f) << std::endl;
+        var_selected.push_back(writer.variable());
+    }
+
+    // No more variables will be created. Print total count.
+    std::cout << "A total of " << writer.nvars() << " variables were created" << std::endl;
+
+
+    /////// Create the CNF constraints ///////
+
+    std::cout << "Generating weighted selected constraints for " << var_selected.size() << " features" << std::endl;
+    for (unsigned f = 0; f < nf_; ++f) {
+        unsigned w = feature_weight(f);
+        writer.print_clause({CNFWriter::literal(var_selected[f], false)}, w);
+        n_selected_clauses += 1;
+    }
+
+    /*
+    TODO: Looks this might not be necessary anymore?
+    // Force D1(s1, s2) to be true if exactly one of the two states is a goal state
+    std::cout << "Generating goal constraints for " << goals_.size() * nongoals_.size() << " state pairs" << std::endl;
+    for (unsigned s:goals_) {
+        for (unsigned t:nongoals_) {
+            const auto& d1feats = d1_distinguishing_features(s, t);
+            if (d1feats.empty()) {
+                undist_goal_warning(s, t);
+                return {true, writer};
+            }
+
+            cnfclause_t clause;
+            for (unsigned f:d1feats) {
+                clause.push_back(CNFWriter::literal(var_selected.at(f), true));
+            }
+
+            writer.print_clause(clause);
+            n_goal_clauses += 1;
+        }
+    }
+    */
+
+    // For goal-identifying features that we want to enforce in the solution, we add a unary clause "selected(f)"
+    assert (enforce_features.empty());
+    for (auto f:enforce_features) {
+        writer.print_clause({CNFWriter::literal(var_selected.at(f), true)});
+        n_goal_clauses += 1;
+    }
+
+
+    // Compute which pairs (t1, t2) of transitions need to be distinguished, and for that pair, which
+    // features do actually distinguish them
+    std::cout << "Generating transition-separation constraints for " << marked_transitions().size()
+              << " positive transitions" << std::endl;
+
+    for (const transition_t& tx1:marked_transitions()) {
+        unsigned s = tx1.first, sprime = tx1.second;
+
+        // TODO Precompute the non-marked transitions
+        for (unsigned t = 0; t < ns_; ++t) {
+            for (unsigned tprime:successors(t)) {
+                if (!is_marked_transition(t, tprime)) {
+                    // We want to distinguish (s, s') from (t, t')
+                    cnfclause_t clause;
+                    for (feature_t f:compute_d2_distinguishing_features(sample_, s, sprime, t, tprime)) {
+                        clause.push_back(CNFWriter::literal(var_selected.at(f), true));
+                    }
+
+                    writer.print_clause(clause);
+                    n_d2_clauses += 1;
+                }
+            }
+        }
+    }
+
+    return {false, writer};
 }

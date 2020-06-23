@@ -121,8 +121,7 @@ class PlannerStep(Step):
         if not os.path.isfile(config["domain"]):
             raise InvalidConfigParameter('Specified domain file "{}" does not exist'.format(config["domain"]))
         if not os.path.isdir(config["planner_location"]):
-            raise InvalidConfigParameter('Specified planner location "{}" does not exist'
-                                         .format(config["planner_location"]))
+            raise InvalidConfigParameter(f'Specified planner location "{config["planner_location"]}" does not exist')
 
         config["instance_tag"] = compute_instance_tag(**config)
         config["experiment_tag"] = compute_experiment_tag(**config)
@@ -392,6 +391,26 @@ class CPPActionModelStep(Step):
     def get_step_runner(self):
         from . import actionmodel
         return actionmodel.compute_abstract_action_model
+
+
+class TransitionSeparationPolicyStep(Step):
+    """  """
+
+    def get_required_attributes(self):
+        return ['serialized_feature_filename', 'domain']
+
+    def process_config(self, config):
+        return config
+
+    def get_required_data(self):
+        return ["cnf_solution", "sample", "num_features", "model_cache"]
+
+    def description(self):
+        return "Computation of the feature separation space"
+
+    def get_step_runner(self):
+        from . import separation
+        return separation.compute_transition_separation_function
 
 
 class ActionModelFromFeatureIndexesStep(Step):
@@ -722,7 +741,8 @@ PIPELINES = dict(
         TransitionSamplingStep,
         CPPFeatureGenerationStep,
         CPPMaxsatProblemGenerationStep,
-        # MaxsatProblemSolutionStep,
+        MaxsatProblemSolutionStep,
+        TransitionSeparationPolicyStep
         # CPPActionModelStep,
         # AbstractionTestingStep,
     ],

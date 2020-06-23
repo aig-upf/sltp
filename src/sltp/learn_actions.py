@@ -21,11 +21,10 @@ class CompletenessInfo:
 
 def compute_completeness_info(sample, complete_only_wrt_optimal):
     """ Compute optimal states and transitions based on the experiment configuration """
-    opt = complete_only_wrt_optimal
     all_states = set(sample.get_sorted_state_ids())
     all_transitions = [(s, s_prime) for s in sample.transitions for s_prime in sample.transitions[s]]
 
-    if opt:
+    if complete_only_wrt_optimal:
         optimal_states = sample.compute_optimal_states(include_goals=False)
         optimal_transitions = sample.optimal_transitions
     else:

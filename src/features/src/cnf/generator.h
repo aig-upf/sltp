@@ -51,7 +51,7 @@ protected:
     //! The number of features in the encoding
     const std::size_t nf_;
 
-    //! For convenient and performant access, a list of goal and non-goal states + a list of expanded states
+    //! For convenient and performant access, a list of goal and non-goal states
     std::vector<unsigned> goals_, nongoals_;
 
     d2map_t d2ids_;
@@ -89,10 +89,18 @@ public:
     bool is_goal(unsigned s) const { return sample_.matrix().goal(s); }
 
     bool is_sound_transition(unsigned s, unsigned sprime) const {
+        return is_marked_transition(s, sprime);
+    }
+
+    bool is_marked_transition(unsigned s, unsigned sprime) const {
         return sample_.transitions().marked(s, sprime);
     }
 
     const transition_set_t& sound_transitions() const {
+        return marked_transitions();
+    }
+
+    const transition_set_t& marked_transitions() const {
         return sample_.transitions().marked_transitions();
     }
 
@@ -138,8 +146,11 @@ public:
         return d2vars_.at(d2id);
     }
 
-    //! Generate and write the actual CNF instance as we go
-        std::pair<bool, CNFWriter> write_maxsat(std::ostream &os, const std::vector<unsigned>& enforce_features, bool use_d2tree = true);
+    //! Generate and write the CNF instance for the standard encoding as we go
+    std::pair<bool, CNFWriter> write_basic_maxsat(std::ostream &os, const std::vector<unsigned>& enforce_features, bool use_d2tree = true);
+
+    //! Generate and write the CNF instance for the transition-separation encoding as we go
+    std::pair<bool, CNFWriter> write_separation_maxsat(std::ostream &os, const std::vector<unsigned>& enforce_features);
 };
 
 using isomorphism_t = std::unordered_map<unsigned, unsigned>;

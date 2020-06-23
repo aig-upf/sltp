@@ -62,9 +62,9 @@ def generate_experiment(domain_dir, domain, **kwargs):
         complete_only_wrt_optimal=False,
 
         # The selection strategy to be used when marking which transitions are considered as optimal.
-        # - "arbitrary" marks as optimal the transitions in one single path btw initial state
-        #  and (some) goal per instance, chosen arbitrarily.
-        # "- complete" marks the transitions between all optimal paths btw initial state and (some) goal.
+        # - "arbitrary": marks as optimal the transitions in one single path btw initial state
+        #               and (some) goal per instance, chosen arbitrarily.
+        # - "complete": marks all transitions that are optimal between some _non-dead_ state and some goal.
         optimal_selection_strategy="arbitrary",
 
         # Type of sampling. Accepted options are:
