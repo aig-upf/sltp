@@ -19,14 +19,14 @@ def experiments():
         instances="sample-small.pddl",
         test_domain=domain, test_instances=["prob03.pddl", "prob04.pddl"],
         num_states=100, max_concept_size=10, max_concept_grammar_iterations=3,
-        concept_generator=None, parameter_generator=add_domain_parameters,
+        concept_generator=None, parameter_generator=gripper_parameters,
         gripper_names=gripper_names,)
 
     exps["prob01"] = update_dict(base,
         instances="prob01.pddl",
         num_states=300, num_sampled_states=None, random_seed=12,
         max_concept_size=10, max_concept_grammar_iterations=3,
-        concept_generator=None, parameter_generator=add_domain_parameters,
+        concept_generator=None, parameter_generator=gripper_parameters,
         gripper_names=gripper_names,)
 
     exps["prob01_goalc"] = update_dict(base,
@@ -41,7 +41,7 @@ def experiments():
         instances="prob01.pddl",
         num_states=2000, num_sampled_states=50, random_seed=12,
         max_concept_size=10, max_concept_grammar_iterations=3,
-        concept_generator=None, parameter_generator=add_domain_parameters,
+        concept_generator=None, parameter_generator=gripper_parameters,
         gripper_names=gripper_names,)
 
     #
