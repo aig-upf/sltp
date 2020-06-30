@@ -14,11 +14,11 @@ def experiments():
     exps["small"] = update_dict(
         base,
         pipeline="transition_classifier",
-        instances=["sample-2balls.pddl"],
-        # instances=["sample-small.pddl"],
+        # instances=["sample-2balls.pddl"],
+        instances=["sample-small.pddl"],
         test_domain="domain.pddl",
-        # test_instances=["prob03.pddl", "prob04.pddl"],
-        test_instances=[],
+        test_instances=["prob03.pddl"],
+        # test_instances=[],
         num_states="all",
         max_concept_size=15,
         concept_generator=None,
@@ -27,6 +27,7 @@ def experiments():
         feature_namer=gripper_names,
         maxsat_encoding="separation",
         complete_only_wrt_optimal=True,
+        prune_redundant_states=False,
         optimal_selection_strategy="complete"
     )
 

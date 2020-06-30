@@ -28,6 +28,7 @@ protected:
     const std::size_t num_marked_transitions_;
     // trdata_[s] contains the IDs of all neighbors of s in the state space
     std::vector<std::vector<unsigned>> trdata_;
+    std::vector<bool> alive_states_;
 
     transition_set_t marked_transitions_;
 
@@ -36,8 +37,11 @@ public:
             : num_states_(num_states),
               num_transitions_(num_transitions),
               num_marked_transitions_(num_marked_transitions),
-              trdata_(num_states)
+              trdata_(num_states),
+              alive_states_(num_states, false),
+              marked_transitions_()
           {}
+
     ~TransitionSample() = default;
     TransitionSample(const TransitionSample&) = default;
     TransitionSample(TransitionSample&&) = default;
@@ -61,6 +65,10 @@ public:
         return marked(std::make_pair(src, dst));
     }
 
+    bool is_alive(unsigned state) const {
+        return alive_states_.at(state);
+    }
+
     //! Print a representation of the object to the given stream.
     friend std::ostream& operator<<(std::ostream &os, const TransitionSample& o) { return o.print(os); }
     std::ostream& print(std::ostream &os) const {
@@ -77,13 +85,8 @@ public:
 
     // readers
     void read(std::istream &is) {
-        // read marked transitions (this is somewhat redundant, but it was added afterwards)
-        unsigned num_marked_transitions;
-        is >> num_marked_transitions;
-        assert(num_marked_transitions == num_marked_transitions_);
-
         std::vector<transition_t> marked_transitions;
-        marked_transitions.reserve(num_marked_transitions);
+        marked_transitions.reserve(num_marked_transitions_);
         for( unsigned i = 0; i < num_marked_transitions_; ++i ) {
             unsigned src, dst;
             is >> src >> dst;
@@ -91,11 +94,11 @@ public:
             marked_transitions.emplace_back(src, dst);
         }
 
-        // read number of records in the rest of the file
+        // read number of states that have been expanded, for thich we'll have one state per line next
         unsigned num_records;
         is >> num_records;
 
-        // read transitions
+        // read transitions, in format: source_id, num_successors, succ_1, succ_2, ...
         for( unsigned i = 0; i < num_records; ++i ) {
             unsigned src, count, dst;
             is >> src >> count;
@@ -113,7 +116,7 @@ public:
             }
         }
 
-        // store valid marked transitions
+        // Validate that marked transitions are indeed transitions and store them
         for (const auto &marked : marked_transitions) {
             unsigned src = marked.first;
             unsigned dst = marked.second;
@@ -131,6 +134,18 @@ public:
                 throw std::runtime_error("Invalid marked transition");
             }
             marked_transitions_.emplace(src, dst);
+        }
+
+        // Store which states are alive (i.e. solvable, reachable, and not a goal)
+        unsigned count, s;
+        is >> count;
+        assert(0 <= count && count <= num_states_);
+        if(count > 0) {
+            for(unsigned j = 0; j < count; ++j) {
+                is >> s;
+                assert(s < num_states_);
+                alive_states_[s] = true;
+            }
         }
     }
 
@@ -158,10 +173,13 @@ public:
 
         std::vector<std::vector<unsigned>> trdata(nstates);
         transition_set_t marked_transitions;
+        std::vector<bool> alive_states(nstates, false);
 
         for (unsigned s:selected) {
             unsigned mapped_s = mapping.at(s);
             assert(mapped_s < nstates);
+
+            if (alive_states_.at(s)) alive_states.at(mapped_s) = true;
 
             for (unsigned sprime:successors(s)) {
                 // mapping must contain all successors of the states in selected

@@ -386,7 +386,6 @@ public:
     using PredicateIndex = std::unordered_map<std::string, predicate_id_t>;
 
 protected:
-    const std::string name_;
     const std::vector<Predicate> predicates_;
     const std::vector<Instance> instances_;
     const std::vector<State> states_;
@@ -397,14 +396,12 @@ protected:
     // mapping from predicate names to their ID in the sample
     PredicateIndex predicate_index_;
 
-    Sample(std::string &name,
-           std::vector<Predicate> &&predicates,
+    Sample(std::vector<Predicate> &&predicates,
            std::vector<Instance> &&instances,
            std::vector<State> &&states,
            std::vector<predicate_id_t> &&goal_predicates,
            PredicateIndex &&predicate_index)
-            : name_(name),
-              predicates_(std::move(predicates)),
+            : predicates_(std::move(predicates)),
               instances_(std::move(instances)),
               states_(std::move(states)),
               goal_predicates_(std::move(goal_predicates)),
@@ -421,9 +418,6 @@ public:
     Sample(Sample &&sample) = default;
     ~Sample() = default;
 
-    const std::string& name() const {
-        return name_;
-    }
     std::size_t num_predicates() const {
         return predicates_.size();
     }
@@ -457,7 +451,7 @@ public:
     }
 
     // factory method - reads sample from serialized data
-    static const Sample read(std::istream &is);
+    static Sample read(std::istream &is);
 };
 
 inline std::string Atom::as_str(const Sample &sample) const {

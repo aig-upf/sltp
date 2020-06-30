@@ -28,6 +28,9 @@ def experiments():
         concept_generator=None,
         parameter_generator=None,
         maxsat_encoding="separation",
+        complete_only_wrt_optimal=True,
+        prune_redundant_states=False,
+        optimal_selection_strategy="complete"
     )
 
     return exps

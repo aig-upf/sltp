@@ -110,7 +110,7 @@ namespace SLTP { namespace DL {
 
         std::vector<predicate_id_t> predicates;
         for(const auto &name : names) {
-            if (name != "") {
+            if (!name.empty()) {
                 auto pid = (object_id_t) predicate_index.size();
                 predicates.push_back(predicate_index.at(name));
             }
@@ -119,16 +119,12 @@ namespace SLTP { namespace DL {
         return predicates;
     }
 
-    const Sample Sample::read(std::istream &is) {
+    Sample Sample::read(std::istream &is) {
         //ObjectIndex object_index;
         PredicateIndex predicate_index;
         //AtomIndex atom_index;
 
-        // First line: sample name or ID
-        std::string sample_name;
-        std::getline(is, sample_name); // Whole line is sample name
-
-        // Second line: list of all predicate names (shared by all instances)
+        // First line: list of all predicate names (shared by all instances)
         // (Note: this will include functions as well, if used in the problem representation)
         std::string predicate_line;
         std::getline(is, predicate_line);
@@ -178,8 +174,7 @@ namespace SLTP { namespace DL {
         }
 
         // create and return sample
-        return Sample(sample_name,
-                      std::move(predicates),
+        return Sample(std::move(predicates),
                       std::move(instances),
                       std::move(states),
                       std::move(goal_predicates),

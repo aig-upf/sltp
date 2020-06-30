@@ -302,6 +302,13 @@ std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(std::ostream &o
         var_selected.push_back(writer.variable());
     }
 
+    // Good(s, s') for each optimal transition (s, s')
+    // map from transitions to SAT variables:
+    std::unordered_map<transition_t, cnfvar_t, boost::hash<transition_t>> var_good_txs;
+    for (const transition_t& tx:marked_transitions()) {
+        var_good_txs.insert(std::make_pair(tx, writer.variable()));
+    }
+
     // No more variables will be created. Print total count.
     std::cout << "A total of " << writer.nvars() << " variables were created" << std::endl;
 
@@ -353,6 +360,7 @@ std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(std::ostream &o
 
     for (const transition_t& tx1:marked_transitions()) {
         unsigned s = tx1.first, sprime = tx1.second;
+        const auto& tx1_is_good = var_good_txs.at(tx1);
 
         // TODO Precompute the non-marked transitions
         for (unsigned t = 0; t < ns_; ++t) {
@@ -360,6 +368,7 @@ std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(std::ostream &o
                 if (!is_marked_transition(t, tprime)) {
                     // We want to distinguish (s, s') from (t, t')
                     cnfclause_t clause;
+                    clause.push_back(CNFWriter::literal(tx1_is_good, false));
                     for (feature_t f:compute_d2_distinguishing_features(sample_, s, sprime, t, tprime)) {
                         clause.push_back(CNFWriter::literal(var_selected.at(f), true));
                     }
@@ -370,6 +379,25 @@ std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(std::ostream &o
             }
         }
     }
+
+    // For each alive state, make sure that at least one of the outgoing marked transitions is labeled as good.
+    for (unsigned s = 0; s < ns_; ++s) {
+        if (!is_alive(s)) continue;
+
+        cnfclause_t clause;
+        bool at_least_one_successor = false;
+        for (unsigned sprime:successors(s)) {
+            if (!is_marked_transition(s, sprime)) continue;
+
+            at_least_one_successor = true;
+            const auto& tx_is_good = var_good_txs.at(std::make_pair(s, sprime));
+            clause.push_back(CNFWriter::literal(tx_is_good, true));
+        }
+        assert(at_least_one_successor);
+        writer.print_clause(clause);
+        ++n_good_tx_clauses;
+    }
+
 
     return {false, writer};
 }

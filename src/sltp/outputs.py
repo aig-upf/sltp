@@ -16,23 +16,27 @@ def print_transition_matrix(state_ids, transitions, transitions_filename):
             print("{} {}".format(s, " ".join("{}".format(sprime) for sprime in succ)), file=f)
 
 
-def print_sat_transition_matrix(state_ids, transitions, optimal_transitions, transitions_filename):
+def print_sat_transition_matrix(state_ids, transitions, alive, optimal_transitions, transitions_filename):
     num_transitions = sum(len(targets) for targets in transitions.values())
     num_states = len(transitions.keys())
     num_optimal_transitions = len(optimal_transitions)
-    logging.info("Printing SAT transition matrix with {} states, {} expanded states and {} transitions to '{}'".
-                 format(len(state_ids), num_states, num_transitions, transitions_filename))
+    logging.info(f"Printing SAT transition matrix with {len(state_ids)} states,"
+                 f" {num_states} expanded states and {num_transitions} transitions to '{transitions_filename}'")
+
     with open(transitions_filename, 'w') as f:
         # first line: <#states> <#transitions> <#marked-transitions>
-        print("{} {} {}".format(num_states, num_transitions, num_optimal_transitions), file=f)
+        print(f"{num_states} {num_transitions} {num_optimal_transitions}", file=f)
 
-        # second line: <#marked-transitions> <src0> <dst0> <src1> <dst1> ...
-        flat_optimal_transitions = list(itertools.chain(*optimal_transitions))
-        print("{} {}".format(num_optimal_transitions, " ".join(str(item) for item in flat_optimal_transitions)), file=f)
+        # second line: all marked transitions, in format: <src0> <dst0> <src1> <dst1> ...
+        print(" ".join(map(str, itertools.chain(*optimal_transitions))), file=f)
 
         # third line: <#expanded states>
-        print("{}".format(num_states), file=f)
+        print(f"{num_states}", file=f)
 
-        for s, succ in transitions.items():
-            print("{} {} {}".format(s, len(succ), " ".join("{}".format(sprime) for sprime in sorted(succ))), file=f)
+        # Next lines: transitions, one per source state, in format: source_id, num_successors, succ_1, succ_2, ...
+        for s, successors in transitions.items():
+            sorted_succs = " ".join(map(str, sorted(successors)))
+            print(f"{s} {len(successors)} {sorted_succs}", file=f)
 
+        # Next: A list of all alive states
+        print(f'{len(alive)} ' + " ".join(map(str, alive)), file=f)

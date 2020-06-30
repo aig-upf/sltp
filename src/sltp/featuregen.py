@@ -83,7 +83,7 @@ def serialize_static_info(model: DLModel, info: InstanceInformation):
 def print_sample_info(sample, infos, model_cache, all_predicates, all_functions, nominals,
                       all_objects, goal_predicate_info, config):
     workspace = config.experiment_dir
-    sample_fn = os.path.join(workspace, "sample.io")
+
     state_info = []
     atoms_per_instance = defaultdict(set)
     # Iterate over all states and collect the necessary information
@@ -95,12 +95,10 @@ def print_sample_info(sample, infos, model_cache, all_predicates, all_functions,
         atoms_per_instance[instance_id].update(full_state)
         state_info.append([str(instance_id)] + [",".join(atom) for atom in full_state])
 
-    logging.info("Printing sample information to {}".format(sample_fn))
+    sample_fn = os.path.join(workspace, "sample.io")
+    logging.info(f"Printing sample information to '{sample_fn}'")
     with open(sample_fn, "w") as f:
-        # First line: sample name
-        print("dummy-sample-name", file=f)
-
-        # Second line: all predicate and function names (note diff treatment of their arity)
+        # First line: all predicate and function names (note diff treatment of their arity)
         predfuns = [(name, ar) for name, ar in all_predicates] + [(name, ar + 1) for name, ar in all_functions]
         print(" ".join("{}/{}".format(name, arity) for name, arity in sorted(predfuns)), file=f)
 
