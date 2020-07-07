@@ -346,7 +346,7 @@ std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(std::ostream &o
     */
 
     // For goal-identifying features that we want to enforce in the solution, we add a unary clause "selected(f)"
-    assert (enforce_features.empty());
+    assert (enforce_features.empty()); // ATM haven't really thought whether this feature makes sense for this encoding
     for (auto f:enforce_features) {
         writer.print_clause({CNFWriter::literal(var_selected.at(f), true)});
         n_goal_clauses += 1;
@@ -369,6 +369,13 @@ std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(std::ostream &o
                     // We want to distinguish (s, s') from (t, t')
                     cnfclause_t clause;
                     clause.push_back(CNFWriter::literal(tx1_is_good, false));
+
+                    // Either some feature that D1-distinguishes s and t is true
+                    for (feature_t f:compute_d1_distinguishing_features(sample_, s, t)) {
+                        clause.push_back(CNFWriter::literal(var_selected.at(f), true));
+                    }
+
+                    // ... or some feature that d2-distinguishes the transitions is true
                     for (feature_t f:compute_d2_distinguishing_features(sample_, s, sprime, t, tprime)) {
                         clause.push_back(CNFWriter::literal(var_selected.at(f), true));
                     }

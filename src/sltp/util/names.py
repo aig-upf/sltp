@@ -4,10 +4,10 @@ from .misc import extend_namer_to_all_features
 def gripper_names(feature):
     s = str(feature)
     base = {
-        "Exists(at,Not({roomb}))": "nballs-A",
-        "Exists(at,{roomb})": "nballs-B",
+        "Exists(at,Not(Nominal(roomb)))": "nballs-A",
+        "Exists(at,Nominal(roomb))": "nballs-B",
         "Exists(carry,<universe>)": "ncarried",
-        "And(at-robby,{roomb})": "robot-at-B",
+        "And(at-robby,Nominal(roomb))": "robot-at-B",
         "Exists(at,Not(at-robby))": "nballs-in-rooms-with-no-robot",
         "free": "nfree-grippers",
         "Exists(at,Exists(Inverse(at-robby),<universe>))": "nballs-in-room-with-some-robot",
@@ -25,8 +25,7 @@ def gripper_names(feature):
         # "Not(And(Not(And(Forall(at,at-robby),ball)),Not(And(at-robby,Nominal(roomb)))))": "",
         # "Not(And(Forall(at-robby,And(Not(Nominal(roomb)),Exists(Inverse(at),<universe>))),Forall(carry,<empty>)))":
         #     ""
-        "And(Exists(carry,<universe>),Exists(at_g,at-robby))": "if-robot-at-B-then-num-carried-balls-else-emptyset"
-
+        "And(Exists(carry,<universe>),Exists(at_g,at-robby))": "if-robot-at-B-then-num-carried-balls-else-emptyset",
     }
     return extend_namer_to_all_features(base).get(s, s)
 
