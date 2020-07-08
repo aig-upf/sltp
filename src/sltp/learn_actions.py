@@ -40,6 +40,7 @@ def run_solver(config, data, rng):
     if not solution.solved and solution.result == "UNSATISFIABLE":
         return ExitCode.MaxsatModelUnsat, dict()
     else:
-        logging.info("MAXSAT solution with cost {} found".format(solution.cost))
+        logging.info(f"MAXSAT solution with cost {solution.cost} found")
+        # print(' '.join(str(var) for var, val in solution.assignment.items() if val is True))
 
     return ExitCode.Success, dict(cnf_solution=solution)

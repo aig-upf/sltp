@@ -104,7 +104,7 @@ struct Options {
 
 std::pair<bool, CNFWriter> write_maxsat(std::ostream &os, CNFGenerator& gen, const Options& options) {
     if (options.use_separation_encoding()) {
-        return gen.write_separation_maxsat(os, options.enforced_features);
+        return gen.write_separation_maxsat(os, options.enforced_features, options.workspace);
     } else {
         return gen.write_basic_maxsat(os, options.enforced_features, options.use_d2tree());
     }

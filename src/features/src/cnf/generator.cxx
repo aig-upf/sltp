@@ -291,8 +291,10 @@ bool all_tx_have_analogs(const Sample::Sample& sample, unsigned s, unsigned t) {
 
 
 //! Generate and write the actual CNF instance as we go
-std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(std::ostream &os, const std::vector<unsigned>& enforce_features) {
+std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(std::ostream &os, const std::vector<unsigned>& enforce_features, const std::string& workspace) {
     CNFWriter writer(os);
+
+    auto varmapstream = get_ofstream(workspace + "/varmap.wsat");
 
     /////// Create the CNF variables ///////
     // Selected(f) for each feature f
@@ -306,7 +308,10 @@ std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(std::ostream &o
     // map from transitions to SAT variables:
     std::unordered_map<transition_t, cnfvar_t, boost::hash<transition_t>> var_good_txs;
     for (const transition_t& tx:marked_transitions()) {
-        var_good_txs.insert(std::make_pair(tx, writer.variable()));
+        auto vid = writer.variable();
+        var_good_txs.insert(std::make_pair(tx, vid));
+//        std::cout << "GOOD(" << tx.first << ", " << tx.second << "): " << vid << std::endl;
+        varmapstream << vid << " " << tx.first << " " << tx.second << std::endl;
     }
 
     // No more variables will be created. Print total count.

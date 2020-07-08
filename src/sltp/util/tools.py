@@ -48,6 +48,12 @@ class IdentifiedFeature:
         return self.name()
     __repr__ = __str__
 
+    def __hash__(self):
+        return hash(self.id)
+
+    def __eq__(self, other):
+        return self.id == other.id
+
 
 class AbstractAction:
     def __init__(self, preconditions, effects, name=None):

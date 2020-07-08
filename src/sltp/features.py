@@ -224,7 +224,7 @@ def generate_model_cache(domain, instances, sample, parameter_generator):
 
 
 def parse_all_instances(domain, instances):
-    logging.info("Parsing {} PDDL instances".format(len(instances)))
+    logging.info(f"Parsing {len(instances)} PDDL instances")
     return [parse_pddl(domain, instance) for instance in instances]
 
 

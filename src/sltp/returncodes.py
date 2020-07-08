@@ -22,8 +22,11 @@ class ExitCode(Enum):
     # The policy is not total on the set of reached states:
     AbstractPolicyNotCompleteOnTestInstances = 28
 
-    FeatureGenerationUnknownError = 30
-    CNFGenerationUnknownError = 31
+    SeparationPolicyNotComplete = 30
+    SeparationPolicyCannotDistinguishGoal = 31
+
+    FeatureGenerationUnknownError = 98
+    CNFGenerationUnknownError = 99
 
     OutOfMemory = 100
     OutOfTime = 101

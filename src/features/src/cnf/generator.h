@@ -154,7 +154,7 @@ public:
     std::pair<bool, CNFWriter> write_basic_maxsat(std::ostream &os, const std::vector<unsigned>& enforce_features, bool use_d2tree = true);
 
     //! Generate and write the CNF instance for the transition-separation encoding as we go
-    std::pair<bool, CNFWriter> write_separation_maxsat(std::ostream &os, const std::vector<unsigned>& enforce_features);
+    std::pair<bool, CNFWriter> write_separation_maxsat(std::ostream &os, const std::vector<unsigned>& enforce_features, const std::string& workspace);
 };
 
 using isomorphism_t = std::unordered_map<unsigned, unsigned>;

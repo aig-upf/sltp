@@ -400,10 +400,11 @@ class TransitionSeparationPolicyStep(Step):
         return ['serialized_feature_filename', 'domain']
 
     def process_config(self, config):
+        config["wsat_varmap_filename"] = compute_info_filename(config, "varmap.wsat")
         return config
 
     def get_required_data(self):
-        return ["cnf_solution", "sample", "num_features", "model_cache"]
+        return ["cnf_solution", "num_features", "model_cache"]
 
     def description(self):
         return "Computation of the feature separation space"
@@ -662,14 +663,14 @@ class TransitionSeparationTestingStep(Step):
         return config
 
     def get_required_data(self):
-        return ["abstraction"]
+        return ["policy_dnf"]
 
     def description(self):
         return "Testing of the transition-separation policy"
 
     def get_step_runner(self):
         from . import tester
-        return tester.run
+        return tester.test_transition_separation_policy
 
 
 class Experiment:
@@ -768,8 +769,6 @@ PIPELINES = dict(
         CPPMaxsatProblemGenerationStep,
         MaxsatProblemSolutionStep,
         TransitionSeparationPolicyStep,
-        # TransitionSeparationTestingStep,
-        # CPPActionModelStep,
-        # AbstractionTestingStep,
+        TransitionSeparationTestingStep,
     ],
 )
