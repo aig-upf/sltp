@@ -9,7 +9,7 @@
 
    (:action move
        :parameters  (?from ?to)
-       :precondition (and  (not (= ?from ?to)) (room ?from) (room ?to) (at-robby ?from))
+       :precondition (and  (room ?from) (room ?to) (at-robby ?from))
        :effect (and  (at-robby ?to)
 		     (not (at-robby ?from))))
 
