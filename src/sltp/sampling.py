@@ -173,6 +173,10 @@ def run_backwards_brfs(g, parents, mincosts, minactions):
         cur = queue.popleft()
         curcost = mincosts[cur]
 
+        if cur not in parents:
+            # A root of the (original) breadth-first search could have no parents
+            continue
+
         for par in parents[cur]:
             parcost = mincosts.get(par, math.inf)
             if parcost > curcost + 1:
