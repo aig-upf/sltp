@@ -31,6 +31,7 @@ protected:
     std::vector<bool> alive_states_;
 
     transition_set_t marked_transitions_;
+    transition_list_t unmarked_transitions_;
 
 public:
     TransitionSample(std::size_t num_states, std::size_t num_transitions, std::size_t num_marked_transitions)
@@ -39,8 +40,9 @@ public:
               num_marked_transitions_(num_marked_transitions),
               trdata_(num_states),
               alive_states_(num_states, false),
-              marked_transitions_()
-          {}
+              marked_transitions_(),
+              unmarked_transitions_()
+     {}
 
     ~TransitionSample() = default;
     TransitionSample(const TransitionSample&) = default;
@@ -56,6 +58,10 @@ public:
 
     const transition_set_t& marked_transitions() const {
         return marked_transitions_;
+    }
+
+    const transition_list_t& unmarked_transitions() const {
+        return unmarked_transitions_;
     }
 
     bool marked(const transition_t& p) const {
@@ -85,18 +91,18 @@ public:
 
     // readers
     void read(std::istream &is) {
-        std::vector<transition_t> marked_transitions;
-        marked_transitions.reserve(num_marked_transitions_);
-        for( unsigned i = 0; i < num_marked_transitions_; ++i ) {
+        marked_transitions_.reserve(num_marked_transitions_);
+        for(unsigned i = 0; i < num_marked_transitions_; ++i) {
             unsigned src, dst;
             is >> src >> dst;
             assert(src < num_states_ && dst < num_states_);
-            marked_transitions.emplace_back(src, dst);
+            marked_transitions_.emplace(src, dst);
         }
 
         // read number of states that have been expanded, for thich we'll have one state per line next
         unsigned num_records;
         is >> num_records;
+        unsigned n_total_transitions = 0;
 
         // read transitions, in format: source_id, num_successors, succ_1, succ_2, ...
         for( unsigned i = 0; i < num_records; ++i ) {
@@ -112,12 +118,19 @@ public:
                     if (seen.at(dst)) throw std::runtime_error("Duplicate transition");
                     trdata_[src].push_back(dst);
                     seen[dst] = true;
+
+                    if (!marked(src, dst)) {
+                        unmarked_transitions_.push_back(std::make_pair(src, dst));
+                    }
+                    n_total_transitions++;
                 }
             }
         }
 
-        // Validate that marked transitions are indeed transitions and store them
-        for (const auto &marked : marked_transitions) {
+        assert(n_total_transitions == unmarked_transitions_.size() + marked_transitions_.size());
+
+        // Validate that marked transitions are indeed transitions
+        for (const auto &marked : marked_transitions_) {
             unsigned src = marked.first;
             unsigned dst = marked.second;
 
@@ -133,7 +146,6 @@ public:
             if (!valid) {
                 throw std::runtime_error("Invalid marked transition");
             }
-            marked_transitions_.emplace(src, dst);
         }
 
         // Store which states are alive (i.e. solvable, reachable, and not a goal)

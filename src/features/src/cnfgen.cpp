@@ -178,9 +178,11 @@ int main(int argc, const char **argv) {
     std::cout << "\tBridge: " <<  gen.n_bridge_clauses << std::endl;
     std::cout << "\tGoal-distinguishing: " <<  gen.n_goal_clauses << std::endl;
     std::cout << "\tDead-end-distinguishing: " <<  gen.n_deadend_clauses << std::endl;
+    std::cout << "\tTransition-Separation: " <<  gen.n_separation_clauses << std::endl;
     std::cout << "\tGood-transition: " <<  gen.n_good_tx_clauses << std::endl;
-    std::cout << "\tTOTAL: " <<  gen.n_selected_clauses + gen.n_d2_clauses + gen.n_bridge_clauses + gen.n_goal_clauses
-                                 + gen.n_deadend_clauses + gen.n_good_tx_clauses << std::endl;
+    std::cout << "\tTOTAL: " <<
+              gen.n_selected_clauses + gen.n_d2_clauses + gen.n_separation_clauses +
+              gen.n_bridge_clauses + gen.n_goal_clauses + gen.n_deadend_clauses + gen.n_good_tx_clauses << std::endl;
 
     bool unsat = res.first;
     if(unsat) {

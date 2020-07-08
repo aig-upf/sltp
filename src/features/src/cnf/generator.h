@@ -65,6 +65,7 @@ public:
     //! Some statistics
     unsigned n_selected_clauses;
     unsigned n_d2_clauses;
+    unsigned n_separation_clauses;
     unsigned n_bridge_clauses;
     unsigned n_goal_clauses;
     unsigned n_deadend_clauses;
@@ -77,6 +78,7 @@ public:
         nf_(sample.matrix().num_features()),
         n_selected_clauses(0),
         n_d2_clauses(0),
+        n_separation_clauses(0),
         n_bridge_clauses(0),
         n_goal_clauses(0),
         n_deadend_clauses(0),
@@ -106,6 +108,10 @@ public:
 
     const transition_set_t& marked_transitions() const {
         return sample_.transitions().marked_transitions();
+    }
+
+    const transition_list_t& unmarked_transitions() const {
+        return sample_.transitions().unmarked_transitions();
     }
 
     unsigned feature_weight(unsigned f) const {

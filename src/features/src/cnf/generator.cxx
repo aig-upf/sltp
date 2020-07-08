@@ -367,31 +367,29 @@ std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(std::ostream &o
         unsigned s = tx1.first, sprime = tx1.second;
         const auto& tx1_is_good = var_good_txs.at(tx1);
 
-        // TODO Precompute the non-marked transitions
-        for (unsigned t = 0; t < ns_; ++t) {
-            for (unsigned tprime:successors(t)) {
-                if (!is_marked_transition(t, tprime)) {
-                    // We want to distinguish (s, s') from (t, t')
-                    cnfclause_t clause;
-                    clause.push_back(CNFWriter::literal(tx1_is_good, false));
+        for (const transition_t& tx2:unmarked_transitions()) {
+            unsigned t = tx2.first, tprime = tx2.second;
+            // We want to distinguish (s, s') from (t, t'):
+            // GOOD(s, s') implies some feature D1-distinguishes or D2-distinguishes (s, s') from (t, t')
+            cnfclause_t clause;
+            clause.push_back(CNFWriter::literal(tx1_is_good, false));
 
-                    // Either some feature that D1-distinguishes s and t is true
-                    for (feature_t f:compute_d1_distinguishing_features(sample_, s, t)) {
-                        clause.push_back(CNFWriter::literal(var_selected.at(f), true));
-                    }
-
-                    // ... or some feature that d2-distinguishes the transitions is true
-                    for (feature_t f:compute_d2_distinguishing_features(sample_, s, sprime, t, tprime)) {
-                        clause.push_back(CNFWriter::literal(var_selected.at(f), true));
-                    }
-
-                    writer.print_clause(clause);
-                    n_d2_clauses += 1;
-                }
+            // Either some feature that D1-distinguishes s and t is true
+            for (feature_t f:compute_d1_distinguishing_features(sample_, s, t)) {
+                clause.push_back(CNFWriter::literal(var_selected.at(f), true));
             }
+
+            // ... or some feature that d2-distinguishes the transitions is true
+            for (feature_t f:compute_d2_distinguishing_features(sample_, s, sprime, t, tprime)) {
+                clause.push_back(CNFWriter::literal(var_selected.at(f), true));
+            }
+
+            writer.print_clause(clause);
+            n_separation_clauses += 1;
         }
     }
 
+    std::cout << "Generating good-transition constraints for " << ns_ << " states" << std::endl;
     // For each alive state, make sure that at least one of the outgoing marked transitions is labeled as good.
     for (unsigned s = 0; s < ns_; ++s) {
         if (!is_alive(s)) continue;
