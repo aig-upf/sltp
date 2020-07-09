@@ -1,6 +1,9 @@
 import itertools
-import logging
 
+from tarski.dl import FeatureValueChange
+
+from .language import parse_pddl
+from .util.serialization import unserialize_feature
 from .util.tools import IdentifiedFeature
 from .util.tools import load_selected_features
 from .returncodes import ExitCode
@@ -18,7 +21,13 @@ def compute_good_transitions(assignment, wsat_varmap_filename):
     return list(sorted(good))
 
 
-def compute_transition_separation_function(config, data, rng):
+def compute_transition_classification_policy(config, data, rng):
+    if config.transition_classification_policy is not None:
+        rules = config.transition_classification_policy()
+        _, language, _ = parse_pddl(config.domain)
+        policy = TransitionClassificationPolicy.parse(rules, language, config.feature_namer)
+        return ExitCode.Success, dict(transition_classification_policy=policy)
+
     solution = data.cnf_solution
     assert solution.solved
 
@@ -30,8 +39,8 @@ def compute_transition_separation_function(config, data, rng):
 
     good_transitions = compute_good_transitions(solution.assignment, config.wsat_varmap_filename)
 
-    # debugging = []
-    policy = set()
+    policy = TransitionClassificationPolicy(features)
+
     for (s, t) in good_transitions:
         m1 = data.model_cache.get_feature_model(s)
         m2 = data.model_cache.get_feature_model(t)
@@ -41,21 +50,11 @@ def compute_transition_separation_function(config, data, rng):
             clause += [DNFAtom(f, f.denotation(m1) != 0),
                        DNFAtom(f, f.feature.diff(f.denotation(m1), f.denotation(m2)))]
 
-        # if ' AND '.join(sorted(map(str, clause))) == "nballs-A NILs AND nballs-A>0 AND ncarried NILs AND ncarried>0 AND nfree-grippers NILs AND nfree-grippers>0 AND robot-at-B ADDs AND robot-at-B=0":
-        #     debugging.append(f"({s}, {t})")
+        policy.add_clause(frozenset(clause))
 
-        policy.add(frozenset(clause))
-
-    # Minimize the DNF
-    policy = minimize_dnf_policy(policy)
-
-    # Print the policy
-    # print(" ".join(debugging))
-    logging.info("GOOD transitions:")
-    for i, clause in enumerate(policy, start=0):
-        print(f"\t{i}. " + ' AND '.join(sorted(map(str, clause))))
-
-    return ExitCode.Success, dict(policy_dnf=TransitionSeparationPolicy(features, policy))
+    policy.minimize()
+    policy.print()
+    return ExitCode.Success, dict(transition_classification_policy=policy)
 
 
 def minimize_dnf_policy(dnf):
@@ -113,29 +112,69 @@ class DNFAtom:
         return self.feature == other.feature and self.value == other.value
 
 
-class TransitionSeparationPolicy:
-    def __init__(self, features, policy_dnf):
+class TransitionClassificationPolicy:
+    def __init__(self, features):
         self.features = features
-        self.dnf = policy_dnf
+        self.dnf = set()
+
+    def add_clause(self, clause):
+        self.dnf.add(clause)
+
+    def minimize(self):
+        self.dnf = minimize_dnf_policy(self.dnf)
 
     def transition_is_good(self, m0, m1):
-        for clause in self.dnf:
-            all_atoms_true = True
+        # If the given transition satisfies any of the clauses in the DNF, we consider it "good"
+        return any(self.does_transition_satisfy_clause(clause, m0, m1) for clause in self.dnf)
 
-            # If the given transition satisfies any of the clauses in the DNF, we consider it "good"
-            for atom in clause:
-                feat = atom.feature
+    @staticmethod
+    def does_transition_satisfy_clause(clause, m0, m1):
+        for atom in clause:
+            feat = atom.feature
 
-                if atom.is_state_feature():
-                    state_val = feat.denotation(m0) != 0
-                    if state_val != atom.value:
-                        all_atoms_true = False
-                else:
-                    tx_val = feat.feature.diff(feat.denotation(m0), feat.denotation(m1))
-                    if tx_val != atom.value:
-                        all_atoms_true = False
+            if atom.is_state_feature():
+                state_val = feat.denotation(m0) != 0
+                if state_val != atom.value:
+                    return False
+            else:
+                tx_val = feat.feature.diff(feat.denotation(m0), feat.denotation(m1))
+                if tx_val != atom.value:
+                    return False
+        return True
 
-            if all_atoms_true:
-                return True
+    def print(self):
+        print("Transition-classification policy with the following transitions labeled as good:")
+        for i, clause in enumerate(self.dnf, start=0):
+            print(f"  {i}. " + ' AND '.join(sorted(map(str, clause))))
 
-        return False
+    @staticmethod
+    def parse(rules, language, feature_namer):
+        """ Create a classification policy from a set of strings representing the clauses """
+        policy = TransitionClassificationPolicy(features=[])
+
+        allfeatures = dict()
+
+        for clause in rules:
+            atoms = []
+            for feature_str, value in clause:
+                f = allfeatures.get(feature_str)
+                if f is None:
+                    f = unserialize_feature(language, feature_str)
+                    allfeatures[feature_str] = f = IdentifiedFeature(f, len(allfeatures), feature_namer(str(f)))
+
+                # Convert the value to an object
+                value = {
+                    "=0": False,
+                    ">0": True,
+                    "INC": FeatureValueChange.INC,
+                    "NIL": FeatureValueChange.NIL,
+                    "DEC": FeatureValueChange.DEC,
+                    "ADD": FeatureValueChange.ADD,
+                    "DEL": FeatureValueChange.DEL,
+                }[value]
+
+                atoms.append(DNFAtom(f, value))
+
+            policy.add_clause(frozenset(atoms))
+
+        return policy

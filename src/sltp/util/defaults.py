@@ -177,6 +177,9 @@ def generate_experiment(domain_dir, domain, **kwargs):
 
         # By default don't timeout the concept generation process
         concept_generation_timeout=-1,
+
+        # A function to manually provide a transition-classification policy that we want to test
+        transition_classification_policy=None,
     )
 
     parameters = {**defaults, **kwargs}  # Copy defaults, overwrite with user-specified parameters

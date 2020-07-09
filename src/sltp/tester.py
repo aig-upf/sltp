@@ -2,7 +2,7 @@ import logging
 import sys
 
 from .models import FeatureModel
-from .separation import TransitionSeparationPolicy
+from .separation import TransitionClassificationPolicy
 from .util.tools import Abstraction, AbstractAction, generate_qualitative_effects_from_transition
 from .features import generate_model_cache, create_model_factory, compute_static_atoms
 from .returncodes import ExitCode
@@ -178,8 +178,8 @@ class PolicySearchException(Exception):
         self.code = code
 
 
-def create_transition_separation_policy(model_factory, static_atoms, policy):
-    assert isinstance(policy, TransitionSeparationPolicy)
+def create_action_selection_function_from_transition_policy(model_factory, static_atoms, policy):
+    assert isinstance(policy, TransitionClassificationPolicy)
 
     def _policy(state, successor_generator):
         m0 = generate_model_from_state(model_factory, state, static_atoms)
@@ -196,25 +196,28 @@ def create_transition_separation_policy(model_factory, static_atoms, policy):
     return _policy
 
 
-def test_transition_separation_policy(config, data, rng):
+def test_transition_classification_policy(config, data, rng):
     if config.test_domain is None:
         logging.info("No testing instances were specified")
         return ExitCode.Success, dict()
 
     def create_policy(model_factory, static_atoms):
-        return create_transition_separation_policy(model_factory, static_atoms, data.policy_dnf)
+        return create_action_selection_function_from_transition_policy(model_factory, static_atoms,
+                                                                       data.transition_classification_policy)
 
     # Test that the policy reaches a goal when applied on all test instances
     res = apply_policy_on_test_instances(config, create_policy)
     if res != ExitCode.Success:
         return res, dict()
 
-    res = test_separation_policy_is_complete(config, data.policy_dnf)
+    res = test_transition_classification_policy_is_complete(config, data.transition_classification_policy)
+    if res != ExitCode.Success:
+        return res, dict()
     logging.info("The computed policy solves all test instances and is complete in all sampled test states")
     return res, dict()
 
 
-def test_separation_policy_is_complete(config, policy):
+def test_transition_classification_policy_is_complete(config, policy):
     if not config.test_sample_files:
         logging.info("No test instances specified for testing of policy completeness")
         return ExitCode.Success
@@ -231,16 +234,15 @@ def test_separation_policy_is_complete(config, policy):
         for t in sample.transitions[s]:
             m1 = model_cache.get_feature_model(t)
             if policy.transition_is_good(m0, m1):
-
                 if is_goal:
-                    logging.error(f"Policy recommends taking transition ({s}, {t}), but {s} is a goal state!"
+                    logging.error(f"Policy advises transition ({s}, {t}), but {s} is a goal state!"
                                   f"\ns: {sample.states[s]}\nt: {sample.states[t]}")
                     return ExitCode.SeparationPolicyCannotDistinguishGoal
 
                 good_action_found = True
                 break
 
-        if not is_goal and not good_action_found:
+        if not is_goal and not good_action_found and len(sample.transitions[s]) > 0:
             logging.error(f"Policy incomplete on test state {s}:\n{sample.states[s]}")
             return ExitCode.SeparationPolicyNotComplete
 

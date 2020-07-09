@@ -75,6 +75,9 @@ def unserialize_feature(language, string, complexity=None):
     raise RuntimeError("Don't know how to unserialize feature \"{}\"".format(string))
 
 
+parse_feature = unserialize_feature  # Just a handy alias
+
+
 def parse_concept(language, string):
     ast = read_ast(string)
     # print("{}:\t\t {}".format(string, tree))

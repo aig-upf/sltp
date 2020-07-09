@@ -38,7 +38,7 @@ def spanner_names(feature):
     s = str(feature)
     base = {
         "And(tightened_g,Not(tightened))": "n-untightened-nuts",
-        "Exists(carrying,<universe>)": "n-carried-spanners",
+        "Exists(Inverse(carrying),<universe>)": "n-carried-spanners",
         "Forall(Inverse(link),<empty>)": "first-cell",  # Neat!
         "Exists(at,Forall(Inverse(link),<empty>))": "n-things-on-first-cell",
         "And(Exists(at,Exists(Inverse(at),man)),Not(man))": "n-spanners-in-same-cell-as-man",
@@ -46,6 +46,11 @@ def spanner_names(feature):
         "Exists(at,Exists(link,Exists(Inverse(at),<universe>)))": "",
         "loose": "n-untightened-nuts",
         "Exists(at,Exists(link,Exists(Inverse(at),man)))": "n-spanners-on-cell-left-to-man",
+        "Exists(Inverse(at),spanner)": "locations-with-a-spanner",
+        "Exists(carrying,useable)": "bob-is-carrying-a-usable-spanner",
+        "tightened": "num-tightened-nuts",
+        "Exists(Star(link),Exists(Inverse(at),man))": "n-unreachable-locations",
+        "Exists(at,Exists(Star(link),Exists(Inverse(at),man)))": "n-unreachable-spanners",
     }
     return extend_namer_to_all_features(base).get(s, s)
 

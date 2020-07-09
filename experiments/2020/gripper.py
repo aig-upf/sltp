@@ -33,4 +33,10 @@ def experiments():
         optimal_selection_strategy="complete"
     )
 
+    exps["quick"] = update_dict(
+        exps["small"],
+        test_instances=[],
+        test_policy_instances=["prob04.pddl"],
+    )
+
     return exps

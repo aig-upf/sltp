@@ -393,7 +393,7 @@ class CPPActionModelStep(Step):
         return actionmodel.compute_abstract_action_model
 
 
-class TransitionSeparationPolicyStep(Step):
+class TransitionClassificationPolicyStep(Step):
     """  """
 
     def get_required_attributes(self):
@@ -404,14 +404,42 @@ class TransitionSeparationPolicyStep(Step):
         return config
 
     def get_required_data(self):
-        return ["cnf_solution", "num_features", "model_cache"]
+        res = ["num_features", "model_cache"]
+        if self.config["transition_classification_policy"] is None:
+            res.append("cnf_solution")
+        return res
 
     def description(self):
-        return "Computation of the feature separation space"
+        return "Computation of the transition-classification policy"
 
     def get_step_runner(self):
         from . import separation
-        return separation.compute_transition_separation_function
+        return separation.compute_transition_classification_policy
+
+
+class TransitionClassificationPolicyTestingStep(Step):
+    """  """
+    def get_required_attributes(self):
+        return ["experiment_dir", "test_instances", "test_domain"]
+
+    def process_config(self, config):
+        if config["test_domain"] is not None:
+            if not os.path.isfile(config["test_domain"]):
+                raise InvalidConfigParameter('"test_domain" must be either None or the path to an existing domain file')
+            if any(not os.path.isfile(i) for i in config["test_instances"]):
+                raise InvalidConfigParameter('"test_instances" must point to existing files')
+
+        return config
+
+    def get_required_data(self):
+        return ["transition_classification_policy"]
+
+    def description(self):
+        return "Testing of the transition-classification policy"
+
+    def get_step_runner(self):
+        from . import tester
+        return tester.test_transition_classification_policy
 
 
 class ActionModelFromFeatureIndexesStep(Step):
@@ -648,31 +676,6 @@ class AbstractionTestingStep(Step):
         return tester.run
 
 
-class TransitionSeparationTestingStep(Step):
-    """  """
-    def get_required_attributes(self):
-        return ["experiment_dir", "test_instances", "test_domain"]
-
-    def process_config(self, config):
-        if config["test_domain"] is not None:
-            if not os.path.isfile(config["test_domain"]):
-                raise InvalidConfigParameter('"test_domain" must be either None or the path to an existing domain file')
-            if any(not os.path.isfile(i) for i in config["test_instances"]):
-                raise InvalidConfigParameter('"test_instances" must point to existing files')
-
-        return config
-
-    def get_required_data(self):
-        return ["policy_dnf"]
-
-    def description(self):
-        return "Testing of the transition-separation policy"
-
-    def get_step_runner(self):
-        from . import tester
-        return tester.test_transition_separation_policy
-
-
 class Experiment:
     def __init__(self, all_steps, parameters):
         self.all_steps = all_steps
@@ -768,7 +771,7 @@ PIPELINES = dict(
         CPPFeatureGenerationStep,
         CPPMaxsatProblemGenerationStep,
         MaxsatProblemSolutionStep,
-        TransitionSeparationPolicyStep,
-        TransitionSeparationTestingStep,
+        TransitionClassificationPolicyStep,
+        TransitionClassificationPolicyTestingStep,
     ],
 )
