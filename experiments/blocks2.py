@@ -1,7 +1,8 @@
 from collections import defaultdict
 
-from common import bwnamer, add_bw_domain_parameters_2, ipc_instances
+from common import add_bw_domain_parameters_2, ipc_instances
 from sltp.util.misc import update_dict
+from sltp.util.names import blocksworld_names
 
 
 def experiments():
@@ -27,7 +28,7 @@ def experiments():
         max_concept_size=8,
         concept_generator=None,
         parameter_generator=add_bw_domain_parameters_2,
-        feature_namer=bwnamer,
+        feature_namer=blocksworld_names,
     )
 
     exps["on_x_y_gc"] = update_dict(exps["on_x_y"], parameter_generator=None)
@@ -68,7 +69,7 @@ def experiments():
         max_concept_size=6,
         concept_generator=None,
         parameter_generator=None,
-        feature_namer=bwnamer,
+        feature_namer=blocksworld_names,
     )
 
     # Goal: build one single given tower of blocks from a random initial configuration

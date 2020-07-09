@@ -149,31 +149,6 @@ def get_on_x_y_feature(lang):
     return [ConceptCardinalityFeature(on_x_y)]
 
 
-def bwnamer(feature):
-    s = str(feature)
-    base = {
-        "And(clear,Nominal(a))": "clear(a)",
-        "And(clear,Nominal(b))": "clear(b)",
-        "holding": "holding(·)",
-        "And(Nominal(a),holding)": "holding(a)",
-        "And(holding,Nominal(a))": "holding(a)",
-        "And(holding,Nominal(b))": "holding(b)",
-        "And(Exists(on,Nominal(b)),Nominal(a))": "on(a,b)",
-        "And(Exists(Inverse(on),Nominal(a)),Nominal(b))": "on(a,b)",
-        "And(Exists(Star(on),Nominal(b)),Nominal(a))": "above(a,b)",
-        "And(Not(Nominal(a)),holding)": "H",
-        "Exists(Inverse(on),Nominal(a))": "Z",
-        "Exists(Star(on),Nominal(a))": "n(a)",
-        "Exists(Star(on),Nominal(b))": "n(b)",
-        "And(ontable,Nominal(a))": "ontable(a)",
-        "And(Forall(on,Nominal(b)),Nominal(a))": "a_on_b_ontable_or_held",
-        "And(And(And(Not(Exists(Star(on),Nominal(a))),Not(Exists(Star(Inverse(on)),Nominal(a)))),Not(Nominal(a))),Not(holding))": "m(a)",
-        "And(And(Forall(Star(on),Not(Nominal(a))),Forall(Star(Inverse(on)),Not(Nominal(a)))),And(Not(holding),Not(Nominal(a))))": "m(a)",
-        "Exists(Star(on),Exists(on,Nominal(b)))": "n-at-least-2-above-b",
-    }
-    return extend_namer_to_all_features(base).get(s, s)
-
-
 def features_clear_x(lang):
     obj_t = lang.Object
     x_nominal = NominalConcept("a", obj_t)

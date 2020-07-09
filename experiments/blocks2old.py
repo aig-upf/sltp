@@ -5,9 +5,9 @@ import sys
 from sltp.incremental import IncrementalExperiment
 
 from sltp.util.defaults import generate_experiment
-from common import bwnamer, \
-    add_bw_domain_parameters_2
+from common import add_bw_domain_parameters_2
 from sltp.util.misc import update_dict
+from sltp.util.names import blocksworld_names
 
 
 def experiment(experiment_name=None):
@@ -26,7 +26,7 @@ def experiment(experiment_name=None):
         sampling="all",
         max_concept_size=8,
         concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
-        feature_namer=bwnamer,
+        feature_namer=blocksworld_names,
     )
 
     exps["on_x_y_gc"] = update_dict(exps["on_x_y"], parameter_generator=None)
@@ -52,7 +52,7 @@ def experiment(experiment_name=None):
         max_concept_size=6,
         concept_generator=None,
         parameter_generator=None,
-        feature_namer=bwnamer,
+        feature_namer=blocksworld_names,
     )
 
     exps["arbitrary1_inc"] = update_dict(
@@ -149,7 +149,7 @@ def experiment(experiment_name=None):
         num_sampled_states=None,
         complete_only_wrt_optimal=True,
         max_concept_size=7,
-        feature_namer=bwnamer,
+        feature_namer=blocksworld_names,
     )
 
     exps["7blocks_manual"] = update_dict(

@@ -1,10 +1,11 @@
 
 from sltp.incremental import IncrementalExperiment
 
-from common import build_ijcai_paper_bw_concepts, add_bw_domain_parameters, bwnamer, \
+from common import build_ijcai_paper_bw_concepts, add_bw_domain_parameters, \
     add_bw_domain_parameters_2, build_on_x_y_feature_set, generate_features_n_ab, get_on_x_y_feature, \
     features_clear_x
 from sltp.util.misc import update_dict
+from sltp.util.names import blocksworld_names
 
 
 def experiments():
@@ -22,7 +23,7 @@ def experiments():
                                          num_states=20, num_sampled_states=10,
                                          max_concept_size=3, max_concept_grammar_iterations=1,
                                          parameter_generator=add_bw_domain_parameters,
-                                         feature_namer=bwnamer, )
+                                         feature_namer=blocksworld_names, )
 
     # Learns a simple action model which is however overfit to 3 blocks,
     # and not sound in general
@@ -31,7 +32,7 @@ def experiments():
                                          test_domain=domain, test_instances=["instance_8_clear_x_0.pddl"],
                                          num_states=100, max_concept_size=6, max_concept_grammar_iterations=None,
                                          concept_generator=None, parameter_generator=add_bw_domain_parameters,
-                                         feature_namer=bwnamer, )
+                                         feature_namer=blocksworld_names, )
 
     exps["simple_clear_3_gc"] = update_dict(exps["simple_clear_3"], parameter_generator=None)
     exps["simple_clear_3_gc_blai"] = update_dict(exps["simple_clear_3_gc"], pipeline="maxsat_poly")
@@ -41,7 +42,7 @@ def experiments():
                                          instances="instance_4_clear_x.pddl",
                                          num_states=150, max_concept_size=10, max_concept_grammar_iterations=3, num_sampled_states=None,
                                          concept_generator=None, parameter_generator=add_bw_domain_parameters,
-                                         feature_namer=bwnamer, )
+                                         feature_namer=blocksworld_names, )
 
     # With these settings we generate the desired m(x):
     # card[And(And(Forall(Star(on),Not({a})), Forall(Star(Inverse(on)),Not({a}))), And(Not(holding), Not({a})))] 18
@@ -54,7 +55,7 @@ def experiments():
                                                              num_states=1000, num_sampled_states=100, random_seed=10,
                                                              max_concept_size=18, max_concept_grammar_iterations=3,
                                                              concept_generator=None, parameter_generator=add_bw_domain_parameters,
-                                                             feature_namer=bwnamer, )
+                                                             feature_namer=blocksworld_names, )
 
     exps["simple_clear_3_completeness_opt"] = update_dict(exps["simple_clear_3"],
                                                   instances=["instance_3_clear_x_2.pddl"]*2,
@@ -72,7 +73,7 @@ def experiments():
                                                      complete_only_wrt_optimal=True,
                                                      max_concept_size=8, max_concept_grammar_iterations=3,
                                                      concept_generator=None, parameter_generator=add_bw_domain_parameters,
-                                                     feature_namer=bwnamer,
+                                                     feature_namer=blocksworld_names,
                                                      )
     exps["aaai_clear_x_blai"] = update_dict(exps["aaai_clear_x_simple_hybrid"], wsat_solver_verbose=True, pipeline="maxsat_poly")
     
@@ -116,7 +117,7 @@ def experiments():
                                               clean_workspace=False,
                                               concept_generator=None,
                                               parameter_generator=add_bw_domain_parameters,
-                                              feature_namer=bwnamer,
+                                              feature_namer=blocksworld_names,
                                               )
 
     # Learns a simple action model which is however overfit to 3 blocks, and not sound in general
@@ -129,7 +130,7 @@ def experiments():
                                                 initial_sample_size=100,
                                                 initial_concept_bound=10, max_concept_bound=10, concept_bound_step=2,
                                                 concept_generator=None, parameter_generator=add_bw_domain_parameters,
-                                                feature_namer=bwnamer, )
+                                                feature_namer=blocksworld_names, )
 
     exps["aaai_clear_x_no_marking_2"] = update_dict(
         exps["aaai_clear_x_no_marking"],
@@ -147,7 +148,7 @@ def experiments():
                                       num_states=200, num_sampled_states=None, random_seed=12,
                                       max_concept_size=31, max_concept_grammar_iterations=4,
                                       concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
-                                      feature_namer=bwnamer, )
+                                      feature_namer=blocksworld_names, )
 
     exps["bw_on_x_y_4_rnd"] = update_dict(exps["bw_on_x_y_4"], num_sampled_states=60)
 
@@ -157,7 +158,7 @@ def experiments():
                                       num_states=1000, num_sampled_states=None, random_seed=12,
                                       max_concept_size=10, max_concept_grammar_iterations=3,
                                       concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
-                                      feature_namer=bwnamer, )
+                                      feature_namer=blocksworld_names, )
 
     exps["bw_on_x_y_5_gc"] = update_dict(exps["bw_on_x_y_5"], parameter_generator=None,)
 
@@ -166,7 +167,7 @@ def experiments():
                                          num_states=1000, max_width=2,
                                          max_concept_size=10, max_concept_grammar_iterations=3,
                                          concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
-                                         feature_namer=bwnamer, )
+                                         feature_namer=blocksworld_names, )
 
     exps["aaai_bw_on_x_y_completeness_opt"] = update_dict(base,
                                                           instances=[
@@ -186,7 +187,7 @@ def experiments():
                                                           # feature_generator=features_clear_x,
                                                           max_concept_size=8, max_concept_grammar_iterations=3,
                                                           concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
-                                                          feature_namer=bwnamer,
+                                                          feature_namer=blocksworld_names,
                                                           )
 
     exps["aaai_bw_on_x_y_completeness_opt_blai"] = update_dict(exps["aaai_bw_on_x_y_completeness_opt"],
@@ -203,7 +204,7 @@ def experiments():
                                           num_states=49999, max_width=2,
                                           max_concept_size=10, max_concept_grammar_iterations=3,
                                           parameter_generator=add_bw_domain_parameters_2,
-                                          feature_namer=bwnamer, )
+                                          feature_namer=blocksworld_names, )
 
     exps["validate_bw_on_x_y_dt_iw"] = update_dict(base,
                                                    instances=["on_x_y_dt_1.pddl"],
@@ -211,7 +212,7 @@ def experiments():
                                                    max_concept_size=10, max_concept_grammar_iterations=3,
                                                    parameter_generator=add_bw_domain_parameters_2,
                                                    feature_generator=generate_features_n_ab,
-                                                   feature_namer=bwnamer, )
+                                                   feature_namer=blocksworld_names, )
 
     exps["bw_on_x_y_dt_iw_fixed_goal"] = update_dict(exps["bw_on_x_y_dt_iw"],
                                              instances=["on_x_y_dt_1.pddl"],
@@ -236,13 +237,13 @@ def experiments():
                                                       instances="instance_5_on_x_y.pddl",
                                                       num_states=1000, max_concept_size=1, max_concept_grammar_iterations=1, num_sampled_states=100, random_seed=2,
                                                       concept_generator=build_on_x_y_feature_set, parameter_generator=add_bw_domain_parameters_2,
-                                                      feature_namer=bwnamer, )
+                                                      feature_namer=blocksworld_names, )
 
     exps["generate_ijcai_features_on_x_y"] = update_dict(base,
                                                          instances="instance_5_on_x_y.pddl",
                                                          num_states=1000, max_concept_size=34, max_concept_grammar_iterations=4, num_sampled_states=50, random_seed=2,
                                                          concept_generator=None, parameter_generator=add_bw_domain_parameters_2,
-                                                         feature_namer=bwnamer, )
+                                                         feature_namer=blocksworld_names, )
 
     exps["clear_two_atoms"] = update_dict(base,
                                           instances="instance_5_clear_x_y.pddl",
@@ -253,7 +254,7 @@ def experiments():
                                           max_concept_size=8,
                                           concept_generator=None,
                                           parameter_generator=None,
-                                          feature_namer=bwnamer,
+                                          feature_namer=blocksworld_names,
                                           )
 
     return exps
