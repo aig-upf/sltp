@@ -1655,7 +1655,7 @@ public:
             insert_new_role(cache, role.clone(), sup.second);
         } else {
             // We cannot just obviate this role, since some other role denotation may depend on this one's
-            std::cout << "PRUNE: " + role.as_str() << std::endl;
+//            std::cout << "PRUNE: " + role.as_str() << std::endl;
             insert_new_denotation_by_name(cache, role.as_str(), sup.second);
         }
         delete sup.second;
