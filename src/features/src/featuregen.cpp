@@ -1,12 +1,10 @@
 
+#include <sltp/features.hxx>
+
 #include <iostream>
-#include <fstream>
 #include <string>
 
 #include <boost/algorithm/string.hpp>
-
-#include <sltp/features.hxx>
-
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
