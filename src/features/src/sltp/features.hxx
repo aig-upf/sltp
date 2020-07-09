@@ -1646,6 +1646,22 @@ public:
         return roles_.size();
     }
 
+    //! Insert the given role as long as it is not redundant with some previous role and it is below the complexity
+    //! bound. Return whether the role was effectively inserted.
+    bool insert_role_if_possible(const Role &role, Cache &cache, const Sample &sample) const {
+        auto sup = is_superfluous_or_exceeds_complexity_bound(role, cache, sample);
+        if(!sup.first) {
+//            std::cout << "INSERT: " + role.as_str() << std::endl;
+            insert_new_role(cache, role.clone(), sup.second);
+        } else {
+            // We cannot just obviate this role, since some other role denotation may depend on this one's
+            std::cout << "PRUNE: " + role.as_str() << std::endl;
+            insert_new_denotation_by_name(cache, role.as_str(), sup.second);
+        }
+        delete sup.second;
+        return !sup.first;
+    }
+
     static bool is_superfluous(Cache &cache, const sample_denotation_t *d) {
         return cache.find_sample_denotation(*d) != nullptr;
     }
@@ -1862,9 +1878,7 @@ public:
         for (const auto& nominal:nominals_) {
             insert_basis(new NominalConcept(nominal));
         }
-        std::cout << "BASIS: #concepts=" << basis_concepts_.size()
-                  << ", #roles=" << basis_roles_.size()
-                  << std::endl;
+        std::cout << "BASIS: #concepts=" << basis_concepts_.size() << ", #roles=" << basis_roles_.size() << std::endl;
 //        report_dl_data(std::cout);
     }
 
@@ -1943,6 +1957,8 @@ public:
 
     int generate_roles(Cache &cache, const Sample &sample) const {
         assert(roles_.empty());
+
+        // Insert the basis (i.e. primitive) roles as long as they are not redundant
         for (auto role : basis_roles_) {
             std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(*role, cache, sample);
             if( !p.first ) {
@@ -1957,67 +1973,20 @@ public:
         }
 
         for (auto role : basis_roles_) {
-            // Create Plus Roles
-            if (!dynamic_cast<const RoleDifference*>(role) &&
-                !dynamic_cast<const StarRole*>(role) &&
-                !dynamic_cast<const RoleRestriction*>(role)) {
-                PlusRole plus_role(role);
-                std::pair<bool, const sample_denotation_t*> p1 = is_superfluous_or_exceeds_complexity_bound(plus_role, cache, sample);
-                if( !p1.first ) {
-                    insert_new_role(cache, plus_role.clone(), p1.second);
-                } else {
-                    // we cannot just obviate this role since another
-                    // role denotation may depend on this denotation
-                    //std::cout << "PRUNE: " + plus_role.as_str() << std::endl;
-                    insert_new_denotation_by_name(cache, plus_role.as_str(), p1.second);
-                }
-                delete p1.second;
-            }
+            // Create Plus(R) roles from the primitive roles
+            PlusRole p_role(role);
+            insert_role_if_possible(p_role, cache, sample);
 
-#if 0  // ATM we deactivate these roles
-            StarRole star_role(role);
-            std::pair<bool, const sample_denotation_t*> p2 = is_superfluous_or_exceeds_complexity_bound(star_role, cache, sample);
-            if( !p2.first ) {
-                insert_new_role(cache, star_role.clone(), p2.second);
-            } else {
-                // we cannot just obviate this role since another
-                // role denotation may depend on this denotation
-                //std::cout << "PRUNE: " + star_role.as_str() << std::endl;
-                insert_new_denotation_by_name(cache, star_role.as_str(), p2.second);
-            }
-            delete p2.second;
-#endif
-            // Create inverse roles
-            if (!dynamic_cast<const RoleDifference*>(role) &&
-                !dynamic_cast<const RoleRestriction*>(role)) {
-                InverseRole inverse_role(role);
-                std::pair<bool, const sample_denotation_t *> p3 = is_superfluous_or_exceeds_complexity_bound(
-                        inverse_role, cache, sample);
-                if (!p3.first) {
-                    const Role *clone = inverse_role.clone();
-                    insert_new_role(cache, clone, p3.second);
+            // Create Star(R) roles from the primitive roles !!! NOTE ATM we deactivate Star roles
+            // insert_role_if_possible(StarRole(role), cache, sample);
 
-                    PlusRole plus_inverse_role(clone);
-                    std::pair<bool, const sample_denotation_t *> p = is_superfluous_or_exceeds_complexity_bound(
-                            plus_inverse_role, cache, sample);
-                    if (!p.first) {
-                        insert_new_role(cache, plus_inverse_role.clone(), p.second);
-                    } else {
-                        // we cannot just obviate this role since another
-                        // role denotation may depend on this denotation
-                        //std::cout << "PRUNE: " + plus_inverse_role.as_str() << std::endl;
-                        insert_new_denotation_by_name(cache, plus_inverse_role.as_str(), p.second);
-                    }
-                    delete p.second;
+            // Create Inverse(R) roles from the primitive roles
+            InverseRole inv_r(role);
+            insert_role_if_possible(InverseRole(role), cache, sample);
 
-                } else {
-                    // we cannot just obviate this role since another
-                    // role denotation may depend on this denotation
-                    //std::cout << "PRUNE: " + inverse_role.as_str() << std::endl;
-                    insert_new_denotation_by_name(cache, inverse_role.as_str(), p3.second);
-                }
-                delete p3.second;
-            }
+            // Create Inverse(Plus(R)) and Plus(Inverse(R)) roles from the primitive roles
+            insert_role_if_possible(InverseRole(p_role.clone()), cache, sample);
+            insert_role_if_possible(PlusRole(inv_r.clone()), cache, sample);
         }
         std::cout << "ROLES: #roles=" << roles_.size() << std::endl;
         return roles_.size();
@@ -2325,7 +2294,7 @@ public:
         }
         os << std::endl;
 
-        os << "All Roles under complexity " << complexity_bound_ << "(sz=" << roles_.size() << "): ";
+        os << "All Roles under complexity " << complexity_bound_ << " (sz=" << roles_.size() << "): ";
         for( int i = 0; i < int(roles_.size()); ++i ) {
             os << roles_[i]->as_str_with_complexity();
             if( 1 + i < int(roles_.size()) ) os << ", ";
