@@ -20,9 +20,7 @@
 
 #include <ctime>
 
-namespace SLTP {
-
-namespace DL {
+namespace SLTP::DL {
 
 const unsigned PRIMITIVE_COMPLEXITY = 1;
 
@@ -39,6 +37,18 @@ class Feature;
 class State;
 
 using feature_cache_t = std::unordered_map<feature_sample_denotation_t, const Feature*, utils::container_hash<feature_sample_denotation_t> >;
+
+
+//! Command-line option processing
+struct Options {
+    std::string workspace;
+    int timeout;
+    unsigned complexity_bound;
+    unsigned dist_complexity_bound;
+    unsigned cond_complexity_bound;
+    bool comparison_features;
+    bool print_denotations;
+};
 
 // We cache sample and state denotations. The latter are cached
 // into a simple hash (i.e. unordered_set). The former are cached
@@ -1553,6 +1563,7 @@ public:
     int complexity() const override {
         return 1 + condition_->complexity() + body_->complexity();
     }
+
     int value(const Cache &cache, const Sample &sample, const State &state) const override {
         return value_from_components(cache, sample, state, condition_, body_);
     }
@@ -1570,16 +1581,47 @@ public:
     bool is_boolean() const override { return false; }
 };
 
+
+//! A feature with value f1 < f2
+class DifferenceFeature : public Feature {
+protected:
+    const Feature* f1;
+    const Feature* f2;
+
+public:
+    DifferenceFeature(const Feature* f1, const Feature* f2) :
+            Feature(), f1(f1), f2(f2)
+    {}
+
+    ~DifferenceFeature() override = default;
+    const Feature* clone() const override {
+        return new DifferenceFeature(f1, f2);
+    }
+
+    int complexity() const override {
+        return 1 + f1->complexity() + f2->complexity();
+    }
+
+    int value(const Cache &cache, const Sample &sample, const State &state) const override {
+        const auto f1val = f1->value(cache, sample, state);
+        const auto f2val = f2->value(cache, sample, state);
+        return f1val < f2val;
+    }
+
+    std::string as_str() const override {
+        return std::string("LessThan{") + f1->as_str() + "}{" + f2->as_str() + "}";
+    }
+
+    bool is_boolean() const override { return true; }
+};
+
 class Factory {
 protected:
     const std::vector<std::string> nominals_;
-    int concept_generation_timeout;
     std::vector<const Role*> basis_roles_;
     std::vector<const Concept*> basis_concepts_;
-
-    int complexity_bound_;
-    int dist_complexity_bound_;
-    int cond_complexity_bound_;
+    
+    Options options;
 
     mutable std::vector<const Role*> roles_;
 
@@ -1592,12 +1634,9 @@ protected:
     std::unordered_set<unsigned> goal_features_;
 
 public:
-    Factory(const std::vector<std::string>& nominals, int complexity_bound, int dist_complexity_bound, int cond_complexity_bound, int concept_generation_timeout) :
+    Factory(const std::vector<std::string>& nominals, Options options) :
             nominals_(nominals),
-            concept_generation_timeout(concept_generation_timeout),
-            complexity_bound_(complexity_bound),
-            dist_complexity_bound_(dist_complexity_bound),
-            cond_complexity_bound_(cond_complexity_bound)
+            options(std::move(options))
     {}
     virtual ~Factory() = default;
 
@@ -1668,8 +1707,8 @@ public:
 
     std::pair<bool, const sample_denotation_t*>
     is_superfluous_or_exceeds_complexity_bound(const Base &base, Cache &cache, const Sample &sample) const {
-        if(base.complexity() > complexity_bound_) {
-//            std::cout << base.as_str() << " superfluous because complexity " << base.complexity() << ">" << complexity_bound_ << std::endl;
+        if(base.complexity() > options.complexity_bound) {
+//            std::cout << base.as_str() << " superfluous because complexity " << base.complexity() << ">" << options.complexity_bound << std::endl;
             return std::make_pair(true, nullptr);
         }
 
@@ -1685,10 +1724,10 @@ public:
     }
 
     bool check_timeout(const std::clock_t& start_time) const {
-        if (concept_generation_timeout <= 0) return false;
+        if (options.timeout <= 0) return false;
         double elapsed = (std::clock() - start_time) / (double) CLOCKS_PER_SEC;
-        if (elapsed > concept_generation_timeout) {
-            std::cout << "\tTimeout of " << concept_generation_timeout << " sec. reached while generating concepts" << std::endl;
+        if (elapsed > options.timeout) {
+            std::cout << "\tTimeout of " << options.timeout << " sec. reached while generating concepts" << std::endl;
             return true;
         }
         return false;
@@ -1701,7 +1740,7 @@ public:
         unsigned num_pruned_concepts = 0;
         if( concepts_.empty() ) { // On the first iteration, we simply process the basis concepts and return
             concepts_.emplace_back();
-            for (auto concept : basis_concepts_) {
+            for (const auto* concept : basis_concepts_) {
                 std::pair<bool, const sample_denotation_t *> p = is_superfluous_or_exceeds_complexity_bound(*concept, cache, sample);
                 if (!p.first) insert_new_concept(cache, concept->clone(), p.second);
                 //else std::cout << "PRUNE: " + concept.as_str() << std::endl;
@@ -1713,15 +1752,15 @@ public:
 
 
         // Classify concepts and roles by their complexity - we will use this to minimize complexity checks later
-        std::vector<std::vector<const Role*>> roles_by_complexity(complexity_bound_+1);
-        std::vector<std::vector<const Concept*>> concepts_in_last_layer_by_complexity(complexity_bound_+1);
-        std::vector<std::vector<const Concept*>> concepts_in_previous_layers_by_complexity(complexity_bound_+1);
+        std::vector<std::vector<const Role*>> roles_by_complexity(options.complexity_bound+1);
+        std::vector<std::vector<const Concept*>> concepts_in_last_layer_by_complexity(options.complexity_bound+1);
+        std::vector<std::vector<const Concept*>> concepts_in_previous_layers_by_complexity(options.complexity_bound+1);
 
-        for (const auto r:roles_) roles_by_complexity.at(r->complexity()).push_back(r);  // TODO Do this just once
-        for (const auto c:concepts_.back()) concepts_in_last_layer_by_complexity.at(c->complexity()).push_back(c);
+        for (const auto* r:roles_) roles_by_complexity.at(r->complexity()).push_back(r);  // TODO Do this just once
+        for (const auto* c:concepts_.back()) concepts_in_last_layer_by_complexity.at(c->complexity()).push_back(c);
 
         for( unsigned layer = 0; layer < concepts_.size()-1; ++layer ) {
-            for (const auto c:concepts_[layer]) {
+            for (const auto* c:concepts_[layer]) {
                 concepts_in_previous_layers_by_complexity.at(c->complexity()).push_back(c);
             }
         }
@@ -1732,8 +1771,8 @@ public:
         bool is_first_non_basis_iteration = (concepts_.size() == 1);
         if (is_first_non_basis_iteration) {
             // Insert equal concepts based on the already-fixed set of roles.
-            for (const auto r1:roles_) {
-                for (const auto r2:roles_) {
+            for (const auto* r1:roles_) {
+                for (const auto* r2:roles_) {
                     if (dynamic_cast<const RoleDifference*>(r1) || dynamic_cast<const RoleDifference*>(r2)) {
                         // R=R' Makes no sense when R or R' are already a role difference
                         continue;
@@ -1761,7 +1800,7 @@ public:
             }
         }
 
-        for (int k = 0; k <= (complexity_bound_-1); ++k) {
+        for (int k = 0; k <= (options.complexity_bound-1); ++k) {
             for (const auto* concept:concepts_in_last_layer_by_complexity[k]) {
 
                 // Negate concepts in the last layer, only if they are not already negations
@@ -1776,8 +1815,8 @@ public:
 
 
                 // generate exist and forall combining a role with a concept in the last layer
-                for (int k2 = 0; k2 <= (complexity_bound_-k-1); ++k2) {
-                    for (auto role:roles_by_complexity[k2]) {
+                for (int k2 = 0; k2 <= (options.complexity_bound-k-1); ++k2) {
+                    for (const auto *role:roles_by_complexity[k2]) {
                         ExistsConcept exists_concept(concept, role);
                         std::pair<bool, const sample_denotation_t *> p = is_superfluous_or_exceeds_complexity_bound(
                                 exists_concept, cache, sample);
@@ -1803,12 +1842,12 @@ public:
 
         // generate conjunctions of (a) a concept in previous layer with a concept of the last layer, and
         // (b) two concepts of the last layer, avoiding symmetries
-        for (int k = 0; k <= (complexity_bound_-1); ++k) {
+        for (int k = 0; k <= (options.complexity_bound-1); ++k) {
             for (unsigned i_k = 0; i_k < concepts_in_last_layer_by_complexity[k].size(); ++i_k) {
                 const auto& concept1 = concepts_in_last_layer_by_complexity[k][i_k];
 
-                for (int k2 = 0; k2 <= (complexity_bound_-k); ++k2) { // TODO Change if measuring AND-concept complexity by multiplication!
-                    for (auto concept2:concepts_in_previous_layers_by_complexity[k2]) {
+                for (int k2 = 0; k2 <= (options.complexity_bound-k); ++k2) { // TODO Change if measuring AND-concept complexity by multiplication!
+                    for (const auto *concept2:concepts_in_previous_layers_by_complexity[k2]) {
                         AndConcept and_concept(concept1, concept2);
                         std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(and_concept, cache, sample);
                         if( !p.first ) insert_new_concept(cache, and_concept.clone(), p.second);
@@ -1820,7 +1859,7 @@ public:
                 }
 
 
-                for (int k2 = k; k2 <= (complexity_bound_-k); ++k2) { // TODO Change if measuring AND-concept complexity by multiplication!
+                for (int k2 = k; k2 <= (options.complexity_bound-k); ++k2) { // TODO Change if measuring AND-concept complexity by multiplication!
                     unsigned start_at = (k == k2) ? i_k+1: 0; // Break symmetries within same complexity bucket
                     for (unsigned i_k2 = start_at; i_k2 < concepts_in_last_layer_by_complexity[k2].size(); ++i_k2) {
                         const auto& concept2 = concepts_in_last_layer_by_complexity[k2][i_k2];
@@ -1842,22 +1881,22 @@ public:
     //! exactly one such predicate
     static const Predicate* get_role_predicate(const Role* r) {
 
-        if (auto c = dynamic_cast<const PrimitiveRole*>(r)) {
+        if (const auto *c = dynamic_cast<const PrimitiveRole*>(r)) {
             return c->predicate();
 
-        } else if (auto c = dynamic_cast<const StarRole*>(r)) {
+        } else if (const auto* c = dynamic_cast<const StarRole*>(r)) {
             return get_role_predicate(c->role());
 
-        } else if (auto c = dynamic_cast<const PlusRole*>(r)) {
+        } else if (const auto *c = dynamic_cast<const PlusRole*>(r)) {
             return get_role_predicate(c->role());
 
-        } else if (auto c = dynamic_cast<const RoleRestriction*>(r)) {
+        } else if (const auto *c = dynamic_cast<const RoleRestriction*>(r)) {
             return get_role_predicate(c->role());
 
-        } else if (auto c = dynamic_cast<const InverseRole*>(r)) {
+        } else if (const auto *c = dynamic_cast<const InverseRole*>(r)) {
             return get_role_predicate(c->role());
 
-        } else if (auto c = dynamic_cast<const RoleDifference*>(r)) {
+        } else if (const auto *c = dynamic_cast<const RoleDifference*>(r)) {
             throw std::runtime_error("Unimplemented");
         }
         throw std::runtime_error("Unknown role type");
@@ -1902,14 +1941,14 @@ public:
 
             } else if (arity == 1) {
                 // Force into the basis a concept "p_g AND Not p"
-                auto c = new PrimitiveConcept(&nongoal_pred);
-                auto not_c = new NotConcept(c);
-                auto c_g = new PrimitiveConcept(&pred);
-                auto and_c = new AndConcept(c_g, not_c);
+                auto *c = new PrimitiveConcept(&nongoal_pred);
+                auto *not_c = new NotConcept(c);
+                auto *c_g = new PrimitiveConcept(&pred);
+                auto *and_c = new AndConcept(c_g, not_c);
 
                 // Insert the denotations into the cache
 //                for (const auto elem:std::vector<const Concept*>({and_c})) {
-                for (const auto elem:std::vector<const Concept*>({c, not_c, c_g, and_c})) {
+                for (const auto* elem:std::vector<const Concept*>({c, not_c, c_g, and_c})) {
                     const sample_denotation_t *d = elem->denotation(cache, sample, false);
                     cache.find_or_insert_sample_denotation(*d, elem->as_str());
                 }
@@ -1919,7 +1958,7 @@ public:
 
 
                 and_c->force_complexity(1);
-                for (const auto elem:std::vector<const Concept*>({c, not_c, c_g, and_c})) {
+                for (const auto* elem:std::vector<const Concept*>({c, not_c, c_g, and_c})) {
                     insert_basis(elem);
                 }
 
@@ -1928,9 +1967,9 @@ public:
 
             } else if (arity == 2) {
                 // Force into the basis a new RoleDifference(r_g, r)
-                auto r = new PrimitiveRole(&nongoal_pred);
-                auto r_g = new PrimitiveRole(&pred);
-                auto r_diff = new RoleDifference(r_g, r);
+                auto *r = new PrimitiveRole(&nongoal_pred);
+                auto *r_g = new PrimitiveRole(&pred);
+                auto *r_diff = new RoleDifference(r_g, r);
 
                 // Insert the denotations into the cache
 //                for (const auto elem:std::vector<const Role*>({r_diff})) {
@@ -1943,11 +1982,11 @@ public:
 //                }
 
                 r_diff->force_complexity(1);
-                for (const auto elem:std::vector<const Role*>({r, r_g, r_diff})) {
+                for (const auto* elem:std::vector<const Role*>({r, r_g, r_diff})) {
                     insert_basis(elem);
                 }
 
-                auto ex_c = new ExistsConcept(new UniversalConcept, r_diff); // memleak
+                auto *ex_c = new ExistsConcept(new UniversalConcept, r_diff); // memleak
 //                goal_features.push_back(new NumericalFeature(ex_c));
                 goal_concepts.push_back(ex_c);
             }
@@ -1959,7 +1998,7 @@ public:
         assert(roles_.empty());
 
         // Insert the basis (i.e. primitive) roles as long as they are not redundant
-        for (auto role : basis_roles_) {
+        for (const auto *role : basis_roles_) {
             std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(*role, cache, sample);
             if( !p.first ) {
                 insert_new_role(cache, role->clone(), p.second);
@@ -1972,7 +2011,7 @@ public:
             delete p.second;
         }
 
-        for (auto role : basis_roles_) {
+        for (const auto *role : basis_roles_) {
             // Create Plus(R) roles from the primitive roles
             PlusRole p_role(role);
             insert_role_if_possible(p_role, cache, sample);
@@ -2028,13 +2067,69 @@ public:
         return all_concepts;
     }
 
+    void generate_comparison_features(
+            const std::vector<const Feature*>& base_features,
+            Cache& cache,
+            const Sample& sample,
+            feature_cache_t& seen_denotations)
+    {
+        if (!options.comparison_features) return;
+
+        // get the max index here, as we'll keep adding elements to the same `features_` vector:
+        auto n = features_.size();
+
+        for (std::size_t i = 0; i < n; ++i) {
+            const auto* f_i = features_[i];
+            if (f_i->is_boolean() || f_i->complexity() + 1 + 1 > options.complexity_bound) continue;
+
+            for (std::size_t j = 0; j < n; ++j) {
+                const auto* f_j = features_[j];
+                if (i == j || f_j->is_boolean() || f_i->complexity() + f_j->complexity() + 1 > options.complexity_bound)
+                    continue;
+
+                const auto *feature = new DifferenceFeature(f_i, f_j);
+                if (!insert_feature_if_necessary(
+                        feature, options.complexity_bound, cache, sample, seen_denotations)) {
+                    delete feature;
+                }
+            }
+        }
+    }
+
+    void generate_conditional_features(
+            const std::vector<const Feature*>& base_features,
+            Cache& cache,
+            const Sample& sample,
+            feature_cache_t& seen_denotations)
+    {
+        if (options.cond_complexity_bound <= 0) return;
+
+        for (std::size_t i = 0, n = features_.size(); i < n; ++i) {
+            const auto* cond = features_[i];
+            if (!cond->is_boolean() || cond->complexity() + 1 + 1 > options.cond_complexity_bound) continue;
+
+            for (std::size_t j = i + 1; j < n; ++j) {
+                const auto* body = features_[j];
+                if (body->is_boolean() ||
+                    cond->complexity() + body->complexity() + 1 > options.cond_complexity_bound)
+                    continue;
+
+                const auto *feature = new ConditionalFeature(cond, body);
+                if (!insert_feature_if_necessary(
+                        feature, options.cond_complexity_bound, cache, sample, seen_denotations)) {
+                    delete feature;
+                }
+            }
+        }
+    }
+
     void generate_features(const std::vector<const Concept*>& concepts, Cache &cache, const Sample &sample, const std::vector<const Concept*>& forced_goal_features) {
         feature_cache_t seen_denotations;
 
         // Insert first the features that allow us to express the goal
         // goal_features will contain the indexes of those features
         goal_features_.clear();
-        for (auto c:forced_goal_features) {
+        for (const auto *c:forced_goal_features) {
             if (generate_cardinality_feature_if_not_redundant(c, cache, sample, seen_denotations, false)) {
                 goal_features_.insert(features_.size()-1);
             }
@@ -2054,45 +2149,41 @@ public:
             generate_cardinality_feature_if_not_redundant(c, cache, sample, seen_denotations);
         }
 
+        // create comparison features here so that only cardinality features are used to build them
+        generate_comparison_features(features_, cache, sample, seen_denotations);
+
         // create distance features
-        generate_distance_features(concepts, cache, sample);
+        generate_distance_features(concepts, cache, sample, seen_denotations);
 
         // create conditional features from boolean conditions and numeric bodies
-        for (std::size_t i = 0, n = features_.size(); i < n; ++i) {
-            const auto* cond = features_[i];
-            if (!cond->is_boolean() || cond->complexity() + 1 + 1 > cond_complexity_bound_) continue;
-
-            for (std::size_t j = i+1; j < n; ++j) {
-                const auto* body = features_[j];
-                if (body->is_boolean() || cond->complexity() + body->complexity() + 1 > cond_complexity_bound_) continue;
-                generate_conditional_feature_if_not_redundant(cond, body, cache, sample, seen_denotations);
-            }
-        }
+        generate_conditional_features(features_, cache, sample, seen_denotations);
 
         print_feature_count();
     }
 
     void print_feature_count() const {
         unsigned num_nullary_features = 0, num_boolean_features = 0, num_numeric_features = 0,
-                num_distance_features = 0, num_conditional_features = 0;
+                num_distance_features = 0, num_conditional_features = 0, num_comparison_features = 0;
         auto nf = features_.size();
-        for (auto f:features_) {
+        for (const auto *f:features_) {
             if (dynamic_cast<const NullaryAtomFeature*>(f)) num_nullary_features++;
             else if (dynamic_cast<const BooleanFeature*>(f)) num_boolean_features++;
             else if (dynamic_cast<const NumericalFeature*>(f)) num_numeric_features++;
             else if (dynamic_cast<const DistanceFeature*>(f)) num_distance_features++;
             else if (dynamic_cast<const ConditionalFeature*>(f)) num_conditional_features++;
+            else if (dynamic_cast<const DifferenceFeature*>(f)) num_comparison_features++;
             else throw std::runtime_error("Unknown feature type");
         }
 
         assert(nf == num_nullary_features+num_boolean_features+num_numeric_features
-                     +num_distance_features+num_conditional_features);
+                     +num_distance_features+num_conditional_features+num_comparison_features);
         std::cout << "FEATURES: #features=" << nf
                   << ", #nullary="   << num_nullary_features
                   << ", #boolean="   << num_boolean_features
                   << ", #numerical=" << num_numeric_features
                   << ", #distance="  << num_distance_features
                   << ", #conditional="  << num_conditional_features
+                  << ", #comparison="  << num_comparison_features
                   << std::endl;
     }
 
@@ -2156,9 +2247,13 @@ public:
         }
     }
 
-    void generate_conditional_feature_if_not_redundant(const Feature* condition, const Feature* body,
-                                                       Cache &cache, const Sample &sample, feature_cache_t& seen_denotations) {
-        assert(condition->is_boolean() && !body->is_boolean());
+    //! Insert the given feature if its complexity is below the given bound, its denotation is not constant,
+    //! and its denotation trail is not redundant with that of some previously-generated feature
+    bool insert_feature_if_necessary(
+            const Feature* feature, unsigned bound,
+            Cache &cache, const Sample &sample, feature_cache_t& seen_denotations)
+    {
+        if (feature->complexity() > bound) return false;
 
         const auto m = sample.num_states();
         feature_sample_denotation_t fd;
@@ -2168,34 +2263,30 @@ public:
         bool all_values_greater_than_zero = true;
         int previous_value = -1;
 
-        for(unsigned j = 0; j < m; ++j) {
+        for (unsigned j = 0; j < m; ++j) {
             const State &state = sample.state(j);
-            int value = ConditionalFeature::value_from_components(cache, sample, state, condition, body);
+            int value = feature->value(cache, sample, state);
             denotation_is_constant = (previous_value == -1) || (denotation_is_constant && (previous_value == value));
             all_values_greater_than_zero = all_values_greater_than_zero && (value > 0);
             previous_value = value;
             fd.push_back(value);
         }
 
-        if( !denotation_is_constant && !all_values_greater_than_zero ) {
-            auto it = seen_denotations.find(fd);
-            if( it == seen_denotations.end() ) { // The feature denotation is new, keep the feature
-                const auto *feature = new ConditionalFeature(condition, body);
-                assert(feature->complexity() <= cond_complexity_bound_);
+        if (!denotation_is_constant && !all_values_greater_than_zero) {
+            if (seen_denotations.find(fd)  == seen_denotations.end()) {
+                // The feature denotation is new, so let's insert it
                 features_.emplace_back(feature);
                 seen_denotations.emplace(fd, feature);
-                return;
+                return true;
             }
         }
-        return;
+        return false;
     }
 
-    void generate_distance_features(const std::vector<const Concept*>& concepts, Cache &cache, const Sample &sample) {
-        if (dist_complexity_bound_<=0) return;
+    void generate_distance_features(const std::vector<const Concept*>& concepts, Cache &cache, const Sample &sample, feature_cache_t& seen_denotations) {
+        if (options.dist_complexity_bound<=0) return;
 
         auto m = sample.num_states();
-
-        feature_cache_t seen_denotations;
 
         // identify concepts with singleton denotation across all states
         // as these are the candidates for start concepts
@@ -2216,7 +2307,7 @@ public:
         for (const Role* r:roles_) {
             for (const Concept* c:concepts) {
                 RoleRestriction role_restriction(r, c);
-                if( role_restriction.complexity()+3 > dist_complexity_bound_ ) continue;
+                if( role_restriction.complexity()+3 > options.dist_complexity_bound ) continue;
                 const sample_denotation_t *d = role_restriction.denotation(cache, sample, false);
                 if( !is_superfluous(cache, d) ) {
                     assert(cache.cache1().find(d) == cache.cache1().end());
@@ -2238,7 +2329,7 @@ public:
                 if (start == end) continue;
                 for (const Role* role:dist_roles) {
                     DistanceFeature df(start, end, role);
-                    if( df.complexity() > dist_complexity_bound_ ) continue;
+                    if( df.complexity() > options.dist_complexity_bound ) continue;
                     //std::cout << "TESTING: " << df.as_str_with_complexity() << std::endl;
 
                     // fill cache with denotations for start and end concepts
@@ -2258,7 +2349,7 @@ public:
                         fd[index] = value;
                     }
 
-                    feature_cache_t::const_iterator it = seen_denotations.find(fd);
+                    auto it = seen_denotations.find(fd);
                     if( it == seen_denotations.end() ) {
                         ++num_distance_features;
                         features_.emplace_back(df.clone());
@@ -2294,14 +2385,14 @@ public:
         }
         os << std::endl;
 
-        os << "All Roles under complexity " << complexity_bound_ << " (sz=" << roles_.size() << "): ";
+        os << "All Roles under complexity " << options.complexity_bound << " (sz=" << roles_.size() << "): ";
         for( int i = 0; i < int(roles_.size()); ++i ) {
             os << roles_[i]->as_str_with_complexity();
             if( 1 + i < int(roles_.size()) ) os << ", ";
         }
         os << std::endl;
 
-        os << "All concepts (by layer) under complexity " << complexity_bound_ << ": " << std::endl;
+        os << "All concepts (by layer) under complexity " << options.complexity_bound << ": " << std::endl;
         for( int layer = 0; layer < concepts_.size(); ++layer ) {
             os << "    Layer " << layer << " (sz=" << concepts_[layer].size() << "): ";
             for( int i = 0; i < int(concepts_[layer].size()); ++i ) {
@@ -2313,7 +2404,7 @@ public:
 
         os << "Nullary-atom features: ";
         bool need_comma = false;
-        for (auto &feature : features_) {
+        for (const auto &feature : features_) {
             if( dynamic_cast<const NullaryAtomFeature*>(feature) ) {
                 if( need_comma ) os << ", ";
                 os << feature->as_str();
@@ -2324,7 +2415,7 @@ public:
 
         os << "Boolean features: ";
         need_comma = false;
-        for (auto &feature : features_) {
+        for (const auto &feature : features_) {
             if( dynamic_cast<const BooleanFeature*>(feature) ) {
                 if( need_comma ) os << ", ";
                 os << feature->as_str();
@@ -2335,7 +2426,7 @@ public:
 
         os << "Numerical features: ";
         need_comma = false;
-        for (auto &feature : features_) {
+        for (const auto &feature : features_) {
             if( dynamic_cast<const NumericalFeature*>(feature) ) {
                 if( need_comma ) os << ", ";
                 os << feature->as_str();
@@ -2346,7 +2437,7 @@ public:
 
         os << "Distance features: ";
         need_comma = false;
-        for (auto &feature : features_) {
+        for (const auto &feature : features_) {
             if( dynamic_cast<const DistanceFeature*>(feature) ) {
                 if( need_comma ) os << ", ";
                 os << feature->as_str();
@@ -2426,4 +2517,4 @@ public:
     }
 };
 
-} }; // namespaces
+}; // namespaces

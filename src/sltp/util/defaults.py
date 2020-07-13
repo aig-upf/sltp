@@ -104,6 +104,9 @@ def generate_experiment(domain_dir, domain, **kwargs):
         distance_feature_max_complexity=0,
         cond_feature_max_complexity=0,
 
+        # Whether to generate comparison features of the type F1 < F2
+        comparison_features=False,
+
         # Method to generate domain parameters (goal or otherwise). If None, goal predicates will
         # be used (default: None)
         parameter_generator=None,

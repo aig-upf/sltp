@@ -395,15 +395,12 @@ std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(std::ostream &o
         if (!is_alive(s)) continue;
 
         cnfclause_t clause;
-        bool at_least_one_successor = false;
         for (unsigned sprime:successors(s)) {
             if (!is_marked_transition(s, sprime)) continue;
 
-            at_least_one_successor = true;
             const auto& tx_is_good = var_good_txs.at(std::make_pair(s, sprime));
             clause.push_back(CNFWriter::literal(tx_is_good, true));
         }
-        assert(at_least_one_successor);
         writer.print_clause(clause);
         ++n_good_tx_clauses;
     }

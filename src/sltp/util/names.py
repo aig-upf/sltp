@@ -51,8 +51,10 @@ def spanner_names(feature):
         "tightened": "num-tightened-nuts",
         "Exists(Star(link),Exists(Inverse(at),man))": "n-unreachable-locations",
         "Exists(at,Exists(Star(link),Exists(Inverse(at),man)))": "n-unreachable-spanners",
+        "LessThan{Num[Exists(Inverse(carrying),<universe>)]}{Num[loose]}": "not-carrying-enough-spanners",
     }
-    return extend_namer_to_all_features(base).get(s, s)
+    d = extend_namer_to_all_features(base)
+    return d.get(s, s)
 
 
 def blocksworld_names(feature):

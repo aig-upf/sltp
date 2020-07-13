@@ -6,6 +6,7 @@ from tarski.dl import NullaryAtom, EmpiricalBinaryConcept, ConceptCardinalityFea
     UniversalConcept, NotConcept, ExistsConcept, ForallConcept, PrimitiveRole, EmptyConcept, AndConcept, GoalRole, \
     GoalConcept, InverseRole, EqualConcept, StarRole, NullaryAtomFeature, NominalConcept, MinDistanceFeature, \
     RestrictRole  #, ConditionalFeature, RoleDifference
+from tarski.dl.features import DifferenceFeature
 from tarski.syntax import Sort
 
 
@@ -48,12 +49,18 @@ def unserialize_feature(language, string, complexity=None):
         condition, body = [unserialize_feature(language, s) for s in concept.split('}{')]
         return ConditionalFeature(condition, body)
 
+    if string.startswith("LessThan{"):
+        content = string[len("LessThan{"):-1]
+        f1, f2 = [unserialize_feature(language, s) for s in content.split('}{')]
+        return DifferenceFeature(f1, f2)
+
     ftype, concept, _ = string.replace("[", "]").split("]")  # Split feature name in 3 parts by '[', ']'
     assert not _
     if ftype == "Atom":
         p = language.get(concept)  # Concept will necessarily be a nullary predicate
         assert p.arity == 0
         return NullaryAtomFeature(NullaryAtom(p))
+
     elif ftype == "Bool":
         c = parse_concept(language, concept)
         if complexity is not None:

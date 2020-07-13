@@ -12,65 +12,60 @@
 using namespace std;
 namespace po = boost::program_options;
 
+SLTP::DL::Options parse_options(int argc, const char **argv) {
+    po::options_description description("Generate a pool of non-redundante candidate features given"
+                                        " a sample of states.\n\nOptions");
 
-//! Command-line option processing
-struct Options {
-    std::string workspace;
-    int timeout;
-    unsigned complexity_bound;
-    unsigned dist_complexity_bound;
-    unsigned cond_complexity_bound;
-    bool print_denotations;
+    description.add_options()
+            ("help,h", "Display this help message and exit.")
+            ("verbose,v", "Show extra debugging messages.")
 
-    Options(int argc, const char **argv) {
-        po::options_description description("Generate a pool of non-redundante candidate features given"
-                                            " a sample of states.\n\nOptions");
+            ("workspace,w", po::value<std::string>()->required(),
+             "Directory where the input and output files will be expected / left.")
 
-        description.add_options()
-                ("help,h", "Display this help message and exit.")
-                ("verbose,v", "Show extra debugging messages.")
+            ("timeout", po::value<int>()->default_value(-1), "The timeout, in seconds. Default: no timeout.")
 
-                ("workspace,w", po::value<std::string>()->required(),
-                 "Directory where the input and output files will be expected / left.")
+            ("complexity-bound", po::value<unsigned>()->required(),
+             "Maximum feature complexity for standard features.")
 
-                ("timeout", po::value<int>()->default_value(-1), "The timeout, in seconds. Default: no timeout.")
+            ("dist-complexity-bound", po::value<unsigned>()->required(),
+             "Maximum feature complexity for distance features.")
 
-                ("complexity-bound", po::value<unsigned>()->required(),
-                        "Maximum feature complexity for standard features.")
+            ("cond-complexity-bound", po::value<unsigned>()->required(),
+             "Maximum feature complexity for conditional features.")
 
-                ("dist-complexity-bound", po::value<unsigned>()->required(),
-                        "Maximum feature complexity for distance features.")
+            ("comparison-features", "Use comparison features of the type F1 < F2")
 
-                 ("cond-complexity-bound", po::value<unsigned>()->required(),
-                         "Maximum feature complexity for conditional features.")
+            ("print-denotations", "Whether print the denotations of all generated features.")
+            ;
 
-                ("print-denotations", "Whether print the denotations of all generated features.")
-        ;
+    po::variables_map vm;
 
-        po::variables_map vm;
+    try {
+        po::store(po::command_line_parser(argc, argv).options(description).run(), vm);
 
-        try {
-            po::store(po::command_line_parser(argc, argv).options(description).run(), vm);
-
-            if (vm.count("help")) {
-                std::cout << description << "\n";
-                exit(0);
-            }
-            po::notify(vm);
-        } catch (const std::exception &ex) {
-            std::cout << "Error with command-line options:" << ex.what() << std::endl;
-            std::cout << std::endl << description << std::endl;
-            exit(1);
+        if (vm.count("help")) {
+            std::cout << description << "\n";
+            exit(0);
         }
-
-        workspace = vm["workspace"].as<std::string>();
-        timeout = vm["timeout"].as<int>();
-        complexity_bound = vm["complexity-bound"].as<unsigned>();
-        dist_complexity_bound = vm["dist-complexity-bound"].as<unsigned>();
-        cond_complexity_bound = vm["cond-complexity-bound"].as<unsigned>();
-        print_denotations = vm.count("print-denotations") > 0;
+        po::notify(vm);
+    } catch (const std::exception &ex) {
+        std::cout << "Error with command-line options:" << ex.what() << std::endl;
+        std::cout << std::endl << description << std::endl;
+        exit(1);
     }
-};
+
+    SLTP::DL::Options options;
+
+    options.workspace = vm["workspace"].as<std::string>();
+    options.timeout = vm["timeout"].as<int>();
+    options.complexity_bound = vm["complexity-bound"].as<unsigned>();
+    options.dist_complexity_bound = vm["dist-complexity-bound"].as<unsigned>();
+    options.cond_complexity_bound = vm["cond-complexity-bound"].as<unsigned>();
+    options.comparison_features = vm.count("comparison-features") > 0;
+    options.print_denotations = vm.count("print-denotations") > 0;
+    return options;
+}
 
 SLTP::DL::Sample parse_input_sample(const string &filename) {
     ifstream sample_file(filename);
@@ -90,7 +85,7 @@ std::vector<std::string> parse_nominals(const string &filename) {
     return nominals;
 }
 
-void output_results(const Options &options,
+void output_results(const SLTP::DL::Options &options,
                     const SLTP::DL::Factory &factory,
                     const SLTP::DL::Sample &sample,
                     const SLTP::DL::Cache &cache) {
@@ -110,19 +105,11 @@ void output_results(const Options &options,
 
 int main(int argc, const char **argv) {
     auto start_time = std::clock();
-    Options options(argc, argv);
+    SLTP::DL::Options options = parse_options(argc, argv);
 
     const SLTP::DL::Sample sample = parse_input_sample(options.workspace + "/sample.io");
     std::vector<std::string> nominals = parse_nominals(options.workspace + "/nominals.io");
-#if 0
-    cout << "SAMPLE: #objects=" << sample->num_objects()
-         << ", #predicates=" << sample->num_predicates()
-         << ", #grounded-predicates=" << sample->num_grounded_predicates()
-         << ", #states=" << sample->num_states()
-         << endl;
-#endif
-    SLTP::DL::Factory factory(nominals, options.complexity_bound,
-            options.dist_complexity_bound, options.cond_complexity_bound, options.timeout);
+    SLTP::DL::Factory factory(nominals, options);
 
     SLTP::DL::Cache cache;
     factory.generate_basis(sample);

@@ -290,11 +290,10 @@ def extract_features(config, sample):
     args = f" --complexity-bound {config.max_concept_size}" \
            + f" --timeout {config.concept_generation_timeout}" \
            + f" --dist-complexity-bound {config.distance_feature_max_complexity}" \
-           + f" --cond-complexity-bound {config.cond_feature_max_complexity}" + \
-           f" --workspace {config.experiment_dir}"
-
-    if config.print_all_denotations:
-        args += "--print-denotations".format(),
+           + f" --cond-complexity-bound {config.cond_feature_max_complexity}" \
+           + (f" --comparison-features" if config.comparison_features else "") \
+           + (f" --print-denotations" if config.print_all_denotations else "") \
+           + f" --workspace {config.experiment_dir}"
 
     args = args.split()
     generate_debug_scripts(config.experiment_dir, cmd, args)
