@@ -1734,8 +1734,8 @@ public:
     // apply one iteration of the concept generation grammar
     // new concepts are left on a new last layer in concepts_
     // new concepts are non-redundant if sample != nullptr
-    unsigned advance_step(Cache &cache, const Sample &sample, const std::clock_t& start_time) const {
-        unsigned num_pruned_concepts = 0;
+    int advance_step(Cache &cache, const Sample &sample, const std::clock_t& start_time) const {
+        int num_pruned_concepts = 0;
         if( concepts_.empty() ) { // On the first iteration, we simply process the basis concepts and return
             concepts_.emplace_back();
             for (const auto* concept : basis_concepts_) {
@@ -1768,7 +1768,9 @@ public:
         concepts_.emplace_back();
 
         if (is_first_non_basis_iteration) {
-            // Insert equal concepts based on the already-fixed set of roles.
+            // Let's create equal concepts for those pairs of roles (whose number is already fixed at this point)
+            // such that both arise from same predicate and one of them is the "goal version" of the other, e.g.
+            // on and on_g, in blocksworld.
             for (const auto* r1:roles_) {
                 for (const auto* r2:roles_) {
                     if (dynamic_cast<const RoleDifference*>(r1) || dynamic_cast<const RoleDifference*>(r2)) {
@@ -2031,7 +2033,7 @@ public:
         std::size_t num_concepts = 0;
         bool some_new_concepts = true;
         bool timeout_reached = false;
-        for( int iteration = 0; some_new_concepts; ++iteration ) {
+        for( int iteration = 0; some_new_concepts && !timeout_reached; ++iteration ) {
             std::cout << "DL::concept-generation: iteration=" << iteration
                       << ", #concepts=" << num_concepts
                       << ", #concepts-in-last-layer=" << (concepts_.empty() ? 0 : concepts_.back().size())
@@ -2040,7 +2042,7 @@ public:
             std::size_t num_concepts_before_step = num_concepts;
 
             // Let the fun begin:
-            std::size_t num_pruned_concepts = advance_step(cache, sample, start_time);
+            auto num_pruned_concepts = advance_step(cache, sample, start_time);
             timeout_reached = num_pruned_concepts < 0;
 
             num_concepts += concepts_.empty() ? 0 : concepts_.back().size();
@@ -2052,8 +2054,10 @@ public:
                       << std::endl;
 //            report_dl_data(std::cout);
         }
-        assert(concepts_.back().empty());
-        concepts_.pop_back();
+
+        if (concepts_.back().empty()) {  // i.e. we stopped because last iteration was already a fixpoint
+            concepts_.pop_back();
+        }
 
         // Important to use this vector from here on, as it is sorted by complexity
         auto all_concepts = consolidate_concepts();
