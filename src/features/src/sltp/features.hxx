@@ -489,13 +489,11 @@ inline std::string Atom::as_str(const Sample &sample) const {
 
 class Base {
 protected:
-    // unsigned id_;
     int complexity_;
 
 public:
     explicit Base(int complexity) : complexity_(complexity) { }
-    // const unsigned id() const { return id_; }
-    const int complexity() const { return complexity_; }
+    int complexity() const { return complexity_; }
 
     //virtual void denotation(Denotation &d) const = 0;
     virtual const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const = 0;
@@ -1741,7 +1739,7 @@ public:
         if( concepts_.empty() ) { // On the first iteration, we simply process the basis concepts and return
             concepts_.emplace_back();
             for (const auto* concept : basis_concepts_) {
-                std::pair<bool, const sample_denotation_t *> p = is_superfluous_or_exceeds_complexity_bound(*concept, cache, sample);
+                auto p = is_superfluous_or_exceeds_complexity_bound(*concept, cache, sample);
                 if (!p.first) insert_new_concept(cache, concept->clone(), p.second);
                 //else std::cout << "PRUNE: " + concept.as_str() << std::endl;
                 delete p.second;
@@ -1766,9 +1764,9 @@ public:
         }
 
         // create new concept layer
+        bool is_first_non_basis_iteration = (concepts_.size() == 1);
         concepts_.emplace_back();
 
-        bool is_first_non_basis_iteration = (concepts_.size() == 1);
         if (is_first_non_basis_iteration) {
             // Insert equal concepts based on the already-fixed set of roles.
             for (const auto* r1:roles_) {
@@ -1785,11 +1783,9 @@ public:
                     if (name1.substr(name1.size()-2) != "_g") continue;
                     if (name1.substr(0, name1.size()-2) != name2) continue;
 
-                    // Force the complexity of R=R' to be 1 + max complexity over R and R' or 1, if both roles are
-                    // of the same type
+                    // Force the complexity of R=R' to be 1, if both roles are of the same type
                     EqualConcept eq_concept(r1, r2);
-                    unsigned k = (typeid(*r1) == typeid(*r2)) ? 1 : 1+std::max(r1->complexity(), r2->complexity());
-                    eq_concept.force_complexity(k);
+                    if (typeid(*r1) == typeid(*r2)) eq_concept.force_complexity(1);
 
                     auto p = is_superfluous_or_exceeds_complexity_bound(eq_concept, cache, sample);
                     if (!p.first) insert_new_concept(cache, eq_concept.clone(), p.second);
