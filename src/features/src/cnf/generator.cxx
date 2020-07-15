@@ -291,7 +291,8 @@ bool all_tx_have_analogs(const Sample::Sample& sample, unsigned s, unsigned t) {
 
 
 //! Generate and write the actual CNF instance as we go
-std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(std::ostream &os, const std::vector<unsigned>& enforce_features, const std::string& workspace) {
+std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(
+        std::ostream &os, const std::vector<unsigned>& enforce_features, const std::string& workspace, bool use_only_alive_states) {
     CNFWriter writer(os);
 
     auto varmapstream = get_ofstream(workspace + "/varmap.wsat");
@@ -367,8 +368,9 @@ std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(std::ostream &o
         unsigned s = tx1.first, sprime = tx1.second;
         const auto& tx1_is_good = var_good_txs.at(tx1);
 
-        for (const transition_t& tx2:unmarked_transitions()) {
+        for (const transition_t& tx2:get_relevant_unmarked_transitions(use_only_alive_states)) {
             unsigned t = tx2.first, tprime = tx2.second;
+
             // We want to distinguish (s, s') from (t, t'):
             // GOOD(s, s') implies some feature D1-distinguishes or D2-distinguishes (s, s') from (t, t')
             cnfclause_t clause;

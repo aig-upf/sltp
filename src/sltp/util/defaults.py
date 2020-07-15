@@ -183,6 +183,10 @@ def generate_experiment(domain_dir, domain, **kwargs):
 
         # A function to manually provide a transition-classification policy that we want to test
         transition_classification_policy=None,
+
+        # In the transition-separation CNF encoding, whether to distinguish good transitions *only from*
+        # unmarked transitions that start in an alive state
+        use_only_alive_unmarked_transitions=True,
     )
 
     parameters = {**defaults, **kwargs}  # Copy defaults, overwrite with user-specified parameters

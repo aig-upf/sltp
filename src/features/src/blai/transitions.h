@@ -32,6 +32,7 @@ protected:
 
     transition_set_t marked_transitions_;
     transition_list_t unmarked_transitions_;
+    transition_list_t unmarked_and_alive_transitions_;
 
 public:
     TransitionSample(std::size_t num_states, std::size_t num_transitions, std::size_t num_marked_transitions)
@@ -41,7 +42,8 @@ public:
               trdata_(num_states),
               alive_states_(num_states, false),
               marked_transitions_(),
-              unmarked_transitions_()
+              unmarked_transitions_(),
+              unmarked_and_alive_transitions_()
      {}
 
     ~TransitionSample() = default;
@@ -62,6 +64,10 @@ public:
 
     const transition_list_t& unmarked_transitions() const {
         return unmarked_transitions_;
+    }
+
+    const transition_list_t& unmarked_and_alive_transitions() const {
+        return unmarked_and_alive_transitions_;
     }
 
     bool marked(const transition_t& p) const {
@@ -93,20 +99,20 @@ public:
     void read(std::istream &is) {
         marked_transitions_.reserve(num_marked_transitions_);
         for(unsigned i = 0; i < num_marked_transitions_; ++i) {
-            unsigned src, dst;
+            unsigned src = 0, dst = 0;
             is >> src >> dst;
             assert(src < num_states_ && dst < num_states_);
             marked_transitions_.emplace(src, dst);
         }
 
         // read number of states that have been expanded, for thich we'll have one state per line next
-        unsigned num_records;
+        unsigned num_records = 0;
         is >> num_records;
         unsigned n_total_transitions = 0;
 
         // read transitions, in format: source_id, num_successors, succ_1, succ_2, ...
         for( unsigned i = 0; i < num_records; ++i ) {
-            unsigned src, count, dst;
+            unsigned src = 0, count = 0, dst = 0;
             is >> src >> count;
             assert(src < num_states_ && 0 <= count);
             if( count > 0 ) {
@@ -149,7 +155,7 @@ public:
         }
 
         // Store which states are alive (i.e. solvable, reachable, and not a goal)
-        unsigned count, s;
+        unsigned count = 0, s = 0;
         is >> count;
         assert(0 <= count && count <= num_states_);
         if(count > 0) {
@@ -159,10 +165,14 @@ public:
                 alive_states_[s] = true;
             }
         }
+
+        for (const auto tx:unmarked_transitions_) {
+            if (alive_states_[tx.first]) unmarked_and_alive_transitions_.push_back(tx);
+        }
     }
 
     static TransitionSample read_dump(std::istream &is, bool verbose) {
-        unsigned num_states, num_transitions, num_marked_transitions;
+        unsigned num_states = 0, num_transitions = 0, num_marked_transitions = 0;
         is >> num_states >> num_transitions >> num_marked_transitions;
         TransitionSample transitions(num_states, num_transitions, num_marked_transitions);
         transitions.read(is);

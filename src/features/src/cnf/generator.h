@@ -71,7 +71,6 @@ public:
     unsigned n_deadend_clauses;
     unsigned n_good_tx_clauses;
 
-public:
     explicit CNFGenerator(const Sample::Sample& sample) :
         sample_(sample),
         ns_(sample.matrix().num_states()),
@@ -112,6 +111,18 @@ public:
 
     const transition_list_t& unmarked_transitions() const {
         return sample_.transitions().unmarked_transitions();
+    }
+
+    const transition_list_t& unmarked_and_alive_transitions() const {
+        return sample_.transitions().unmarked_and_alive_transitions();
+    }
+
+    const transition_list_t& get_relevant_unmarked_transitions(bool use_only_alive_states) const {
+        if (use_only_alive_states) {
+            return sample_.transitions().unmarked_and_alive_transitions();
+        } else {
+            return sample_.transitions().unmarked_transitions();
+        }
     }
 
     unsigned feature_weight(unsigned f) const {
@@ -160,7 +171,7 @@ public:
     std::pair<bool, CNFWriter> write_basic_maxsat(std::ostream &os, const std::vector<unsigned>& enforce_features, bool use_d2tree = true);
 
     //! Generate and write the CNF instance for the transition-separation encoding as we go
-    std::pair<bool, CNFWriter> write_separation_maxsat(std::ostream &os, const std::vector<unsigned>& enforce_features, const std::string& workspace);
+    std::pair<bool, CNFWriter> write_separation_maxsat(std::ostream &os, const std::vector<unsigned>& enforce_features, const std::string& workspace, bool use_only_alive_states);
 };
 
 using isomorphism_t = std::unordered_map<unsigned, unsigned>;

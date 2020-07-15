@@ -30,6 +30,8 @@ struct Options {
     bool prune_redundant_states;
     bool verbose;
     Encoding encoding;
+    bool use_only_alive_unmarked_states;
+
 
     std::vector<unsigned> enforced_features;
 
@@ -53,6 +55,10 @@ struct Options {
 
                 ("encoding", po::value<std::string>()->default_value("basic"),
                      "The encoding to be used (options: {basic, d2tree, separation}).")
+
+                ("use-only-unmarked-alive-transitions",
+                 "In the transition-separation CNF encoding, whether to distinguish good transitions *only from*"
+                 " unmarked transitions that start in an alive state")
                 ;
 
         po::variables_map vm;
@@ -74,6 +80,7 @@ struct Options {
         workspace = vm["workspace"].as<std::string>();
         prune_redundant_states = vm.count("prune-redundant-states") > 0;
         verbose = vm.count("verbose") > 0;
+        use_only_alive_unmarked_states = vm.count("use-only-unmarked-alive-transitions") > 0;
 
         auto enc = vm["encoding"].as<std::string>();
         if (enc == "basic") encoding = Encoding::Basic;
@@ -104,7 +111,7 @@ struct Options {
 
 std::pair<bool, CNFWriter> write_maxsat(std::ostream &os, CNFGenerator& gen, const Options& options) {
     if (options.use_separation_encoding()) {
-        return gen.write_separation_maxsat(os, options.enforced_features, options.workspace);
+        return gen.write_separation_maxsat(os, options.enforced_features, options.workspace, options.use_only_alive_unmarked_states);
     } else {
         return gen.write_basic_maxsat(os, options.enforced_features, options.use_d2tree());
     }

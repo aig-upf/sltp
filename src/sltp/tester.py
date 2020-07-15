@@ -228,6 +228,13 @@ def test_transition_classification_policy_is_complete(config, policy):
 
     for s in sample.expanded:
         is_goal = s in sample.goals
+        is_alive = s in sample.alive_states
+
+        if not is_alive:
+            # ATM we only check that the policy is complete on alive states and that it does not mandate an action
+            # leading into a non-alive state.
+            continue
+
         m0 = model_cache.get_feature_model(s)
 
         good_action_found = False
@@ -238,6 +245,11 @@ def test_transition_classification_policy_is_complete(config, policy):
                     logging.error(f"Policy advises transition ({s}, {t}), but {s} is a goal state!"
                                   f"\ns: {sample.states[s]}\nt: {sample.states[t]}")
                     return ExitCode.SeparationPolicyCannotDistinguishGoal
+
+                if t not in sample.alive_states:
+                    logging.error(f"Policy advises transition ({s}, {t}), but {t} is dead!"
+                                  f"\ns: {sample.states[s]}\nt: {sample.states[t]}")
+                    return ExitCode.SeparationPolicyAdvisesDeadState
 
                 good_action_found = True
                 break

@@ -17,10 +17,15 @@ def experiments():
         base,
         pipeline="transition_classifier",
         instances=[
-            # "prob-3-2-2.pddl",
-            # "prob-4-2-5.pddl",
+            "prob-3-2-2.pddl",
+            "prob-3-2-2_b.pddl",
+            "prob-3-2-2_c.pddl",
+            "prob-3-2-2_d.pddl",
+            "prob-4-2-5.pddl",
             "prob-6_4_10.pddl",
-            # "prob-2-2-10.pddl"
+            "prob-2-2-10.pddl",
+            "prob-2-2-10_b.pddl"
+
         ],
         test_instances=[
             "prob-4-3-3-1540907466.pddl",
@@ -43,6 +48,7 @@ def experiments():
         complete_only_wrt_optimal=True,
         prune_redundant_states=False,
         optimal_selection_strategy="complete",
+        use_only_alive_unmarked_transitions=True,
         # transition_classification_policy=debug_policy
     )
 

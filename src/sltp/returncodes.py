@@ -24,6 +24,7 @@ class ExitCode(Enum):
 
     SeparationPolicyNotComplete = 30
     SeparationPolicyCannotDistinguishGoal = 31
+    SeparationPolicyAdvisesDeadState = 32
 
     FeatureGenerationUnknownError = 98
     CNFGenerationUnknownError = 99

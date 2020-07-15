@@ -52,6 +52,9 @@ def spanner_names(feature):
         "Exists(Star(link),Exists(Inverse(at),man))": "n-unreachable-locations",
         "Exists(at,Exists(Star(link),Exists(Inverse(at),man)))": "n-unreachable-spanners",
         "LessThan{Num[Exists(Inverse(carrying),<universe>)]}{Num[loose]}": "not-carrying-enough-spanners",
+        "Exists(at,Forall(Inverse(at),man))": "bob-in-empty-loc",
+        "Exists(Star(link),Exists(Inverse(at),spanner))": "num-locs-from-which-some-spanner-is-reachable",
+        "Exists(Inverse(Star(link)),Exists(Inverse(at),<universe>))": "num-locs-reachable-from-a-loc-with-things",
     }
     d = extend_namer_to_all_features(base)
     return d.get(s, s)
