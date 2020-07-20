@@ -328,29 +328,6 @@ std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(
         n_selected_clauses += 1;
     }
 
-    /*
-    TODO: Looks this might not be necessary anymore?
-    // Force D1(s1, s2) to be true if exactly one of the two states is a goal state
-    std::cout << "Generating goal constraints for " << goals_.size() * nongoals_.size() << " state pairs" << std::endl;
-    for (unsigned s:goals_) {
-        for (unsigned t:nongoals_) {
-            const auto& d1feats = d1_distinguishing_features(s, t);
-            if (d1feats.empty()) {
-                undist_goal_warning(s, t);
-                return {true, writer};
-            }
-
-            cnfclause_t clause;
-            for (unsigned f:d1feats) {
-                clause.push_back(CNFWriter::literal(var_selected.at(f), true));
-            }
-
-            writer.print_clause(clause);
-            n_goal_clauses += 1;
-        }
-    }
-    */
-
     // For goal-identifying features that we want to enforce in the solution, we add a unary clause "selected(f)"
     assert (enforce_features.empty()); // ATM haven't really thought whether this feature makes sense for this encoding
     for (auto f:enforce_features) {
