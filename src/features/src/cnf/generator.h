@@ -8,6 +8,30 @@
 //! A feature index
 using feature_t = uint32_t;
 
+namespace sltp::cnf {
+
+struct Options {
+    enum class Encoding {
+        Basic,
+        D2Tree,
+        TransitionSeparation
+    };
+
+    std::string workspace;
+    bool prune_redundant_states;
+    bool verbose;
+    Encoding encoding;
+    bool use_only_alive_unmarked_states;
+    bool distinguish_transitions_locally;
+    std::vector<unsigned> enforced_features;
+
+
+    bool use_d2tree() const { return encoding == Encoding::D2Tree; }
+    bool use_separation_encoding() const { return encoding == Encoding::TransitionSeparation; }
+};
+
+} // namespaces
+
 inline void undist_goal_warning(unsigned s, unsigned t) {
     std::cout << Utils::warning()
         <<  "No feature can distinguish state " << s << " from state " << t << ", but only one of them is a goal"
@@ -45,6 +69,9 @@ protected:
     //! The transition sample data
     const Sample::Sample& sample_;
 
+    //! The CNF encoding options
+    const sltp::cnf::Options& options;
+
     //! The number of states in the encoding
     const std::size_t ns_;
 
@@ -71,8 +98,9 @@ public:
     unsigned n_deadend_clauses;
     unsigned n_good_tx_clauses;
 
-    explicit CNFGenerator(const Sample::Sample& sample) :
+    explicit CNFGenerator(const Sample::Sample& sample, const sltp::cnf::Options& options) :
         sample_(sample),
+        options(options),
         ns_(sample.matrix().num_states()),
         nf_(sample.matrix().num_features()),
         n_selected_clauses(0),
@@ -167,11 +195,14 @@ public:
         return d2vars_.at(d2id);
     }
 
+    //! Write the desired CNF encoding to the specified file
+    std::pair<bool, CNFWriter> write_encoding(std::ofstream& os);
+
     //! Generate and write the CNF instance for the standard encoding as we go
-    std::pair<bool, CNFWriter> write_basic_maxsat(std::ostream &os, const std::vector<unsigned>& enforce_features, bool use_d2tree = true);
+    std::pair<bool, CNFWriter> write_basic_maxsat(std::ostream &os);
 
     //! Generate and write the CNF instance for the transition-separation encoding as we go
-    std::pair<bool, CNFWriter> write_separation_maxsat(std::ostream &os, const std::vector<unsigned>& enforce_features, const std::string& workspace, bool use_only_alive_states);
+    std::pair<bool, CNFWriter> write_separation_maxsat(std::ostream &os);
 };
 
 using isomorphism_t = std::unordered_map<unsigned, unsigned>;

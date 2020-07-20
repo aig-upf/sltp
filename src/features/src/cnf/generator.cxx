@@ -4,7 +4,7 @@
 
 
 //! Generate and write the actual CNF instance as we go
-std::pair<bool, CNFWriter> CNFGenerator::write_basic_maxsat(std::ostream &os, const std::vector<unsigned>& enforce_features, bool use_d2tree) {
+std::pair<bool, CNFWriter> CNFGenerator::write_basic_maxsat(std::ostream &os) {
     CNFWriter writer(os);
 
     /////// Create the CNF variables ///////
@@ -57,7 +57,7 @@ std::pair<bool, CNFWriter> CNFGenerator::write_basic_maxsat(std::ostream &os, co
 
     /////// Build the D2 tree ///////
     d2tree::D2TreeBuilder treebuilder(writer, nd2vars, d2_features_cache_, 5);
-    if (use_d2tree) {
+    if (options.use_d2tree()) {
         treebuilder.build();
         d2vars_ = treebuilder.generate_variables();
     } else { // Simply initialize all D2 variables with a fresh variable
@@ -142,12 +142,12 @@ std::pair<bool, CNFWriter> CNFGenerator::write_basic_maxsat(std::ostream &os, co
     }
 
     // For goal-identifying features that we want to enforce in the solution, we add a unary clause "selected(f)"
-    for (auto f:enforce_features) {
+    for (auto f:options.enforced_features) {
         writer.print_clause({CNFWriter::literal(var_selected.at(f), true)});
         n_goal_clauses += 1;
     }
 
-    if (use_d2tree) {
+    if (options.use_d2tree()) {
         n_d2_clauses += treebuilder.generate_constraints(var_selected);
     } else {
         std::cout << "Generating D2 constraints for " << nd2vars << " variables" << std::endl;
@@ -291,22 +291,23 @@ bool all_tx_have_analogs(const Sample::Sample& sample, unsigned s, unsigned t) {
 
 
 //! Generate and write the actual CNF instance as we go
-std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(
-        std::ostream &os, const std::vector<unsigned>& enforce_features, const std::string& workspace, bool use_only_alive_states) {
+std::pair<bool, CNFWriter>
+CNFGenerator::write_separation_maxsat(std::ostream &os)
+{
     CNFWriter writer(os);
 
-    auto varmapstream = get_ofstream(workspace + "/varmap.wsat");
+    auto varmapstream = get_ofstream(options.workspace + "/varmap.wsat");
 
-    /////// Create the CNF variables ///////
-    // Selected(f) for each feature f
+    /////// CNF variables ///////
+    // We have one variable Selected(f) for each feature f
     std::vector<cnfvar_t> var_selected;
     for (unsigned f = 0; f < nf_; ++f) {
 //            std::cout << "#" << f << ": " << sample_.matrix().feature_name(f) << std::endl;
         var_selected.push_back(writer.variable());
     }
 
-    // Good(s, s') for each optimal transition (s, s')
-    // map from transitions to SAT variables:
+    // We have one variable Good(s, s') for each optimal transition (s, s')
+    // We'll keep in `var_good_txs` a map from transitions to SAT variables:
     std::unordered_map<transition_t, cnfvar_t, boost::hash<transition_t>> var_good_txs;
     for (const transition_t& tx:marked_transitions()) {
         auto vid = writer.variable();
@@ -315,12 +316,11 @@ std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(
         varmapstream << vid << " " << tx.first << " " << tx.second << std::endl;
     }
 
-    // No more variables will be created. Print total count.
+    // From this point on, no more variables will be created. Print total count.
     std::cout << "A total of " << writer.nvars() << " variables were created" << std::endl;
 
 
-    /////// Create the CNF constraints ///////
-
+    /////// CNF constraints ///////
     std::cout << "Generating weighted selected constraints for " << var_selected.size() << " features" << std::endl;
     for (unsigned f = 0; f < nf_; ++f) {
         unsigned w = feature_weight(f);
@@ -329,8 +329,8 @@ std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(
     }
 
     // For goal-identifying features that we want to enforce in the solution, we add a unary clause "selected(f)"
-    assert (enforce_features.empty()); // ATM haven't really thought whether this feature makes sense for this encoding
-    for (auto f:enforce_features) {
+    assert (options.enforced_features.empty()); // ATM haven't really thought whether this feature makes sense for this encoding
+    for (auto f:options.enforced_features) {
         writer.print_clause({CNFWriter::literal(var_selected.at(f), true)});
         n_goal_clauses += 1;
     }
@@ -345,7 +345,7 @@ std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(
         unsigned s = tx1.first, sprime = tx1.second;
         const auto& tx1_is_good = var_good_txs.at(tx1);
 
-        for (const transition_t& tx2:get_relevant_unmarked_transitions(use_only_alive_states)) {
+        for (const transition_t& tx2:get_relevant_unmarked_transitions(options.use_only_alive_unmarked_states)) {
             unsigned t = tx2.first, tprime = tx2.second;
 
             // We want to distinguish (s, s') from (t, t'):
@@ -386,4 +386,12 @@ std::pair<bool, CNFWriter> CNFGenerator::write_separation_maxsat(
 
 
     return {false, writer};
+}
+
+std::pair<bool, CNFWriter> CNFGenerator::write_encoding(std::ofstream& os) {
+    if (options.use_separation_encoding()) {
+        return write_separation_maxsat(os);
+    } else {
+        return write_basic_maxsat(os);
+    }
 }

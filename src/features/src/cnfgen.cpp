@@ -19,107 +19,88 @@ using namespace std;
 namespace po = boost::program_options;
 
 //! Command-line option processing
-struct Options {
-    enum class Encoding {
-        Basic,
-        D2Tree,
-        TransitionSeparation
-    };
+sltp::cnf::Options parse_options(int argc, const char **argv) {
+    sltp::cnf::Options options;
 
-    std::string workspace;
-    bool prune_redundant_states;
-    bool verbose;
-    Encoding encoding;
-    bool use_only_alive_unmarked_states;
+    po::options_description description("Generate a weighted max-sat instance from given feature "
+                                        "matrix and transition samples.\n\nOptions");
 
+    description.add_options()
+            ("help,h", "Display this help message and exit.")
+            ("verbose,v", "Show extra debugging messages.")
 
-    std::vector<unsigned> enforced_features;
+            ("workspace,w", po::value<std::string>()->required(),
+                    "Directory where the input files (feature matrix, transition sample) reside, "
+                    "and where the output .wsat file will be left.")
 
-    Options(int argc, const char **argv) {
-        po::options_description description("Generate a weighted max-sat instance from given feature "
-                                            "matrix and transition samples.\n\nOptions");
+            ("prune-redundant-states,p",
+                    "Whether to prune those states that appear redundant for the given feature pool.")
 
-        description.add_options()
-                ("help,h", "Display this help message and exit.")
-                ("verbose,v", "Show extra debugging messages.")
+            ("enforce-features,e", po::value<std::string>()->default_value(""),
+             "Comma-separated (no spaces!) list of IDs of feature we want to enforce in the abstraction.")
 
-                ("workspace,w", po::value<std::string>()->required(),
-                        "Directory where the input files (feature matrix, transition sample) reside, "
-                        "and where the output .wsat file will be left.")
+            ("encoding", po::value<std::string>()->default_value("basic"),
+                 "The encoding to be used (options: {basic, d2tree, separation}).")
 
-                ("prune-redundant-states,p",
-                        "Whether to prune those states that appear redundant for the given feature pool.")
+            ("use-only-unmarked-alive-transitions",
+             "In the transition-separation CNF encoding, whether to distinguish good transitions *only from*"
+             " unmarked transitions that start in an alive state")
 
-                ("enforce-features,e", po::value<std::string>()->default_value(""),
-                 "Comma-separated (no spaces!) list of IDs of feature we want to enforce in the abstraction.")
+            ("distinguish-transitions-locally",
+             "In the transition-separation CNF encoding, whether to distinguish good transitions *only from*"
+             " unmarked transitions starting in the same state")
+            ;
 
-                ("encoding", po::value<std::string>()->default_value("basic"),
-                     "The encoding to be used (options: {basic, d2tree, separation}).")
+    po::variables_map vm;
 
-                ("use-only-unmarked-alive-transitions",
-                 "In the transition-separation CNF encoding, whether to distinguish good transitions *only from*"
-                 " unmarked transitions that start in an alive state")
-                ;
+    try {
+        po::store(po::command_line_parser(argc, argv).options(description).run(), vm);
 
-        po::variables_map vm;
-
-        try {
-            po::store(po::command_line_parser(argc, argv).options(description).run(), vm);
-
-            if (vm.count("help")) {
-                std::cout << description << "\n";
-                exit(0);
-            }
-            po::notify(vm);
-        } catch (const std::exception &ex) {
-            std::cout << "Error with command-line options:" << ex.what() << std::endl;
-            std::cout << std::endl << description << std::endl;
-            exit(1);
+        if (vm.count("help")) {
+            std::cout << description << "\n";
+            exit(0);
         }
+        po::notify(vm);
+    } catch (const std::exception &ex) {
+        std::cout << "Error with command-line options:" << ex.what() << std::endl;
+        std::cout << std::endl << description << std::endl;
+        exit(1);
+    }
 
-        workspace = vm["workspace"].as<std::string>();
-        prune_redundant_states = vm.count("prune-redundant-states") > 0;
-        verbose = vm.count("verbose") > 0;
-        use_only_alive_unmarked_states = vm.count("use-only-unmarked-alive-transitions") > 0;
+    options.workspace = vm["workspace"].as<std::string>();
+    options.prune_redundant_states = vm.count("prune-redundant-states") > 0;
+    options.verbose = vm.count("verbose") > 0;
+    options.use_only_alive_unmarked_states = vm.count("use-only-unmarked-alive-transitions") > 0;
+    options.distinguish_transitions_locally = vm.count("distinguish-transitions-locally") > 0;
 
-        auto enc = vm["encoding"].as<std::string>();
-        if (enc == "basic") encoding = Encoding::Basic;
-        else if (enc == "d2tree") encoding = Encoding::D2Tree;
-        else if  (enc == "separation") encoding = Encoding::TransitionSeparation;
-        else throw po::validation_error(po::validation_error::invalid_option_value, "encoding");
+    auto enc = vm["encoding"].as<std::string>();
+    if (enc == "basic") options.encoding = sltp::cnf::Options::Encoding::Basic;
+    else if (enc == "d2tree") options.encoding = sltp::cnf::Options::Encoding::D2Tree;
+    else if  (enc == "separation") options.encoding = sltp::cnf::Options::Encoding::TransitionSeparation;
+    else throw po::validation_error(po::validation_error::invalid_option_value, "encoding");
 
 
-        // Split the comma-separated list of enforced feature IDS
-        auto enforced_str = vm["enforce-features"].as<std::string>();
+    // Split the comma-separated list of enforced feature IDS
+    auto enforced_str = vm["enforce-features"].as<std::string>();
 //        std::cout << "\nenforced_str: " << enforced_str << std::endl;
-        if (!enforced_str.empty()) {
-            std::stringstream ss(enforced_str);
-            while (ss.good()) {
-                std::string substr;
-                getline(ss, substr, ',');
-                if (!substr.empty()) {
-                    enforced_features.push_back((unsigned) atoi(substr.c_str()));
-                }
+    if (!enforced_str.empty()) {
+        std::stringstream ss(enforced_str);
+        while (ss.good()) {
+            std::string substr;
+            getline(ss, substr, ',');
+            if (!substr.empty()) {
+                options.enforced_features.push_back((unsigned) atoi(substr.c_str()));
             }
         }
+    }
 //        for (auto x:enforced_features) std::cout << "\n" << x << std::endl;
-    }
 
-    bool use_d2tree() const { return encoding == Encoding::D2Tree; }
-    bool use_separation_encoding() const { return encoding == Encoding::TransitionSeparation; }
-};
-
-std::pair<bool, CNFWriter> write_maxsat(std::ostream &os, CNFGenerator& gen, const Options& options) {
-    if (options.use_separation_encoding()) {
-        return gen.write_separation_maxsat(os, options.enforced_features, options.workspace, options.use_only_alive_unmarked_states);
-    } else {
-        return gen.write_basic_maxsat(os, options.enforced_features, options.use_d2tree());
-    }
+    return options;
 }
 
 int main(int argc, const char **argv) {
     float start_time = Utils::read_time_in_seconds();
-    Options options(argc, argv);
+    auto options = parse_options(argc, argv);
 
     // Read feature matrix
     std::string matrix_filename = options.workspace + "/feature-matrix.dat";
@@ -162,10 +143,10 @@ int main(int argc, const char **argv) {
     // We write the MaxSAT instance progressively as we generate the CNF. We do so into a temporary "*.tmp" file
     // which will be later processed by the Python pipeline to inject the value of the TOP weight, which we can
     // know only when we finish writing all clauses
-    CNFGenerator gen(*sample);
+    CNFGenerator gen(*sample, options);
     auto wsatstream = get_ofstream(options.workspace + "/theory.wsat.tmp");
 
-    auto res = write_maxsat(wsatstream, gen, options);
+    std::pair<bool, CNFWriter> res = gen.write_encoding(wsatstream);
 
     wsatstream.close();
 
