@@ -1,6 +1,10 @@
 from .misc import extend_namer_to_all_features
 
 
+def no_parameter(lang):
+    return []
+
+
 def gripper_names(feature):
     s = str(feature)
     base = {
@@ -8,6 +12,7 @@ def gripper_names(feature):
         "Exists(at,Nominal(roomb))": "nballs-B",
         "Exists(carry,<universe>)": "ncarried",
         "And(at-robby,Nominal(roomb))": "robot-at-B",
+        "Exists(at,at-robby)": "nballs-in-room-with-robot",
         "Exists(at,Not(at-robby))": "nballs-in-rooms-with-no-robot",
         "free": "nfree-grippers",
         "Exists(at,Exists(Inverse(at-robby),<universe>))": "nballs-in-room-with-some-robot",
@@ -92,3 +97,14 @@ def blocksworld_parameters_for_clear(language):
 
 def blocksworld_parameters_for_on(language):
     return [language.constant("a", "object"), language.constant("b", "object")]
+
+
+def reward_names(feature):
+    s = str(feature)
+    base = {
+        "reward": "num-rewards",
+        "Dist[at, adjacent, reward]": "dist-to-closest-reward",
+        "Dist[at, Restrict(adjacent,unblocked), reward]": "unblocked-dist-to-closest-reward",
+    }
+
+    return extend_namer_to_all_features(base).get(s, s)

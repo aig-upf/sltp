@@ -4,8 +4,8 @@
 ;;; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (problem grid-circles-3x3)
-    (:domain grid-circles-strips)
+(define (problem pick-reward-3x3)
+    (:domain pick-reward-strips)
 
     (:objects
         c_0_0 c_0_1 c_0_2 c_1_0 c_1_1 c_1_2 c_2_0 c_2_1 c_2_2 - cell

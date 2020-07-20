@@ -9,6 +9,8 @@ from sltp.util.defaults import generate_experiment
 from sltp.util.misc import update_dict
 from tarski.dl import AndConcept, PrimitiveConcept, NotConcept, PrimitiveRole, UniversalConcept, MinDistanceFeature, ConceptCardinalityFeature, RestrictRole
 
+from sltp.util.names import reward_names
+
 
 def add_domain_parameters(language):
     return []
@@ -41,7 +43,7 @@ def build_expected_concepts(lang):
 
 
 def experiment(experiment_name=None):
-    domain_dir = "grid-circles"
+    domain_dir = "pick-reward"
     domain = "domain.pddl"
 
     exps = dict()
@@ -52,7 +54,7 @@ def experiment(experiment_name=None):
         complete_only_wrt_optimal=True,
         num_states=1500, max_concept_size=8, max_concept_grammar_iterations=3,
         distance_feature_max_complexity=8,
-        feature_namer=feature_namer,
+        feature_namer=reward_names,
         # feature_generator=build_expected_features,
         concept_generator=None, parameter_generator=add_domain_parameters
     )
@@ -88,13 +90,6 @@ def build_expected_features(lang):
         # MinDistanceFeature(current_cell, adjacent_role, reward),
         MinDistanceFeature(current_cell, adjacent_unblocked, reward),
     ]
-
-
-def feature_namer(feature):
-    s = str(feature)
-    return {
-        "card[reward]": "num-rewards",
-    }.get(s, s)
 
 
 if __name__ == "__main__":

@@ -40,7 +40,6 @@ def experiments():
         #            "holding_a_b_unclear.pddl",
         #            ],
         instances=["inst_on_x_y_5.pddl"],
-        # We cannot test this, since works only for states where A and B are on diff towers
         test_instances=["inst_on_x_y_7.pddl"],
         test_policy_instances=[
             "inst_on_x_y_7.pddl",
@@ -65,5 +64,31 @@ def experiments():
         optimal_selection_strategy="complete"
     )
 
+    exps["all"] = update_dict(
+        base,
+        pipeline="transition_classifier",
+
+        instances=[
+            "probBLOCKS-4-0.pddl"
+        ],
+        test_instances=[
+
+        ],
+        test_policy_instances=[
+            "probBLOCKS-6-0.pddl",
+        ],
+        # num_states=2000,
+        # num_sampled_states=[50, 50, 1],
+        # sampling="all",
+        num_states="all",
+        max_concept_size=8,
+        concept_generation_timeout=10,  # in seconds
+        concept_generator=None,
+        parameter_generator=None,
+        maxsat_encoding="separation",
+        complete_only_wrt_optimal=True,
+        prune_redundant_states=False,
+        optimal_selection_strategy="complete"
+    )
 
     return exps

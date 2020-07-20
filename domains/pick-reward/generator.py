@@ -22,13 +22,12 @@ def create_noop(problem):
 
 def create_single_action_version(problem):
     lang = problem.language
-    cell_t, at, reward, blocked, adjacent = lang.get("cell", "at", "reward", "blocked", "adjacent")
+    cell_t, at, reward, unblocked, picked, adjacent = lang.get("cell", "at", "reward", "unblocked", "picked", "adjacent")
     from_ = lang.variable("from", cell_t)
     to = lang.variable("to", cell_t)
     c = lang.variable("c", cell_t)
     problem.action(name='move', parameters=[from_, to],
-                   # precondition=adjacent(from_, to) & at(from_) & ~blocked(to),
-                   precondition=adjacent(from_, to) & at(from_) & ~blocked(to) & exists(c, reward(c)),
+                   precondition=land(adjacent(from_, to), at(from_), unblocked(to), exists(c, reward(c)), flat=True),
                    effects=[DelEffect(at(from_)),
                             AddEffect(at(to)),
                             # AddEffect(visited(to)),
@@ -37,32 +36,33 @@ def create_single_action_version(problem):
 
 def create_two_action_version(problem):
     lang = problem.language
-    cell_t, at, reward, blocked, adjacent = lang.get("cell", "at", "reward", "blocked", "adjacent")
+    cell_t, at, reward, unblocked, picked, adjacent = lang.get("cell", "at", "reward", "unblocked", "picked", "adjacent")
     from_ = lang.variable("from", cell_t)
     to = lang.variable("to", cell_t)
     c = lang.variable("c", cell_t)
     problem.action(name='move', parameters=[from_, to],
-                   precondition=adjacent(from_, to) & at(from_) & ~blocked(to),
-                   # precondition=adjacent(from_, to) & at(from_) & ~blocked(to) & exists(c, reward(c)),
+                   precondition=land(adjacent(from_, to), at(from_), unblocked(to), flat=True),
                    effects=[DelEffect(at(from_)),
                             AddEffect(at(to))])
 
     x = lang.variable("x", cell_t)
     problem.action(name='pick-reward', parameters=[x],
                    precondition=at(x) & reward(x),
-                   effects=[DelEffect(reward(x))])
+                   effects=[DelEffect(reward(x)),
+                            AddEffect(picked(x))])
 
 
-def generate_propositional_domain(gridsize, num_rewards, num_blocks, add_noop=False):
+def generate_propositional_domain(gridsize, num_rewards, num_blocked_cells, add_noop=False):
     lang = language(theories=[Theory.EQUALITY])
-    problem = create_fstrips_problem(domain_name='grid-circles-strips',
-                                     problem_name="grid-circles-{}x{}".format(gridsize, gridsize),
+    problem = create_fstrips_problem(domain_name='pick-reward-strips',
+                                     problem_name=f"pick-reward-{gridsize}x{gridsize}",
                                      language=lang)
 
     cell_t = lang.sort('cell')
     at = lang.predicate('at', cell_t)
     reward = lang.predicate('reward', cell_t)
-    blocked = lang.predicate('blocked', cell_t)
+    unblocked = lang.predicate('unblocked', cell_t)
+    picked = lang.predicate('picked', cell_t)
     adjacent = lang.predicate('adjacent', cell_t, cell_t)
     # visited = lang.predicate('visited', cell_t)
 
@@ -93,34 +93,35 @@ def generate_propositional_domain(gridsize, num_rewards, num_blocks, add_noop=Fa
     #     if abs(x0-x1) + abs(y0-y1) == 1:
     #         problem.init.add(adjacent, cell_name(x0, y0), cell_name(x1, y1))
 
-    initial_position = cell_name(0, 0)
-
     # The initial position is already visited, by definition
     # problem.init.add(visited, initial_position)
-    problem.init.add(at, initial_position)
+    problem.init.add(at, cell_name(0, 0))
+    problem.init.add(unblocked, cell_name(0, 0))
 
     # Set some random rewards and cell blocks:
-    if num_rewards + num_blocks > len(coordinates) - 1:
+    if num_rewards + num_blocked_cells > len(coordinates) - 1:
         raise RuntimeError("Number of rewards and blocks higher than total number of available cells!")
 
     cd = coordinates[1:]  # Clone the list of coordinates excluding the initial position
     random.shuffle(cd)
 
-    i = 0
-    while i < num_blocks:
-        x, y = cd[i]
-        problem.init.add(blocked, cell_name(x, y))
-        i += 1
+    num_unblocked = len(cd) - num_blocked_cells
+    for x, y in cd[0:num_unblocked]:
+        problem.init.add(unblocked, cell_name(x, y))
 
-    while i < num_rewards + num_blocks:
-        x, y = cd[i]
+    cells_with_reward = list()
+    for x, y in cd[0:num_rewards]:
         problem.init.add(reward, cell_name(x, y))
-        i += 1
+        cells_with_reward.append(cell_name(x, y))
 
     # Set the problem goal
     c = lang.variable("c", cell_t)
     # problem.goal = forall(c, ~reward(c))
-    problem.goal = land(*[~reward(c) for c in coord_objects])
+
+    # This one's good, and doesn't require a "picked" predicate, but cannot be parsed by Pyperplan:
+    # problem.goal = land(*[~reward(c) for c in coord_objects], flat=True)
+
+    problem.goal = land(*[picked(lang.get(c)) for c in cells_with_reward], flat=True)
 
     return problem
 
@@ -128,7 +129,7 @@ def generate_propositional_domain(gridsize, num_rewards, num_blocks, add_noop=Fa
 def main():
 
     add_noop = False
-    for gridsize in [3, 5, 7, 10]:
+    for gridsize in [3, 5, 7, 10, 20]:
         num_blocks_and_rewards = gridsize
         problem = generate_propositional_domain(gridsize, num_blocks_and_rewards-2, num_blocks_and_rewards-2, add_noop)
         writer = FstripsWriter(problem)

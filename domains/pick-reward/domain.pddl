@@ -4,17 +4,22 @@
 ;;; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (domain grid-circles-strips)
-    (:requirements )
+(define (domain pick-reward-strips)
+    (:requirements :equality :typing)
     (:types
         cell - object
     )
 
+    (:constants
+        
+    )
+
     (:predicates
-        (reward ?x1 - cell)
         (at ?x1 - cell)
+        (reward ?x1 - cell)
+        (unblocked ?x1 - cell)
+        (picked ?x1 - cell)
         (adjacent ?x1 - cell ?x2 - cell)
-        (blocked ?x1 - cell)
     )
 
     (:functions
@@ -22,21 +27,23 @@
     )
 
     
+
+    
     (:action move
      :parameters (?from - cell ?to - cell)
-     :precondition (and (and (adjacent ?from ?to) (at ?from)) (not (blocked ?to)))
+     :precondition (and (adjacent ?from ?to) (at ?from) (unblocked ?to))
      :effect (and
         (not (at ?from))
         (at ?to))
-    ) 
+    )
 
 
     (:action pick-reward
      :parameters (?x - cell)
      :precondition (and (at ?x) (reward ?x))
      :effect (and
-        (not (reward ?x)))
-    ) 
-
+        (not (reward ?x))
+        (picked ?x))
+    )
 
 )
