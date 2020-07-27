@@ -296,28 +296,68 @@ CNFGenerator::write_transition_classification_maxsat(std::ostream &os)
 {
     CNFWriter writer(os);
 
+    const unsigned max_d = 10;
+
+    // Keep a map `good_tx_vars` from transitions to SAT variables:
+    std::unordered_map<transition_t, cnfvar_t, boost::hash<transition_t>> good_tx_vars;
+
+    // Keep a map from pairs (s, d) to CNF var_ids of the variable Vleq(s, d)
+    std::vector<std::vector<cnfvar_t>> vleqs(ns_, std::vector<cnfvar_t>(max_d, std::numeric_limits<uint32_t>::max()));
+
+
     auto varmapstream = get_ofstream(options.workspace + "/varmap.wsat");
 
     /////// CNF variables ///////
     // We have one variable Selected(f) for each feature f
     std::vector<cnfvar_t> var_selected;
     for (unsigned f = 0; f < nf_; ++f) {
-//            std::cout << "#" << f << ": " << sample_.matrix().feature_name(f) << std::endl;
+        // std::cout << "#" << f << ": " << sample_.matrix().feature_name(f) << std::endl;
         var_selected.push_back(writer.variable());
     }
 
-    // We have one variable Good(s, s') for each optimal transition (s, s')
-    // We'll keep in `var_good_txs` a map from transitions to SAT variables:
-    std::unordered_map<transition_t, cnfvar_t, boost::hash<transition_t>> var_good_txs;
-    for (const transition_t& tx:marked_transitions()) {
-        auto vid = writer.variable();
-        var_good_txs.insert(std::make_pair(tx, vid));
-//        std::cout << "GOOD(" << tx.first << ", " << tx.second << "): " << vid << std::endl;
-        varmapstream << vid << " " << tx.first << " " << tx.second << std::endl;
+    // Good(s, s') for each transition (s, s') such that both s and s' are alive
+    // If s is alive but s' is not, then the transition can never be recommended by a reasonable policy
+    // We will in the same loop create all constraints of the form
+    //     OR Good(s, s'),
+    // where s is alive and s' iterates over all children of s that are solvable
+    for (unsigned s = 0; s < ns_; ++s) {
+        if (!is_alive(s)) continue;
+
+        cnfclause_t clause;
+        for (unsigned sprime:successors(s)) {
+            if (!is_solvable(sprime)) continue; // alive-to-unsolvable transitions cannot be good
+
+            auto good_var = writer.variable();
+            good_tx_vars.insert(std::make_pair(std::make_pair(s, sprime), good_var));
+            //        std::cout << "GOOD(" << tx.first << ", " << tx.second << "): " << vid << std::endl;
+            varmapstream << good_var << " " << s << " " << sprime << std::endl;
+
+            clause.push_back(CNFWriter::literal(good_var, true));
+        }
+
+        // Add clauses (1) for this state
+        writer.print_clause(clause);
+        ++n_good_tx_clauses;
+
+
+        // Create variables Vleq(s, k) that denote that V(s) <= d, for all d in 0..D and all solvable state s
+        vleqs[s][0] = writer.variable();
+        for (unsigned d=1; d <= max_d; ++d) {
+            vleqs[s][d] = writer.variable();
+
+            // Add clauses (4):  V(s) <= d-1 --> V(s) <= d
+            writer.print_clause({CNFWriter::literal(vleqs[s][d-1], false), CNFWriter::literal(vleqs[s][d], true)});
+        }
+        n_leq_clauses += max_d;
     }
+
+
+
+
 
     // From this point on, no more variables will be created. Print total count.
     std::cout << "A total of " << writer.nvars() << " variables were created" << std::endl;
+    std::cout << "\tOf which " << good_tx_vars.size() << " are Good(s, s') variables." << std::endl;
 
 
     /////// CNF constraints ///////
@@ -328,12 +368,13 @@ CNFGenerator::write_transition_classification_maxsat(std::ostream &os)
         n_selected_clauses += 1;
     }
 
+
     // For goal-identifying features that we want to enforce in the solution, we add a unary clause "selected(f)"
     assert (options.enforced_features.empty()); // ATM haven't really thought whether this feature makes sense for this encoding
-    for (auto f:options.enforced_features) {
-        writer.print_clause({CNFWriter::literal(var_selected.at(f), true)});
-        n_goal_clauses += 1;
-    }
+//    for (auto f:options.enforced_features) {
+//        writer.print_clause({CNFWriter::literal(var_selected.at(f), true)});
+//        n_goal_clauses += 1;
+//    }
 
 
     // Compute which pairs (t1, t2) of transitions need to be distinguished, and for that pair, which
@@ -343,7 +384,7 @@ CNFGenerator::write_transition_classification_maxsat(std::ostream &os)
 
     for (const transition_t& tx1:marked_transitions()) {
         unsigned s = tx1.first, sprime = tx1.second;
-        const auto& tx1_is_good = var_good_txs.at(tx1);
+        const auto& tx1_is_good = good_tx_vars.at(tx1);
 
         for (const transition_t& tx2:get_relevant_unmarked_transitions(s)) {
             unsigned t = tx2.first, tprime = tx2.second;
@@ -377,7 +418,7 @@ CNFGenerator::write_transition_classification_maxsat(std::ostream &os)
         for (unsigned sprime:successors(s)) {
             if (!is_marked_transition(s, sprime)) continue;
 
-            const auto& tx_is_good = var_good_txs.at(std::make_pair(s, sprime));
+            const auto& tx_is_good = good_tx_vars.at(std::make_pair(s, sprime));
             clause.push_back(CNFWriter::literal(tx_is_good, true));
         }
         writer.print_clause(clause);

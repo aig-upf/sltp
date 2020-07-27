@@ -97,6 +97,7 @@ public:
     unsigned n_goal_clauses;
     unsigned n_deadend_clauses;
     unsigned n_good_tx_clauses;
+    unsigned n_leq_clauses;
 
     explicit CNFGenerator(const Sample::Sample& sample, const sltp::cnf::Options& options) :
         sample_(sample),
@@ -109,7 +110,8 @@ public:
         n_bridge_clauses(0),
         n_goal_clauses(0),
         n_deadend_clauses(0),
-        n_good_tx_clauses(0)
+        n_good_tx_clauses(0),
+        n_leq_clauses(0)
     {
         for (unsigned s = 0; s < ns_; ++s) {
             if (is_goal(s)) goals_.push_back(s);
@@ -120,6 +122,8 @@ public:
     bool is_goal(unsigned s) const { return sample_.matrix().goal(s); }
 
     bool is_alive(unsigned s) const { return sample_.transitions().is_alive(s); }
+
+    bool is_solvable(unsigned s) const { return is_alive(s) || is_goal(s); }
 
     bool is_sound_transition(unsigned s, unsigned sprime) const {
         return is_marked_transition(s, sprime);
