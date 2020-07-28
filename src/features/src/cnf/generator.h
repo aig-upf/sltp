@@ -145,11 +145,16 @@ public:
         return sample_.transitions().unmarked_and_alive_transitions();
     }
 
-    const transition_list_t& get_relevant_unmarked_transitions(bool use_only_alive_states) const {
-        if (use_only_alive_states) {
-            return sample_.transitions().unmarked_and_alive_transitions();
+    const transition_list_t& get_relevant_unmarked_transitions(unsigned s) const {
+        if (options.distinguish_transitions_locally) {
+            assert(is_alive(s));
+            return sample_.transitions().unmarked_transitions_starting_at(s);
         } else {
-            return sample_.transitions().unmarked_transitions();
+            if (options.use_only_alive_unmarked_states) {
+                return sample_.transitions().unmarked_and_alive_transitions();
+            } else {
+                return sample_.transitions().unmarked_transitions();
+            }
         }
     }
 
@@ -202,7 +207,7 @@ public:
     std::pair<bool, CNFWriter> write_basic_maxsat(std::ostream &os);
 
     //! Generate and write the CNF instance for the transition-separation encoding as we go
-    std::pair<bool, CNFWriter> write_separation_maxsat(std::ostream &os);
+    std::pair<bool, CNFWriter> write_transition_classification_maxsat(std::ostream &os);
 };
 
 using isomorphism_t = std::unordered_map<unsigned, unsigned>;

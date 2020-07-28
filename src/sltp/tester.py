@@ -150,7 +150,7 @@ def create_pyperplan_abstract_policy_based_search(pyperplan, search_policy):
         closed = set()
 
         while not task.goal_reached(node.state):
-            # logging.info(f'Expanding: {sorted(node.state)}')
+            logging.info(f'Expanding: {sorted(node.state)}')
 
             closed.add(node.state)
             expanded += 1

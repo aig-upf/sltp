@@ -24,6 +24,7 @@ def run(config, data, rng):
     args += ["--encoding", config.maxsat_encoding]
 
     args += ["--use-only-unmarked-alive-transitions"] if config.use_only_alive_unmarked_transitions else []
+    args += ["--distinguish-transitions-locally"] if config.distinguish_transitions_locally else []
 
     retcode = execute([cmd] + args)
 

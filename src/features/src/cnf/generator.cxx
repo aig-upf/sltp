@@ -292,7 +292,7 @@ bool all_tx_have_analogs(const Sample::Sample& sample, unsigned s, unsigned t) {
 
 //! Generate and write the actual CNF instance as we go
 std::pair<bool, CNFWriter>
-CNFGenerator::write_separation_maxsat(std::ostream &os)
+CNFGenerator::write_transition_classification_maxsat(std::ostream &os)
 {
     CNFWriter writer(os);
 
@@ -338,14 +338,14 @@ CNFGenerator::write_separation_maxsat(std::ostream &os)
 
     // Compute which pairs (t1, t2) of transitions need to be distinguished, and for that pair, which
     // features do actually distinguish them
-    std::cout << "Generating transition-separation constraints for " << marked_transitions().size()
+    std::cout << "Generating transition-classification constraints for " << marked_transitions().size()
               << " positive transitions" << std::endl;
 
     for (const transition_t& tx1:marked_transitions()) {
         unsigned s = tx1.first, sprime = tx1.second;
         const auto& tx1_is_good = var_good_txs.at(tx1);
 
-        for (const transition_t& tx2:get_relevant_unmarked_transitions(options.use_only_alive_unmarked_states)) {
+        for (const transition_t& tx2:get_relevant_unmarked_transitions(s)) {
             unsigned t = tx2.first, tprime = tx2.second;
 
             // We want to distinguish (s, s') from (t, t'):
@@ -390,7 +390,7 @@ CNFGenerator::write_separation_maxsat(std::ostream &os)
 
 std::pair<bool, CNFWriter> CNFGenerator::write_encoding(std::ofstream& os) {
     if (options.use_separation_encoding()) {
-        return write_separation_maxsat(os);
+        return write_transition_classification_maxsat(os);
     } else {
         return write_basic_maxsat(os);
     }

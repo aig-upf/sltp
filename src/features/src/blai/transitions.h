@@ -33,6 +33,7 @@ protected:
     transition_set_t marked_transitions_;
     transition_list_t unmarked_transitions_;
     transition_list_t unmarked_and_alive_transitions_;
+    std::vector<transition_list_t> unmarked_transitions_from_;
 
 public:
     TransitionSample(std::size_t num_states, std::size_t num_transitions, std::size_t num_marked_transitions)
@@ -43,7 +44,8 @@ public:
               alive_states_(num_states, false),
               marked_transitions_(),
               unmarked_transitions_(),
-              unmarked_and_alive_transitions_()
+              unmarked_and_alive_transitions_(),
+              unmarked_transitions_from_(num_states)
      {}
 
     ~TransitionSample() = default;
@@ -68,6 +70,10 @@ public:
 
     const transition_list_t& unmarked_and_alive_transitions() const {
         return unmarked_and_alive_transitions_;
+    }
+
+    const transition_list_t& unmarked_transitions_starting_at(unsigned s) const {
+        return unmarked_transitions_from_[s];
     }
 
     bool marked(const transition_t& p) const {
@@ -127,6 +133,7 @@ public:
 
                     if (!marked(src, dst)) {
                         unmarked_transitions_.push_back(std::make_pair(src, dst));
+                        unmarked_transitions_from_[src].push_back(std::make_pair(src, dst));
                     }
                     n_total_transitions++;
                 }

@@ -187,6 +187,10 @@ def generate_experiment(domain_dir, domain, **kwargs):
         # In the transition-separation CNF encoding, whether to distinguish good transitions *only from*
         # unmarked transitions that start in an alive state
         use_only_alive_unmarked_transitions=True,
+
+        # In the transition-separation CNF encoding, whether to distinguish good transitions *only from*
+        # unmarked transitions that start in the same state as the good transition
+        distinguish_transitions_locally=True,
     )
 
     parameters = {**defaults, **kwargs}  # Copy defaults, overwrite with user-specified parameters

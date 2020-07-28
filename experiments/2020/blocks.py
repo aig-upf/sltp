@@ -29,7 +29,8 @@ def experiments():
         maxsat_encoding="separation",
         complete_only_wrt_optimal=True,
         prune_redundant_states=False,
-        optimal_selection_strategy="complete"
+        optimal_selection_strategy="complete",
+        # distinguish_transitions_locally=False,
     )
 
     exps["on"] = update_dict(
