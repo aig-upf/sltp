@@ -1,0 +1,164 @@
+\documentclass[a4paper]{article}
+%\def\year{2020}\relax
+%\usepackage{aaai20}  % DO NOT CHANGE THIS
+\usepackage{times}  % DO NOT CHANGE THIS
+\usepackage{helvet} % DO NOT CHANGE THIS
+\usepackage{courier}  % DO NOT CHANGE THIS
+\usepackage[hyphens]{url}  % DO NOT CHANGE THIS
+\urlstyle{rm} % DO NOT CHANGE THIS
+\def\UrlFont{\rm}  % DO NOT CHANGE THIS
+\frenchspacing  % DO NOT CHANGE THIS
+\setlength{\pdfpagewidth}{8.5in}  % DO NOT CHANGE THIS
+\setlength{\pdfpageheight}{11in}  % DO NOT CHANGE THIS
+
+% our packages
+\usepackage{amsthm}
+\usepackage{amsmath}
+\usepackage{amssymb}
+%\usepackage{bm}
+\usepackage{booktabs}
+%\usepackage[inline]{enumitem}
+%\usepackage{mathtools}
+%\usepackage{multirow}
+%\usepackage[mode=buildnew,subpreambles=true]{standalone}
+\usepackage{subcaption}
+%\usepackage{todonotes}
+\usepackage[table]{xcolor}  % TODO Comment out for final submission
+%\usepackage{pgfplots}
+%\usepackage{tikz}
+\usepackage{natbib}
+
+
+% Some useful macros
+%\newcommand{\inlinecite}[1]{\citeauthor{#1}~(\citeyear{#1})}
+%\newcommand{\citealp}[1]{\citeauthor{#1}~\citeyear{#1}}
+
+\newcommand{\free}[1]{\ensuremath{\mathrm{free}(#1)}}
+\newcommand{\vars}{\ensuremath{\mathrm{vars}}}
+\newcommand{\pre}{\ensuremath{\mathrm{pre}}}
+\newcommand{\add}{\ensuremath{\mathrm{add}}}
+\newcommand{\del}{\ensuremath{\mathrm{del}}}
+\newcommand{\effs}{\ensuremath{\mathrm{effs}}}
+
+\newcommand{\tup}[1]{\ensuremath{\langle #1 \rangle}}
+\newcommand{\tuple}[1]{\tup{#1}}  % Just an alias
+\newcommand{\set}[1]{\ensuremath{\left\{#1 \right\}}}
+\newcommand{\setst}[2]{\ensuremath{\left\{#1 \mid #2 \right\}}}
+
+\newtheorem{definition}{Definition}
+\newtheorem{definitionandtheorem}[definition]{Definition and Theorem}
+\newtheorem{theorem}[definition]{Theorem}
+\newtheorem{lemma}[definition]{Lemma}
+\newtheorem{proposition}[definition]{Proposition}
+\newtheorem{corollary}[definition]{Corollary}
+\newtheorem{example}[definition]{Example}
+
+\newcommand{\wip}[1]{{\color{red} #1}}  % From "work in progress" :-)
+\newcommand{\gfm}[1]{\footnote{\color{red}{[Guillem] #1}}}
+
+\newcommand{\numtasks}[1]{\small{(#1)}}
+
+
+\setcounter{secnumdepth}{0} %May be changed to 1 or 2 if section numbers are desired.
+
+%PDF Info Is REQUIRED.
+% For /Author, add all authors within the parentheses, separated by commas. No accents or commands.
+% For /Title, add Title in Mixed Case. No accents or commands. Retain the parentheses.
+ \pdfinfo{
+/Title ()
+/Author ()
+} %Leave this
+
+\title{Representation Learning for Generalized Planning - SAT Encodings}
+%Your title must be in mixed case, not sentence case.
+% That means all verbs (including short verbs like be, is, using,and go),
+% nouns, adverbs, adjectives should be capitalized, including both words in hyphenated terms, while
+% articles, conjunctions, and prepositions are lower case unless they
+% directly follow a colon or long dash
+\author{GFM}
+
+
+\begin{document}
+
+\maketitle
+
+\section{One-Shot Learning of Generalized Features \& Policy}
+
+Encoding is parametrized by
+\begin{itemize}
+ \item $D$: maximum allowed value for $V(s)$ for any $s$ in the training set.
+ \item max. concept complexity.
+\end{itemize}
+
+
+\subsection{Terminology}
+A state is called \emph{reachable} if there is a path to it from $s_0$, and
+it is called \emph{solvable} if there is a path from it to a goal
+state.
+A state is \emph{alive} if it is solvable, reachable and not a
+goal state~\cite{frances-et-al-ijcai2019}.
+
+
+\subsection{Variables}
+
+\subsubsection{Main Variables}
+\begin{itemize}
+ \item $Good(s, s')$ for $s$ alive, $s'$ solvable.
+ Note that if $s$ is alive but $s'$ is not solvable,
+ it cannot make sense for a policy to recommend transition $(s, s')$.
+
+ \item $Vleq(s, d)$, for $s$ alive, and $0 \leq d \leq D$.
+ $Vleq(s, d)$ stands for $V(s) \leq d$.
+ Note that for states $s$ that are a goal, we want $V(s)=0$, hance $V(s)\leq d$ for all $d$.
+ Thus, we can restrict SAT variables $Vleq(s, d)$ to those states $s$ that are alive.
+
+ \item $Select(f)$, for each feature $f$ in the feature pool.
+\end{itemize}
+
+\subsubsection{Auxiliary Variables}
+\begin{itemize}
+ \item $GV(s, s', d) \rightarrow Good(s, s') \land Vleq(s', d)$ for $s, s'$ alive, $d \in [0, D)$.
+\end{itemize}
+
+\subsection{Constraints}
+
+\noindent The policy has to be complete with respect to all alive states:
+\begin{align}
+\bigvee_{s' \text{ solvable child of } s} Good(s, s'),&\;\; \text{for $s$ alive.}
+\end{align}
+
+
+\noindent Labeling a transition $(s, s')$ as ``good'' necessarily upper-bounds $V(s)$:
+\begin{align}
+ Good(s, s') \land V(s') \leq d \rightarrow V(s) \leq d+1,&\;\; \text{for $s, s'$ alive, $d \in [0, D)$.} \\
+ Good(s, s') \rightarrow V(s) \leq d+1,&\;\; \text{for $s$ alive, $s'$ goal, $d \in [0, D)$.}
+\end{align}
+
+\noindent Any upper bound on $V(s)$ (for $s$ not a goal) needs to be justified:
+\begin{align}
+ V(s) \leq d+1 \rightarrow \bigvee_{s' \text{ goal child of } s} Good(s, s') \lor
+                           \bigvee_{s' \text{ alive child of } s} GV(s, s', d),&
+                           \;\; \text{for $s$ alive, $d \in [0, D)$.} \\
+ \neg V(s) \leq 0,&\;\; \text{for $s$ not a goal.}
+\end{align}
+
+\noindent Atoms $V(s) \leq d$ are consistent among them:
+\begin{align}
+ V(s) \leq d \rightarrow V(s) \leq d+1,&\;\; \text{for $s$ alive, $d \in [0, D)$.}
+\end{align}
+
+\noindent Good transitions can be distinguished from bad transitions:
+\begin{align}
+ Good(s, s') \rightarrow Good(t, t') \lor
+ Distinguish(s, s', t, t'),&\;\; \text{for $s, t$ alive, $s', t'$ solvable.} \\
+ Good(s, s') \rightarrow
+ Distinguish(s, s', t, t'),&\;\; \text{for $s, t$ alive, $s'$ solvable, $t'$ unsolvable,}
+\end{align}
+
+\noindent where $Distinguish(s, s', t, t')$ is merely a presentational shorthand for $\bigvee_{f \in D2(s, s', t, t')} Select(f)$.
+
+
+\bibliographystyle{plain}
+% Cross-referenced entries need to go after the entries that cross-reference them
+\bibliography{abbrv-short,literatur,references,crossref-short}
+\end{document}

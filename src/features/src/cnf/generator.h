@@ -119,6 +119,8 @@ public:
         }
     }
 
+    const std::vector<unsigned>& all_alive() const { return sample_.transitions().all_alive(); }
+
     bool is_goal(unsigned s) const { return sample_.matrix().goal(s); }
 
     bool is_alive(unsigned s) const { return sample_.transitions().is_alive(s); }

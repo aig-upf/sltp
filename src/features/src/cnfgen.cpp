@@ -160,17 +160,17 @@ int main(int argc, const char **argv) {
     std::cout << "Preprocessing time: " << preprocess_time << std::endl;
     std::cout << "Total-time: " << total_time << std::endl;
     std::cout << "CNF Theory: "  << writer.nvars() << " vars + " << writer.nclauses() << " clauses" << std::endl;
-    std::cout << "Clause breakdown: " << std::endl;
-    std::cout << "\tSelected(f): " <<  gen.n_selected_clauses << std::endl;
-    std::cout << "\tD2-definition: " <<  gen.n_d2_clauses << std::endl;
-    std::cout << "\tBridge: " <<  gen.n_bridge_clauses << std::endl;
-    std::cout << "\tGoal-distinguishing: " <<  gen.n_goal_clauses << std::endl;
-    std::cout << "\tDead-end-distinguishing: " <<  gen.n_deadend_clauses << std::endl;
-    std::cout << "\tTransition-Separation: " <<  gen.n_separation_clauses << std::endl;
-    std::cout << "\tGood-transition: " <<  gen.n_good_tx_clauses << std::endl;
-    std::cout << "\tTOTAL: " <<
-              gen.n_selected_clauses + gen.n_d2_clauses + gen.n_separation_clauses +
-              gen.n_bridge_clauses + gen.n_goal_clauses + gen.n_deadend_clauses + gen.n_good_tx_clauses << std::endl;
+//    std::cout << "Clause breakdown: " << std::endl;
+//    std::cout << "\tSelected(f): " <<  gen.n_selected_clauses << std::endl;
+//    std::cout << "\tD2-definition: " <<  gen.n_d2_clauses << std::endl;
+//    std::cout << "\tBridge: " <<  gen.n_bridge_clauses << std::endl;
+//    std::cout << "\tGoal-distinguishing: " <<  gen.n_goal_clauses << std::endl;
+//    std::cout << "\tDead-end-distinguishing: " <<  gen.n_deadend_clauses << std::endl;
+//    std::cout << "\tTransition-Separation: " <<  gen.n_separation_clauses << std::endl;
+//    std::cout << "\tGood-transition: " <<  gen.n_good_tx_clauses << std::endl;
+//    std::cout << "\tTOTAL: " <<
+//              gen.n_selected_clauses + gen.n_d2_clauses + gen.n_separation_clauses +
+//              gen.n_bridge_clauses + gen.n_goal_clauses + gen.n_deadend_clauses + gen.n_good_tx_clauses << std::endl;
 
     bool unsat = res.first;
     if(unsat) {

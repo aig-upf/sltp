@@ -86,6 +86,7 @@ def blocksworld_names(feature):
         "And(And(And(Not(Exists(Star(on),Nominal(a))),Not(Exists(Star(Inverse(on)),Nominal(a)))),Not(Nominal(a))),Not(holding))": "m(a)",
         "And(And(Forall(Star(on),Not(Nominal(a))),Forall(Star(Inverse(on)),Not(Nominal(a)))),And(Not(holding),Not(Nominal(a))))": "m(a)",
         "Exists(Star(on),Exists(on,Nominal(b)))": "n-at-least-2-above-b",
+        "Not(clear)": "num-unclear",
     }
     return extend_namer_to_all_features(base).get(s, s)
 

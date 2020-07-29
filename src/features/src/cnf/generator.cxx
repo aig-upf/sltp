@@ -294,139 +294,211 @@ bool all_tx_have_analogs(const Sample::Sample& sample, unsigned s, unsigned t) {
 std::pair<bool, CNFWriter>
 CNFGenerator::write_transition_classification_maxsat(std::ostream &os)
 {
-    CNFWriter writer(os);
-
-    const unsigned max_d = 10;
-
-    // Keep a map `good_tx_vars` from transitions to SAT variables:
-    std::unordered_map<transition_t, cnfvar_t, boost::hash<transition_t>> good_tx_vars;
-
-    // Keep a map from pairs (s, d) to CNF var_ids of the variable Vleq(s, d)
-    std::vector<std::vector<cnfvar_t>> vleqs(ns_, std::vector<cnfvar_t>(max_d, std::numeric_limits<uint32_t>::max()));
-
+    using Wr = CNFWriter;
 
     auto varmapstream = get_ofstream(options.workspace + "/varmap.wsat");
+    auto allvarsstream = get_ofstream(options.workspace + "/allvars.wsat");
+
+    CNFWriter wr(os, &allvarsstream);
+
+    const unsigned max_d = 10; // TODO Adjust this
+
+    // Keep a map `good_tx_vars` from transitions to SAT variable IDs:
+    std::unordered_map<transition_t, cnfvar_t, boost::hash<transition_t>> good_vars;
+
+    // Keep a map `good_and_vleq_vars` from transitions to SAT variable IDs:
+    using GV_idx = std::tuple<unsigned, unsigned, unsigned>;
+    std::unordered_map<GV_idx, cnfvar_t, boost::hash<GV_idx>> good_and_vleq_vars;
+
+    // Keep a map from pairs (s, d) to SAT variable ID of the variable Vleq(s, d)
+    std::vector<std::vector<cnfvar_t>> vleqs(ns_);
+
+    // Keep a map from each feature index to the SAT variable ID of Selected(f)
+    std::vector<cnfvar_t> var_selected;
+
+    unsigned n_vleq_vars = 0;
+    unsigned n_upper_bound_clauses = 0;
+    unsigned n_justification_clauses = 0;
+    unsigned n_gv_aux_clauses = 0;
+
 
     /////// CNF variables ///////
-    // We have one variable Selected(f) for each feature f
-    std::vector<cnfvar_t> var_selected;
     for (unsigned f = 0; f < nf_; ++f) {
-        // std::cout << "#" << f << ": " << sample_.matrix().feature_name(f) << std::endl;
-        var_selected.push_back(writer.variable());
+        var_selected.push_back(wr.var("Select(" + sample_.matrix().feature_name(f) + ")"));
     }
 
-    // Good(s, s') for each transition (s, s') such that both s and s' are alive
-    // If s is alive but s' is not, then the transition can never be recommended by a reasonable policy
-    // We will in the same loop create all constraints of the form
-    //     OR Good(s, s'),
-    // where s is alive and s' iterates over all children of s that are solvable
-    for (unsigned s = 0; s < ns_; ++s) {
-        if (!is_alive(s)) continue;
+    // Create variables Vleq(s, k) that denote that V(s) <= d, for all d in 0..D and all alive state s
+    for (const auto s:all_alive()) {
+        vleqs[s].reserve(max_d + 1);
+        vleqs[s].push_back(wr.var("Vleq(" + std::to_string(s) + ", 0)"));
+        for (unsigned d = 1; d <= max_d; ++d) {
+            const auto v = wr.var("Vleq(" + std::to_string(s) + ", " + std::to_string(d) + ")");
+            vleqs[s].push_back(v);
 
+            // Add clauses (6):  V(s) <= d-1 --> V(s) <= d
+            wr.cl({Wr::lit(vleqs[s][d - 1], false), Wr::lit(v, true)});
+        }
+        n_leq_clauses += max_d;
+        n_vleq_vars += max_d + 1;
+    }
+
+
+    for (const auto s:all_alive()) {
+        // Good(s, s') for each transition (s, s') such that both s and s' are alive
+        // We will in the same loop create all constraints of the form
+        //     OR Good(s, s'),
+        // where s is alive and s' iterates over all children of s that are solvable
         cnfclause_t clause;
         for (unsigned sprime:successors(s)) {
             if (!is_solvable(sprime)) continue; // alive-to-unsolvable transitions cannot be good
 
-            auto good_var = writer.variable();
-            good_tx_vars.insert(std::make_pair(std::make_pair(s, sprime), good_var));
+            // Create the Good(s, s') variable
+            const auto good_s_sprime = wr.var("Good(" + std::to_string(s) + ", " + std::to_string(sprime) + ")");
+            good_vars.insert(std::make_pair(std::make_pair(s, sprime), good_s_sprime));
             //        std::cout << "GOOD(" << tx.first << ", " << tx.second << "): " << vid << std::endl;
-            varmapstream << good_var << " " << s << " " << sprime << std::endl;
+            varmapstream << good_s_sprime << " " << s << " " << sprime << std::endl;
 
-            clause.push_back(CNFWriter::literal(good_var, true));
+            // Push it into the clause
+            clause.push_back(Wr::lit(good_s_sprime, true));
+
+            if (is_alive(sprime)) {
+                for (unsigned d=0; d < max_d; ++d) {
+                    const auto var = wr.var("GV(" + std::to_string(s) + ", " + std::to_string(sprime) + ", " + std::to_string(d) + ")");
+                    good_and_vleq_vars.insert({{s, sprime, d}, var});
+
+                    // GV(s, s', d) -> Good(s, s') and Vleq(s', d)
+                    wr.cl({Wr::lit(var, false), Wr::lit(good_s_sprime, true)});
+                    wr.cl({Wr::lit(var, false), Wr::lit(vleqs[sprime][d], true)});
+                    n_gv_aux_clauses += 2;
+                }
+            }
         }
 
         // Add clauses (1) for this state
-        writer.print_clause(clause);
+        wr.cl(clause);
         ++n_good_tx_clauses;
-
-
-        // Create variables Vleq(s, k) that denote that V(s) <= d, for all d in 0..D and all solvable state s
-        vleqs[s][0] = writer.variable();
-        for (unsigned d=1; d <= max_d; ++d) {
-            vleqs[s][d] = writer.variable();
-
-            // Add clauses (4):  V(s) <= d-1 --> V(s) <= d
-            writer.print_clause({CNFWriter::literal(vleqs[s][d-1], false), CNFWriter::literal(vleqs[s][d], true)});
-        }
-        n_leq_clauses += max_d;
     }
-
-
-
 
 
     // From this point on, no more variables will be created. Print total count.
-    std::cout << "A total of " << writer.nvars() << " variables were created" << std::endl;
-    std::cout << "\tOf which " << good_tx_vars.size() << " are Good(s, s') variables." << std::endl;
+    std::cout << "A total of " << wr.nvars() << " variables were created" << std::endl;
+    std::cout << "\tSelect(f): " << var_selected.size() << std::endl;
+    std::cout << "\tGood(s, s'): " << good_vars.size() << std::endl;
+    std::cout << "\tV(s) <= d: " << n_vleq_vars << std::endl;
+    std::cout << "\tGV(s, s', d): " << good_and_vleq_vars.size() << std::endl;
+
+    assert(wr.nvars() == var_selected.size() + good_vars.size() + n_vleq_vars + good_and_vleq_vars.size());
+
+    /////// Rest of CNF constraints ///////
+    std::cout << "Generating CNF constraints for " << all_alive().size() << " alive states" << std::endl;
+    for (const auto s:all_alive()) {
+
+        const auto& succs = successors(s);
+        for (unsigned i=0; i < succs.size(); ++i) {
+            unsigned sprime = succs[i];
+            if (!is_solvable(sprime)) continue;
+
+            if (is_goal(sprime)) {
+                for (unsigned d=0; d < max_d; ++d) {
+                    // (3) Good(s, s') -> V(s) <= d+1
+                    wr.cl({
+                        Wr::lit(good_vars.at({s, sprime}), false),
+                        Wr::lit(vleqs[s][d+1], true)});
+                    ++n_upper_bound_clauses;
+                }
+            }
+
+            if (is_alive(sprime)) {
+                for (unsigned d=0; d < max_d; ++d) {
+                    // (2) Good(s, s') and V(s') <= d -> V(s) <= d+1
+                    wr.cl({
+                        Wr::lit(good_vars.at({s, sprime}), false),
+                        Wr::lit(vleqs[sprime][d], false),
+                        Wr::lit(vleqs[s][d+1], true)});
+                    ++n_upper_bound_clauses;
+                }
+            }
 
 
-    /////// CNF constraints ///////
-    std::cout << "Generating weighted selected constraints for " << var_selected.size() << " features" << std::endl;
-    for (unsigned f = 0; f < nf_; ++f) {
-        unsigned w = feature_weight(f);
-        writer.print_clause({CNFWriter::literal(var_selected[f], false)}, w);
-        n_selected_clauses += 1;
+            // -Good(s, s') or -Good(s, s'') - deterministic policy
+            for (unsigned j=i+1; j < succs.size(); ++j) {
+                unsigned sprimeprime = succs[j];
+                wr.cl({Wr::lit(good_vars.at({s, sprime}), false), Wr::lit(good_vars.at({s, sprimeprime}), false)});
+                ++n_good_tx_clauses;
+            }
+        }
+
+        // Clauses (4), (5):
+        for (unsigned d=0; d < max_d; ++d) {
+            cnfclause_t clause{Wr::lit(vleqs[s][d+1], false)};
+            for (unsigned sprime:successors(s)) {
+                if (is_goal(sprime)) clause.push_back(Wr::lit(good_vars.at({s, sprime}), true));
+                else if (is_alive(sprime)) clause.push_back(Wr::lit(good_and_vleq_vars.at({s, sprime, d}), true));
+            }
+            wr.cl(clause);
+            ++n_justification_clauses;
+        }
+        wr.cl({Wr::lit(vleqs[s][0], false)});  // s is not a goal
+        ++n_justification_clauses;
+
+
+        // Clauses (7), (8):
+        for (const auto t:all_alive()) {
+            for (unsigned sprime:successors(s)) {
+                if (!is_solvable(sprime)) continue;
+
+                for (unsigned tprime:successors(t)) {
+                    cnfclause_t clause{Wr::lit(good_vars.at({s, sprime}), false)};
+
+                    // Either some feature that D1-distinguishes s and t is true
+                    for (feature_t f:compute_d1_distinguishing_features(sample_, s, t)) {
+                        clause.push_back(Wr::lit(var_selected.at(f), true));
+                    }
+
+                    // ... or some feature that d2-distinguishes the transitions is true
+                    for (feature_t f:compute_d2_distinguishing_features(sample_, s, sprime, t, tprime)) {
+                        clause.push_back(Wr::lit(var_selected.at(f), true));
+                    }
+
+                    if (is_solvable(tprime)) {
+                        clause.push_back(Wr::lit(good_vars.at({t, tprime}), true));
+                    }
+
+                    wr.cl(clause);
+                    n_separation_clauses += 1;
+                }
+            }
+        }
     }
 
+
+    std::cout << "Generating weighted selected constraints for " << var_selected.size() << " features" << std::endl;
+    for (unsigned f = 0; f < nf_; ++f) {
+        wr.cl({Wr::lit(var_selected[f], false)}, feature_weight(f));
+    }
+    n_selected_clauses += nf_;
+
+
+    // Print a breakdown of the clauses
+    std::cout << "A total of " << wr.nclauses() << " clauses were created" << std::endl;
+    std::cout << "\t(Weighted) Select(f): " << n_selected_clauses << std::endl;
+    std::cout << "\tPolicy completeness [1]: " << n_good_tx_clauses << std::endl;
+    std::cout << "\tUpper-bounding V(s) clauses [2,3]: " << n_upper_bound_clauses << std::endl;
+    std::cout << "\tClauses justifying V(s) bounds [4]: " << n_justification_clauses << std::endl;
+    std::cout << "\tV(s)<=d consistency [5]: " << n_leq_clauses << std::endl;
+    std::cout << "\tTransition-separation clauses [6,7]: " << n_separation_clauses << std::endl;
+    std::cout << "\tGV(s, s', d) auxiliary clauses: " << n_gv_aux_clauses << std::endl;
+    assert(wr.nclauses() == n_selected_clauses + n_good_tx_clauses + n_upper_bound_clauses + n_justification_clauses
+    + n_leq_clauses + n_separation_clauses + n_gv_aux_clauses);
 
     // For goal-identifying features that we want to enforce in the solution, we add a unary clause "selected(f)"
     assert (options.enforced_features.empty()); // ATM haven't really thought whether this feature makes sense for this encoding
 //    for (auto f:options.enforced_features) {
-//        writer.print_clause({CNFWriter::literal(var_selected.at(f), true)});
+//        writer.print_clause({Wr::lit(var_selected.at(f), true)});
 //        n_goal_clauses += 1;
 //    }
 
-
-    // Compute which pairs (t1, t2) of transitions need to be distinguished, and for that pair, which
-    // features do actually distinguish them
-    std::cout << "Generating transition-classification constraints for " << marked_transitions().size()
-              << " positive transitions" << std::endl;
-
-    for (const transition_t& tx1:marked_transitions()) {
-        unsigned s = tx1.first, sprime = tx1.second;
-        const auto& tx1_is_good = good_tx_vars.at(tx1);
-
-        for (const transition_t& tx2:get_relevant_unmarked_transitions(s)) {
-            unsigned t = tx2.first, tprime = tx2.second;
-
-            // We want to distinguish (s, s') from (t, t'):
-            // GOOD(s, s') implies some feature D1-distinguishes or D2-distinguishes (s, s') from (t, t')
-            cnfclause_t clause;
-            clause.push_back(CNFWriter::literal(tx1_is_good, false));
-
-            // Either some feature that D1-distinguishes s and t is true
-            for (feature_t f:compute_d1_distinguishing_features(sample_, s, t)) {
-                clause.push_back(CNFWriter::literal(var_selected.at(f), true));
-            }
-
-            // ... or some feature that d2-distinguishes the transitions is true
-            for (feature_t f:compute_d2_distinguishing_features(sample_, s, sprime, t, tprime)) {
-                clause.push_back(CNFWriter::literal(var_selected.at(f), true));
-            }
-
-            writer.print_clause(clause);
-            n_separation_clauses += 1;
-        }
-    }
-
-    std::cout << "Generating good-transition constraints for " << ns_ << " states" << std::endl;
-    // For each alive state, make sure that at least one of the outgoing marked transitions is labeled as good.
-    for (unsigned s = 0; s < ns_; ++s) {
-        if (!is_alive(s)) continue;
-
-        cnfclause_t clause;
-        for (unsigned sprime:successors(s)) {
-            if (!is_marked_transition(s, sprime)) continue;
-
-            const auto& tx_is_good = good_tx_vars.at(std::make_pair(s, sprime));
-            clause.push_back(CNFWriter::literal(tx_is_good, true));
-        }
-        writer.print_clause(clause);
-        ++n_good_tx_clauses;
-    }
-
-
-    return {false, writer};
+    return {false, wr};
 }
 
 std::pair<bool, CNFWriter> CNFGenerator::write_encoding(std::ofstream& os) {

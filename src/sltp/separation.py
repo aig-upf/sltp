@@ -1,4 +1,7 @@
 import itertools
+import sys
+
+from natsort import natsorted
 
 from tarski.dl import FeatureValueChange
 
@@ -21,6 +24,24 @@ def compute_good_transitions(assignment, wsat_varmap_filename):
     return list(sorted(good))
 
 
+def print_maxsat_solution(assignment, filename):
+    """ """
+    solution = []
+    vleqs = dict()
+    with open(filename, 'r') as f:
+        for line in f:
+            id_, name = line.rstrip().split("\t")
+            if assignment[int(id_)] is True:
+                # e.g. Vleq(4, 1)
+                if name.startswith("Vleq("):
+                    state, value = map(int, name[5:-1].split(", "))
+                    vleqs[state] = min(value, vleqs.get(state, sys.maxsize))
+                else:
+                    solution.append(name)
+    print('\n'.join(natsorted(solution, key=lambda y: y.lower())))
+    print('\n'.join(f"V({s}) = {vleqs[s]}" for s in sorted(vleqs.keys())))
+
+
 def compute_transition_classification_policy(config, data, rng):
     if config.transition_classification_policy is not None:
         rules = config.transition_classification_policy()
@@ -31,12 +52,14 @@ def compute_transition_classification_policy(config, data, rng):
     solution = data.cnf_solution
     assert solution.solved
 
+
     # CNF variables "selected(f)" take range from 1 to num_features+1
     selected_feature_ids = [i - 1 for i in range(1, data.num_features + 1) if solution.assignment[i] is True]
 
     features = load_selected_features(selected_feature_ids, config.domain, config.serialized_feature_filename)
     features = [IdentifiedFeature(f, i, config.feature_namer(str(f))) for i, f in zip(selected_feature_ids, features)]
 
+    print_maxsat_solution(solution.assignment, config.wsat_allvars_filename)
     good_transitions = compute_good_transitions(solution.assignment, config.wsat_varmap_filename)
 
     policy = TransitionClassificationPolicy(features)

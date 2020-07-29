@@ -60,6 +60,7 @@ def main():
             'setuptools',
             'psutil',
             'bitarray',
+            'natsorted',
             'numpy',
             "tarski @ git+ssh://git@github.com/aig-upf/tarski.git@1c107d5#egg=tarski-devel"
         ],

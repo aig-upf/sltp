@@ -401,6 +401,7 @@ class TransitionClassificationPolicyStep(Step):
 
     def process_config(self, config):
         config["wsat_varmap_filename"] = compute_info_filename(config, "varmap.wsat")
+        config["wsat_allvars_filename"] = compute_info_filename(config, "allvars.wsat")
         return config
 
     def get_required_data(self):

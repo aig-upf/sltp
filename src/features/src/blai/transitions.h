@@ -28,7 +28,9 @@ protected:
     const std::size_t num_marked_transitions_;
     // trdata_[s] contains the IDs of all neighbors of s in the state space
     std::vector<std::vector<unsigned>> trdata_;
-    std::vector<bool> alive_states_;
+    std::vector<bool> is_state_alive_;
+
+    std::vector<unsigned> alive_states_;
 
     transition_set_t marked_transitions_;
     transition_list_t unmarked_transitions_;
@@ -41,7 +43,8 @@ public:
               num_transitions_(num_transitions),
               num_marked_transitions_(num_marked_transitions),
               trdata_(num_states),
-              alive_states_(num_states, false),
+              is_state_alive_(num_states, false),
+              alive_states_(),
               marked_transitions_(),
               unmarked_transitions_(),
               unmarked_and_alive_transitions_(),
@@ -84,8 +87,10 @@ public:
     }
 
     bool is_alive(unsigned state) const {
-        return alive_states_.at(state);
+        return is_state_alive_.at(state);
     }
+
+    const std::vector<unsigned>&  all_alive() const { return alive_states_; }
 
     //! Print a representation of the object to the given stream.
     friend std::ostream& operator<<(std::ostream &os, const TransitionSample& o) { return o.print(os); }
@@ -169,12 +174,13 @@ public:
             for(unsigned j = 0; j < count; ++j) {
                 is >> s;
                 assert(s < num_states_);
-                alive_states_[s] = true;
+                is_state_alive_[s] = true;
+                alive_states_.push_back(s);
             }
         }
 
         for (const auto tx:unmarked_transitions_) {
-            if (alive_states_[tx.first]) unmarked_and_alive_transitions_.push_back(tx);
+            if (is_state_alive_[tx.first]) unmarked_and_alive_transitions_.push_back(tx);
         }
     }
 
@@ -208,7 +214,7 @@ public:
             unsigned mapped_s = mapping.at(s);
             assert(mapped_s < nstates);
 
-            if (alive_states_.at(s)) alive_states.at(mapped_s) = true;
+            if (is_state_alive_.at(s)) alive_states.at(mapped_s) = true;
 
             for (unsigned sprime:successors(s)) {
                 // mapping must contain all successors of the states in selected
