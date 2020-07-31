@@ -75,18 +75,23 @@ def blocksworld_names(feature):
         "And(holding,Nominal(a))": "holding(a)",
         "And(holding,Nominal(b))": "holding(b)",
         "And(Exists(on,Nominal(b)),Nominal(a))": "on(a,b)",
+        "And(Exists(loc,Nominal(b)),Nominal(a))": "on(a,b)",  # FSTRIPS
         "And(Exists(Inverse(on),Nominal(a)),Nominal(b))": "on(a,b)",
         "And(Exists(Star(on),Nominal(b)),Nominal(a))": "above(a,b)",
         "And(Not(Nominal(a)),holding)": "H",
         "Exists(Inverse(on),Nominal(a))": "Z",
         "Exists(Star(on),Nominal(a))": "n(a)",
         "Exists(Star(on),Nominal(b))": "n(b)",
+        "Exists(Star(loc),Nominal(a))": "n(a)",  # FSTRIPS
+        "Exists(Star(loc),Nominal(b))": "n(b)",  # FSTRIPS
         "And(ontable,Nominal(a))": "ontable(a)",
         "And(Forall(on,Nominal(b)),Nominal(a))": "a_on_b_ontable_or_held",
         "And(And(And(Not(Exists(Star(on),Nominal(a))),Not(Exists(Star(Inverse(on)),Nominal(a)))),Not(Nominal(a))),Not(holding))": "m(a)",
         "And(And(Forall(Star(on),Not(Nominal(a))),Forall(Star(Inverse(on)),Not(Nominal(a)))),And(Not(holding),Not(Nominal(a))))": "m(a)",
         "Exists(Star(on),Exists(on,Nominal(b)))": "n-at-least-2-above-b",
         "Not(clear)": "num-unclear",
+        "And(clear,ontable)": "n-single-blocks",
+        "Atom[handempty]": "handempty",
     }
     return extend_namer_to_all_features(base).get(s, s)
 

@@ -15,12 +15,15 @@ def experiments():
     exps["clear"] = update_dict(
         base,
         pipeline="transition_classifier",
-        # instances=["sample-2balls.pddl", "sample-small.pddl"],
-        instances=["instance_5_clear_x_1.pddl"],
-        test_instances=["instance_5_clear_x_2.pddl"],
-        test_policy_instances=["instance_5_clear_x_2.pddl"],
-        # num_states=2000,
-        # num_sampled_states=300,
+        instances=["training_clear_5.pddl"],
+        test_instances=[
+            "instance_5_clear_x_1.pddl",
+            "instance_5_clear_x_2.pddl",
+        ],
+        test_policy_instances=[
+            "instance_5_clear_x_1.pddl",
+            "instance_5_clear_x_2.pddl",
+        ],
         num_states="all",
         max_concept_size=8,
         # concept_generation_timeout=120,  # in seconds
@@ -30,7 +33,15 @@ def experiments():
         complete_only_wrt_optimal=True,
         prune_redundant_states=False,
         optimal_selection_strategy="complete",
-        # distinguish_transitions_locally=False,
+    )
+
+    exps["clear_fn"] = update_dict(
+        exps["clear"],
+        domain="domain_fstrips.pddl",
+        test_domain="domain_fstrips.pddl",
+        instances=["training_clear_5_fs.pddl"],
+        test_instances=[],
+        test_policy_instances=[],
     )
 
     exps["on"] = update_dict(
@@ -40,7 +51,11 @@ def experiments():
         #            "inst_on_x_y_14.pddl",
         #            "holding_a_b_unclear.pddl",
         #            ],
-        instances=["inst_on_x_y_5.pddl"],
+        instances=[
+            "training_on_2.pddl",
+            "training_on_3.pddl",
+            "training_on_5.pddl",
+        ],
         test_instances=["inst_on_x_y_7.pddl"],
         test_policy_instances=[
             "inst_on_x_y_7.pddl",
@@ -63,6 +78,15 @@ def experiments():
         complete_only_wrt_optimal=True,
         prune_redundant_states=False,
         optimal_selection_strategy="complete"
+    )
+
+    exps["on_fn"] = update_dict(
+        exps["on"],
+        domain="domain_fstrips.pddl",
+        test_domain="domain_fstrips.pddl",
+        instances=["training_on_5_fs.pddl"],
+        test_instances=[],
+        test_policy_instances=[],
     )
 
     exps["all"] = update_dict(
