@@ -107,7 +107,7 @@ goal state~\cite{frances-et-al-ijcai2019}.
  Note that if $s$ is alive but $s'$ is not solvable,
  it cannot make sense for a policy to recommend transition $(s, s')$.
 
- \item $Vleq(s, d)$, for $s$ alive, and $0 \leq d \leq D$.
+ \item $Vleq(s, d)$, for $s$ alive, and $d \in [0, D]$.
  $Vleq(s, d)$ stands for $V(s) \leq d$.
  Note that for states $s$ that are a goal, we want $V(s)=0$, hance $V(s)\leq d$ for all $d$.
  Thus, we can restrict SAT variables $Vleq(s, d)$ to those states $s$ that are alive.
@@ -134,12 +134,23 @@ goal state~\cite{frances-et-al-ijcai2019}.
  Good(s, s') \rightarrow V(s) \leq d+1,&\;\; \text{for $s$ alive, $s'$ goal, $d \in [0, D)$.}
 \end{align}
 
+\noindent All transitions chosen as \emph{Good} need to have the same q-value:
+\begin{align}
+ V(s) \leq d+1 \land \neg V(s') \leq d \rightarrow -Good(s, s'),&\;\; \text{for $s, s'$ alive, $d \in [0, D)$.} \tag{\theequation${}^\prime$}
+\end{align}
+
+
 \noindent Any upper bound on $V(s)$ (for $s$ not a goal) needs to be justified:
 \begin{align}
  V(s) \leq d+1 \rightarrow \bigvee_{s' \text{ goal child of } s} Good(s, s') \lor
                            \bigvee_{s' \text{ alive child of } s} GV(s, s', d),&
                            \;\; \text{for $s$ alive, $d \in [0, D)$.} \\
  \neg V(s) \leq 0,&\;\; \text{for $s$ not a goal.}
+\end{align}
+
+\noindent At least one atom $V(s) \leq d$ is true for each alive state $s$:
+\begin{align}
+ \bigvee_{d \in [0, D]} V(s) \leq d,&\;\; \text{for $s$ alive.}
 \end{align}
 
 \noindent Atoms $V(s) \leq d$ are consistent among them:

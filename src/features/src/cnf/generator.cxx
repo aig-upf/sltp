@@ -329,17 +329,26 @@ CNFGenerator::write_transition_classification_maxsat(std::ostream &os)
 
     // Create variables Vleq(s, k) that denote that V(s) <= d, for all d in 0..D and all alive state s
     for (const auto s:all_alive()) {
-        vleqs[s].reserve(max_d + 1);
-        vleqs[s].push_back(wr.var("Vleq(" + std::to_string(s) + ", 0)"));
-        for (unsigned d = 1; d <= max_d; ++d) {
-            const auto v = wr.var("Vleq(" + std::to_string(s) + ", " + std::to_string(d) + ")");
-            vleqs[s].push_back(v);
 
-            // Add clauses (6):  V(s) <= d-1 --> V(s) <= d
-            wr.cl({Wr::lit(vleqs[s][d - 1], false), Wr::lit(v, true)});
+        const auto v_s_0 = wr.var("Vleq(" + std::to_string(s) + ", 0)");
+        cnfclause_t at_least_one_v_clause{Wr::lit(v_s_0, true)};
+
+        vleqs[s].reserve(max_d + 1);
+        vleqs[s].push_back(v_s_0);
+        for (unsigned d = 1; d <= max_d; ++d) {
+            const auto v_s_d = wr.var("Vleq(" + std::to_string(s) + ", " + std::to_string(d) + ")");
+            vleqs[s].push_back(v_s_d);
+            at_least_one_v_clause.push_back(Wr::lit(v_s_d, true));
+
+            // Add clauses (7):  V(s) <= d-1 --> V(s) <= d
+            wr.cl({Wr::lit(vleqs[s][d - 1], false), Wr::lit(v_s_d, true)});
         }
         n_leq_clauses += max_d;
         n_vleq_vars += max_d + 1;
+
+        // Add clauses (6)
+        wr.cl(at_least_one_v_clause);
+        n_leq_clauses += 1;
     }
 
 
@@ -416,16 +425,26 @@ CNFGenerator::write_transition_classification_maxsat(std::ostream &os)
                         Wr::lit(vleqs[sprime][d], false),
                         Wr::lit(vleqs[s][d+1], true)});
                     ++n_upper_bound_clauses;
+
+                    // (3') if Vleq(s,d+1) and -Vleq(s',d) then -Good(s,s')
+                    // i.e.: -Good(s, s') OR -Vleq(s, d+1) OR Vleq(s', d)
+                    wr.cl({
+                        Wr::lit(good_vars.at({s, sprime}), false),
+                        Wr::lit(vleqs[s][d+1], false),
+                        Wr::lit(vleqs[sprime][d], true)});
+                    ++n_upper_bound_clauses;
                 }
             }
 
-
             // -Good(s, s') or -Good(s, s'') - deterministic policy
+            // Uncomment to enforce a deterministic policy
+            /*
             for (unsigned j=i+1; j < succs.size(); ++j) {
                 unsigned sprimeprime = succs[j];
                 wr.cl({Wr::lit(good_vars.at({s, sprime}), false), Wr::lit(good_vars.at({s, sprimeprime}), false)});
                 ++n_good_tx_clauses;
             }
+            */
         }
 
         // Clauses (4), (5):
@@ -442,7 +461,7 @@ CNFGenerator::write_transition_classification_maxsat(std::ostream &os)
         ++n_justification_clauses;
 
 
-        // Clauses (7), (8):
+        // Clauses (8), (9):
         for (const auto t:all_alive()) {
             for (unsigned sprime:successors(s)) {
                 if (!is_solvable(sprime)) continue;
