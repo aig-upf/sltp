@@ -3,7 +3,7 @@ import sys
 
 from natsort import natsorted
 
-from tarski.dl import FeatureValueChange
+from tarski.dl import FeatureValueChange, NullaryAtomFeature, EmpiricalBinaryConcept, ConceptCardinalityFeature
 
 from .language import parse_pddl
 from .util.serialization import unserialize_feature
@@ -52,32 +52,49 @@ def compute_transition_classification_policy(config, data, rng):
     solution = data.cnf_solution
     assert solution.solved
 
-
     # CNF variables "selected(f)" take range from 1 to num_features+1
     selected_feature_ids = [i - 1 for i in range(1, data.num_features + 1) if solution.assignment[i] is True]
 
     features = load_selected_features(selected_feature_ids, config.domain, config.serialized_feature_filename)
     features = [IdentifiedFeature(f, i, config.feature_namer(str(f))) for i, f in zip(selected_feature_ids, features)]
 
-    print_maxsat_solution(solution.assignment, config.wsat_allvars_filename)
+    # print_maxsat_solution(solution.assignment, config.wsat_allvars_filename)
     good_transitions = compute_good_transitions(solution.assignment, config.wsat_varmap_filename)
 
     policy = TransitionClassificationPolicy(features)
 
     for (s, t) in good_transitions:
-        m1 = data.model_cache.get_feature_model(s)
-        m2 = data.model_cache.get_feature_model(t)
+        m_s = data.model_cache.get_feature_model(s)
+        m_t = data.model_cache.get_feature_model(t)
 
         clause = []
         for f in features:
-            clause += [DNFAtom(f, f.denotation(m1) != 0),
-                       DNFAtom(f, f.feature.diff(f.denotation(m1), f.denotation(m2)))]
+            den_s = f.denotation(m_s)
+            den_t = f.denotation(m_t)
+            clause += compute_policy_clauses(f, den_s, den_t)
 
         policy.add_clause(frozenset(clause))
 
     policy.minimize()
     policy.print()
     return ExitCode.Success, dict(transition_classification_policy=policy)
+
+
+def compute_policy_clauses(f, den_s, den_t):
+    diff = f.feature.diff(den_s, den_t)
+
+    if isinstance(f.feature, NullaryAtomFeature) or isinstance(f.feature, EmpiricalBinaryConcept):
+        if diff in (FeatureValueChange.DEL, FeatureValueChange.ADD):
+            # For binary features that change their value across a transition, the origin value is implicit
+            return [DNFAtom(f, diff)]
+
+    if isinstance(f.feature, ConceptCardinalityFeature):
+        if diff in (FeatureValueChange.DEC, ):
+            # Same for numeric features that decrease their value: they necessarily need to start at >0
+            return [DNFAtom(f, diff)]
+
+    # Else, the start value is non-redundant info that we want to use
+    return [DNFAtom(f, den_s != 0), DNFAtom(f, diff)]
 
 
 def minimize_dnf_policy(dnf):
@@ -87,6 +104,10 @@ def minimize_dnf_policy(dnf):
             break
 
         # Else do the actual merge
+        # newstr = ' AND '.join(sorted(map(str, new)))
+        # p1str = ' AND '.join(sorted(map(str, p1)))
+        # p2str = ' AND '.join(sorted(map(str, p2)))
+        # print(f'Inserting:\n\t"{newstr}"\nRemoving:\n\t"{p1str}"\nRemoving:\n\t"{p2str}"\n')
         dnf.remove(p1)
         dnf.remove(p2)
         dnf.add(new)
@@ -168,7 +189,11 @@ class TransitionClassificationPolicy:
     def print(self):
         print("Transition-classification policy with the following transitions labeled as good:")
         for i, clause in enumerate(self.dnf, start=0):
-            print(f"  {i}. " + ' AND '.join(sorted(map(str, clause))))
+            print(f"  {i}. " + self.print_clause(clause))
+
+    @staticmethod
+    def print_clause(clause):
+        return ' AND '.join(sorted(map(str, clause)))
 
     @staticmethod
     def parse(rules, language, feature_namer):
