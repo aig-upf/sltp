@@ -16,7 +16,7 @@ def get_experiment_class(kwargs):
     return expclass if expclass is not None else Experiment
 
 
-def generate_experiment(domain_dir, domain, **kwargs):
+def generate_experiment(expid, domain_dir, domain, **kwargs):
     """ """
 
     if "instances" not in kwargs:
@@ -194,6 +194,8 @@ def generate_experiment(domain_dir, domain, **kwargs):
     )
 
     parameters = {**defaults, **kwargs}  # Copy defaults, overwrite with user-specified parameters
+
+    parameters['experiment_dir'] = os.path.join(parameters['workspace'], expid.replace(':', '_'))
 
     steps = generate_pipeline(**parameters)
     exp = parameters["experiment_class"](steps, parameters)

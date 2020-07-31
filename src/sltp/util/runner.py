@@ -38,7 +38,7 @@ def report_and_exit(msg):
 def do(expid, steps=None, workspace=None, show_steps_only=False):
     name_parts = expid.split(":")
     if len(name_parts) != 2:
-        report_and_exit('Wrong experiment ID "{}"'.format(expid))
+        report_and_exit(f'Wrong experiment ID "{expid}"')
 
     scriptname, expname = name_parts
     mod = import_experiment_file(scriptname)
@@ -47,16 +47,16 @@ def do(expid, steps=None, workspace=None, show_steps_only=False):
     try:
         experiments = mod.experiments()
     except AttributeError:
-        report_and_exit('Expected method "experiments" not found in script "{}"'.format(expname, scriptname))
+        report_and_exit(f'Expected method "experiments" not found in script "{scriptname}"')
 
     if expname not in experiments:
-        report_and_exit('No experiment named "{}" in current experiment script'.format(expname))
+        report_and_exit(f'No experiment named "{expname}" in current experiment script')
 
     parameters = experiments[expname]
     if workspace is not None:
         parameters["workspace"] = workspace
 
-    experiment = generate_experiment(**parameters)
+    experiment = generate_experiment(expid, **parameters)
 
     if show_steps_only:
         console.print_hello()

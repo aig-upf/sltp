@@ -10,7 +10,7 @@ from .returncodes import ExitCode
 from .errors import CriticalPipelineError
 from .util import console
 from .util.command import execute, create_experiment_workspace
-from .util.naming import compute_instance_tag, compute_experiment_tag, compute_serialization_name, \
+from .util.naming import compute_serialization_name, \
     compute_maxsat_filename, compute_info_filename, compute_maxsat_variables_filename, compute_sample_filenames, \
     compute_test_sample_filenames
 from .util.serialization import deserialize, serialize
@@ -122,10 +122,6 @@ class PlannerStep(Step):
             raise InvalidConfigParameter('Specified domain file "{}" does not exist'.format(config["domain"]))
         if not os.path.isdir(config["planner_location"]):
             raise InvalidConfigParameter(f'Specified planner location "{config["planner_location"]}" does not exist')
-
-        config["instance_tag"] = compute_instance_tag(**config)
-        config["experiment_tag"] = compute_experiment_tag(**config)
-        config["experiment_dir"] = os.path.join(config["workspace"], config["experiment_tag"])
 
         mw = config.get("max_width", [-1] * len(config["instances"]))
         if isinstance(mw, int):
