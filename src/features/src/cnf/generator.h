@@ -214,6 +214,12 @@ public:
 
     //! Generate and write the CNF instance for the transition-separation encoding as we go
     std::pair<bool, CNFWriter> write_transition_classification_maxsat(std::ostream &os);
+
+    void check_feature_dominance();
+    void check_feature_dominance2();
+
+    std::set<std::tuple<unsigned, unsigned, unsigned, unsigned>>
+    compute_d2_prime(unsigned f);
 };
 
 using isomorphism_t = std::unordered_map<unsigned, unsigned>;

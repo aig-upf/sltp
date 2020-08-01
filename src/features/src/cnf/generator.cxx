@@ -1,6 +1,7 @@
 
 #include "generator.h"
 #include "d2tree.h"
+#include <algorithm>
 
 
 //! Generate and write the actual CNF instance as we go
@@ -183,6 +184,117 @@ std::vector<feature_t> compute_d1_distinguishing_features(const Sample::Sample& 
     return features;
 }
 
+
+bool are_transitions_distinguished(int s_f, int sprime_f, int t_f, int tprime_f) {
+    if ((s_f == 0) != (t_f == 0)) return true;
+
+    int type_s = sprime_f - s_f; // <0 if DEC, =0 if unaffected, >0 if INC
+    int type_t = tprime_f - s_f; // <0 if DEC, =0 if unaffected, >0 if INC
+
+    // Get the sign
+    type_s = (type_s > 0) ? 1 : ((type_s < 0) ? -1 : 0);
+    type_t = (type_t > 0) ? 1 : ((type_t < 0) ? -1 : 0);
+
+    return type_s != type_t;
+}
+
+
+void CNFGenerator::
+check_feature_dominance() {
+    const auto& mat = sample_.matrix();
+    auto nfeatures = mat.num_features();
+
+    using transition_pair = std::tuple<unsigned, unsigned, unsigned, unsigned>;
+    using transition_set = std::unordered_set<transition_pair, boost::hash<transition_pair>>;
+
+    std::cout << "Computing D2' sets... " << std::endl;
+    std::vector<transition_set> d2prime(nfeatures);
+    for (unsigned f = 0; f < nfeatures; ++f) {
+        std::cout << "f=" << f << std::endl;
+        for (const auto s:all_alive()) {
+            for (const auto t:all_alive()) {
+                for (unsigned sprime:successors(s)) {
+                    if (!is_solvable(sprime)) continue;
+
+                    for (unsigned tprime:successors(t)) {
+                        if (are_transitions_distinguished(
+                                mat.entry(s, f), mat.entry(sprime, f), mat.entry(t, f), mat.entry(tprime, f))) {
+                            d2prime[f].emplace(s, sprime, t, tprime);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    std::cout << "Compute dominance relations... " << std::endl;
+    unsigned ndominated = 0;
+    for (unsigned f1 = 0; f1 < nfeatures; ++f1) {
+        const auto& d2_f1 = d2prime[f1];
+        for (unsigned f2 = f1+1; f2 < nfeatures; ++f2) {
+            if (feature_weight(f1) > feature_weight(f2)) throw std::runtime_error("Features not ordered by complexity");
+
+            const auto& d2_f2 = d2prime[f2];
+
+            auto const is_in_d2_f2 = [&d2_f2](auto const& x){ return d2_f2.find(x) != d2_f2.end(); };
+            if (d2_f1.size() <= d2_f2.size() && std::all_of(d2_f1.begin(), d2_f1.end(), is_in_d2_f2)) {
+                std::cout << "Feature " << mat.feature_name(f1) << " dominates feature " << mat.feature_name(f2) << std::endl;
+                ++ndominated;
+            }
+        }
+    }
+
+    std::cout << "A total of " << ndominated << " are dominated and can be ignored" << std::endl;
+}
+
+
+std::set<std::tuple<unsigned, unsigned, unsigned, unsigned>> CNFGenerator::
+compute_d2_prime(unsigned f) {
+    const auto& mat = sample_.matrix();
+
+    std::set<std::tuple<unsigned, unsigned, unsigned, unsigned>> d2prime;
+
+    for (const auto s:all_alive()) {
+        for (const auto t:all_alive()) {
+            for (unsigned sprime:successors(s)) {
+                if (!is_solvable(sprime)) continue;
+
+                for (unsigned tprime:successors(t)) {
+                    if (are_transitions_distinguished(
+                            mat.entry(s, f), mat.entry(sprime, f), mat.entry(t, f), mat.entry(tprime, f))) {
+                        d2prime.emplace(s, sprime, t, tprime);
+                    }
+                }
+            }
+        }
+    }
+    return d2prime;
+}
+
+void CNFGenerator::
+check_feature_dominance2() {
+    const auto& mat = sample_.matrix();
+    auto nfeatures = mat.num_features();
+
+    std::cout << "Compute dominance relations... " << std::endl;
+    unsigned ndominated = 0;
+    for (unsigned f1 = 0; f1 < nfeatures; ++f1) {
+        std::cout << "f=" << f1 << std::endl;
+        const auto d2_f1 = compute_d2_prime(f1);
+        for (unsigned f2 = f1+1; f2 < nfeatures; ++f2) {
+            if (feature_weight(f1) > feature_weight(f2)) throw std::runtime_error("Features not ordered by complexity");
+
+            const auto d2_f2 = compute_d2_prime(f2);
+            if (d2_f2.size() <= d2_f1.size() && std::includes(d2_f1.begin(), d2_f1.end(), d2_f2.begin(), d2_f2.end())) {
+                std::cout << "Feat. " << mat.feature_name(f1) << " dominates " << mat.feature_name(f2) << std::endl;
+                ++ndominated;
+            }
+        }
+    }
+
+    std::cout << "A total of " << ndominated << " are dominated and can be ignored" << std::endl;
+}
+
 //! Return a sorted vector with those features that d2-distinguish transition (s, s') from (t, t')
 std::vector<feature_t> compute_d2_distinguishing_features(const Sample::Sample& sample,
                                                           unsigned s, unsigned sprime, unsigned t, unsigned tprime) {
@@ -295,6 +407,8 @@ std::pair<bool, CNFWriter>
 CNFGenerator::write_transition_classification_maxsat(std::ostream &os)
 {
     using Wr = CNFWriter;
+
+    check_feature_dominance2();
 
     auto varmapstream = get_ofstream(options.workspace + "/varmap.wsat");
     auto allvarsstream = get_ofstream(options.workspace + "/allvars.wsat");
