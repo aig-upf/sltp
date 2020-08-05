@@ -203,7 +203,7 @@ bool operator<(const transition_pair& x, const transition_pair& y) {
 }
 
 boost::container::flat_set<transition_pair> CNFGenerator::
-compute_d2_prime(unsigned f) {
+compute_dt(unsigned f) {
     const auto& mat = sample_.matrix();
 
     boost::container::flat_set<transition_pair> d2prime;
@@ -234,33 +234,41 @@ check_feature_dominance() {
     std::vector<bool> dominated(nfeatures, false);
 //    return dominated;
 
-    std::cout << "Compute dominance relations... " << std::endl;
+//    std::cout << "Computing sets DT(f)... " << std::endl;
+//    std::vector<boost::container::flat_set<transition_pair>> dt(nfeatures);
+//    for (unsigned f1 = 0; f1 < nfeatures; ++f1) {
+//        dt[f1] = compute_dt(f1);
+//    }
+
+    std::cout << "Computing feature-dominance relations... " << std::endl;
     unsigned ndominated = 0;
     for (unsigned f1 = 0; f1 < nfeatures; ++f1) {
         if (dominated[f1]) continue;
 
         std::cout << "f=" << f1 << std::endl;
-        const auto d2_f1 = compute_d2_prime(f1);
+        const auto d2_f1 = compute_dt(f1);
+//        const auto& d2_f1 = dt[f1];
         for (unsigned f2 = f1+1; f2 < nfeatures; ++f2) {
             if (dominated[f2]) continue;
             if (feature_weight(f1) > feature_weight(f2)) throw std::runtime_error("Features not ordered by complexity");
 
-            const auto d2_f2 = compute_d2_prime(f2);
+            const auto d2_f2 = compute_dt(f2);
+//            const auto& d2_f2 = dt[f2];
             if (d2_f2.size() <= d2_f1.size() && std::includes(d2_f1.begin(), d2_f1.end(), d2_f2.begin(), d2_f2.end())) {
-                std::cout << "Feat. " << mat.feature_name(f1) << " dominates " << mat.feature_name(f2) << std::endl;
+//                std::cout << "Feat. " << mat.feature_name(f1) << " dominates " << mat.feature_name(f2) << std::endl;
                 ++ndominated;
                 dominated[f2] = true;
             } else if (feature_weight(f1) == feature_weight(f2) &&
                     d2_f1.size() <= d2_f2.size() && std::includes(d2_f2.begin(), d2_f2.end(), d2_f1.begin(), d2_f1.end())
             ) {
-                std::cout << "Feat. " << mat.feature_name(f1) << " dominates " << mat.feature_name(f2) << std::endl;
+//                std::cout << "Feat. " << mat.feature_name(f1) << " dominates " << mat.feature_name(f2) << std::endl;
                 ++ndominated;
                 dominated[f1] = true;
             }
         }
     }
 
-    std::cout << "A total of " << ndominated << " are dominated and can be ignored" << std::endl;
+    std::cout << "A total of " << ndominated << " features are dominated by some less complex feature and can be ignored" << std::endl;
     return dominated;
 }
 

@@ -232,7 +232,7 @@ public:
     std::vector<bool> check_feature_dominance();
 
     boost::container::flat_set<transition_pair>
-    compute_d2_prime(unsigned f);
+    compute_dt(unsigned f);
 };
 
 
