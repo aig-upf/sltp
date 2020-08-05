@@ -247,12 +247,15 @@ check_feature_dominance() {
     std::cout << "A total of " << ndominated << " are dominated and can be ignored" << std::endl;
 }
 
+bool operator<(const transition_pair& x, const transition_pair& y) {
+    return std::tie(x.s, x.sprime, x.t, x.tprime) < std::tie(y.s, y.sprime, y.t, y.tprime);
+}
 
-std::set<std::tuple<unsigned, unsigned, unsigned, unsigned>> CNFGenerator::
+boost::container::flat_set<transition_pair> CNFGenerator::
 compute_d2_prime(unsigned f) {
     const auto& mat = sample_.matrix();
 
-    std::set<std::tuple<unsigned, unsigned, unsigned, unsigned>> d2prime;
+    boost::container::flat_set<transition_pair> d2prime;
 
     for (const auto s:all_alive()) {
         for (const auto t:all_alive()) {
@@ -268,6 +271,7 @@ compute_d2_prime(unsigned f) {
             }
         }
     }
+//    std::cout << "DT(" << f << ") has " << d2prime.size() << " elements." << std::endl;
     return d2prime;
 }
 
@@ -286,6 +290,11 @@ check_feature_dominance2() {
 
             const auto d2_f2 = compute_d2_prime(f2);
             if (d2_f2.size() <= d2_f1.size() && std::includes(d2_f1.begin(), d2_f1.end(), d2_f2.begin(), d2_f2.end())) {
+                std::cout << "Feat. " << mat.feature_name(f1) << " dominates " << mat.feature_name(f2) << std::endl;
+                ++ndominated;
+            } else if (feature_weight(f1) == feature_weight(f2) &&
+                    d2_f1.size() <= d2_f2.size() && std::includes(d2_f2.begin(), d2_f2.end(), d2_f1.begin(), d2_f1.end())
+            ) {
                 std::cout << "Feat. " << mat.feature_name(f1) << " dominates " << mat.feature_name(f2) << std::endl;
                 ++ndominated;
             }

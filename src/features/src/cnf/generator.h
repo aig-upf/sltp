@@ -4,6 +4,7 @@
 #include <queue>
 #include <blai/sample.h>
 #include "cnfwriter.h"
+#include <boost/container/flat_set.hpp>
 
 //! A feature index
 using feature_t = uint32_t;
@@ -51,6 +52,19 @@ std::vector<feature_t> compute_d1_distinguishing_features(const Sample::Sample& 
 std::vector<feature_t> compute_d2_distinguishing_features(const Sample::Sample& sample,
         unsigned s, unsigned sprime, unsigned t, unsigned tprime);
 
+struct transition_pair {
+    transition_pair(uint16_t s, uint16_t sprime, uint16_t t, uint16_t tprime) :
+            s(s), sprime(sprime), t(t), tprime(tprime)
+    {}
+
+    uint16_t s;
+    uint16_t sprime;
+    uint16_t t;
+    uint16_t tprime;
+};
+
+
+bool operator<(const transition_pair& x, const transition_pair& y);
 
 class CNFGenerator {
 public:
@@ -218,9 +232,12 @@ public:
     void check_feature_dominance();
     void check_feature_dominance2();
 
-    std::set<std::tuple<unsigned, unsigned, unsigned, unsigned>>
+    boost::container::flat_set<transition_pair>
     compute_d2_prime(unsigned f);
 };
+
+
+
 
 using isomorphism_t = std::unordered_map<unsigned, unsigned>;
 
