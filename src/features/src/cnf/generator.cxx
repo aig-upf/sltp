@@ -198,55 +198,6 @@ bool are_transitions_distinguished(int s_f, int sprime_f, int t_f, int tprime_f)
     return type_s != type_t;
 }
 
-
-void CNFGenerator::
-check_feature_dominance() {
-    const auto& mat = sample_.matrix();
-    auto nfeatures = mat.num_features();
-
-    using transition_pair = std::tuple<unsigned, unsigned, unsigned, unsigned>;
-    using transition_set = std::unordered_set<transition_pair, boost::hash<transition_pair>>;
-
-    std::cout << "Computing D2' sets... " << std::endl;
-    std::vector<transition_set> d2prime(nfeatures);
-    for (unsigned f = 0; f < nfeatures; ++f) {
-        std::cout << "f=" << f << std::endl;
-        for (const auto s:all_alive()) {
-            for (const auto t:all_alive()) {
-                for (unsigned sprime:successors(s)) {
-                    if (!is_solvable(sprime)) continue;
-
-                    for (unsigned tprime:successors(t)) {
-                        if (are_transitions_distinguished(
-                                mat.entry(s, f), mat.entry(sprime, f), mat.entry(t, f), mat.entry(tprime, f))) {
-                            d2prime[f].emplace(s, sprime, t, tprime);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    std::cout << "Compute dominance relations... " << std::endl;
-    unsigned ndominated = 0;
-    for (unsigned f1 = 0; f1 < nfeatures; ++f1) {
-        const auto& d2_f1 = d2prime[f1];
-        for (unsigned f2 = f1+1; f2 < nfeatures; ++f2) {
-            if (feature_weight(f1) > feature_weight(f2)) throw std::runtime_error("Features not ordered by complexity");
-
-            const auto& d2_f2 = d2prime[f2];
-
-            auto const is_in_d2_f2 = [&d2_f2](auto const& x){ return d2_f2.find(x) != d2_f2.end(); };
-            if (d2_f1.size() <= d2_f2.size() && std::all_of(d2_f1.begin(), d2_f1.end(), is_in_d2_f2)) {
-                std::cout << "Feature " << mat.feature_name(f1) << " dominates feature " << mat.feature_name(f2) << std::endl;
-                ++ndominated;
-            }
-        }
-    }
-
-    std::cout << "A total of " << ndominated << " are dominated and can be ignored" << std::endl;
-}
-
 bool operator<(const transition_pair& x, const transition_pair& y) {
     return std::tie(x.s, x.sprime, x.t, x.tprime) < std::tie(y.s, y.sprime, y.t, y.tprime);
 }
