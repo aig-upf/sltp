@@ -227,7 +227,7 @@ compute_d2_prime(unsigned f) {
 }
 
 std::vector<bool> CNFGenerator::
-check_feature_dominance2() {
+check_feature_dominance() {
     const auto& mat = sample_.matrix();
     auto nfeatures = mat.num_features();
 
@@ -377,7 +377,7 @@ CNFGenerator::write_transition_classification_maxsat(std::ostream &os)
 {
     using Wr = CNFWriter;
 
-    auto ignore_features = check_feature_dominance2();
+    auto ignore_features = check_feature_dominance();
 
     auto varmapstream = get_ofstream(options.workspace + "/varmap.wsat");
     auto selected_map_stream = get_ofstream(options.workspace + "/selecteds.wsat");
