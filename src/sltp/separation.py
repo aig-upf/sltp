@@ -1,4 +1,5 @@
 import itertools
+import os
 import sys
 
 from natsort import natsorted
@@ -22,6 +23,16 @@ def compute_good_transitions(assignment, wsat_varmap_filename):
             if assignment[var] is True:
                 good.append((s, t))
     return list(sorted(good))
+
+
+def read_selected_variable_ids(assignment, filename):
+    selected = []
+    with open(filename, 'r') as f:
+        for line in f:
+            featid, varid, name = line.rstrip().split("\t")
+            if assignment[int(varid)] is True:
+                selected.append(int(featid))
+    return selected
 
 
 def print_maxsat_solution(assignment, filename):
@@ -52,8 +63,8 @@ def compute_transition_classification_policy(config, data, rng):
     solution = data.cnf_solution
     assert solution.solved
 
-    # CNF variables "selected(f)" take range from 1 to num_features+1
-    selected_feature_ids = [i - 1 for i in range(1, data.num_features + 1) if solution.assignment[i] is True]
+    selected_feature_ids = read_selected_variable_ids(
+        solution.assignment, os.path.join(config.experiment_dir, "selecteds.wsat"))
 
     features = load_selected_features(selected_feature_ids, config.domain, config.serialized_feature_filename)
     features = [IdentifiedFeature(f, i, config.feature_namer(str(f))) for i, f in zip(selected_feature_ids, features)]
