@@ -230,7 +230,7 @@ public:
     std::pair<bool, CNFWriter> write_transition_classification_maxsat(std::ostream &os);
 
     void check_feature_dominance();
-    void check_feature_dominance2();
+    std::vector<bool> check_feature_dominance2();
 
     boost::container::flat_set<transition_pair>
     compute_d2_prime(unsigned f);

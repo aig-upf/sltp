@@ -275,33 +275,42 @@ compute_d2_prime(unsigned f) {
     return d2prime;
 }
 
-void CNFGenerator::
+std::vector<bool> CNFGenerator::
 check_feature_dominance2() {
     const auto& mat = sample_.matrix();
     auto nfeatures = mat.num_features();
 
+    std::vector<bool> dominated(nfeatures, false);
+//    return dominated;
+
     std::cout << "Compute dominance relations... " << std::endl;
     unsigned ndominated = 0;
     for (unsigned f1 = 0; f1 < nfeatures; ++f1) {
+        if (dominated[f1]) continue;
+
         std::cout << "f=" << f1 << std::endl;
         const auto d2_f1 = compute_d2_prime(f1);
         for (unsigned f2 = f1+1; f2 < nfeatures; ++f2) {
+            if (dominated[f2]) continue;
             if (feature_weight(f1) > feature_weight(f2)) throw std::runtime_error("Features not ordered by complexity");
 
             const auto d2_f2 = compute_d2_prime(f2);
             if (d2_f2.size() <= d2_f1.size() && std::includes(d2_f1.begin(), d2_f1.end(), d2_f2.begin(), d2_f2.end())) {
                 std::cout << "Feat. " << mat.feature_name(f1) << " dominates " << mat.feature_name(f2) << std::endl;
                 ++ndominated;
+                dominated[f2] = true;
             } else if (feature_weight(f1) == feature_weight(f2) &&
                     d2_f1.size() <= d2_f2.size() && std::includes(d2_f2.begin(), d2_f2.end(), d2_f1.begin(), d2_f1.end())
             ) {
                 std::cout << "Feat. " << mat.feature_name(f1) << " dominates " << mat.feature_name(f2) << std::endl;
                 ++ndominated;
+                dominated[f1] = true;
             }
         }
     }
 
     std::cout << "A total of " << ndominated << " are dominated and can be ignored" << std::endl;
+    return dominated;
 }
 
 //! Return a sorted vector with those features that d2-distinguish transition (s, s') from (t, t')
@@ -417,9 +426,10 @@ CNFGenerator::write_transition_classification_maxsat(std::ostream &os)
 {
     using Wr = CNFWriter;
 
-    check_feature_dominance2();
+    auto ignore_features = check_feature_dominance2();
 
     auto varmapstream = get_ofstream(options.workspace + "/varmap.wsat");
+    auto selected_map_stream = get_ofstream(options.workspace + "/selecteds.wsat");
     auto allvarsstream = get_ofstream(options.workspace + "/allvars.wsat");
 
     CNFWriter wr(os, &allvarsstream);
@@ -447,7 +457,14 @@ CNFGenerator::write_transition_classification_maxsat(std::ostream &os)
 
     /////// CNF variables ///////
     for (unsigned f = 0; f < nf_; ++f) {
-        var_selected.push_back(wr.var("Select(" + sample_.matrix().feature_name(f) + ")"));
+        if (!ignore_features[f]) {
+            auto v = wr.var("Select(" + sample_.matrix().feature_name(f) + ")");
+            var_selected.push_back(v);
+            selected_map_stream << f << "\t" << v << "\t" << sample_.matrix().feature_name(f) << std::endl;
+
+        } else {
+            var_selected.push_back(std::numeric_limits<uint32_t>::max());
+        }
     }
 
     // Create variables Vleq(s, k) that denote that V(s) <= d, for all d in 0..D and all alive state s
@@ -594,12 +611,16 @@ CNFGenerator::write_transition_classification_maxsat(std::ostream &os)
 
                     // Either some feature that D1-distinguishes s and t is true
                     for (feature_t f:compute_d1_distinguishing_features(sample_, s, t)) {
-                        clause.push_back(Wr::lit(var_selected.at(f), true));
+                        if (!ignore_features[f]) {
+                            clause.push_back(Wr::lit(var_selected.at(f), true));
+                        }
                     }
 
                     // ... or some feature that d2-distinguishes the transitions is true
                     for (feature_t f:compute_d2_distinguishing_features(sample_, s, sprime, t, tprime)) {
-                        clause.push_back(Wr::lit(var_selected.at(f), true));
+                        if (!ignore_features[f]) {
+                            clause.push_back(Wr::lit(var_selected.at(f), true));
+                        }
                     }
 
                     if (is_solvable(tprime)) {
@@ -616,7 +637,9 @@ CNFGenerator::write_transition_classification_maxsat(std::ostream &os)
 
     std::cout << "Generating weighted selected constraints for " << var_selected.size() << " features" << std::endl;
     for (unsigned f = 0; f < nf_; ++f) {
-        wr.cl({Wr::lit(var_selected[f], false)}, feature_weight(f));
+        if (!ignore_features[f]) {
+            wr.cl({Wr::lit(var_selected[f], false)}, feature_weight(f));
+        }
     }
     n_selected_clauses += nf_;
 
