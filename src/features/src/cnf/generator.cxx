@@ -189,7 +189,7 @@ bool are_transitions_distinguished(int s_f, int sprime_f, int t_f, int tprime_f)
     if ((s_f == 0) != (t_f == 0)) return true;
 
     int type_s = sprime_f - s_f; // <0 if DEC, =0 if unaffected, >0 if INC
-    int type_t = tprime_f - s_f; // <0 if DEC, =0 if unaffected, >0 if INC
+    int type_t = tprime_f - t_f; // <0 if DEC, =0 if unaffected, >0 if INC
 
     // Get the sign
     type_s = (type_s > 0) ? 1 : ((type_s < 0) ? -1 : 0);
