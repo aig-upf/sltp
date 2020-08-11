@@ -23,6 +23,8 @@ set(SOURCE_FILES
 
 set(CNFGEN_SOURCE_FILES
         src/cnfgen.cpp
+        src/cnf/equivalences.h
+        src/cnf/equivalences.cxx
         src/cnf/generator.h
         src/cnf/generator.cxx
         src/cnf/cnfwriter.h

@@ -229,6 +229,7 @@ public:
     //! Generate and write the CNF instance for the transition-separation encoding as we go
     std::pair<bool, CNFWriter> write_transition_classification_maxsat(std::ostream &os);
 
+    void compute_equivalence_relations();
     std::vector<bool> check_feature_dominance();
 
     boost::container::flat_set<transition_pair>

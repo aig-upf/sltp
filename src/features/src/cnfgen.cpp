@@ -98,7 +98,7 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
     return options;
 }
 
-int main(int argc, const char **argv) {
+    int main(int argc, const char **argv) {
     float start_time = Utils::read_time_in_seconds();
     auto options = parse_options(argc, argv);
 

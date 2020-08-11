@@ -1,6 +1,7 @@
 
 #include "generator.h"
 #include "d2tree.h"
+#include "equivalences.h"
 #include <algorithm>
 
 
@@ -226,6 +227,62 @@ compute_dt(unsigned f) {
     return d2prime;
 }
 
+enum class transition_class : bool {
+    alive_to_solvable,
+    alive_to_dead
+};
+
+
+using feature_value_t = Sample::FeatureMatrix::feature_value_t;
+
+sltp::cnf::transition_denotation compute_transition_denotation(feature_value_t s_f, feature_value_t sprime_f) {
+    int type_s = (int) sprime_f - (int) s_f; // <0 if DEC, =0 if unaffected, >0 if INC
+    int sign = (type_s > 0) ? 1 : ((type_s < 0) ? -1 : 0); // Get the sign
+    return sltp::cnf::transition_denotation(s_f, sign);
+}
+
+void CNFGenerator::compute_equivalence_relations() {
+    const auto& mat = sample_.matrix();
+    auto nfeatures = mat.num_features();
+
+    std::unordered_map<std::pair<uint16_t, uint16_t>, sltp::cnf::transition_id, boost::hash<std::pair<uint16_t, uint16_t>>> transition_ids;
+    std::vector<std::pair<uint16_t, uint16_t>> transition_ids_inv;
+
+    // A map from a full transition trace to the ID of the corresponding equivalence class
+    std::unordered_map<sltp::cnf::transition_trace, unsigned> from_trace_to_class_repr;
+    std::vector<unsigned> from_transition_to_eq_class;
+    std::vector<transition_class> classes;
+
+    for (const auto s:all_alive()) {
+        for (unsigned sprime:successors(s)) {
+            auto id = transition_ids_inv.size();
+            auto tx = std::make_pair((uint16_t)s, (uint16_t) sprime);
+
+            transition_ids_inv.push_back(tx);
+            transition_ids.emplace(std::make_pair(tx, (sltp::cnf::transition_id) id));
+
+            if (is_solvable(sprime)) {
+                classes.push_back(transition_class::alive_to_solvable);
+            } else {
+                classes.push_back(transition_class::alive_to_dead);
+            }
+
+            // Compute the trace of the transition for all features
+            sltp::cnf::transition_trace tt(nfeatures);
+            for (unsigned f = 0; f < nfeatures; ++f) {
+                tt.denotations[f] = compute_transition_denotation(mat.entry(s, f), mat.entry(sprime, f));
+            }
+
+            // Check whether some previous transition has the same transition trace
+            auto it = from_trace_to_class_repr.find(tt);
+            if (it == from_trace_to_class_repr.end())
+
+        }
+    }
+
+}
+
+
 std::vector<bool> CNFGenerator::
 check_feature_dominance() {
     const auto& mat = sample_.matrix();
@@ -385,6 +442,7 @@ CNFGenerator::write_transition_classification_maxsat(std::ostream &os)
 {
     using Wr = CNFWriter;
 
+    compute_equivalence_relations();
     auto ignore_features = check_feature_dominance();
 
     auto varmapstream = get_ofstream(options.workspace + "/varmap.wsat");
