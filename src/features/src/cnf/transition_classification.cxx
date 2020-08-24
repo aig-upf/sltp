@@ -87,7 +87,7 @@ check_feature_dominance() {
     const auto& mat = sample_.matrix();
 
     std::vector<bool> dominated(nf_, false);
-//    return dominated;
+    return dominated;
 
 //    std::cout << "Computing sets DT(f)... " << std::endl;
 //    std::vector<boost::container::flat_set<transition_pair>> dt(nfeatures);
