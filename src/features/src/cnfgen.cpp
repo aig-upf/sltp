@@ -13,6 +13,7 @@
 #include <blai/transitions.h>
 #include <cnf/generator.h>
 #include <common/utils.h>
+#include <cnf/transition_classification.h>
 
 
 using namespace std;
@@ -98,7 +99,18 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
     return options;
 }
 
-    int main(int argc, const char **argv) {
+std::pair<bool, CNFWriter>
+write_encoding(std::ofstream& os, const Sample::Sample& sample, const sltp::cnf::Options& options) {
+    if (options.use_separation_encoding()) {
+        sltp::cnf::TransitionClassificationEncoding gen(sample, options);
+        return gen.write(os);
+    } else {
+        CNFGenerator gen(sample, options);
+        return gen.write(os);
+    }
+}
+
+int main(int argc, const char **argv) {
     float start_time = Utils::read_time_in_seconds();
     auto options = parse_options(argc, argv);
 
@@ -143,10 +155,10 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
     // We write the MaxSAT instance progressively as we generate the CNF. We do so into a temporary "*.tmp" file
     // which will be later processed by the Python pipeline to inject the value of the TOP weight, which we can
     // know only when we finish writing all clauses
-    CNFGenerator gen(*sample, options);
+
     auto wsatstream = get_ofstream(options.workspace + "/theory.wsat.tmp");
 
-    std::pair<bool, CNFWriter> res = gen.write_encoding(wsatstream);
+    auto res = write_encoding(wsatstream, *sample, options);
 
     wsatstream.close();
 

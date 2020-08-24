@@ -10,9 +10,6 @@
 
 namespace sltp::cnf {
 
-using transition_id = uint16_t;
-
-
 struct transition_denotation {
     uint8_t value_s:6;
     uint8_t increases:1;
@@ -30,7 +27,7 @@ struct transition_denotation {
         }
     }
 
-    bool nils() const { return increases == 0 && decreases == 0; }
+    [[nodiscard]] bool nils() const { return increases == 0 && decreases == 0; }
 };
 static_assert(sizeof(transition_denotation) == 1);
 
@@ -45,7 +42,9 @@ std::size_t hash_value(const transition_denotation& x);
 
 
 struct transition_trace {
-//    std::array<transition_denotation, 40> data;
+//    std::array<transition_denotation, 40> data; // This could be useful if we decide to compile the code on the fly
+
+    //! A list of denotations, one denotation for every transition
     std::vector<transition_denotation> denotations;
 
     explicit transition_trace(unsigned nfeatures)

@@ -27,8 +27,8 @@ struct Options {
     std::vector<unsigned> enforced_features;
 
 
-    bool use_d2tree() const { return encoding == Encoding::D2Tree; }
-    bool use_separation_encoding() const { return encoding == Encoding::TransitionSeparation; }
+    [[nodiscard]] bool use_d2tree() const { return encoding == Encoding::D2Tree; }
+    [[nodiscard]] bool use_separation_encoding() const { return encoding == Encoding::TransitionSeparation; }
 };
 
 } // namespaces
@@ -66,18 +66,44 @@ struct transition_pair {
 
 bool operator<(const transition_pair& x, const transition_pair& y);
 
-class CNFGenerator {
+class CNFEncoding {
 public:
-    //!
-    using d1_key = std::tuple<unsigned, unsigned>;
-
-    //! A map from 4 state IDs to the ID of the corresponding D2(s, s', t, t') variable
-    using d2_key = std::tuple<unsigned, unsigned, unsigned, unsigned>;
-    using d2map_t = std::unordered_map<d2_key, cnfvar_t, boost::hash<d2_key>>;
 
     using transition_t = Sample::TransitionSample::transition_t;
     using transition_set_t = Sample::TransitionSample::transition_set_t;
     using transition_list_t = Sample::TransitionSample::transition_list_t;
+
+    CNFEncoding(const Sample::Sample& sample, const sltp::cnf::Options& options) :
+        sample_(sample),
+        options(options),
+        ns_(sample.matrix().num_states()),
+        nf_(sample.matrix().num_features())
+    {
+        for (unsigned s = 0; s < ns_; ++s) {
+            if (is_goal(s)) goals_.push_back(s);
+            else nongoals_.push_back(s);
+        }
+    }
+
+    [[nodiscard]] const std::vector<unsigned>& all_alive() const { return sample_.transitions().all_alive(); }
+
+    [[nodiscard]] bool is_goal(unsigned s) const { return sample_.matrix().goal(s); }
+
+    [[nodiscard]] bool is_alive(unsigned s) const { return sample_.transitions().is_alive(s); }
+
+    [[nodiscard]] bool is_solvable(unsigned s) const { return is_alive(s) || is_goal(s); }
+
+    [[nodiscard]] unsigned feature_weight(unsigned f) const {
+        return sample_.matrix().feature_cost(f);
+    }
+
+    [[nodiscard]] const std::vector<unsigned>& successors(unsigned s) const {
+        return sample_.transitions().successors(s);
+    }
+
+    //! Generate and write the CNF instance as we go
+    virtual std::pair<bool, CNFWriter> write(std::ostream &os) = 0;
+
 
 protected:
     //! The transition sample data
@@ -95,6 +121,19 @@ protected:
     //! For convenient and performant access, a list of goal and non-goal states
     std::vector<unsigned> goals_, nongoals_;
 
+};
+
+class CNFGenerator : public CNFEncoding {
+public:
+    //!
+    using d1_key = std::tuple<unsigned, unsigned>;
+
+    //! A map from 4 state IDs to the ID of the corresponding D2(s, s', t, t') variable
+    using d2_key = std::tuple<unsigned, unsigned, unsigned, unsigned>;
+    using d2map_t = std::unordered_map<d2_key, cnfvar_t, boost::hash<d2_key>>;
+
+
+protected:
     d2map_t d2ids_;
     std::vector<cnfvar_t> d2vars_;
 
@@ -106,40 +145,18 @@ public:
     //! Some statistics
     unsigned n_selected_clauses;
     unsigned n_d2_clauses;
-    unsigned n_separation_clauses;
     unsigned n_bridge_clauses;
     unsigned n_goal_clauses;
     unsigned n_deadend_clauses;
-    unsigned n_good_tx_clauses;
-    unsigned n_leq_clauses;
 
-    explicit CNFGenerator(const Sample::Sample& sample, const sltp::cnf::Options& options) :
-        sample_(sample),
-        options(options),
-        ns_(sample.matrix().num_states()),
-        nf_(sample.matrix().num_features()),
+    CNFGenerator(const Sample::Sample& sample, const sltp::cnf::Options& options) :
+        CNFEncoding(sample, options),
         n_selected_clauses(0),
         n_d2_clauses(0),
-        n_separation_clauses(0),
         n_bridge_clauses(0),
         n_goal_clauses(0),
-        n_deadend_clauses(0),
-        n_good_tx_clauses(0),
-        n_leq_clauses(0)
-    {
-        for (unsigned s = 0; s < ns_; ++s) {
-            if (is_goal(s)) goals_.push_back(s);
-            else nongoals_.push_back(s);
-        }
-    }
-
-    const std::vector<unsigned>& all_alive() const { return sample_.transitions().all_alive(); }
-
-    bool is_goal(unsigned s) const { return sample_.matrix().goal(s); }
-
-    bool is_alive(unsigned s) const { return sample_.transitions().is_alive(s); }
-
-    bool is_solvable(unsigned s) const { return is_alive(s) || is_goal(s); }
+        n_deadend_clauses(0)
+    {}
 
     bool is_sound_transition(unsigned s, unsigned sprime) const {
         return is_marked_transition(s, sprime);
@@ -178,14 +195,6 @@ public:
         }
     }
 
-    unsigned feature_weight(unsigned f) const {
-        return sample_.matrix().feature_cost(f);
-    }
-
-    const std::vector<unsigned>& successors(unsigned s) const {
-        return sample_.transitions().successors(s);
-    }
-
     //! Return possibly-cached set of features that d1-distinguish s from t
     const std::vector<feature_t>& d1_distinguishing_features(unsigned s, unsigned t) {
         const auto idx = d1idx(s, t);
@@ -220,20 +229,7 @@ public:
         return d2vars_.at(d2id);
     }
 
-    //! Write the desired CNF encoding to the specified file
-    std::pair<bool, CNFWriter> write_encoding(std::ofstream& os);
-
-    //! Generate and write the CNF instance for the standard encoding as we go
-    std::pair<bool, CNFWriter> write_basic_maxsat(std::ostream &os);
-
-    //! Generate and write the CNF instance for the transition-separation encoding as we go
-    std::pair<bool, CNFWriter> write_transition_classification_maxsat(std::ostream &os);
-
-    void compute_equivalence_relations();
-    std::vector<bool> check_feature_dominance();
-
-    boost::container::flat_set<transition_pair>
-    compute_dt(unsigned f);
+    std::pair<bool, CNFWriter> write(std::ostream &os) override;
 };
 
 

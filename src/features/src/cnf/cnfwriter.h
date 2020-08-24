@@ -24,7 +24,7 @@ protected:
 
 public:
     // Variable IDs must start with 1
-    explicit CNFWriter(std::ostream &os, std::ostream* varnamestream = nullptr)
+    CNFWriter(std::ostream &os, std::ostream* varnamestream = nullptr)
         : next_var_id_(1), accumulated_weight_(0), nclauses_(0), os_(os), varnamestream_(varnamestream)
     {
     }
@@ -38,16 +38,16 @@ public:
         return id;
     }
 
-    uint32_t nvars() const { return next_var_id_ - 1; }
+    [[nodiscard]] uint32_t nvars() const { return next_var_id_ - 1; }
 
-    ulong nclauses() const { return nclauses_; }
+    [[nodiscard]] ulong nclauses() const { return nclauses_; }
 
     static inline cnflit_t literal(cnfvar_t var, bool polarity) {
         auto res = static_cast<cnflit_t>(var);
         return polarity ? res : -1*res;
     }
 
-    ulong top() const { return accumulated_weight_ + 1; }
+    [[nodiscard]] ulong top() const { return accumulated_weight_ + 1; }
 
     //! Print the given clause - if weight is negative, it is assumed to be TOP
     void print_clause(const cnfclause_t& clause, unsigned weight = std::numeric_limits<unsigned int>::max()) {

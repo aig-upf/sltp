@@ -23,14 +23,12 @@ set(SOURCE_FILES
 
 set(CNFGEN_SOURCE_FILES
         src/cnfgen.cpp
-        src/cnf/equivalences.h
-        src/cnf/equivalences.cxx
-        src/cnf/generator.h
-        src/cnf/generator.cxx
+        src/cnf/transition_classification
+        src/cnf/equivalences
+        src/cnf/generator
         src/cnf/cnfwriter.h
         src/cnf/d2tree.h
-        src/common/utils.h
-        src/common/utils.cxx
+        src/common/utils
         src/blai/sample.h
         src/blai/matrix.h
         src/blai/transitions.h

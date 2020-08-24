@@ -90,7 +90,7 @@ public:
         return is_state_alive_.at(state);
     }
 
-    const std::vector<unsigned>&  all_alive() const { return alive_states_; }
+    const std::vector<unsigned>& all_alive() const { return alive_states_; }
 
     //! Print a representation of the object to the given stream.
     friend std::ostream& operator<<(std::ostream &os, const TransitionSample& o) { return o.print(os); }
