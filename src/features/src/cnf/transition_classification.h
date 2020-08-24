@@ -19,7 +19,7 @@ public:
             CNFEncoding(sample, options),
             transition_ids_(),
             transition_ids_inv_(),
-            from_trace_to_class_repr_(),
+            class_representatives_(),
             from_transition_to_eq_class_(),
             types_()
     {
@@ -29,6 +29,13 @@ public:
 
     std::pair<bool, CNFWriter> write(std::ostream &os) override;
 
+    inline unsigned get_transition_id(uint16_t s, uint16_t t) const { return transition_ids_.at(state_pair(s, t)); }
+    inline unsigned get_representative_id(unsigned tx) const { return from_transition_to_eq_class_.at(tx); }
+
+    inline unsigned get_class_representative(uint16_t s, uint16_t t) const {
+        return get_representative_id(get_transition_id(s, t));
+    }
+
 
 protected:
     // A mapping from pairs of state to the assigned transition id
@@ -36,8 +43,8 @@ protected:
     // The reverse mapping
     std::vector<state_pair> transition_ids_inv_;
 
-    // A mapping from a full transition trace to the ID of the corresponding equivalence class
-    std::unordered_map<transition_trace, unsigned> from_trace_to_class_repr_;
+    // A list of transition IDs that are the representative of their class
+    std::vector<unsigned> class_representatives_;
 
     // A mapping from the ID of the transition to the ID of its equivalence class
     std::vector<unsigned> from_transition_to_eq_class_;
