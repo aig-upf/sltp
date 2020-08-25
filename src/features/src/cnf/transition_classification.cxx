@@ -431,18 +431,19 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
             cnfclause_t reverse(clause);
 
             clause.push_back(Wr::lit(good_s_sprime, false));
-
             if (is_solvable(tprime)) {
                 clause.push_back(Wr::lit(good_t_tprime, true));
             }
-
             wr.cl(clause);
             n_separation_clauses += 1;
 
-            reverse.push_back(Wr::lit(good_t_tprime, false));
-            if (is_solvable(sprime)) {
-                clause.push_back(Wr::lit(good_s_sprime, true));
-            }
+// TODO UNCOMMENT THIS
+//            reverse.push_back(Wr::lit(good_t_tprime, false));
+//            if (is_solvable(sprime)) {
+//                reverse.push_back(Wr::lit(good_s_sprime, true));
+//            }
+//            wr.cl(reverse);
+//            n_separation_clauses += 1;
             /////////////////////////////
 
 
