@@ -147,7 +147,7 @@ The policy has to be complete with respect to all alive states:
 
 \smallpar{C3'} All transitions chosen as \emph{Good} need to have the same q-value:
 \begin{align}
- V(s) \leq d+1 \land \neg V(s') \leq d \rightarrow -Good(s, s'),&\;\; \text{for $s, s'$ alive, $(s, s') \not\in \badtx$, $d \in [0, D)$.} \tag{\theequation${}^\prime$}
+ V(s) \leq d+1 \land \neg V(s') \leq d \rightarrow \neg Good(s, s'),&\;\; \text{for $s, s'$ alive, $(s, s') \not\in \badtx$, $d \in [0, D)$.} \tag{\theequation${}^\prime$}
 \end{align}
 
 
