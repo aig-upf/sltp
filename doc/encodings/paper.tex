@@ -33,6 +33,8 @@
 %\newcommand{\inlinecite}[1]{\citeauthor{#1}~(\citeyear{#1})}
 %\newcommand{\citealp}[1]{\citeauthor{#1}~\citeyear{#1}}
 
+\newcommand{\smallpar}[1]{{\vspace{10pt}\noindent \bf #1.}}
+
 \newcommand{\free}[1]{\ensuremath{\mathrm{free}(#1)}}
 \newcommand{\vars}{\ensuremath{\mathrm{vars}}}
 \newcommand{\pre}{\ensuremath{\mathrm{pre}}}
@@ -58,6 +60,7 @@
 
 \newcommand{\numtasks}[1]{\small{(#1)}}
 
+\newcommand{\badtx}{\ensuremath{\mathrm{BAD}}}
 
 \setcounter{secnumdepth}{0} %May be changed to 1 or 2 if section numbers are desired.
 
@@ -92,82 +95,118 @@ Encoding is parametrized by
 
 
 \subsection{Terminology}
+We use $T$ to denote the set of all transitions in the training sample.
 A state is called \emph{reachable} if there is a path to it from $s_0$, and
 it is called \emph{solvable} if there is a path from it to a goal
 state.
 A state is \emph{alive} if it is solvable, reachable and not a
 goal state~\cite{frances-et-al-ijcai2019}.
 
+\paragraph{``Bad'' transitions.}
+We use \badtx{} to denote the set of transitions that have been determined at preprocessing as necessarily
+\emph{not} good.
+At the moment, this set contains all transitions that go from an alive to a dead state and, if using
+equivalence relations, all those other transitions in whose equivalence class there is some other ``bad'' transition.
+
 
 \subsection{Variables}
 
 \subsubsection{Main Variables}
 \begin{itemize}
- \item $Good(s, s')$ for $s$ alive, $s'$ solvable.
- Note that if $s$ is alive but $s'$ is not solvable,
- it cannot make sense for a policy to recommend transition $(s, s')$.
+ \item $Good(s, s')$ for $s$ alive, $s'$ solvable and $(s, s') \not\in \badtx$.
 
- \item $Vleq(s, d)$, for $s$ alive, and $d \in [0, D]$.
- $Vleq(s, d)$ stands for $V(s) \leq d$.
- Note that for states $s$ that are a goal, we want $V(s)=0$, hance $V(s)\leq d$ for all $d$.
+ \item $Vleq(s, d)$, for $s$ alive, and $d \in [0, D]$, which stands for $V(s) \leq d$.
+ Note that for states $s$ that are a goal, we want $V(s)=0$, hance $V(s) \leq d$ for all $d$.
  Thus, we can restrict SAT variables $Vleq(s, d)$ to those states $s$ that are alive.
+ We'll use the notation $V(s) \leq d$ in what follows.
 
  \item $Select(f)$, for each feature $f$ in the feature pool.
 \end{itemize}
 
 \subsubsection{Auxiliary Variables}
 \begin{itemize}
- \item $GV(s, s', d) \rightarrow Good(s, s') \land Vleq(s', d)$ for $s, s'$ alive, $d \in [0, D)$.
+ \item $GV(s, s', d) \rightarrow Good(s, s') \land V(s') \leq d$ for $s, s'$ alive, $(s, s') \not\in \badtx$, $d \in [0, D)$.
 \end{itemize}
 
-\subsection{Constraints}
+\newpage
 
-\noindent The policy has to be complete with respect to all alive states:
+\subsection{Hard Constraints}
+
+\smallpar{C1}
+The policy has to be complete with respect to all alive states:
 \begin{align}
-\bigvee_{s' \text{ solvable child of } s} Good(s, s'),&\;\; \text{for $s$ alive.}
+\bigvee_{s' \text{ s.t. } (s, s') \in T \setminus \badtx} Good(s, s'),&\;\; \text{for $s$ alive.}
 \end{align}
 
 
-\noindent Labeling a transition $(s, s')$ as ``good'' necessarily upper-bounds $V(s)$:
+\smallpar{C2-3} Labeling a transition $(s, s')$ as ``good'' necessarily upper-bounds $V(s)$:
 \begin{align}
- Good(s, s') \land V(s') \leq d \rightarrow V(s) \leq d+1,&\;\; \text{for $s, s'$ alive, $d \in [0, D)$.} \\
- Good(s, s') \rightarrow V(s) \leq d+1,&\;\; \text{for $s$ alive, $s'$ goal, $d \in [0, D)$.}
+ Good(s, s') \land V(s') \leq d \rightarrow V(s) \leq d+1,&\;\; \text{for $s, s'$ alive, $(s, s') \not\in \badtx$, $d \in [0, D)$.} \\
+ Good(s, s') \rightarrow V(s) \leq d+1,&\;\; \text{for $s$ alive, $s'$ goal, $(s, s') \not\in \badtx$, $d \in [0, D)$.}
 \end{align}
 
-\noindent All transitions chosen as \emph{Good} need to have the same q-value:
+\smallpar{C3'} All transitions chosen as \emph{Good} need to have the same q-value:
 \begin{align}
- V(s) \leq d+1 \land \neg V(s') \leq d \rightarrow -Good(s, s'),&\;\; \text{for $s, s'$ alive, $d \in [0, D)$.} \tag{\theequation${}^\prime$}
+ V(s) \leq d+1 \land \neg V(s') \leq d \rightarrow -Good(s, s'),&\;\; \text{for $s, s'$ alive, $(s, s') \not\in \badtx$, $d \in [0, D)$.} \tag{\theequation${}^\prime$}
 \end{align}
 
 
-\noindent Any upper bound on $V(s)$ (for $s$ not a goal) needs to be justified:
+\smallpar{C4-5} Any upper bound on $V(s)$ (for $s$ not a goal) needs to be justified:
 \begin{align}
- V(s) \leq d+1 \rightarrow \bigvee_{s' \text{ goal child of } s} Good(s, s') \lor
-                           \bigvee_{s' \text{ alive child of } s} GV(s, s', d),&
-                           \;\; \text{for $s$ alive, $d \in [0, D)$.} \\
+ V(s) \leq d+1 \rightarrow \bigvee_{\substack{
+ s' \text{ goal child of } s\\
+ (s, s') \not\in \badtx}} Good(s, s') \lor
+ \bigvee_{\substack{
+ s' \text{ alive child of } s\\
+ (s, s') \not\in \badtx}} GV(s, s', d),&
+ \;\; \text{for $s$ alive, $d \in [0, D)$.} \\
  \neg V(s) \leq 0,&\;\; \text{for $s$ not a goal.}
 \end{align}
 
-\noindent At least one atom $V(s) \leq d$ is true for each alive state $s$:
+\smallpar{C6}
+At least one atom $V(s) \leq d$ is true for each alive state $s$:
 \begin{align}
  \bigvee_{d \in [0, D]} V(s) \leq d,&\;\; \text{for $s$ alive.}
 \end{align}
 
-\noindent Atoms $V(s) \leq d$ are consistent among them:
+\smallpar{C7}
+Atoms $V(s) \leq d$ are consistent among them:
 \begin{align}
  V(s) \leq d \rightarrow V(s) \leq d+1,&\;\; \text{for $s$ alive, $d \in [0, D)$.}
 \end{align}
 
-\noindent Good transitions can be distinguished from bad transitions:
+\smallpar{C8-9}
+Good transitions can be distinguished from bad transitions.
+Let $(s, s')$ and $(t, t')$ be \emph{representative} transitions
+of two different equivalence classes such that $(s, s') \not\in \badtx$
+(which implies that $s'$ is solvable).
+
 \begin{align}
  Good(s, s') \rightarrow Good(t, t') \lor
- Distinguish(s, s', t, t'),&\;\; \text{for $s, t$ alive, $s', t'$ solvable.} \\
+ Dist(s, s', t, t'),&\;\; \text{for $s, t$ alive, $(t, t') \not\in \badtx$.} \\
  Good(s, s') \rightarrow
- Distinguish(s, s', t, t'),&\;\; \text{for $s, t$ alive, $s'$ solvable, $t'$ unsolvable,}
+ Dist(s, s', t, t'),&\;\; \text{for $s, t$ alive, $(t, t') \in \badtx$.}
 \end{align}
 
-\noindent where $Distinguish(s, s', t, t')$ is merely a presentational shorthand for $\bigvee_{f \in D2(s, s', t, t')} Select(f)$.
+%\begin{align}
+% Good(s, s') \rightarrow Good(t, t') \lor
+% Distinguish(s, s', t, t'),&\;\; \text{for $s, t$ alive, $s', t'$ solvable.} \\
+% Good(s, s') \rightarrow
+% Distinguish(s, s', t, t'),&\;\; \text{for $s, t$ alive, $s'$ solvable, $t'$ unsolvable,}
+%\end{align}
 
+\noindent where $Dist(s, s', t, t')$ is merely a presentational shorthand for $\bigvee_{f \in D2(s, s', t, t')} Select(f)$.
+
+
+% Note that the clauses below are not necessary, as we don't even declare SAT variables Good(s, s') when (s, s') \in BAD
+%\smallpar{C10} Necessarily-bad transitions can be declared as such:
+%\begin{align}
+% \neg Good(s, s'),&\;\; \text{for $(s, s') \in \badtx$.}
+%\end{align}
+
+
+\subsection{Soft Constraints}
+We simply post a constraint $\neg Select(f)$ for each feature $f$ in the pool, with weight equal to the complexity of $f$.
 
 \bibliographystyle{plain}
 % Cross-referenced entries need to go after the entries that cross-reference them
