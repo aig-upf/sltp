@@ -441,21 +441,10 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
             const auto t = tx2pair.first;
             const auto tprime = tx2pair.second;
 
-            const auto d1dist = compute_d1_distinguishing_features(sample_, s, t);
-            const auto d2dist = compute_d2_distinguishing_features(sample_, s, sprime, t, tprime);
-
             cnfclause_t clause{Wr::lit(good_s_sprime, false)};
 
-            // Let's compute first the Selected(f) terms
-            // Either some feature that D1-distinguishes s and t is true
-            for (feature_t f:d1dist) {
-                if (!ignore_features[f]) {
-                    clause.push_back(Wr::lit(var_selected.at(f), true));
-                }
-            }
-
-            // ... or some feature that d2-distinguishes the transitions is true
-            for (feature_t f:d2dist) {
+            // Compute first the Selected(f) terms
+            for (feature_t f:compute_d1d2_distinguishing_features(sample_, s, sprime, t, tprime)) {
                 if (!ignore_features[f]) {
                     clause.push_back(Wr::lit(var_selected.at(f), true));
                 }

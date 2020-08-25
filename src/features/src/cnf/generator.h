@@ -71,6 +71,10 @@ std::vector<feature_t> compute_d1_distinguishing_features(const Sample::Sample& 
 std::vector<feature_t> compute_d2_distinguishing_features(const Sample::Sample& sample,
         unsigned s, unsigned sprime, unsigned t, unsigned tprime);
 
+//! Return a sorted vector with those features that d2-distinguish transition (s, s') from (t, t')
+std::vector<feature_t> compute_d1d2_distinguishing_features(const Sample::Sample& sample,
+                                                          unsigned s, unsigned sprime, unsigned t, unsigned tprime);
+
 struct transition_pair {
     transition_pair(uint16_t s, uint16_t sprime, uint16_t t, uint16_t tprime) :
             s(s), sprime(sprime), t(t), tprime(tprime)

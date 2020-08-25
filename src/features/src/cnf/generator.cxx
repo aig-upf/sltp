@@ -170,12 +170,15 @@ std::pair<bool, CNFWriter> CNFGenerator::write(std::ostream &os) {
     return {false, writer};
 }
 
+bool operator<(const transition_pair& x, const transition_pair& y) {
+    return std::tie(x.s, x.sprime, x.t, x.tprime) < std::tie(y.s, y.sprime, y.t, y.tprime);
+}
 
 //! Return a sorted vector with those features that d1-distinguish s from t
 std::vector<feature_t> compute_d1_distinguishing_features(const Sample::Sample& sample, unsigned s, unsigned t) {
     std::vector<unsigned> features;
     const auto& mat = sample.matrix();
-    for(unsigned f = 0; f < mat.num_features(); ++f) {
+    for (unsigned f = 0; f < mat.num_features(); ++f) {
         auto sf = mat.entry(s, f);
         auto tf = mat.entry(t, f);
         if ((sf == 0) != (tf == 0)) {
@@ -185,11 +188,6 @@ std::vector<feature_t> compute_d1_distinguishing_features(const Sample::Sample& 
     return features;
 }
 
-
-bool operator<(const transition_pair& x, const transition_pair& y) {
-    return std::tie(x.s, x.sprime, x.t, x.tprime) < std::tie(y.s, y.sprime, y.t, y.tprime);
-}
-
 //! Return a sorted vector with those features that d2-distinguish transition (s, s') from (t, t')
 std::vector<feature_t> compute_d2_distinguishing_features(const Sample::Sample& sample,
                                                           unsigned s, unsigned sprime, unsigned t, unsigned tprime) {
@@ -197,11 +195,48 @@ std::vector<feature_t> compute_d2_distinguishing_features(const Sample::Sample& 
     std::vector<unsigned> features;
     const auto& mat = sample.matrix();
 
-    for(unsigned f = 0; f < mat.num_features(); ++f) {
+    for (unsigned f = 0; f < mat.num_features(); ++f) {
         // Store those features that d2-distinguish (s, s') from (t, t'), but do _not_ d1-distinguish s from t
         int sf = mat.entry(s, f);
         int tf = mat.entry(t, f);
         if ((sf == 0) != (tf == 0)) continue; // f d1-distinguishes s from t
+
+        int sprime_f = mat.entry(sprime, f);
+        int tprime_f = mat.entry(tprime, f);
+
+        int type_s = sprime_f - sf; // <0 if DEC, =0 if unaffected, >0 if INC
+        int type_t = tprime_f - tf; // <0 if DEC, =0 if unaffected, >0 if INC
+
+        // Get the sign
+        type_s = (type_s > 0) ? 1 : ((type_s < 0) ? -1 : 0);
+        type_t = (type_t > 0) ? 1 : ((type_t < 0) ? -1 : 0);
+
+        if(type_s != type_t) {
+            features.push_back(f);
+        }
+    }
+
+    return features;
+}
+
+//! Return a sorted vector with those features that either d1-distinguish or d2-distinguish (s, s') from (t, t')
+std::vector<feature_t> compute_d1d2_distinguishing_features(
+        const Sample::Sample& sample,
+        unsigned s, unsigned sprime,
+        unsigned t, unsigned tprime)
+{
+    std::vector<unsigned> features;
+    const auto& mat = sample.matrix();
+    const auto nf = mat.num_features();
+
+    for (unsigned f = 0; f < nf; ++f) {
+        auto sf = mat.entry(s, f);
+        auto tf = mat.entry(t, f);
+
+        if ((sf == 0) != (tf == 0)) {
+            features.push_back(f); // f d1-distinguishes s from t
+            continue;
+        }
 
         int sprime_f = mat.entry(sprime, f);
         int tprime_f = mat.entry(tprime, f);
