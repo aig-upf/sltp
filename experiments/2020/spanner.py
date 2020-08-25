@@ -49,6 +49,7 @@ def experiments():
         prune_redundant_states=False,
         optimal_selection_strategy="complete",
         use_only_alive_unmarked_transitions=True,
+        use_equivalence_classes=True,
         # transition_classification_policy=debug_policy
     )
 

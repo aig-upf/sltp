@@ -25,6 +25,7 @@ def run(config, data, rng):
 
     args += ["--use-only-unmarked-alive-transitions"] if config.use_only_alive_unmarked_transitions else []
     args += ["--distinguish-transitions-locally"] if config.distinguish_transitions_locally else []
+    args += ["--use-equivalence-classes"] if config.use_equivalence_classes else []
 
     retcode = execute([cmd] + args)
 

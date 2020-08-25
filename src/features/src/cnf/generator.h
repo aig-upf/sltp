@@ -18,12 +18,31 @@ struct Options {
         TransitionSeparation
     };
 
+    //! The path of the workspace where output files will be left
     std::string workspace;
-    bool prune_redundant_states;
-    bool verbose;
+
+    //! The type of encoding we want to use
     Encoding encoding;
+
+    //! In the transition-separation encoding, whether we want to exploit the equivalence relation
+    //! among transitions given by the feature pool
+    bool use_equivalence_classes;
+
+    //! Whether to prune states that appear redundant for the given feature pool
+    bool prune_redundant_states;
+
+    //! Whether to be more verbose in the generation of the encoding
+    bool verbose;
+
+    //! In the transition-separation CNF encoding, whether to distinguish good transitions *only from*
+    //! unmarked transitions that start in an alive state
     bool use_only_alive_unmarked_states;
+
+    //! In the transition-separation CNF encoding, whether to distinguish good transitions *only from*
+    //! unmarked transitions that start in the same state as the good transition
     bool distinguish_transitions_locally;
+
+    //! A list of user-provided feature IDs for which we want to enforce selection
     std::vector<unsigned> enforced_features;
 
 

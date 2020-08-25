@@ -60,6 +60,7 @@ def spanner_names(feature):
         "Exists(at,Forall(Inverse(at),man))": "bob-in-empty-loc",
         "Exists(Star(link),Exists(Inverse(at),spanner))": "num-locs-from-which-some-spanner-is-reachable",
         "Exists(Inverse(Star(link)),Exists(Inverse(at),<universe>))": "num-locs-reachable-from-a-loc-with-things",
+        "And(Forall(at,<empty>),useable)": "picked-up-spanners",
     }
     d = extend_namer_to_all_features(base)
     return d.get(s, s)

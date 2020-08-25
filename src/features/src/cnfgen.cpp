@@ -27,30 +27,34 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
                                         "matrix and transition samples.\n\nOptions");
 
     description.add_options()
-            ("help,h", "Display this help message and exit.")
-            ("verbose,v", "Show extra debugging messages.")
+        ("help,h", "Display this help message and exit.")
+        ("verbose,v", "Show extra debugging messages.")
 
-            ("workspace,w", po::value<std::string>()->required(),
-                    "Directory where the input files (feature matrix, transition sample) reside, "
-                    "and where the output .wsat file will be left.")
+        ("workspace,w", po::value<std::string>()->required(),
+                "Directory where the input files (feature matrix, transition sample) reside, "
+                "and where the output .wsat file will be left.")
 
-            ("prune-redundant-states,p",
-                    "Whether to prune those states that appear redundant for the given feature pool.")
+        ("prune-redundant-states,p",
+                "Whether to prune those states that appear redundant for the given feature pool.")
 
-            ("enforce-features,e", po::value<std::string>()->default_value(""),
-             "Comma-separated (no spaces!) list of IDs of feature we want to enforce in the abstraction.")
+        ("enforce-features,e", po::value<std::string>()->default_value(""),
+         "Comma-separated (no spaces!) list of IDs of feature we want to enforce in the abstraction.")
 
-            ("encoding", po::value<std::string>()->default_value("basic"),
-                 "The encoding to be used (options: {basic, d2tree, separation}).")
+        ("encoding", po::value<std::string>()->default_value("basic"),
+             "The encoding to be used (options: {basic, d2tree, separation}).")
 
-            ("use-only-unmarked-alive-transitions",
-             "In the transition-separation CNF encoding, whether to distinguish good transitions *only from*"
-             " unmarked transitions that start in an alive state")
+        ("use-only-unmarked-alive-transitions",
+         "In the transition-separation CNF encoding, whether to distinguish good transitions *only from*"
+         " unmarked transitions that start in an alive state")
 
-            ("distinguish-transitions-locally",
-             "In the transition-separation CNF encoding, whether to distinguish good transitions *only from*"
-             " unmarked transitions starting in the same state")
-            ;
+        ("use-equivalence-classes",
+         "In the transition-separation encoding, whether we want to exploit the equivalence relation "
+         "among transitions given by the feature pool")
+
+        ("distinguish-transitions-locally",
+         "In the transition-separation CNF encoding, whether to distinguish good transitions *only from*"
+         " unmarked transitions starting in the same state")
+    ;
 
     po::variables_map vm;
 
@@ -73,6 +77,7 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
     options.verbose = vm.count("verbose") > 0;
     options.use_only_alive_unmarked_states = vm.count("use-only-unmarked-alive-transitions") > 0;
     options.distinguish_transitions_locally = vm.count("distinguish-transitions-locally") > 0;
+    options.use_equivalence_classes = vm.count("use-equivalence-classes") > 0;
 
     auto enc = vm["encoding"].as<std::string>();
     if (enc == "basic") options.encoding = sltp::cnf::Options::Encoding::Basic;

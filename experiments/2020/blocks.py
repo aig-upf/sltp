@@ -33,6 +33,7 @@ def experiments():
         complete_only_wrt_optimal=True,
         prune_redundant_states=False,
         optimal_selection_strategy="complete",
+        use_equivalence_classes=True,
     )
 
     exps["clear_fn"] = update_dict(
@@ -77,7 +78,8 @@ def experiments():
         maxsat_encoding="separation",
         complete_only_wrt_optimal=True,
         prune_redundant_states=False,
-        optimal_selection_strategy="complete"
+        optimal_selection_strategy="complete",
+        use_equivalence_classes=True,
     )
 
     exps["on_fn"] = update_dict(
@@ -113,7 +115,8 @@ def experiments():
         maxsat_encoding="separation",
         complete_only_wrt_optimal=True,
         prune_redundant_states=False,
-        optimal_selection_strategy="complete"
+        optimal_selection_strategy="complete",
+        use_equivalence_classes=True,
     )
 
     return exps
