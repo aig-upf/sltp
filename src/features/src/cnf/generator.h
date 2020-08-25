@@ -35,10 +35,6 @@ struct Options {
     bool verbose;
 
     //! In the transition-separation CNF encoding, whether to distinguish good transitions *only from*
-    //! unmarked transitions that start in an alive state
-    bool use_only_alive_unmarked_states;
-
-    //! In the transition-separation CNF encoding, whether to distinguish good transitions *only from*
     //! unmarked transitions that start in the same state as the good transition
     bool distinguish_transitions_locally;
 
@@ -210,11 +206,7 @@ public:
             assert(is_alive(s));
             return sample_.transitions().unmarked_transitions_starting_at(s);
         } else {
-            if (options.use_only_alive_unmarked_states) {
-                return sample_.transitions().unmarked_and_alive_transitions();
-            } else {
-                return sample_.transitions().unmarked_transitions();
-            }
+            return sample_.transitions().unmarked_transitions();
         }
     }
 

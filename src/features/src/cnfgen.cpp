@@ -43,10 +43,6 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
         ("encoding", po::value<std::string>()->default_value("basic"),
              "The encoding to be used (options: {basic, d2tree, separation}).")
 
-        ("use-only-unmarked-alive-transitions",
-         "In the transition-separation CNF encoding, whether to distinguish good transitions *only from*"
-         " unmarked transitions that start in an alive state")
-
         ("use-equivalence-classes",
          "In the transition-separation encoding, whether we want to exploit the equivalence relation "
          "among transitions given by the feature pool")
@@ -75,7 +71,6 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
     options.workspace = vm["workspace"].as<std::string>();
     options.prune_redundant_states = vm.count("prune-redundant-states") > 0;
     options.verbose = vm.count("verbose") > 0;
-    options.use_only_alive_unmarked_states = vm.count("use-only-unmarked-alive-transitions") > 0;
     options.distinguish_transitions_locally = vm.count("distinguish-transitions-locally") > 0;
     options.use_equivalence_classes = vm.count("use-equivalence-classes") > 0;
 
