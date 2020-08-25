@@ -78,35 +78,56 @@
 % nouns, adverbs, adjectives should be capitalized, including both words in hyphenated terms, while
 % articles, conjunctions, and prepositions are lower case unless they
 % directly follow a colon or long dash
-\author{GFM}
+%\author{GFM}
 
 
 \begin{document}
 
 \maketitle
 
-\section{One-Shot Learning of Generalized Features \& Policy}
+\section{Learning of Generalized Features \& Policy}
 
 Encoding is parametrized by
 \begin{itemize}
- \item $D$: maximum allowed value for $V(s)$ for any $s$ in the training set.
- \item max. concept complexity.
+ \item Pool $F$ of description logic features $f$, each with given feature complexity $\mathcal{K}(f)$.
+ \item Training set consisting of a sample of transitions from a number of instances of the same domain.
+       At the moment we're assuming the sample is complete, and we have full information on whether each state
+       in the sample is a goal state, an unsolvable state, or otherwise (see below for definitions). We also have access
+       to the minimum distance to a goal $V^*(s)$ for each state $s$.
+ \item $D$: maximum allowed value for $V(s)$ for any $s$ in the training set.\footnote{This is to be improved based on $V^*(s)$.}
 \end{itemize}
 
 
 \subsection{Terminology}
-We use $T$ to denote the set of all transitions in the training sample.
 A state is called \emph{reachable} if there is a path to it from $s_0$, and
 it is called \emph{solvable} if there is a path from it to a goal
 state.
 A state is \emph{alive} if it is solvable, reachable and not a
 goal state~\cite{frances-et-al-ijcai2019}.
 
+We use $T$ to denote the set of all transitions $(s, s')$ in the training sample such that $s$ is alive.
+
+\subsection{Improvements}
+
+\paragraph{Non-distinguishability of transitions as an equivalence relation.}
+Any fixed, given pool of features $F$ implicitly defines an equivalence relation where to transitions are
+equivalent iff they cannot be distinguished \emph{by any feature in $F$}.
+If two transitions cannot be distinguished by any feature, then clearly either the policy computed by the SAT solver
+considers all of them as ``good'', or as ``bad''.
+We'll exploit this by using one single SAT variable to denote whether \emph{all transitions in a given equivalence
+class} are good or bad. When exploiting this notion of equivalence (which is implemented as an optional feature of
+the CNF generator), then every mention below to SAT variable $Good(s, s')$ needs to be read as $Good(s_{\star}, s_{\star}')$,
+where $(s_{\star}, s_{\star}')$ is the \emph{representative} transition of the equivalence class to which $(s, s')$ belongs.
+
 \paragraph{``Bad'' transitions.}
 We use \badtx{} to denote the set of transitions that have been determined at preprocessing as necessarily
 \emph{not} good.
-At the moment, this set contains all transitions that go from an alive to a dead state and, if using
+At the moment, this set contains all transitions that go from an alive to an unsolvable state and, if using
 equivalence relations, all those other transitions in whose equivalence class there is some other ``bad'' transition.
+
+
+\paragraph{Feature dominance.}
+Work In Progress.\footnote{This is implemented, but needs to be adapted to the equivalence classes improvement.}
 
 
 \subsection{Variables}
@@ -115,17 +136,19 @@ equivalence relations, all those other transitions in whose equivalence class th
 \begin{itemize}
  \item $Good(s, s')$ for $s$ alive, $s'$ solvable and $(s, s') \not\in \badtx$.
 
- \item $Vleq(s, d)$, for $s$ alive, and $d \in [0, D]$, which stands for $V(s) \leq d$.
- Note that for states $s$ that are a goal, we want $V(s)=0$, hance $V(s) \leq d$ for all $d$.
- Thus, we can restrict SAT variables $Vleq(s, d)$ to those states $s$ that are alive.
- We'll use the notation $V(s) \leq d$ in what follows.
+ \item $V(s) \leq d$ for $s$ alive, and $d \in [0, D]$.
+ Note that for states $s$ that are a goal, we know $V(s)=0$, hence $V(s) \leq d$ for all $d$,
+ and for states $s$ that are unsolvable, we know that $V(s) \not\leq d$ for all $d$.
+ Thus, we can restrict SAT variables $V(s) \leq d$ to those states $s$ that are alive.
 
  \item $Select(f)$, for each feature $f$ in the feature pool.
 \end{itemize}
 
 \subsubsection{Auxiliary Variables}
 \begin{itemize}
- \item $GV(s, s', d) \rightarrow Good(s, s') \land V(s') \leq d$ for $s, s'$ alive, $(s, s') \not\in \badtx$, $d \in [0, D)$.
+ \item We'll use $GV(s, s', d)$ to denote that $Good(s, s')$ and $V(s') \leq d$. This is enforced with the constraint
+ $GV(s, s', d) \rightarrow Good(s, s') \land V(s') \leq d$ for $s, s'$ alive, $(s, s') \not\in \badtx$, $d \in [0, D)$.
+ The other direction of the implication is not necessary.
 \end{itemize}
 
 \newpage
@@ -179,7 +202,7 @@ Atoms $V(s) \leq d$ are consistent among them:
 Good transitions can be distinguished from bad transitions.
 Let $(s, s')$ and $(t, t')$ be \emph{representative} transitions
 of two different equivalence classes such that $(s, s') \not\in \badtx$
-(which implies that $s'$ is solvable).
+(which implies that $s'$ is solvable). Then,
 
 \begin{align}
  Good(s, s') \rightarrow Good(t, t') \lor
@@ -188,25 +211,11 @@ of two different equivalence classes such that $(s, s') \not\in \badtx$
  Dist(s, s', t, t'),&\;\; \text{for $s, t$ alive, $(t, t') \in \badtx$.}
 \end{align}
 
-%\begin{align}
-% Good(s, s') \rightarrow Good(t, t') \lor
-% Distinguish(s, s', t, t'),&\;\; \text{for $s, t$ alive, $s', t'$ solvable.} \\
-% Good(s, s') \rightarrow
-% Distinguish(s, s', t, t'),&\;\; \text{for $s, t$ alive, $s'$ solvable, $t'$ unsolvable,}
-%\end{align}
-
-\noindent where $Dist(s, s', t, t')$ is merely a presentational shorthand for $\bigvee_{f \in D2(s, s', t, t')} Select(f)$.
-
-
-% Note that the clauses below are not necessary, as we don't even declare SAT variables Good(s, s') when (s, s') \in BAD
-%\smallpar{C10} Necessarily-bad transitions can be declared as such:
-%\begin{align}
-% \neg Good(s, s'),&\;\; \text{for $(s, s') \in \badtx$.}
-%\end{align}
+\noindent where $Dist(s, s', t, t')$ is shorthand for $\bigvee_{f \in D2(s, s', t, t')} Select(f)$.
 
 
 \subsection{Soft Constraints}
-We simply post a constraint $\neg Select(f)$ for each feature $f$ in the pool, with weight equal to the complexity of $f$.
+We simply post a constraint $\neg Select(f)$ for each feature $f$ in the pool, with weight equal to its complexity $\mathcal{K}(f)$.
 
 \bibliographystyle{plain}
 % Cross-referenced entries need to go after the entries that cross-reference them
