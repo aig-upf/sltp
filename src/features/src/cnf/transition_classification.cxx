@@ -37,7 +37,6 @@ sltp::cnf::transition_denotation compute_transition_denotation(feature_value_t s
 void TransitionClassificationEncoding::compute_equivalence_relations() {
     const auto& mat = sample_.matrix();
 
-
     // A mapping from a full transition trace to the ID of the corresponding equivalence class
     std::unordered_map<transition_trace, unsigned> from_trace_to_class_repr;
 
@@ -51,6 +50,18 @@ void TransitionClassificationEncoding::compute_equivalence_relations() {
 
             // Store the type of the transition
             types_.push_back(is_solvable(sprime) ? transition_type::alive_to_solvable : transition_type::alive_to_dead);
+
+            if (!is_solvable(sprime)) { // An alive-to-dead transition cannot be Good
+                necessarily_bad_transitions_.emplace(id);
+            }
+
+            if (!options.use_equivalence_classes) {
+                // If we don't want to use equivalence classes, we simply create one fictitious equivalence class
+                // for each transition, and proceed as usual
+                from_transition_to_eq_class_.push_back(id);
+                class_representatives_.push_back(id);
+                continue;
+            }
 
             // Compute the trace of the transition for all features
             transition_trace trace(nf_);
@@ -79,8 +90,24 @@ void TransitionClassificationEncoding::compute_equivalence_relations() {
         }
     }
 
+    // All transitions that belong to some class where at least one transition must be bad, must be bad
+    std::unordered_set<unsigned> necessarily_bad_classes;
+    for (const auto id:necessarily_bad_transitions_) {
+        necessarily_bad_classes.insert(get_representative_id(id));
+    }
+
+    for (unsigned id=0; id < transition_ids_.size(); ++id) {
+        auto repr = get_representative_id(id);
+        if (necessarily_bad_classes.find(repr) != necessarily_bad_classes.end()) {
+            necessarily_bad_transitions_.insert(id);
+        }
+    }
+
+    // Print some stats
     std::cout << "Number of transitions: " << transition_ids_.size() << std::endl;
     std::cout << "Number of equivalence classes: " << class_representatives_.size() << std::endl;
+    std::cout << "Number of necessarily bad classes/transitions: " << necessarily_bad_classes.size()
+              << "/" << necessarily_bad_transitions_.size() << std::endl;
 }
 
 
@@ -167,7 +194,7 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
 
     CNFWriter wr(os, &allvarsstream);
 
-    const unsigned max_d = 10; // TODO Adjust this
+    const unsigned max_d = 25; // TODO Adjust this
 
     // Keep a map `good_tx_vars` from transition IDs to SAT variable IDs:
     std::unordered_map<unsigned, cnfvar_t> good_vars;
@@ -236,10 +263,10 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
         // where s is alive and s' iterates over all children of s that are solvable
         cnfclause_t clause;
         for (unsigned sprime:successors(s)) {
-            if (!is_solvable(sprime)) continue; // alive-to-unsolvable transitions cannot be good
-
             auto tx = get_transition_id(s, sprime);
             auto repr = get_representative_id(tx);
+
+            if (is_necessarily_bad(tx)) continue; // This includes  alive-to-dead transitions
 
             cnfvar_t good_s_sprime = 0;
             if (tx == repr) {
@@ -269,6 +296,9 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
         }
 
         // Add clauses (1) for this state
+        if (clause.empty()) {
+            throw std::runtime_error("State #" + std::to_string(s) + " has no successor that can be good");
+        }
         wr.cl(clause);
         ++n_good_tx_clauses;
     }
@@ -290,9 +320,10 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
         const auto& succs = successors(s);
         for (unsigned i=0; i < succs.size(); ++i) {
             unsigned sprime = succs[i];
-            if (!is_solvable(sprime)) continue;
-            auto good_s_sprime = good_vars.at(get_class_representative(s, sprime));
+            auto tx = get_transition_id(s, sprime);
+            if (is_necessarily_bad(tx)) continue; // This includes  alive-to-dead transitions
 
+            auto good_s_sprime = good_vars.at(get_class_representative(s, sprime));
 
             if (is_goal(sprime)) {
                 for (unsigned d=0; d < max_d; ++d) {
@@ -338,6 +369,9 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
         for (unsigned d=0; d < max_d; ++d) {
             cnfclause_t clause{Wr::lit(vleqs[s][d+1], false)};
             for (unsigned sprime:successors(s)) {
+                auto tx = get_transition_id(s, sprime);
+                if (is_necessarily_bad(tx)) continue;
+
                 auto good_s_sprime = good_vars.at(get_class_representative(s, sprime));
 
 
@@ -347,7 +381,7 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
             wr.cl(clause);
             ++n_justification_clauses;
         }
-        wr.cl({Wr::lit(vleqs[s][0], false)});  // s is not a goal
+        wr.cl({Wr::lit(vleqs[s][0], false)});  // (5) if s is not a goal, then -V(s) <= 0
         ++n_justification_clauses;
 
 
@@ -396,22 +430,21 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
         const auto& tx1pair = transition_ids_inv_.at(tx1);
         const auto s = tx1pair.first;
         const auto sprime = tx1pair.second;
+        const auto tx1_is_bad = is_necessarily_bad(tx1);
+        if (tx1_is_bad) continue;
+
         auto good_s_sprime = good_vars.at(tx1);
 
-        for (std::size_t j = i+1; j < nclasses; ++j) {
+        for (std::size_t j=0; j < nclasses; ++j) {
             const auto tx2 = class_representatives_[j];
-            const auto& tx2pair = transition_ids_inv_.at(tx1);
-            const auto t = tx1pair.first;
-            const auto tprime = tx1pair.second;
-            auto good_t_tprime = good_vars.at(tx2);
+            const auto& tx2pair = transition_ids_inv_.at(tx2);
+            const auto t = tx2pair.first;
+            const auto tprime = tx2pair.second;
 
-
-
-            /////////////////////////////
             const auto d1dist = compute_d1_distinguishing_features(sample_, s, t);
             const auto d2dist = compute_d2_distinguishing_features(sample_, s, sprime, t, tprime);
 
-            cnfclause_t clause;
+            cnfclause_t clause{Wr::lit(good_s_sprime, false)};
 
             // Let's compute first the Selected(f) terms
             // Either some feature that D1-distinguishes s and t is true
@@ -428,31 +461,17 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
                 }
             }
 
-            cnfclause_t reverse(clause);
-
-            clause.push_back(Wr::lit(good_s_sprime, false));
-            if (is_solvable(tprime)) {
+            if (!is_necessarily_bad(tx2)) {
+                auto good_t_tprime = good_vars.at(tx2);
                 clause.push_back(Wr::lit(good_t_tprime, true));
             }
             wr.cl(clause);
             n_separation_clauses += 1;
-
-// TODO UNCOMMENT THIS
-//            reverse.push_back(Wr::lit(good_t_tprime, false));
-//            if (is_solvable(sprime)) {
-//                reverse.push_back(Wr::lit(good_s_sprime, true));
-//            }
-//            wr.cl(reverse);
-//            n_separation_clauses += 1;
-            /////////////////////////////
-
-
         }
     }
 
 
-
-    std::cout << "Generating weighted selected constraints for " << var_selected.size() << " features" << std::endl;
+    std::cout << "Posting weighted selected constraints for " << var_selected.size() << " features" << std::endl;
     for (unsigned f = 0; f < nf_; ++f) {
         if (!ignore_features[f]) {
             wr.cl({Wr::lit(var_selected[f], false)}, feature_weight(f));
@@ -465,10 +484,10 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
     std::cout << "A total of " << wr.nclauses() << " clauses were created" << std::endl;
     std::cout << "\t(Weighted) Select(f): " << n_selected_clauses << std::endl;
     std::cout << "\tPolicy completeness [1]: " << n_good_tx_clauses << std::endl;
-    std::cout << "\tUpper-bounding V(s) clauses [2,3]: " << n_upper_bound_clauses << std::endl;
-    std::cout << "\tClauses justifying V(s) bounds [4]: " << n_justification_clauses << std::endl;
-    std::cout << "\tV(s)<=d consistency [5]: " << n_leq_clauses << std::endl;
-    std::cout << "\tTransition-separation clauses [6,7]: " << n_separation_clauses << std::endl;
+    std::cout << "\tUpper-bounding V(s) clauses [2,3,3']: " << n_upper_bound_clauses << std::endl;
+    std::cout << "\tClauses justifying V(s) bounds [4,5]: " << n_justification_clauses << std::endl;
+    std::cout << "\tV(s)<=d consistency [6,7]: " << n_leq_clauses << std::endl;
+    std::cout << "\tTransition-separation clauses [8,9]: " << n_separation_clauses << std::endl;
     std::cout << "\tGV(s, s', d) auxiliary clauses: " << n_gv_aux_clauses << std::endl;
     assert(wr.nclauses() == n_selected_clauses + n_good_tx_clauses + n_upper_bound_clauses + n_justification_clauses
                             + n_leq_clauses + n_separation_clauses + n_gv_aux_clauses);

@@ -21,7 +21,8 @@ public:
             transition_ids_inv_(),
             class_representatives_(),
             from_transition_to_eq_class_(),
-            types_()
+            types_(),
+            necessarily_bad_transitions_()
     {
         compute_equivalence_relations();
     }
@@ -30,12 +31,16 @@ public:
     std::pair<bool, CNFWriter> write(std::ostream &os) override;
 
     inline unsigned get_transition_id(uint16_t s, uint16_t t) const { return transition_ids_.at(state_pair(s, t)); }
+
     inline unsigned get_representative_id(unsigned tx) const { return from_transition_to_eq_class_.at(tx); }
 
     inline unsigned get_class_representative(uint16_t s, uint16_t t) const {
         return get_representative_id(get_transition_id(s, t));
     }
 
+    inline bool is_necessarily_bad(unsigned tx) const {
+        return necessarily_bad_transitions_.find(tx) != necessarily_bad_transitions_.end();
+    }
 
 protected:
     // A mapping from pairs of state to the assigned transition id
@@ -51,6 +56,8 @@ protected:
 
     // A mapping from the ID of the transition to its transition type
     std::vector<transition_type> types_;
+
+    std::unordered_set<unsigned> necessarily_bad_transitions_;
 
     //!
     void compute_equivalence_relations();
