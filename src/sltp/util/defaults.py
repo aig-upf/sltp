@@ -192,6 +192,10 @@ def generate_experiment(expid, domain_dir, domain, **kwargs):
         # among transitions given by the feature pool
         use_equivalence_classes=False,
 
+        # In the transition-separation encoding, whether we want to exploit the dominance among features to ignore
+        # dominated features and reduce the size of the encoding
+        use_feature_dominance=False,
+
         # The slack value for the maximum allowed value for V_pi(s) = slack * V^*(s)
         v_slack=2,
     )

@@ -51,6 +51,10 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
          "In the transition-separation encoding, whether we want to exploit the equivalence relation "
          "among transitions given by the feature pool")
 
+        ("use-feature-dominance",
+         "In the transition-separation encoding, whether we want to exploit the dominance among features to ignore "
+         "dominated features and reduce the size of the encoding.")
+
         ("distinguish-transitions-locally",
          "In the transition-separation CNF encoding, whether to distinguish good transitions *only from*"
          " unmarked transitions starting in the same state")
@@ -77,6 +81,7 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
     options.verbose = vm.count("verbose") > 0;
     options.distinguish_transitions_locally = vm.count("distinguish-transitions-locally") > 0;
     options.use_equivalence_classes = vm.count("use-equivalence-classes") > 0;
+    options.use_feature_dominance = vm.count("use-feature-dominance") > 0;
     options.v_slack = vm["v_slack"].as<double>();
 
     auto enc = vm["encoding"].as<std::string>();

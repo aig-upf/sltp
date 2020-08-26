@@ -26,7 +26,11 @@ struct Options {
     //! among transitions given by the feature pool
     bool use_equivalence_classes;
 
-    //! Whether to prune states that appear redundant for the given feature pool
+    //! In the transition-separation encoding, whether we want to exploit the dominance among features to ignore
+    //! dominated features and reduce the size of the encoding.
+    bool use_feature_dominance;
+
+    //! In the AAAI19 encoding, whether to prune states that appear redundant for the given feature pool
     bool prune_redundant_states;
 
     //! Whether to be more verbose in the generation of the encoding
@@ -72,15 +76,15 @@ std::vector<feature_t> compute_d2_distinguishing_features(const Sample::Sample& 
 std::vector<feature_t> compute_d1d2_distinguishing_features(const Sample::Sample& sample,
                                                           unsigned s, unsigned sprime, unsigned t, unsigned tprime);
 
+bool are_transitions_d1d2_distinguished(int s_f, int sprime_f, int t_f, int tprime_f);
+
 struct transition_pair {
-    transition_pair(uint16_t s, uint16_t sprime, uint16_t t, uint16_t tprime) :
-            s(s), sprime(sprime), t(t), tprime(tprime)
+    transition_pair(uint32_t  tx1, uint32_t  tx2) :
+            tx1(tx1), tx2(tx2)
     {}
 
-    uint16_t s;
-    uint16_t sprime;
-    uint16_t t;
-    uint16_t tprime;
+    uint32_t tx1;
+    uint32_t tx2;
 };
 
 

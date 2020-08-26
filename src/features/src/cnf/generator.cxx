@@ -4,7 +4,7 @@
 
 
 bool operator<(const transition_pair& x, const transition_pair& y) {
-    return std::tie(x.s, x.sprime, x.t, x.tprime) < std::tie(y.s, y.sprime, y.t, y.tprime);
+    return std::tie(x.tx1, x.tx2) < std::tie(y.tx1, y.tx2);
 }
 
 //! Return a sorted vector with those features that d1-distinguish s from t
@@ -52,6 +52,19 @@ std::vector<feature_t> compute_d2_distinguishing_features(const Sample::Sample& 
     return features;
 }
 
+bool are_transitions_d1d2_distinguished(int s_f, int sprime_f, int t_f, int tprime_f) {
+    if ((s_f == 0) != (t_f == 0)) return true;
+
+    int type_s = sprime_f - s_f; // <0 if DEC, =0 if unaffected, >0 if INC
+    int type_t = tprime_f - t_f; // <0 if DEC, =0 if unaffected, >0 if INC
+
+    // Get the sign
+    type_s = (type_s > 0) ? 1 : ((type_s < 0) ? -1 : 0);
+    type_t = (type_t > 0) ? 1 : ((type_t < 0) ? -1 : 0);
+
+    return type_s != type_t;
+}
+
 //! Return a sorted vector with those features that either d1-distinguish or d2-distinguish (s, s') from (t, t')
 std::vector<feature_t> compute_d1d2_distinguishing_features(
         const Sample::Sample& sample,
@@ -63,25 +76,8 @@ std::vector<feature_t> compute_d1d2_distinguishing_features(
     const auto nf = mat.num_features();
 
     for (unsigned f = 0; f < nf; ++f) {
-        auto sf = mat.entry(s, f);
-        auto tf = mat.entry(t, f);
-
-        if ((sf == 0) != (tf == 0)) {
-            features.push_back(f); // f d1-distinguishes s from t
-            continue;
-        }
-
-        int sprime_f = mat.entry(sprime, f);
-        int tprime_f = mat.entry(tprime, f);
-
-        int type_s = sprime_f - sf; // <0 if DEC, =0 if unaffected, >0 if INC
-        int type_t = tprime_f - tf; // <0 if DEC, =0 if unaffected, >0 if INC
-
-        // Get the sign
-        type_s = (type_s > 0) ? 1 : ((type_s < 0) ? -1 : 0);
-        type_t = (type_t > 0) ? 1 : ((type_t < 0) ? -1 : 0);
-
-        if(type_s != type_t) {
+        if (are_transitions_d1d2_distinguished(
+                mat.entry(s, f), mat.entry(sprime, f), mat.entry(t, f), mat.entry(tprime, f))) {
             features.push_back(f);
         }
     }

@@ -3,7 +3,7 @@
 
 #include "generator.h"
 
-#include <boost/container/flat_set.hpp>
+//#include <boost/container/flat_set.hpp>
 
 namespace sltp::cnf {
 
@@ -38,6 +38,8 @@ public:
     inline unsigned get_class_representative(uint16_t s, uint16_t t) const {
         return get_representative_id(get_transition_id(s, t));
     }
+
+    inline const state_pair& get_state_pair(unsigned tx) const { return transition_ids_inv_.at(tx); }
 
     inline bool is_necessarily_bad(unsigned tx) const {
         return necessarily_bad_transitions_.find(tx) != necessarily_bad_transitions_.end();
@@ -84,8 +86,8 @@ protected:
     std::vector<bool> check_feature_dominance();
 
 
-    //!
-    boost::container::flat_set<transition_pair> compute_dt(unsigned f);
+    //! Return DT(f), the set of pairs of transitions that are distinguished by the given feature f
+    std::vector<transition_pair> compute_dt(unsigned f);
 
 };
 

@@ -13,20 +13,6 @@
 namespace sltp::cnf {
 
 
-bool are_transitions_distinguished(int s_f, int sprime_f, int t_f, int tprime_f) {
-    if ((s_f == 0) != (t_f == 0)) return true;
-
-    int type_s = sprime_f - s_f; // <0 if DEC, =0 if unaffected, >0 if INC
-    int type_t = tprime_f - t_f; // <0 if DEC, =0 if unaffected, >0 if INC
-
-    // Get the sign
-    type_s = (type_s > 0) ? 1 : ((type_s < 0) ? -1 : 0);
-    type_t = (type_t > 0) ? 1 : ((type_t < 0) ? -1 : 0);
-
-    return type_s != type_t;
-}
-
-
 using feature_value_t = Sample::FeatureMatrix::feature_value_t;
 sltp::cnf::transition_denotation compute_transition_denotation(feature_value_t s_f, feature_value_t sprime_f) {
     int type_s = (int) sprime_f - (int) s_f; // <0 if DEC, =0 if unaffected, >0 if INC
@@ -117,35 +103,41 @@ check_feature_dominance() {
     const auto& mat = sample_.matrix();
 
     std::vector<bool> dominated(nf_, false);
-    return dominated;
+    if (!options.use_feature_dominance) return dominated;  // No feature will be considered as dominated
 
-//    std::cout << "Computing sets DT(f)... " << std::endl;
-//    std::vector<boost::container::flat_set<transition_pair>> dt(nfeatures);
-//    for (unsigned f1 = 0; f1 < nfeatures; ++f1) {
-//        dt[f1] = compute_dt(f1);
-//    }
+    std::cout << "Computing sets DT(f)... " << std::endl;
+    std::vector<std::vector<transition_pair>> dt(nf_);
+//    std::vector<boost::container::flat_set<transition_pair>> dt(nf_);
+    for (unsigned f1 = 0; f1 < nf_; ++f1) {
+        dt[f1] = compute_dt(f1);
+    }
 
     std::cout << "Computing feature-dominance relations... " << std::endl;
+
+    //! The computation and manipulation of the sets DT(f) below, notably the use of std::includes, requires that
+    //! the vector of transition IDs is sorted
+    assert(std::is_sorted(class_representatives_.begin(), class_representatives_.end()));
+
     unsigned ndominated = 0;
     for (unsigned f1 = 0; f1 < nf_; ++f1) {
         if (dominated[f1]) continue;
 
-        std::cout << "f=" << f1 << std::endl;
-        const auto d2_f1 = compute_dt(f1);
-//        const auto& d2_f1 = dt[f1];
+//        std::cout << "f=" << f1 << std::endl;
+//        const auto d2_f1 = compute_dt(f1);
+        const auto& d2_f1 = dt[f1];
         for (unsigned f2 = f1+1; f2 < nf_; ++f2) {
             if (dominated[f2]) continue;
             if (feature_weight(f1) > feature_weight(f2)) throw std::runtime_error("Features not ordered by complexity");
 
-            const auto d2_f2 = compute_dt(f2);
-//            const auto& d2_f2 = dt[f2];
+//            const auto d2_f2 = compute_dt(f2);
+            const auto& d2_f2 = dt[f2];
             if (d2_f2.size() <= d2_f1.size() && std::includes(d2_f1.begin(), d2_f1.end(), d2_f2.begin(), d2_f2.end())) {
 //                std::cout << "Feat. " << mat.feature_name(f1) << " dominates " << mat.feature_name(f2) << std::endl;
                 ++ndominated;
                 dominated[f2] = true;
-            } else if (feature_weight(f1) == feature_weight(f2) &&
-                       d2_f1.size() <= d2_f2.size() && std::includes(d2_f2.begin(), d2_f2.end(), d2_f1.begin(), d2_f1.end())
-                    ) {
+
+            } else if (feature_weight(f1) == feature_weight(f2) && d2_f1.size() <= d2_f2.size()
+                      && std::includes(d2_f2.begin(), d2_f2.end(), d2_f1.begin(), d2_f1.end())) {
 //                std::cout << "Feat. " << mat.feature_name(f1) << " dominates " << mat.feature_name(f2) << std::endl;
                 ++ndominated;
                 dominated[f1] = true;
@@ -157,28 +149,33 @@ check_feature_dominance() {
     return dominated;
 }
 
-boost::container::flat_set<transition_pair> TransitionClassificationEncoding::
+std::vector<transition_pair> TransitionClassificationEncoding::
 compute_dt(unsigned f) {
     const auto& mat = sample_.matrix();
 
-    boost::container::flat_set<transition_pair> d2prime;
+//    boost::container::flat_set<transition_pair> dt;
+    std::vector<transition_pair> dt;
 
-    for (const auto s:all_alive()) {
-        for (const auto t:all_alive()) {
-            for (unsigned sprime:successors(s)) {
-                if (!is_solvable(sprime)) continue;
+    for (const auto tx1:class_representatives_) {
+        if (is_necessarily_bad(tx1)) continue;
+        const auto& tx1pair = get_state_pair(tx1);
+        const auto s = tx1pair.first;
+        const auto sprime = tx1pair.second;
 
-                for (unsigned tprime:successors(t)) {
-                    if (are_transitions_distinguished(
-                            mat.entry(s, f), mat.entry(sprime, f), mat.entry(t, f), mat.entry(tprime, f))) {
-                        d2prime.emplace(s, sprime, t, tprime);
-                    }
-                }
+
+        for (const auto tx2:class_representatives_) {
+            const auto& tx2pair = get_state_pair(tx2);
+            const auto t = tx2pair.first;
+            const auto tprime = tx2pair.second;
+
+            if (are_transitions_d1d2_distinguished(
+                    mat.entry(s, f), mat.entry(sprime, f), mat.entry(t, f), mat.entry(tprime, f))) {
+                dt.emplace_back(tx1, tx2);
             }
         }
     }
-//    std::cout << "DT(" << f << ") has " << d2prime.size() << " elements." << std::endl;
-    return d2prime;
+//    std::cout << "DT(" << f << ") has " << dt.size() << " elements." << std::endl;
+    return dt;
 }
 
 
@@ -211,6 +208,7 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
     // Keep a map from each feature index to the SAT variable ID of Selected(f)
     std::vector<cnfvar_t> var_selected;
 
+    unsigned n_select_vars = 0;
     unsigned n_vleq_vars = 0;
     unsigned n_upper_bound_clauses = 0;
     unsigned n_justification_clauses = 0;
@@ -228,6 +226,7 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
             auto v = wr.var("Select(" + sample_.matrix().feature_name(f) + ")");
             var_selected.push_back(v);
             selected_map_stream << f << "\t" << v << "\t" << sample_.matrix().feature_name(f) << std::endl;
+            ++n_select_vars;
 
         } else {
             var_selected.push_back(std::numeric_limits<uint32_t>::max());
@@ -309,12 +308,12 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
 
     // From this point on, no more variables will be created. Print total count.
     std::cout << "A total of " << wr.nvars() << " variables were created" << std::endl;
-    std::cout << "\tSelect(f): " << var_selected.size() << std::endl;
+    std::cout << "\tSelect(f): " << n_select_vars << std::endl;
     std::cout << "\tGood(s, s'): " << good_vars.size() << std::endl;
     std::cout << "\tV(s) <= d: " << n_vleq_vars << std::endl;
     std::cout << "\tGV(s, s', d): " << good_and_vleq_vars.size() << std::endl;
 
-    assert(wr.nvars() == var_selected.size() + good_vars.size() + n_vleq_vars + good_and_vleq_vars.size());
+    assert(wr.nvars() == n_select_vars + good_vars.size() + n_vleq_vars + good_and_vleq_vars.size());
 
     /////// Rest of CNF constraints ///////
     std::cout << "Generating CNF encoding for " << all_alive().size() << " alive states, "
@@ -427,20 +426,16 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
     }
 
     // Clauses (8), (9):
-    const auto nclasses = class_representatives_.size();
-    for (std::size_t i = 0; i < nclasses; ++i) {
-        const auto tx1 = class_representatives_[i];
-        const auto& tx1pair = transition_ids_inv_.at(tx1);
+    for (const auto tx1:class_representatives_) {
+        const auto& tx1pair = get_state_pair(tx1);
         const auto s = tx1pair.first;
         const auto sprime = tx1pair.second;
-        const auto tx1_is_bad = is_necessarily_bad(tx1);
-        if (tx1_is_bad) continue;
+        if (is_necessarily_bad(tx1)) continue;
 
         auto good_s_sprime = good_vars.at(tx1);
 
-        for (std::size_t j=0; j < nclasses; ++j) {
-            const auto tx2 = class_representatives_[j];
-            const auto& tx2pair = transition_ids_inv_.at(tx2);
+        for (const auto tx2:class_representatives_) {
+            const auto& tx2pair = get_state_pair(tx2);
             const auto t = tx2pair.first;
             const auto tprime = tx2pair.second;
 
@@ -476,9 +471,9 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
     for (unsigned f = 0; f < nf_; ++f) {
         if (!ignore_features[f]) {
             wr.cl({Wr::lit(var_selected[f], false)}, feature_weight(f));
+            n_selected_clauses += 1;
         }
     }
-    n_selected_clauses += nf_;
 
 
     // Print a breakdown of the clauses

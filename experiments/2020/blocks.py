@@ -34,6 +34,7 @@ def experiments():
         prune_redundant_states=False,
         optimal_selection_strategy="complete",
         use_equivalence_classes=True,
+        use_feature_dominance=True,
     )
 
     exps["clear_fn"] = update_dict(
@@ -80,6 +81,7 @@ def experiments():
         prune_redundant_states=False,
         optimal_selection_strategy="complete",
         use_equivalence_classes=True,
+        use_feature_dominance=True,
     )
 
     exps["on_fn"] = update_dict(
