@@ -1,5 +1,6 @@
 
 #include "transition_classification.h"
+#include "equivalences.h"
 
 #include <iostream>
 #include <vector>
@@ -104,10 +105,10 @@ void TransitionClassificationEncoding::compute_equivalence_relations() {
     }
 
     // Print some stats
-    std::cout << "Number of transitions: " << transition_ids_.size() << std::endl;
-    std::cout << "Number of equivalence classes: " << class_representatives_.size() << std::endl;
-    std::cout << "Number of necessarily bad classes/transitions: " << necessarily_bad_classes.size()
-              << "/" << necessarily_bad_transitions_.size() << std::endl;
+    std::cout << "Number of transitions/equivalence classes: " << transition_ids_.size()
+              << "/" << class_representatives_.size() << std::endl;
+    std::cout << "Number of necessarily bad transitions/classes: " << necessarily_bad_transitions_.size()
+              << "/" << necessarily_bad_classes.size() << std::endl;
 }
 
 
@@ -316,7 +317,10 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
     assert(wr.nvars() == var_selected.size() + good_vars.size() + n_vleq_vars + good_and_vleq_vars.size());
 
     /////// Rest of CNF constraints ///////
-    std::cout << "Generating CNF constraints for " << all_alive().size() << " alive states" << std::endl;
+    std::cout << "Generating CNF encoding for " << all_alive().size() << " alive states, "
+              <<  transition_ids_.size() << " alive-to-solvable and alive-to-dead transitions and "
+              << class_representatives_.size() << " transition equivalence classes" << std::endl;
+
     for (const auto s:all_alive()) {
 
         const auto& succs = successors(s);
@@ -423,9 +427,6 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
     }
 
     // Clauses (8), (9):
-    std::cout << "Generating distinguishability constraints for a total of " << transition_ids_.size() <<
-                 " alive-to-solvable and alive-to-dead transitions and " << class_representatives_.size() <<
-                 " transition equivalence classes" << std::endl;
     const auto nclasses = class_representatives_.size();
     for (std::size_t i = 0; i < nclasses; ++i) {
         const auto tx1 = class_representatives_[i];

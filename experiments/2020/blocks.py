@@ -96,13 +96,19 @@ def experiments():
         pipeline="transition_classifier",
 
         instances=[
-            "probBLOCKS-4-0.pddl"
+            "probBLOCKS-5-0.pddl"
         ],
         test_instances=[
 
         ],
         test_policy_instances=[
             "probBLOCKS-6-0.pddl",
+            "probBLOCKS-6-1.pddl",
+            "probBLOCKS-6-2.pddl",
+            "probBLOCKS-7-0.pddl",
+            "probBLOCKS-7-1.pddl",
+            "probBLOCKS-7-2.pddl",
+
         ],
         # num_states=2000,
         # num_sampled_states=[50, 50, 1],

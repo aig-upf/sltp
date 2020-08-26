@@ -93,6 +93,8 @@ def blocksworld_names(feature):
         "Not(clear)": "num-unclear",
         "And(clear,ontable)": "n-single-blocks",
         "Atom[handempty]": "handempty",
+        # "superficially-well-placed": all blocks below are the same as in goal
+        "And(Equal(Star(on_g),Star(on)),clear)": "n-clear-and-superficially-well-placed-blocks",
     }
     return extend_namer_to_all_features(base).get(s, s)
 

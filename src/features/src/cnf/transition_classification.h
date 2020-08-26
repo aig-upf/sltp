@@ -2,7 +2,8 @@
 #pragma once
 
 #include "generator.h"
-#include "equivalences.h"
+
+#include <boost/container/flat_set.hpp>
 
 namespace sltp::cnf {
 

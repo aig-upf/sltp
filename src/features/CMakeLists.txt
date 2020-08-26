@@ -24,6 +24,7 @@ set(SOURCE_FILES
 set(CNFGEN_SOURCE_FILES
         src/cnfgen.cpp
         src/cnf/transition_classification
+        src/cnf/aaai19_generator
         src/cnf/equivalences
         src/cnf/generator
         src/cnf/cnfwriter.h

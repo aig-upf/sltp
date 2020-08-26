@@ -13,5 +13,3 @@ std::size_t hash_value(const transition_denotation& x) {
 }
 
 } // namespaces
-
-

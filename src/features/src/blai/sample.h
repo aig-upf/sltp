@@ -39,7 +39,7 @@ public:
 
     //! Remap the states in the current sample, whose IDs are assumed to span the full range [0..n],
     //! into a smaller range [0..m] with the m states that are either contained in `selected` or a successor of them
-    Sample* resample(const std::unordered_set<unsigned>& selected) const {
+    Sample resample(const std::unordered_set<unsigned>& selected) const {
 
         // Add all successors of selected states
         std::set<unsigned> closed; // set must be sorted
@@ -68,7 +68,7 @@ public:
 //        for (auto& elem:mapping)  std::cout << elem.first << ": " << elem.second << ", ";
 //        std::cout << std::endl;
 
-        return new Sample(matrix_.resample(mapping), transitions_.resample(selected, mapping));
+        return Sample(matrix_.resample(mapping), transitions_.resample(selected, mapping));
     }
 
     friend std::ostream& operator<<(std::ostream &os, const Sample& o) { return o.print(os); }
