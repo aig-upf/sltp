@@ -127,4 +127,12 @@ def experiments():
         use_equivalence_classes=True,
     )
 
+    exps["all+"] = update_dict(
+        exps["all"],
+        instances=[
+            "probBLOCKS-5-0.pddl",
+            "training_arbitrary_5.pddl",
+        ],
+    )
+
     return exps
