@@ -17,7 +17,7 @@ using feature_value_t = Sample::FeatureMatrix::feature_value_t;
 sltp::cnf::transition_denotation compute_transition_denotation(feature_value_t s_f, feature_value_t sprime_f) {
     int type_s = (int) sprime_f - (int) s_f; // <0 if DEC, =0 if unaffected, >0 if INC
     int sign = (type_s > 0) ? 1 : ((type_s < 0) ? -1 : 0); // Get the sign
-    return sltp::cnf::transition_denotation(s_f, sign);
+    return sltp::cnf::transition_denotation(bool(s_f > 0), sign);
 }
 
 
