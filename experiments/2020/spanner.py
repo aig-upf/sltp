@@ -50,6 +50,7 @@ def experiments():
         optimal_selection_strategy="complete",
         use_equivalence_classes=True,
         # transition_classification_policy=debug_policy
+        v_slack=2,
     )
 
     return exps

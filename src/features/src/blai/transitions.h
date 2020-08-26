@@ -32,6 +32,8 @@ protected:
 
     std::vector<unsigned> alive_states_;
 
+    std::vector<int> vstar_;
+
     transition_set_t marked_transitions_;
     transition_list_t unmarked_transitions_;
     transition_list_t unmarked_and_alive_transitions_;
@@ -58,6 +60,8 @@ public:
     std::size_t num_states() const { return num_states_; }
     std::size_t num_transitions() const { return num_transitions_; }
     std::size_t num_marked_transitions() const { return num_marked_transitions_; }
+
+    int vstar(unsigned sid) const { return vstar_.at(sid); }
 
     const std::vector<unsigned>& successors(unsigned s) const {
         return trdata_.at(s);
@@ -181,6 +185,14 @@ public:
 
         for (const auto tx:unmarked_transitions_) {
             if (is_state_alive_[tx.first]) unmarked_and_alive_transitions_.push_back(tx);
+        }
+
+        // Store the value of V^*(s) for each state s
+        int vstar;
+        vstar_.reserve(num_states_);
+        for (s=0; s < num_states_; ++s) {
+            is >> vstar;
+            vstar_.push_back(vstar);
         }
     }
 

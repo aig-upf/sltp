@@ -16,12 +16,15 @@ def print_transition_matrix(state_ids, transitions, transitions_filename):
             print("{} {}".format(s, " ".join("{}".format(sprime) for sprime in succ)), file=f)
 
 
-def print_sat_transition_matrix(state_ids, transitions, alive, optimal_transitions, transitions_filename):
+def print_sat_transition_matrix(state_ids, transitions, alive, vstar, optimal_transitions, transitions_filename):
     num_transitions = sum(len(targets) for targets in transitions.values())
     num_states = len(transitions.keys())
     num_optimal_transitions = len(optimal_transitions)
     logging.info(f"Printing SAT transition matrix with {len(state_ids)} states,"
                  f" {num_states} expanded states and {num_transitions} transitions to '{transitions_filename}'")
+
+    # State Ids should start at 0 and be contiguous
+    assert state_ids == list(range(0, len(state_ids)))
 
     with open(transitions_filename, 'w') as f:
         # first line: <#states> <#transitions> <#marked-transitions>
@@ -40,3 +43,6 @@ def print_sat_transition_matrix(state_ids, transitions, alive, optimal_transitio
 
         # Next: A list of all alive states
         print(f'{len(alive)} ' + " ".join(map(str, alive)), file=f)
+
+        # Next: A space-separated list of V^*(s) values, one per each state s, where -1 denotes infinity
+        print(' '.join(str(vstar.get(s, -1)) for s in state_ids), file=f)

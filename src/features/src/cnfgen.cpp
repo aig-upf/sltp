@@ -40,6 +40,10 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
         ("enforce-features,e", po::value<std::string>()->default_value(""),
          "Comma-separated (no spaces!) list of IDs of feature we want to enforce in the abstraction.")
 
+
+        ("v_slack", po::value<double>()->default_value(2),
+         "The slack value for the maximum allowed value for V_pi(s) = slack * V^*(s)")
+
         ("encoding", po::value<std::string>()->default_value("basic"),
              "The encoding to be used (options: {basic, d2tree, separation}).")
 
@@ -73,6 +77,7 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
     options.verbose = vm.count("verbose") > 0;
     options.distinguish_transitions_locally = vm.count("distinguish-transitions-locally") > 0;
     options.use_equivalence_classes = vm.count("use-equivalence-classes") > 0;
+    options.v_slack = vm["v_slack"].as<double>();
 
     auto enc = vm["encoding"].as<std::string>();
     if (enc == "basic") options.encoding = sltp::cnf::Options::Encoding::Basic;

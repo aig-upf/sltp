@@ -190,7 +190,10 @@ def generate_experiment(expid, domain_dir, domain, **kwargs):
 
         # In the transition-separation encoding, whether we want to exploit the equivalence relation
         # among transitions given by the feature pool
-        use_equivalence_classes=False
+        use_equivalence_classes=False,
+
+        # The slack value for the maximum allowed value for V_pi(s) = slack * V^*(s)
+        v_slack=2,
     )
 
     parameters = {**defaults, **kwargs}  # Copy defaults, overwrite with user-specified parameters

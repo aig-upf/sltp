@@ -25,6 +25,7 @@ def run(config, data, rng):
 
     args += ["--distinguish-transitions-locally"] if config.distinguish_transitions_locally else []
     args += ["--use-equivalence-classes"] if config.use_equivalence_classes else []
+    args += ["--v_slack", str(config.v_slack)]
 
     retcode = execute([cmd] + args)
 

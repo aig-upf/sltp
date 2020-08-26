@@ -94,7 +94,8 @@ Encoding is parametrized by
        At the moment we're assuming the sample is complete, and we have full information on whether each state
        in the sample is a goal state, an unsolvable state, or otherwise (see below for definitions). We also have access
        to the minimum distance to a goal $V^*(s)$ for each state $s$.
- \item $D$: maximum allowed value for $V(s)$ for any $s$ in the training set.\footnote{This is to be improved based on $V^*(s)$.}
+ \item A parameter $\delta$ which is a ``slack'' value to determine the maximum deviation from the optimal $V^*(s)$
+ what we will allow in our policy. This will be made clearer in the encoding below.
 \end{itemize}
 
 
@@ -136,7 +137,7 @@ Work In Progress.\footnote{This is implemented, but needs to be adapted to the e
 \begin{itemize}
  \item $Good(s, s')$ for $s$ alive, $s'$ solvable and $(s, s') \not\in \badtx$.
 
- \item $V(s) \leq d$ for $s$ alive, and $d \in [0, D]$.
+ \item $V(s) \leq d$ for $s$ alive, and $d \in [0, D]$, where $D = \max_{s} \delta \cdot V^*(s)$.
  Note that for states $s$ that are a goal, we know $V(s)=0$, hence $V(s) \leq d$ for all $d$,
  and for states $s$ that are unsolvable, we know that $V(s) \not\leq d$ for all $d$.
  Thus, we can restrict SAT variables $V(s) \leq d$ to those states $s$ that are alive.
@@ -213,6 +214,11 @@ of two different equivalence classes such that $(s, s') \not\in \badtx$
 
 \noindent where $Dist(s, s', t, t')$ is shorthand for $\bigvee_{f \in D2(s, s', t, t')} Select(f)$.
 
+\smallpar{C10}
+$V(s)$ cannot be much larger than $V^+(s)$:
+\begin{align}
+ V(s) \leq \delta \cdot V^*(s),&\;\; \text{for $s$ alive.}
+\end{align}
 
 \subsection{Soft Constraints}
 We simply post a constraint $\neg Select(f)$ for each feature $f$ in the pool, with weight equal to its complexity $\mathcal{K}(f)$.

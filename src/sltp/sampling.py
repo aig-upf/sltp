@@ -29,6 +29,7 @@ class TransitionSample:
         self.instance = dict()  # A mapping between states and the problem instances they came from
         # self.transition_schemas = dict()  # A mapping between transitions and the action schema that induced them
         self.remapping = dict()
+        self.vstar = {}
 
     def add_transitions(self, states, transitions, schemas, instance_id, deadends):
         assert not any(s in self.states for s in states.keys())  # Don't allow repeated states
@@ -106,6 +107,8 @@ class TransitionSample:
         optimal = {(remapping[x], remapping[y]) for x, y in self.optimal_transitions
                    if x in remapping and y in remapping}
 
+        vstar = {remapping[x]: self.vstar[x] for x in ordered_sample if x in self.vstar}
+
         instance = dict()
         states = OrderedDict()
         for i, s in self.states.items():  # Iterate following the order in self.states
@@ -130,6 +133,7 @@ class TransitionSample:
         resampled.mark_as_optimal(optimal)
         resampled.mark_as_unsolvable(unsolvable)
         resampled.mark_as_alive(alive_states)
+        resampled.vstar = vstar
         resampled.remapping = remapping
         _ = [resampled.mark_as_root(r) for r in roots]
         return resampled
@@ -190,9 +194,9 @@ def run_backwards_brfs(g, parents, mincosts, minactions):
 def mark_all_optimal(goals, parents):
     """ Collect all transitions that lie on at least one optimal plan starting from some alive state (i.e. solvable,
      reachable, and not a goal). """
-    mincosts, minactions = {}, {}
+    vstar, minactions = {}, {}
     for g in goals:
-        run_backwards_brfs(g, parents, mincosts, minactions)
+        run_backwards_brfs(g, parents, vstar, minactions)
 
     # minactions contains a map between state IDs and a list with those successors that represent an optimal transition
     # from that state
@@ -204,9 +208,9 @@ def mark_all_optimal(goals, parents):
     # the backwards brfs (i.e. for which mincost[s] is actually defined). Note that the "reachable" part of a state
     # being alive is already guaranteed by the fact that the state is on the sample, as we sample states with a simple
     # breadth first search.
-    alive = {s for s, cost in mincosts.items() if cost > 0}
+    alive = {s for s, cost in vstar.items() if cost > 0}
 
-    return optimal_txs, alive
+    return optimal_txs, alive, vstar
 
 
 def print_atom(atom):
@@ -288,7 +292,7 @@ def print_transition_matrices(sample, config):
     state_ids = sample.get_sorted_state_ids()
     # We print the optimal transitions only if they need to be used for the encoding
     optimal_transitions = sample.optimal_transitions if config.complete_only_wrt_optimal else []
-    print_sat_transition_matrix(state_ids, sample.transitions, sample.alive_states,
+    print_sat_transition_matrix(state_ids, sample.transitions, sample.alive_states, sample.vstar,
                                 optimal_transitions, config.sat_transitions_filename)
     print_transition_matrix(state_ids, sample.transitions, config.transitions_filename)
 
@@ -303,8 +307,8 @@ def mark_optimal_transitions(selection_strategy, sample: TransitionSample):
         optimal = mark_optimal(goals, sample.roots, sample.parents)
 
     elif selection_strategy == "complete":  # Only the complete strategy also marks which states are alive.
-        # Mark all transitions that are optimal from some non-dead-end state
-        optimal, alive = mark_all_optimal(sample.goals, sample.parents)
+        # Mark all transitions that are optimal from some alive state
+        optimal, alive, sample.vstar = mark_all_optimal(sample.goals, sample.parents)
         sample.mark_as_alive(alive)
 
     else:

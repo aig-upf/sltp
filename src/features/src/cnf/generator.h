@@ -34,6 +34,9 @@ struct Options {
     //! Whether to be more verbose in the generation of the encoding
     bool verbose;
 
+    //! The slack value for the maximum allowed value for V_\pi(s) = slack * V^*(s)
+    double v_slack;
+
     //! In the transition-separation CNF encoding, whether to distinguish good transitions *only from*
     //! unmarked transitions that start in the same state as the good transition
     bool distinguish_transitions_locally;

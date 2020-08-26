@@ -42,6 +42,23 @@ public:
         return necessarily_bad_transitions_.find(tx) != necessarily_bad_transitions_.end();
     }
 
+    inline int get_max_v(unsigned s) const {
+        int vstar = sample_.transitions().vstar(s);
+        if (vstar < 0) return -1;
+        return std::ceil(options.v_slack * vstar);
+    }
+
+    inline unsigned compute_D() const {
+        // return 20;
+        // D will be the maximum over the set of alive states of the upper bounds on V_pi
+        unsigned D = 0;
+        for (const auto s:all_alive()) {
+            auto max_v_s = get_max_v(s);
+            if (max_v_s > D) D = max_v_s;
+        }
+        return D;
+    }
+
 protected:
     // A mapping from pairs of state to the assigned transition id
     std::unordered_map<state_pair, unsigned, boost::hash<state_pair>> transition_ids_;

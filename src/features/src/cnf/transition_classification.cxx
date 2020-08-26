@@ -194,7 +194,8 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
 
     CNFWriter wr(os, &allvarsstream);
 
-    const unsigned max_d = 25; // TODO Adjust this
+    const unsigned max_d = compute_D();
+    std::cout << "Using an upper bound for V_pi(s) values of " << max_d << std::endl;
 
     // Keep a map `good_tx_vars` from transition IDs to SAT variable IDs:
     std::unordered_map<unsigned, cnfvar_t> good_vars;
@@ -217,6 +218,7 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
     unsigned n_good_tx_clauses = 0;
     unsigned n_selected_clauses = 0;
     unsigned n_separation_clauses = 0;
+    unsigned n_max_v_s_clauses = 0;
 
 
     /////// CNF variables ///////
@@ -459,8 +461,17 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
         }
     }
 
+    // Clauses (10)
+    for (const auto s:all_alive()) {
+        auto max_v_s = get_max_v(s);
+        assert(max_v_s <= max_d);
+        if (max_v_s < 0) throw std::runtime_error("State #" + std::to_string(s) + " has infinite V^* value");
+        wr.cl({Wr::lit(vleqs[s][max_v_s], true)});
+        n_max_v_s_clauses += 1;
+    }
 
-    std::cout << "Posting weighted selected constraints for " << var_selected.size() << " features" << std::endl;
+
+    std::cout << "Posting (weighted) soft constraints for " << var_selected.size() << " features" << std::endl;
     for (unsigned f = 0; f < nf_; ++f) {
         if (!ignore_features[f]) {
             wr.cl({Wr::lit(var_selected[f], false)}, feature_weight(f));
@@ -477,9 +488,10 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
     std::cout << "\tClauses justifying V(s) bounds [4,5]: " << n_justification_clauses << std::endl;
     std::cout << "\tV(s)<=d consistency [6,7]: " << n_leq_clauses << std::endl;
     std::cout << "\tTransition-separation clauses [8,9]: " << n_separation_clauses << std::endl;
+    std::cout << "\tMax V(s) clauses [10]: " << n_max_v_s_clauses << std::endl;
     std::cout << "\tGV(s, s', d) auxiliary clauses: " << n_gv_aux_clauses << std::endl;
     assert(wr.nclauses() == n_selected_clauses + n_good_tx_clauses + n_upper_bound_clauses + n_justification_clauses
-                            + n_leq_clauses + n_separation_clauses + n_gv_aux_clauses);
+                            + n_leq_clauses + n_separation_clauses + n_gv_aux_clauses + n_max_v_s_clauses);
 
     // For goal-identifying features that we want to enforce in the solution, we add a unary clause "selected(f)"
     assert (options.enforced_features.empty()); // ATM haven't really thought whether this feature makes sense for this encoding
