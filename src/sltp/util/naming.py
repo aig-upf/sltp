@@ -18,7 +18,7 @@ def compute_test_sample_filenames(experiment_dir, test_instances, **_):
 
 
 def compute_serialization_name(basedir, name):
-    return os.path.join(basedir, '{}.pickle'.format(name))
+    return os.path.join(basedir, f'{name}.pickle')
 
 
 def compute_maxsat_filename(config):

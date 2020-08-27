@@ -281,10 +281,6 @@ def sample_generated_states(config, rng):
         optimal = mark_optimal(goal_maximizing_states, sample.roots, sample.parents)
         sample.mark_as_optimal(optimal)
 
-    log_sampled_states(sample, config.resampled_states_filename)
-    print_transition_matrices(sample, config)
-    print_state_set(sample.goals, config.goal_states_filename)
-    print_state_set(sample.unsolvable, config.unsolvable_states_filename)
     return sample
 
 
@@ -461,4 +457,8 @@ def read_single_sample_file(filename):
 def run(config, data, rng):
     assert not data
     sample = sample_generated_states(config, rng)
+    log_sampled_states(sample, config.resampled_states_filename)
+    print_transition_matrices(sample, config)
+    print_state_set(sample.goals, config.goal_states_filename)
+    print_state_set(sample.unsolvable, config.unsolvable_states_filename)
     return ExitCode.Success, dict(sample=sample)

@@ -159,7 +159,7 @@ class TransitionSamplingStep(Step):
         return []
 
     def process_config(self, config):
-        config["resampled_states_filename"] = os.path.join(config["experiment_dir"], 'resampled.txt')
+        config["resampled_states_filename"] = os.path.join(config["experiment_dir"], 'sample.txt')
         config["num_sampled_states"] = config.get("num_sampled_states", None)
         config["complete_only_wrt_optimal"] = config.get("complete_only_wrt_optimal", False)
         config["sampling"] = config.get("sampling", "all")
