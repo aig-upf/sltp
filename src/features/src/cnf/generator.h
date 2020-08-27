@@ -126,7 +126,7 @@ public:
     }
 
     //! Generate and write the CNF instance as we go
-    virtual std::pair<bool, CNFWriter> write(std::ostream &os) = 0;
+    virtual bool write(CNFWriter& wr) = 0;
 
 
 protected:

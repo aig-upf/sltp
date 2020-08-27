@@ -180,7 +180,7 @@ compute_dt(unsigned f) {
 
 
 
-std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream &os)
+bool TransitionClassificationEncoding::write(CNFWriter& wr)
 {
     using Wr = CNFWriter;
 
@@ -188,9 +188,6 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
 
     auto varmapstream = get_ofstream(options.workspace + "/varmap.wsat");
     auto selected_map_stream = get_ofstream(options.workspace + "/selecteds.wsat");
-    auto allvarsstream = get_ofstream(options.workspace + "/allvars.wsat");
-
-    CNFWriter wr(os, &allvarsstream);
 
     const unsigned max_d = compute_D();
     std::cout << "Using an upper bound for V_pi(s) values of " << max_d << std::endl;
@@ -496,11 +493,43 @@ std::pair<bool, CNFWriter> TransitionClassificationEncoding::write(std::ostream 
 //        n_goal_clauses += 1;
 //    }
 
-    return {false, wr};
+    return false;
 }
 
+bool TransitionClassificationEncoding::check_validity_of_existing_solution() {
+    auto ifs_good_transitions = get_ifstream(options.workspace + "/good_transitions.io");
+    auto ifs_good_features = get_ifstream(options.workspace + "/good_features.io");
+
+    std::vector<unsigned> featureids;
+    int featureid = -1;
+    while (ifs_good_features >> featureid) {
+        featureids.push_back(featureid);
+    }
+
+    std::vector<unsigned> good_transitions, bad_transitions;
+    int s = -1, sprime = -1;
+    while (ifs_good_transitions >> s >> sprime) {
+        good_transitions.emplace_back(get_transition_id(s, sprime));
+    }
+
+    ifs_good_transitions.close();
+    ifs_good_features.close();
+
+    if (featureids.empty()) return false;
+
+    // Let's check whether the policy is indeed able to distinguish between all pairs of good and bad transitions
+
+    std::unordered_set<unsigned> good_set(good_transitions.begin(), good_transitions.end());
+    for (unsigned tx=0; tx < transition_ids_.size(); ++tx) {
+        if (good_set.find(tx) == good_set.end()) bad_transitions.push_back(tx);
+    }
+
+    for ()
 
 
+
+    return false;
+}
 
 
 } // namespaces

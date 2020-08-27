@@ -6,7 +6,7 @@
 namespace sltp::cnf {
 
 
-class CNFGenerator : public CNFEncoding {
+class AAAI19Generator : public CNFEncoding {
 public:
     //!
     using d1_key = std::tuple<unsigned, unsigned>;
@@ -32,7 +32,7 @@ public:
     unsigned n_goal_clauses;
     unsigned n_deadend_clauses;
 
-    CNFGenerator(const Sample::Sample& sample, const sltp::cnf::Options& options) :
+    AAAI19Generator(const Sample::Sample& sample, const sltp::cnf::Options& options) :
             CNFEncoding(sample, options),
             n_selected_clauses(0),
             n_d2_clauses(0),
@@ -111,7 +111,7 @@ public:
         return d2vars_.at(d2id);
     }
 
-    std::pair<bool, CNFWriter> write(std::ostream &os) override;
+    bool write(CNFWriter& wr) override;
 };
 
 } // namespaces

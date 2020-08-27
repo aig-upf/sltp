@@ -8,6 +8,8 @@ from enum import Enum, unique
 class ExitCode(Enum):
     Success = 0
 
+    IterativeMaxsatApproachSuccessful = 2
+
     MaxsatModelUnsat = 10
     NoAbstractionUnderComplexityBound = 11
 

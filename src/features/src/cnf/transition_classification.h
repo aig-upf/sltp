@@ -29,7 +29,7 @@ public:
     }
 
 
-    std::pair<bool, CNFWriter> write(std::ostream &os) override;
+    bool write(CNFWriter& wr) override;
 
     inline unsigned get_transition_id(uint16_t s, uint16_t t) const { return transition_ids_.at(state_pair(s, t)); }
 
@@ -61,6 +61,8 @@ public:
         }
         return D;
     }
+
+    bool check_validity_of_existing_solution();
 
 protected:
     // A mapping from pairs of state to the assigned transition id

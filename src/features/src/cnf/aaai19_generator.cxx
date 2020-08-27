@@ -6,7 +6,7 @@
 namespace sltp::cnf {
 
 
-Sample::Sample CNFGenerator::preprocess_sample(const Sample::Sample& sample, const sltp::cnf::Options& options) {
+Sample::Sample AAAI19Generator::preprocess_sample(const Sample::Sample& sample, const sltp::cnf::Options& options) {
     auto isomorphisms = compute_redundant_states(sample);
 
     std::cout << isomorphisms.size() << " / " << sample.matrix().num_states()
@@ -23,8 +23,7 @@ Sample::Sample CNFGenerator::preprocess_sample(const Sample::Sample& sample, con
 }
 
 //! Generate and write the actual CNF instance as we go
-std::pair<bool, CNFWriter> CNFGenerator::write(std::ostream &os) {
-    CNFWriter writer(os);
+bool AAAI19Generator::write(CNFWriter& writer) {
 
     /////// Create the CNF variables ///////
 
@@ -128,7 +127,7 @@ std::pair<bool, CNFWriter> CNFGenerator::write(std::ostream &os) {
             const auto& d1feats = d1_distinguishing_features(s, t);
             if (d1feats.empty()) {
                 undist_goal_warning(s, t);
-                return {true, writer};
+                return true;
             }
 
             cnfclause_t clause;
@@ -148,7 +147,7 @@ std::pair<bool, CNFWriter> CNFGenerator::write(std::ostream &os) {
             const auto& d1feats = d1_distinguishing_features(s, t);
             if (d1feats.empty()) {
                 undist_deadend_warning(s, t);
-                return {true, writer};
+                return true;
             }
 
             cnfclause_t clause;
@@ -185,7 +184,7 @@ std::pair<bool, CNFWriter> CNFGenerator::write(std::ostream &os) {
         }
     }
 
-    return {false, writer};
+    return false;
 }
 
 } // namespaces

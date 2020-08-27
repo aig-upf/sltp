@@ -109,20 +109,25 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
     return options;
 }
 
-std::pair<bool, CNFWriter>
-write_encoding(std::ofstream& os, const Sample::Sample& sample, const sltp::cnf::Options& options) {
+bool
+write_encoding(CNFWriter& wr, const Sample::Sample& sample, const sltp::cnf::Options& options, bool& solution_check_successful) {
     if (options.use_separation_encoding()) {
         sltp::cnf::TransitionClassificationEncoding gen(sample, options);
-        return gen.write(os);
+        if (gen.check_validity_of_existing_solution()) {
+            solution_check_successful = true;
+            return false;
+        }
+        return gen.write(wr);
+
     } else {
         if (options.prune_redundant_states) {
             // If indicated by the user, prune those states that appear redundant for the given feature pool
-            auto resample = sltp::cnf::CNFGenerator::preprocess_sample(sample, options);
-            sltp::cnf::CNFGenerator gen(sample, options);
-            return gen.write(os);
+            auto resample = sltp::cnf::AAAI19Generator::preprocess_sample(sample, options);
+            sltp::cnf::AAAI19Generator gen(sample, options);
+            return gen.write(wr);
         } else {
-            sltp::cnf::CNFGenerator gen(sample, options);
-            return gen.write(os);
+            sltp::cnf::AAAI19Generator gen(sample, options);
+            return gen.write(wr);
         }
     }
 }
@@ -153,13 +158,22 @@ int main(int argc, const char **argv) {
     // know only when we finish writing all clauses
 
     auto wsatstream = get_ofstream(options.workspace + "/theory.wsat.tmp");
+    auto allvarsstream = get_ofstream(options.workspace + "/allvars.wsat");
 
-    auto res = write_encoding(wsatstream, sample, options);
+    bool solution_check_successful = false;
+
+    CNFWriter writer(wsatstream, &allvarsstream);
+    auto unsat = write_encoding(writer, sample, options, solution_check_successful);
 
     wsatstream.close();
+    allvarsstream.close();
+
+    if (solution_check_successful) {
+        // The run was only to check a previous solution, and the check was successful, so we just signal that and end
+        return 2;
+    }
 
     // Write some characteristics of the CNF to a different file
-    const auto& writer = res.second;
     auto topstream = get_ofstream(options.workspace + "/top.dat");
     topstream << writer.top() << " " << writer.nvars() << " " << writer.nclauses();
     topstream.close();
@@ -167,20 +181,8 @@ int main(int argc, const char **argv) {
     float total_time = Utils::read_time_in_seconds() - start_time;
     std::cout << "Total-time: " << total_time << std::endl;
     std::cout << "CNF Theory: "  << writer.nvars() << " vars + " << writer.nclauses() << " clauses" << std::endl;
-//    std::cout << "Clause breakdown: " << std::endl;
-//    std::cout << "\tSelected(f): " <<  gen.n_selected_clauses << std::endl;
-//    std::cout << "\tD2-definition: " <<  gen.n_d2_clauses << std::endl;
-//    std::cout << "\tBridge: " <<  gen.n_bridge_clauses << std::endl;
-//    std::cout << "\tGoal-distinguishing: " <<  gen.n_goal_clauses << std::endl;
-//    std::cout << "\tDead-end-distinguishing: " <<  gen.n_deadend_clauses << std::endl;
-//    std::cout << "\tTransition-Separation: " <<  gen.n_separation_clauses << std::endl;
-//    std::cout << "\tGood-transition: " <<  gen.n_good_tx_clauses << std::endl;
-//    std::cout << "\tTOTAL: " <<
-//              gen.n_selected_clauses + gen.n_d2_clauses + gen.n_separation_clauses +
-//              gen.n_bridge_clauses + gen.n_goal_clauses + gen.n_deadend_clauses + gen.n_good_tx_clauses << std::endl;
 
-    bool unsat = res.first;
-    if(unsat) {
+    if (unsat) {
         // The generation of the CNF might have already detected unsatisfiability
         std::cout << Utils::warning() << "CNF theory is UNSAT" << std::endl;
         return 1;

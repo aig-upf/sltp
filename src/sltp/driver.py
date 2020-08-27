@@ -279,6 +279,10 @@ class CPPMaxsatProblemGenerationStep(Step):
     def process_config(self, config):
         config["top_filename"] = compute_info_filename(config, "top.dat")
         config["cnf_filename"] = compute_maxsat_filename(config)
+        config["good_transitions_filename"] = compute_info_filename(config, "good_transitions.io")
+        config["good_features_filename"] = compute_info_filename(config, "good_features.io")
+        config["wsat_varmap_filename"] = compute_info_filename(config, "varmap.wsat")
+        config["wsat_allvars_filename"] = compute_info_filename(config, "allvars.wsat")
         return config
 
     def description(self):
@@ -396,8 +400,6 @@ class TransitionClassificationPolicyStep(Step):
         return ['serialized_feature_filename', 'domain']
 
     def process_config(self, config):
-        config["wsat_varmap_filename"] = compute_info_filename(config, "varmap.wsat")
-        config["wsat_allvars_filename"] = compute_info_filename(config, "allvars.wsat")
         return config
 
     def get_required_data(self):

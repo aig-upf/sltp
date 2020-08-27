@@ -55,28 +55,21 @@ def print_maxsat_solution(assignment, filename):
 
 def compute_transition_classification_policy(config, data, rng):
     if config.transition_classification_policy is not None:
-        rules = config.transition_classification_policy()
-        _, language, _ = parse_pddl(config.domain)
-        policy = TransitionClassificationPolicy.parse(rules, language, config.feature_namer)
-        return ExitCode.Success, dict(transition_classification_policy=policy)
+        return ExitCode.Success, dict(transition_classification_policy=generate_user_provided_policy(config))
 
-    solution = data.cnf_solution
+    policy = generate_policy_from_sat_solution(config, data.cnf_solution, data.model_cache)
+    return ExitCode.Success, dict(transition_classification_policy=policy)
+
+
+def generate_policy_from_sat_solution(config, solution, model_cache):
     assert solution.solved
-
-    selected_feature_ids = read_selected_variable_ids(
-        solution.assignment, os.path.join(config.experiment_dir, "selecteds.wsat"))
-
-    features = load_selected_features(selected_feature_ids, config.domain, config.serialized_feature_filename)
-    features = [IdentifiedFeature(f, i, config.feature_namer(str(f))) for i, f in zip(selected_feature_ids, features)]
-
+    features = extract_features_from_sat_solution(config, solution)
     # print_maxsat_solution(solution.assignment, config.wsat_allvars_filename)
     good_transitions = compute_good_transitions(solution.assignment, config.wsat_varmap_filename)
-
     policy = TransitionClassificationPolicy(features)
-
     for (s, t) in good_transitions:
-        m_s = data.model_cache.get_feature_model(s)
-        m_t = data.model_cache.get_feature_model(t)
+        m_s = model_cache.get_feature_model(s)
+        m_t = model_cache.get_feature_model(t)
 
         clause = []
         for f in features:
@@ -85,10 +78,24 @@ def compute_transition_classification_policy(config, data, rng):
             clause += compute_policy_clauses(f, den_s, den_t)
 
         policy.add_clause(frozenset(clause))
-
     policy.minimize()
     policy.print()
-    return ExitCode.Success, dict(transition_classification_policy=policy)
+    return policy
+
+
+def extract_features_from_sat_solution(config, solution):
+    selected_feature_ids = read_selected_variable_ids(
+        solution.assignment, os.path.join(config.experiment_dir, "selecteds.wsat"))
+    features = load_selected_features(selected_feature_ids, config.domain, config.serialized_feature_filename)
+    features = [IdentifiedFeature(f, i, config.feature_namer(str(f))) for i, f in zip(selected_feature_ids, features)]
+    return features
+
+
+def generate_user_provided_policy(config):
+    rules = config.transition_classification_policy()
+    _, language, _ = parse_pddl(config.domain)
+    policy = TransitionClassificationPolicy.parse(rules, language, config.feature_namer)
+    return policy
 
 
 def compute_policy_clauses(f, den_s, den_t):

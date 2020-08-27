@@ -24,7 +24,7 @@ protected:
 
 public:
     // Variable IDs must start with 1
-    CNFWriter(std::ostream &os, std::ostream* varnamestream = nullptr)
+    explicit CNFWriter(std::ostream &os, std::ostream* varnamestream = nullptr)
         : next_var_id_(1), accumulated_weight_(0), nclauses_(0), os_(os), varnamestream_(varnamestream)
     {
     }
