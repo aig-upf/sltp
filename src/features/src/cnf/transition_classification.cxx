@@ -180,7 +180,8 @@ compute_dt(unsigned f) {
 
 
 
-bool TransitionClassificationEncoding::write(CNFWriter& wr)
+sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
+        CNFWriter& wr, const std::vector<transition_pair>& transitions_to_distinguish)
 {
     using Wr = CNFWriter;
 
@@ -385,73 +386,35 @@ bool TransitionClassificationEncoding::write(CNFWriter& wr)
         }
         wr.cl({Wr::lit(vleqs[s][0], false)});  // (5) if s is not a goal, then -V(s) <= 0
         ++n_justification_clauses;
-
-
-        /*
-        // Clauses (8), (9):
-        for (const auto t:all_alive()) {
-            for (unsigned sprime:successors(s)) {
-                if (!is_solvable(sprime)) continue;
-
-                for (unsigned tprime:successors(t)) {
-                    cnfclause_t clause{Wr::lit(good_vars.at({s, sprime}), false)};
-
-                    // Either some feature that D1-distinguishes s and t is true
-                    for (feature_t f:compute_d1_distinguishing_features(sample_, s, t)) {
-                        if (!ignore_features[f]) {
-                            clause.push_back(Wr::lit(var_selected.at(f), true));
-                        }
-                    }
-
-                    // ... or some feature that d2-distinguishes the transitions is true
-                    for (feature_t f:compute_d2_distinguishing_features(sample_, s, sprime, t, tprime)) {
-                        if (!ignore_features[f]) {
-                            clause.push_back(Wr::lit(var_selected.at(f), true));
-                        }
-                    }
-
-                    if (is_solvable(tprime)) {
-                        clause.push_back(Wr::lit(good_vars.at({t, tprime}), true));
-                    }
-
-                    wr.cl(clause);
-                    n_separation_clauses += 1;
-                }
-            }
-        }
-        */
     }
 
     // Clauses (8), (9):
-    for (const auto tx1:class_representatives_) {
-        const auto& tx1pair = get_state_pair(tx1);
+    std::cout << "Posting distinguishability constraints for " << transitions_to_distinguish.size()
+              << " pairs of transitions" << std::endl;
+    for (const auto& tpair:transitions_to_distinguish) {
+        assert (!is_necessarily_bad(tpair.tx1));
+        const auto& tx1pair = get_state_pair(tpair.tx1);
         const auto s = tx1pair.first;
         const auto sprime = tx1pair.second;
-        if (is_necessarily_bad(tx1)) continue;
+        const auto& tx2pair = get_state_pair(tpair.tx2);
+        const auto t = tx2pair.first;
+        const auto tprime = tx2pair.second;
 
-        auto good_s_sprime = good_vars.at(tx1);
+        cnfclause_t clause{Wr::lit(good_vars.at(tpair.tx1), false)};
 
-        for (const auto tx2:class_representatives_) {
-            const auto& tx2pair = get_state_pair(tx2);
-            const auto t = tx2pair.first;
-            const auto tprime = tx2pair.second;
-
-            cnfclause_t clause{Wr::lit(good_s_sprime, false)};
-
-            // Compute first the Selected(f) terms
-            for (feature_t f:compute_d1d2_distinguishing_features(sample_, s, sprime, t, tprime)) {
-                if (!ignore_features[f]) {
-                    clause.push_back(Wr::lit(var_selected.at(f), true));
-                }
+        // Compute first the Selected(f) terms
+        for (feature_t f:compute_d1d2_distinguishing_features(sample_, s, sprime, t, tprime)) {
+            if (!ignore_features[f]) {
+                clause.push_back(Wr::lit(var_selected.at(f), true));
             }
-
-            if (!is_necessarily_bad(tx2)) {
-                auto good_t_tprime = good_vars.at(tx2);
-                clause.push_back(Wr::lit(good_t_tprime, true));
-            }
-            wr.cl(clause);
-            n_separation_clauses += 1;
         }
+
+        if (!is_necessarily_bad(tpair.tx2)) {
+            auto good_t_tprime = good_vars.at(tpair.tx2);
+            clause.push_back(Wr::lit(good_t_tprime, true));
+        }
+        wr.cl(clause);
+        n_separation_clauses += 1;
     }
 
     // Clauses (10)
@@ -493,43 +456,133 @@ bool TransitionClassificationEncoding::write(CNFWriter& wr)
 //        n_goal_clauses += 1;
 //    }
 
-    return false;
+    return sltp::cnf::CNFGenerationOutput::Success;
 }
 
-bool TransitionClassificationEncoding::check_validity_of_existing_solution() {
+CNFGenerationOutput TransitionClassificationEncoding::refine_theory(CNFWriter& wr) {
+    std::vector<transition_pair> flaws;
+    bool previous_solution = check_existing_solution_for_flaws(flaws);
+    if (previous_solution && flaws.empty()) {
+        return CNFGenerationOutput::ValidationCorrectNoRefinementNecessary;
+    }
+
+    if (options.use_incremental_refinement) {
+        return write(wr, compute_transitions_to_distinguish(flaws));
+    }
+
+    return write(wr, distinguish_all_transitions());
+}
+
+std::vector<transition_pair> TransitionClassificationEncoding::distinguish_all_transitions() const {
+    std::vector<transition_pair> transitions_to_distinguish;
+    transitions_to_distinguish.reserve(class_representatives_.size() * class_representatives_.size());
+
+    for (const auto tx1:class_representatives_) {
+        if (is_necessarily_bad(tx1)) continue;
+        for (const auto tx2:class_representatives_) {
+            transitions_to_distinguish.emplace_back(tx1, tx2);
+        }
+    }
+    return transitions_to_distinguish;
+}
+
+std::vector<transition_pair>
+TransitionClassificationEncoding::compute_transitions_to_distinguish(
+        const std::vector<transition_pair> &flaws) const {
+
+    if (flaws.size()>1) throw std::runtime_error("Code below needs to be adapted");
+
+    transition_pair onlyflaw = {std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max()};
+    if (flaws.size()==1) onlyflaw = flaws[0];
+
+    std::vector<transition_pair> transitions_to_distinguish;
+    for (const auto tx1:class_representatives_) {
+        if (is_necessarily_bad(tx1)) continue;
+
+        const auto& tx1pair = get_state_pair(tx1);
+        const auto s = tx1pair.first;
+
+        std::unordered_set<uint32_t> transitions2;
+        for (unsigned sprime:successors(s)) {
+            if (sprime == tx1pair.second) continue;
+            transitions2.insert(get_class_representative(s, sprime));
+        }
+
+        // This will need to be adapted if we want to refine with more than one flaw at a time
+        if (onlyflaw.tx1 == tx1) transitions2.insert(get_representative_id(onlyflaw.tx2));
+
+        for (auto tx2:transitions2) {
+            transitions_to_distinguish.emplace_back(tx1, tx2);
+        }
+    }
+    return transitions_to_distinguish;
+}
+
+    bool TransitionClassificationEncoding::check_existing_solution_for_flaws(
+        std::vector<transition_pair>& flaws)  const {
     auto ifs_good_transitions = get_ifstream(options.workspace + "/good_transitions.io");
     auto ifs_good_features = get_ifstream(options.workspace + "/good_features.io");
 
-    std::vector<unsigned> featureids;
+    std::vector<unsigned> good_features;
     int featureid = -1;
     while (ifs_good_features >> featureid) {
-        featureids.push_back(featureid);
+        good_features.push_back(featureid);
     }
 
-    std::vector<unsigned> good_transitions, bad_transitions;
+    std::vector<unsigned> good_transitions_repr;
     int s = -1, sprime = -1;
     while (ifs_good_transitions >> s >> sprime) {
-        good_transitions.emplace_back(get_transition_id(s, sprime));
+        good_transitions_repr.emplace_back(get_transition_id(s, sprime));
     }
 
     ifs_good_transitions.close();
     ifs_good_features.close();
 
-    if (featureids.empty()) return false;
+    if (good_features.empty()) return false;
 
-    // Let's check whether the policy is indeed able to distinguish between all pairs of good and bad transitions
+    // Let's exploit the equivalence classes between transitions. The transitions that have been read off as Good from
+    // the SAT solution are already class representatives by definition of the SAT theory
+    std::vector<unsigned> bad_transitions_repr;
+    std::unordered_set<unsigned> good_set(good_transitions_repr.begin(), good_transitions_repr.end());
 
-    std::unordered_set<unsigned> good_set(good_transitions.begin(), good_transitions.end());
-    for (unsigned tx=0; tx < transition_ids_.size(); ++tx) {
-        if (good_set.find(tx) == good_set.end()) bad_transitions.push_back(tx);
+    for (auto repr:class_representatives_) {
+        if (good_set.find(repr) == good_set.end()) {
+            bad_transitions_repr.push_back(repr);
+        }
     }
 
-    for ()
+    // Let's check whether the policy is indeed able to distinguish between all pairs of good and bad transitions
+    for (auto gtx:good_transitions_repr) {
+        const auto& tx1pair = get_state_pair(gtx);
 
+        for (auto btx:bad_transitions_repr) {
+            const auto& tx2pair = get_state_pair(btx);
 
+            if (!are_transitions_d1d2_distinguishable(tx1pair.first, tx1pair.second, tx2pair.first, tx2pair.second, good_features)) {
+                // We found a flaw in the computed policy: Transitions gtx, which is labeled as Good, cannot be
+                // distinguished from transition btx, labeled as bad, based only on the selected ("good") features.
+                flaws.emplace_back(gtx, btx);
+                break;
+            }
+        }
+    }
 
+    std::cout << "Refinement of computed policy found " << flaws.size() << " flaws" << std::endl;
+    return true;
+}
+
+bool TransitionClassificationEncoding::are_transitions_d1d2_distinguishable(
+        uint16_t s, uint16_t sprime, uint16_t t, uint16_t tprime, const std::vector<unsigned>& features) const {
+    const auto& mat = sample_.matrix();
+    for (unsigned f:features) {
+        if (are_transitions_d1d2_distinguished(mat.entry(s, f), mat.entry(sprime, f),
+                                               mat.entry(t, f), mat.entry(tprime, f))) {
+            return true;
+        }
+    }
     return false;
 }
+
 
 
 } // namespaces

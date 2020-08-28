@@ -23,7 +23,7 @@ Sample::Sample AAAI19Generator::preprocess_sample(const Sample::Sample& sample, 
 }
 
 //! Generate and write the actual CNF instance as we go
-bool AAAI19Generator::write(CNFWriter& writer) {
+sltp::cnf::CNFGenerationOutput AAAI19Generator::write(CNFWriter& writer) {
 
     /////// Create the CNF variables ///////
 
@@ -127,7 +127,7 @@ bool AAAI19Generator::write(CNFWriter& writer) {
             const auto& d1feats = d1_distinguishing_features(s, t);
             if (d1feats.empty()) {
                 undist_goal_warning(s, t);
-                return true;
+                return sltp::cnf::CNFGenerationOutput::UnsatTheory;
             }
 
             cnfclause_t clause;
@@ -147,7 +147,7 @@ bool AAAI19Generator::write(CNFWriter& writer) {
             const auto& d1feats = d1_distinguishing_features(s, t);
             if (d1feats.empty()) {
                 undist_deadend_warning(s, t);
-                return true;
+                return sltp::cnf::CNFGenerationOutput::UnsatTheory;
             }
 
             cnfclause_t clause;
@@ -184,7 +184,7 @@ bool AAAI19Generator::write(CNFWriter& writer) {
         }
     }
 
-    return false;
+    return sltp::cnf::CNFGenerationOutput::Success;
 }
 
 } // namespaces

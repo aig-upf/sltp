@@ -111,7 +111,7 @@ public:
         return d2vars_.at(d2id);
     }
 
-    bool write(CNFWriter& wr) override;
+    sltp::cnf::CNFGenerationOutput write(CNFWriter& wr);
 };
 
 } // namespaces

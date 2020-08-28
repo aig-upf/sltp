@@ -3,7 +3,6 @@ import os
 import time
 
 from sltp.separation import extract_features_from_sat_solution, compute_good_transitions
-from sltp.util.naming import compute_info_filename
 
 from . import SLTP_SRC_DIR
 from .util.command import execute, read_file
@@ -18,17 +17,14 @@ def run(config, data, rng):
 
     good_transitions, good_features = [], []
 
-    it = 1
-    while True:
+    maxiterations = 9999 if config.use_incremental_refinement else 1
+    for it in range(1, maxiterations+1):
         print_good_transition_list(good_transitions, config.good_transitions_filename)
         print_good_features_list(good_features, config.good_features_filename)
 
-        exitcode, data = generate_cnf(config, data)
+        exitcode, results = generate_cnf(config, data)
         if exitcode == ExitCode.IterativeMaxsatApproachSuccessful:
             print(f"Iterative approach finished successfully after {it} iterations")
-
-        if exitcode != ExitCode.Success:
-            return exitcode, data
 
         solution = solve(config.experiment_dir, config.cnf_filename, config.maxsat_solver, config.maxsat_timeout)
 
@@ -40,7 +36,7 @@ def run(config, data, rng):
         good_transitions = compute_good_transitions(solution.assignment, config.wsat_varmap_filename)
         good_features = extract_features_from_sat_solution(config, solution)
 
-        it += 1
+    return ExitCode.Success, dict()
 
 
 def print_good_transition_list(good_txs, filename):
@@ -67,6 +63,7 @@ def generate_cnf(config, data):
     args += ["--use-equivalence-classes"] if config.use_equivalence_classes else []
     args += ["--use-feature-dominance"] if config.use_feature_dominance else []
     args += ["--v_slack", str(config.v_slack)]
+    args += ["--use-incremental-refinement", str(config.use_incremental_refinement)]
     retcode = execute([cmd] + args)
     if retcode != 0:
         return ExitCode.CNFGenerationUnknownError, dict()

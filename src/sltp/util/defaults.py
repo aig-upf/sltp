@@ -198,6 +198,9 @@ def generate_experiment(expid, domain_dir, domain, **kwargs):
 
         # The slack value for the maximum allowed value for V_pi(s) = slack * V^*(s)
         v_slack=2,
+
+        # In the transition-separation encoding, whether to use the incremental refinement approach
+        use_incremental_refinement=False,
     )
 
     parameters = {**defaults, **kwargs}  # Copy defaults, overwrite with user-specified parameters

@@ -29,7 +29,7 @@ public:
     }
 
 
-    bool write(CNFWriter& wr) override;
+    sltp::cnf::CNFGenerationOutput write(CNFWriter& wr, const std::vector<transition_pair>& transitions_to_distinguish);
 
     inline unsigned get_transition_id(uint16_t s, uint16_t t) const { return transition_ids_.at(state_pair(s, t)); }
 
@@ -62,7 +62,13 @@ public:
         return D;
     }
 
-    bool check_validity_of_existing_solution();
+    bool check_existing_solution_for_flaws(std::vector<transition_pair>& flaws) const;
+
+    //! Whether the two given transitions are distinguishable through the given features alone
+    bool are_transitions_d1d2_distinguishable(
+            uint16_t s, uint16_t sprime, uint16_t t, uint16_t tprime, const std::vector<unsigned>& features) const;
+
+    CNFGenerationOutput refine_theory(CNFWriter& wr);
 
 protected:
     // A mapping from pairs of state to the assigned transition id
@@ -91,6 +97,9 @@ protected:
     //! Return DT(f), the set of pairs of transitions that are distinguished by the given feature f
     std::vector<transition_pair> compute_dt(unsigned f);
 
+    std::vector<transition_pair> compute_transitions_to_distinguish(const std::vector<transition_pair> &flaws) const;
+
+    std::vector<transition_pair> distinguish_all_transitions() const;
 };
 
 } // namespaces

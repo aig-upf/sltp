@@ -39,6 +39,9 @@ struct Options {
     //! The slack value for the maximum allowed value for V_\pi(s) = slack * V^*(s)
     double v_slack;
 
+    //! In the transition-separation encoding, whether to use the incremental refinement approach
+    bool use_incremental_refinement;
+
     //! In the transition-separation CNF encoding, whether to distinguish good transitions *only from*
     //! unmarked transitions that start in the same state as the good transition
     bool distinguish_transitions_locally;
@@ -49,6 +52,13 @@ struct Options {
 
     [[nodiscard]] bool use_d2tree() const { return encoding == Encoding::D2Tree; }
     [[nodiscard]] bool use_separation_encoding() const { return encoding == Encoding::TransitionSeparation; }
+};
+
+
+enum class CNFGenerationOutput : unsigned {
+    Success = 0,
+    UnsatTheory = 1,
+    ValidationCorrectNoRefinementNecessary = 2
 };
 
 } // namespaces
@@ -79,7 +89,7 @@ std::vector<feature_t> compute_d1d2_distinguishing_features(const Sample::Sample
 bool are_transitions_d1d2_distinguished(int s_f, int sprime_f, int t_f, int tprime_f);
 
 struct transition_pair {
-    transition_pair(uint32_t  tx1, uint32_t  tx2) :
+    transition_pair(uint32_t tx1, uint32_t tx2) :
             tx1(tx1), tx2(tx2)
     {}
 
@@ -124,10 +134,6 @@ public:
     [[nodiscard]] const std::vector<unsigned>& successors(unsigned s) const {
         return sample_.transitions().successors(s);
     }
-
-    //! Generate and write the CNF instance as we go
-    virtual bool write(CNFWriter& wr) = 0;
-
 
 protected:
     //! The transition sample data

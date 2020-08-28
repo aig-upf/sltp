@@ -44,12 +44,17 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
         ("v_slack", po::value<double>()->default_value(2),
          "The slack value for the maximum allowed value for V_pi(s) = slack * V^*(s)")
 
+        ("use-incremental-refinement",
+         "In the transition-separation encoding, whether to use the incremental refinement approach")
+
         ("encoding", po::value<std::string>()->default_value("basic"),
              "The encoding to be used (options: {basic, d2tree, separation}).")
 
         ("use-equivalence-classes",
          "In the transition-separation encoding, whether we want to exploit the equivalence relation "
          "among transitions given by the feature pool")
+
+
 
         ("use-feature-dominance",
          "In the transition-separation encoding, whether we want to exploit the dominance among features to ignore "
@@ -82,6 +87,7 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
     options.distinguish_transitions_locally = vm.count("distinguish-transitions-locally") > 0;
     options.use_equivalence_classes = vm.count("use-equivalence-classes") > 0;
     options.use_feature_dominance = vm.count("use-feature-dominance") > 0;
+    options.use_incremental_refinement = vm.count("use-incremental-refinement") > 0;
     options.v_slack = vm["v_slack"].as<double>();
 
     auto enc = vm["encoding"].as<std::string>();
@@ -109,21 +115,17 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
     return options;
 }
 
-bool
-write_encoding(CNFWriter& wr, const Sample::Sample& sample, const sltp::cnf::Options& options, bool& solution_check_successful) {
+sltp::cnf::CNFGenerationOutput
+write_encoding(CNFWriter& wr, const Sample::Sample& sample, const sltp::cnf::Options& options) {
     if (options.use_separation_encoding()) {
-        sltp::cnf::TransitionClassificationEncoding gen(sample, options);
-        if (gen.check_validity_of_existing_solution()) {
-            solution_check_successful = true;
-            return false;
-        }
-        return gen.write(wr);
+        sltp::cnf::TransitionClassificationEncoding generator(sample, options);
+        return generator.refine_theory(wr);
 
     } else {
         if (options.prune_redundant_states) {
             // If indicated by the user, prune those states that appear redundant for the given feature pool
             auto resample = sltp::cnf::AAAI19Generator::preprocess_sample(sample, options);
-            sltp::cnf::AAAI19Generator gen(sample, options);
+            sltp::cnf::AAAI19Generator gen(resample, options);
             return gen.write(wr);
         } else {
             sltp::cnf::AAAI19Generator gen(sample, options);
@@ -160,32 +162,26 @@ int main(int argc, const char **argv) {
     auto wsatstream = get_ofstream(options.workspace + "/theory.wsat.tmp");
     auto allvarsstream = get_ofstream(options.workspace + "/allvars.wsat");
 
-    bool solution_check_successful = false;
-
     CNFWriter writer(wsatstream, &allvarsstream);
-    auto unsat = write_encoding(writer, sample, options, solution_check_successful);
+    auto output = write_encoding(writer, sample, options);
 
     wsatstream.close();
     allvarsstream.close();
 
-    if (solution_check_successful) {
-        // The run was only to check a previous solution, and the check was successful, so we just signal that and end
-        return 2;
+    if (output != sltp::cnf::CNFGenerationOutput::ValidationCorrectNoRefinementNecessary) {
+        // Write some characteristics of the CNF to a different file
+        auto topstream = get_ofstream(options.workspace + "/top.dat");
+        topstream << writer.top() << " " << writer.nvars() << " " << writer.nclauses();
+        topstream.close();
+
+        float total_time = Utils::read_time_in_seconds() - start_time;
+        std::cout << "Total-time: " << total_time << std::endl;
+        std::cout << "CNF Theory: " << writer.nvars() << " vars + " << writer.nclauses() << " clauses" << std::endl;
     }
 
-    // Write some characteristics of the CNF to a different file
-    auto topstream = get_ofstream(options.workspace + "/top.dat");
-    topstream << writer.top() << " " << writer.nvars() << " " << writer.nclauses();
-    topstream.close();
-
-    float total_time = Utils::read_time_in_seconds() - start_time;
-    std::cout << "Total-time: " << total_time << std::endl;
-    std::cout << "CNF Theory: "  << writer.nvars() << " vars + " << writer.nclauses() << " clauses" << std::endl;
-
-    if (unsat) {
-        // The generation of the CNF might have already detected unsatisfiability
+    if (output == sltp::cnf::CNFGenerationOutput::UnsatTheory) {
         std::cout << Utils::warning() << "CNF theory is UNSAT" << std::endl;
-        return 1;
     }
-    return 0;
+
+    return static_cast<std::underlying_type_t<sltp::cnf::CNFGenerationOutput>>(output);
 }
