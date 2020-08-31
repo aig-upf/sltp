@@ -66,12 +66,12 @@ def run_solver(solver, rundir, input_filename, tag=None, stdout=None, timeout=No
     assert tag or stdout
     error = False
     if stdout is None:
-        stdout = os.path.join(rundir, '{}_run.log'.format(tag))
+        stdout = os.path.join(rundir, f'{tag}_run.log')
 
     with open(stdout, 'w') as driver_log:
-        with open(os.path.join(rundir, '{}_run.err'.format(tag)), 'w') as driver_err:
+        with open(os.path.join(rundir, f'{tag}_run.err'), 'w') as driver_err:
             cmd = solver.command(input_filename)
-            logging.info('Executing (timeout: {}) "{}" on directory "{}"'.format(timeout, cmd, rundir))
+            logging.info(f'Executing (timeout: {timeout} s.) "{cmd}" on directory "{rundir}"')
 
             proc = subprocess.Popen(cmd, cwd=rundir, stdout=driver_log, stderr=driver_err,
                                     bufsize=0)  # use unbuffered output
@@ -90,7 +90,7 @@ def run_with_controlling_timer(proc, timeout=None):
     If a timeout is specified, send a SIGTERM after that timeout, and a SIGKILL a bit later.
     Otherwise, just run the process normally. """
     def send_sigterm():
-        logging.warning("Sending SIGTERM to subprocess with ID {}".format(proc.pid))
+        logging.warning(f"Sending SIGTERM to subprocess with ID {proc.pid}")
         os.kill(proc.pid, signal.SIGTERM)
 
     timeout = 0 if timeout is None else timeout
