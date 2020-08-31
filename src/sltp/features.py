@@ -252,16 +252,18 @@ def compute_static_atoms(problem):
     return static_atoms, static_predicates
 
 
-def compute_instance_information(problem, use_goal_denotation=False):
-    goal_denotations, goal_predicates = None, set()
+def compute_instance_information(problem, goal_predicates):
+    goal_denotations = None
 
     # Compute the universe of each instance - a bit redundant with the above, but should be OK
     universe = compute_universe_from_pddl_model(problem.language)
 
     static_atoms, static_predicates = compute_static_atoms(problem)
 
-    if use_goal_denotation:
-        goal_denotations = defaultdict(list)  # Atoms indexed by their predicate name
+    if goal_predicates:
+        goal_denotations = {}  # Atoms indexed by their predicate name
+        for p in goal_predicates:
+            goal_denotations[p] = list()
 
         try:
             ground_atoms = transform_to_ground_atoms(problem.goal)
@@ -272,9 +274,21 @@ def compute_instance_information(problem, use_goal_denotation=False):
         for atom in ground_atoms:
             predicate_name = atom[0]
             goal_denotations[predicate_name].append(atom)
-            goal_predicates.add(predicate_name)
 
     return InstanceInformation(universe, static_atoms, static_predicates, goal_denotations, goal_predicates)
+
+
+def compute_predicates_appearing_in_goal(problem, use_goal_denotation):
+    if not use_goal_denotation:
+        return set()
+
+    try:
+        ground_atoms = transform_to_ground_atoms(problem.goal)
+    except TransformationError:
+        logging.error("Cannot create goal concepts when problem goal is not a conjunction of ground atoms")
+        raise
+
+    return {atom[0] for atom in ground_atoms}
 
 
 class InstanceInformation:
@@ -297,16 +311,19 @@ def report_use_goal_denotation(parameter_generator):
 
 
 def compute_models(domain, sample, parsed_problems, parameter_generator):
+    problems = [problem for problem, _, _ in parsed_problems]
     use_goal_denotation = report_use_goal_denotation(parameter_generator)
 
-    infos = [compute_instance_information(problem, use_goal_denotation) for problem, _, _ in parsed_problems]
+    goal_predicates = set().union(*(compute_predicates_appearing_in_goal(p, use_goal_denotation) for p in problems))
+
+    infos = [compute_instance_information(problem, goal_predicates) for problem in problems]
 
     # We assume all problems languages are the same and simply pick the first one
-    language = parsed_problems[0][0].language
+    language = problems[0].language
     vocabulary = compute_dl_vocabulary(language)
 
     nominals, model_cache = create_model_cache_from_samples(vocabulary, sample, domain, parameter_generator, infos)
-    return language, nominals, model_cache, infos
+    return language, nominals, model_cache, infos, goal_predicates
 
 
 def extract_features(config, sample):

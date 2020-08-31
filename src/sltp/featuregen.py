@@ -246,7 +246,7 @@ def extract_features(config, sample):
 
     parsed_problems = parse_all_instances(config.domain, config.instances)  # Parse all problem instances
 
-    language, nominals, model_cache, infos = compute_models(
+    language, nominals, model_cache, infos, all_goal_predicates = compute_models(
         config.domain, sample, parsed_problems, config.parameter_generator)
 
     # If user provides handcrafted features, no need to go further than here
@@ -256,10 +256,6 @@ def extract_features(config, sample):
         return ExitCode.Success, dict(enforced_feature_idxs=[], in_goal_features=[], sat_feature_mapping={},
                                       num_features=len(features),
                                       model_cache=model_cache)
-
-    all_goal_predicates = set(itertools.chain.from_iterable(info.goal_predicates for info in infos))
-    if any(all_goal_predicates != info.goal_predicates for info in infos):
-        logging.warning("Not all instances in the training set use the same goal predicate")
 
     all_objects = []
     all_predicates, all_functions = set(), set()
