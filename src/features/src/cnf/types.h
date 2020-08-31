@@ -10,6 +10,20 @@
 
 namespace sltp::cnf {
 
+using transition_id_t = uint32_t;
+
+struct transition_pair {
+    transition_pair(transition_id_t tx1, transition_id_t tx2) :
+            tx1(tx1), tx2(tx2)
+    {}
+
+    transition_id_t tx1;
+    transition_id_t tx2;
+};
+
+bool operator<(const transition_pair& x, const transition_pair& y);
+
+
 struct transition_denotation {
     uint8_t value_s_gt_0:1;
     uint8_t increases:1;
@@ -40,11 +54,6 @@ inline std::ostream& operator<<(std::ostream &os, const transition_denotation& o
 }
 
 
-std::size_t hash_value(const transition_denotation& x);
-
-
-
-
 struct transition_trace {
 //    std::array<transition_denotation, 40> data; // This could be useful if we decide to compile the code on the fly
 
@@ -67,11 +76,19 @@ inline std::ostream& operator<<(std::ostream &os, const transition_trace& o) {
     return os;
 }
 
+std::size_t hash_value(const transition_pair& x);
+std::size_t hash_value(const transition_denotation& x);
 
 } // namespaces
 
 // Specializations of std::hash
 namespace std {
+
+template<> struct hash<sltp::cnf::transition_pair> {
+    std::size_t operator()(const sltp::cnf::transition_pair& x) const {
+        return hash_value(x);
+    }
+};
 
 template<> struct hash<sltp::cnf::transition_denotation> {
     std::size_t operator()(const sltp::cnf::transition_denotation& x) const {

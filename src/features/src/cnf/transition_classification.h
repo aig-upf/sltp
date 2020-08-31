@@ -2,6 +2,7 @@
 #pragma once
 
 #include "generator.h"
+#include "types.h"
 
 //#include <boost/container/flat_set.hpp>
 
@@ -62,7 +63,8 @@ public:
         return D;
     }
 
-    bool check_existing_solution_for_flaws(std::vector<transition_pair>& flaws) const;
+    using flaw_index_t = std::unordered_map<transition_id_t, std::vector<transition_id_t>>;
+    bool check_existing_solution_for_flaws(flaw_index_t& flaws) const;
 
     //! Whether the two given transitions are distinguishable through the given features alone
     bool are_transitions_d1d2_distinguishable(
@@ -97,9 +99,17 @@ protected:
     //! Return DT(f), the set of pairs of transitions that are distinguished by the given feature f
     std::vector<transition_pair> compute_dt(unsigned f);
 
-    std::vector<transition_pair> compute_transitions_to_distinguish(const std::vector<transition_pair> &flaws) const;
+    std::vector<transition_pair> compute_transitions_to_distinguish(
+            bool load_transitions_from_previous_iteration, const flaw_index_t& flaws) const;
 
     std::vector<transition_pair> distinguish_all_transitions() const;
+
+    void store_transitions_to_distinguish(const std::vector<transition_pair> &transitions) const;
+
+    std::vector<transition_pair> load_transitions_to_distinguish() const;
+
+    std::vector<transition_pair> generate_t0_transitions() const;
+
 };
 
 } // namespaces

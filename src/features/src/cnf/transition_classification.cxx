@@ -1,6 +1,6 @@
 
 #include "transition_classification.h"
-#include "equivalences.h"
+#include "types.h"
 
 #include <iostream>
 #include <vector>
@@ -460,17 +460,22 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
 }
 
 CNFGenerationOutput TransitionClassificationEncoding::refine_theory(CNFWriter& wr) {
-    std::vector<transition_pair> flaws;
+    flaw_index_t flaws;
     bool previous_solution = check_existing_solution_for_flaws(flaws);
     if (previous_solution && flaws.empty()) {
         return CNFGenerationOutput::ValidationCorrectNoRefinementNecessary;
     }
 
+    std::vector<transition_pair> transitions;
+
     if (options.use_incremental_refinement) {
-        return write(wr, compute_transitions_to_distinguish(flaws));
+        transitions = compute_transitions_to_distinguish(previous_solution, flaws);
+        store_transitions_to_distinguish(transitions);
+    } else {
+        transitions = distinguish_all_transitions();
     }
 
-    return write(wr, distinguish_all_transitions());
+    return write(wr, transitions);
 }
 
 std::vector<transition_pair> TransitionClassificationEncoding::distinguish_all_transitions() const {
@@ -488,38 +493,38 @@ std::vector<transition_pair> TransitionClassificationEncoding::distinguish_all_t
 
 std::vector<transition_pair>
 TransitionClassificationEncoding::compute_transitions_to_distinguish(
-        const std::vector<transition_pair> &flaws) const {
+        bool load_transitions_from_previous_iteration,
+        const flaw_index_t& flaws) const {
 
-    if (flaws.size()>1) throw std::runtime_error("Code below needs to be adapted");
 
-    transition_pair onlyflaw = {std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max()};
-    if (flaws.size()==1) onlyflaw = flaws[0];
+    std::vector<transition_pair> last_transitions;
+    if (load_transitions_from_previous_iteration) {
+        last_transitions = load_transitions_to_distinguish();
+    } else {
+        last_transitions = generate_t0_transitions();
+    }
 
     std::vector<transition_pair> transitions_to_distinguish;
-    for (const auto tx1:class_representatives_) {
-        if (is_necessarily_bad(tx1)) continue;
 
-        const auto& tx1pair = get_state_pair(tx1);
-        const auto s = tx1pair.first;
-
-        std::unordered_set<uint32_t> transitions2;
-        for (unsigned sprime:successors(s)) {
-            if (sprime == tx1pair.second) continue;
-            transitions2.insert(get_class_representative(s, sprime));
+    std::vector<std::unordered_set<uint32_t>> index(transition_ids_.size());
+    for (auto txpair:last_transitions) {
+        index.at(txpair.tx1).insert(txpair.tx2);
+    }
+    for (const auto& it:flaws) {
+        for (auto tx2:it.second) {
+            index.at(it.first).insert(tx2);
         }
+    }
 
-        // This will need to be adapted if we want to refine with more than one flaw at a time
-        if (onlyflaw.tx1 == tx1) transitions2.insert(get_representative_id(onlyflaw.tx2));
-
-        for (auto tx2:transitions2) {
+    for (unsigned tx1=0; tx1<index.size(); ++tx1) {
+        for (auto tx2:index[tx1]) {
             transitions_to_distinguish.emplace_back(tx1, tx2);
         }
     }
     return transitions_to_distinguish;
 }
 
-    bool TransitionClassificationEncoding::check_existing_solution_for_flaws(
-        std::vector<transition_pair>& flaws)  const {
+bool TransitionClassificationEncoding::check_existing_solution_for_flaws(flaw_index_t& flaws)  const {
     auto ifs_good_transitions = get_ifstream(options.workspace + "/good_transitions.io");
     auto ifs_good_features = get_ifstream(options.workspace + "/good_features.io");
 
@@ -538,7 +543,9 @@ TransitionClassificationEncoding::compute_transitions_to_distinguish(
     ifs_good_transitions.close();
     ifs_good_features.close();
 
-    if (good_features.empty()) return false;
+    if (good_features.empty()) {
+        return false;
+    }
 
     // Let's exploit the equivalence classes between transitions. The transitions that have been read off as Good from
     // the SAT solution are already class representatives by definition of the SAT theory
@@ -552,6 +559,7 @@ TransitionClassificationEncoding::compute_transitions_to_distinguish(
     }
 
     // Let's check whether the policy is indeed able to distinguish between all pairs of good and bad transitions
+    unsigned num_flaws = 0;
     for (auto gtx:good_transitions_repr) {
         const auto& tx1pair = get_state_pair(gtx);
 
@@ -561,13 +569,19 @@ TransitionClassificationEncoding::compute_transitions_to_distinguish(
             if (!are_transitions_d1d2_distinguishable(tx1pair.first, tx1pair.second, tx2pair.first, tx2pair.second, good_features)) {
                 // We found a flaw in the computed policy: Transitions gtx, which is labeled as Good, cannot be
                 // distinguished from transition btx, labeled as bad, based only on the selected ("good") features.
-                flaws.emplace_back(gtx, btx);
+                flaws[gtx].push_back(btx);
+                ++num_flaws;
                 break;
             }
         }
     }
 
-    std::cout << "Refinement of computed policy found " << flaws.size() << " flaws" << std::endl;
+    if (num_flaws) {
+        std::cout << Utils::red() << "Refinement of computed policy found " << num_flaws << " flaws" << Utils::normal() << std::endl;
+    } else {
+        std::cout << Utils::green() << "Computed policy is correct with respect to full training set!" << Utils::normal() << std::endl;
+    }
+
     return true;
 }
 
@@ -583,6 +597,44 @@ bool TransitionClassificationEncoding::are_transitions_d1d2_distinguishable(
     return false;
 }
 
+void TransitionClassificationEncoding::store_transitions_to_distinguish(
+        const std::vector<transition_pair> &transitions) const {
 
+    auto ofs = get_ofstream(options.workspace + "/last_iteration_transitions.io");
+    for (const auto& txpair:transitions) {
+        ofs << txpair.tx1 << " " << txpair.tx2 << std::endl;
+    }
+    ofs.close();
+}
+
+
+std::vector<transition_pair> TransitionClassificationEncoding::load_transitions_to_distinguish() const {
+    std::vector<transition_pair> transitions;
+    auto ifs = get_ifstream(options.workspace + "/last_iteration_transitions.io");
+    transition_id_t tx1, tx2;
+    while (ifs >> tx1 >> tx2) {
+        transitions.emplace_back(tx1, tx2);
+    }
+    ifs.close();
+    return transitions;
+}
+
+std::vector<transition_pair> TransitionClassificationEncoding::generate_t0_transitions() const {
+    std::vector<transition_pair> transitions;
+
+    for (const auto tx1:class_representatives_) {
+        if (is_necessarily_bad(tx1)) continue;
+        const auto& tx1pair = get_state_pair(tx1);
+        const auto s = tx1pair.first;
+
+        std::unordered_set<uint32_t> transitions2;
+        for (unsigned sprime:successors(s)) {
+            if (sprime == tx1pair.second) continue;
+            transitions.emplace_back(tx1, get_class_representative(s, sprime));
+        }
+    }
+
+    return transitions;
+}
 
 } // namespaces

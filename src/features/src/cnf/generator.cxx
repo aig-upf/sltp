@@ -1,11 +1,7 @@
 
 #include "generator.h"
-#include "equivalences.h"
+#include "types.h"
 
-
-bool operator<(const transition_pair& x, const transition_pair& y) {
-    return std::tie(x.tx1, x.tx2) < std::tie(y.tx1, y.tx2);
-}
 
 //! Return a sorted vector with those features that d1-distinguish s from t
 std::vector<feature_t> compute_d1_distinguishing_features(const Sample::Sample& sample, unsigned s, unsigned t) {

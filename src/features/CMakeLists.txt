@@ -8,8 +8,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Uncomment for debug build. Alternatively, build with `cmake -DCMAKE_BUILD_TYPE=Debug .`
 #set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_CXX_FLAGS "-g -DDEBUG")
-#set(CMAKE_CXX_FLAGS "-O3 -DNDEBUG")  # -Wall -Wextra
+#set(CMAKE_CXX_FLAGS "-g -DDEBUG")
+set(CMAKE_CXX_FLAGS "-O3 -DNDEBUG")  # -Wall -Wextra
 
 
 set(SOURCE_FILES
@@ -25,7 +25,7 @@ set(CNFGEN_SOURCE_FILES
         src/cnfgen.cpp
         src/cnf/transition_classification
         src/cnf/aaai19_generator
-        src/cnf/equivalences
+        src/cnf/types
         src/cnf/generator
         src/cnf/cnfwriter.h
         src/cnf/d2tree.h

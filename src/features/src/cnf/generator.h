@@ -88,18 +88,6 @@ std::vector<feature_t> compute_d1d2_distinguishing_features(const Sample::Sample
 
 bool are_transitions_d1d2_distinguished(int s_f, int sprime_f, int t_f, int tprime_f);
 
-struct transition_pair {
-    transition_pair(uint32_t tx1, uint32_t tx2) :
-            tx1(tx1), tx2(tx2)
-    {}
-
-    uint32_t tx1;
-    uint32_t tx2;
-};
-
-
-bool operator<(const transition_pair& x, const transition_pair& y);
-
 class CNFEncoding {
 public:
 
