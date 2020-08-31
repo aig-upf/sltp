@@ -37,10 +37,12 @@ def compute_completeness_info(sample, complete_only_wrt_optimal):
 
 def run_solver(config, data, rng):
     solution = solve(config.experiment_dir, config.cnf_filename, config.maxsat_solver, config.maxsat_timeout)
-    if not solution.solved and solution.result == "UNSATISFIABLE":
+    if solution.result == "UNSATISFIABLE":
         return ExitCode.MaxsatModelUnsat, dict()
+    elif solution.result == "SATISFIABLE":
+        logging.info(f"Possibly suboptimal MAXSAT solution with cost {solution.cost} found")
     else:
-        logging.info(f"MAXSAT solution with cost {solution.cost} found")
+        logging.info(f"Optimal MAXSAT solution with cost {solution.cost} found")
         # print(' '.join(str(var) for var, val in solution.assignment.items() if val is True))
 
     return ExitCode.Success, dict(cnf_solution=solution)

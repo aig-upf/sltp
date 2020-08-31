@@ -18,20 +18,29 @@ def run(config, data, rng):
     good_transitions, good_features = [], []
 
     maxiterations = 9999 if config.use_incremental_refinement else 1
+    approach_name = "incremental refinement" if config.use_incremental_refinement else "standard"
+
     for it in range(1, maxiterations+1):
+        logging.info(f"Starting iteration {it} of the {approach_name} approach")
+
         print_good_transition_list(good_transitions, config.good_transitions_filename)
         print_good_features_list(good_features, config.good_features_filename)
 
         exitcode, results = generate_cnf(config, data)
         if exitcode == ExitCode.IterativeMaxsatApproachSuccessful:
-            print(f"Iterative approach finished successfully after {it} iterations")
+            # Here we subtract 1 because last iteration was only the check
+            print(f"Iterative approach finished successfully after {it-1} iterations")
+            return ExitCode.Success, dict()
 
         solution = solve(config.experiment_dir, config.cnf_filename, config.maxsat_solver, config.maxsat_timeout)
 
         if solution.result == "UNSATISFIABLE":
             return ExitCode.MaxsatModelUnsat, dict()
+        elif solution.result == "SATISFIABLE":
+            logging.info(f"Possibly suboptimal MAXSAT solution with cost {solution.cost} found")
+        else:
+            logging.info(f"Optimal MAXSAT solution with cost {solution.cost} found")
 
-        logging.info(f"MAXSAT solution with cost {solution.cost} found")
         # print_maxsat_solution(solution.assignment, config.wsat_allvars_filename)
         good_transitions = compute_good_transitions(solution.assignment, config.wsat_varmap_filename)
         good_features = extract_features_from_sat_solution(config, solution)
@@ -63,12 +72,18 @@ def generate_cnf(config, data):
     args += ["--use-equivalence-classes"] if config.use_equivalence_classes else []
     args += ["--use-feature-dominance"] if config.use_feature_dominance else []
     args += ["--v_slack", str(config.v_slack)]
-    args += ["--use-incremental-refinement", str(config.use_incremental_refinement)]
+    args += ["--use-incremental-refinement"] if config.use_incremental_refinement else []
     retcode = execute([cmd] + args)
-    if retcode != 0:
-        return ExitCode.CNFGenerationUnknownError, dict()
-    prepare_maxsat_solver_input(config)
-    return ExitCode.Success, dict()
+
+    if retcode == 0:
+        prepare_maxsat_solver_input(config)
+
+    exitcode = {  # Let's map the numeric code returned by the c++ app into an ExitCode object
+        0: ExitCode.Success,
+        2: ExitCode.IterativeMaxsatApproachSuccessful
+    }.get(retcode, ExitCode.CNFGenerationUnknownError)
+
+    return exitcode, dict()
 
 
 def prepare_maxsat_solver_input(config):
