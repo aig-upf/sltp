@@ -209,11 +209,11 @@ protected:
     const std::string name_;
 
 public:
-    Object(unsigned id, const std::string &name) : id_(id), name_(name) { }
-    int id() const {
+    Object(unsigned id, std::string name) : id_(id), name_(std::move(name)) { }
+    [[nodiscard]] int id() const {
         return id_;
     }
-    const std::string& as_str() const {
+    [[nodiscard]] const std::string& as_str() const {
         return name_;
     }
     friend std::ostream& operator<<(std::ostream &os, const Object &obj) {
@@ -225,16 +225,16 @@ struct Predicate {
     const predicate_id_t id_;
     const std::string name_;
     const int arity_;
-    Predicate(unsigned id, const std::string &name, int arity)
-            : id_(id), name_(name), arity_(arity) {
+    Predicate(unsigned id, std::string name, int arity)
+            : id_(id), name_(std::move(name)), arity_(arity) {
     }
-    predicate_id_t id() const {
+    [[nodiscard]] predicate_id_t id() const {
         return id_;
     }
-    const std::string& name() const {
+    [[nodiscard]] const std::string& name() const {
         return name_;
     }
-    int arity() const {
+    [[nodiscard]] int arity() const {
         return arity_;
     }
     std::string as_str(const std::vector<object_id_t> *objects) const {
@@ -269,29 +269,29 @@ public:
             : predicate_(predicate), objects_(std::move(objects)) {
     }
 
-    predicate_id_t pred_id() const {
+    [[nodiscard]] predicate_id_t pred_id() const {
         return predicate_;
     }
-    const std::vector<object_id_t>& objects() const {
+    [[nodiscard]] const std::vector<object_id_t>& objects() const {
         return objects_;
     }
 
     // Return the i-th object of the current atom
-    object_id_t object(int i) const {
+    [[nodiscard]] object_id_t object(int i) const {
         return objects_.at(i);
     }
 
-    bool is_instance(const Predicate &predicate) const {
+    [[nodiscard]] bool is_instance(const Predicate &predicate) const {
         return predicate_ == predicate.id();
     }
 
-    std::vector<unsigned> data() const {
+    [[nodiscard]] std::vector<unsigned> data() const {
         std::vector<unsigned> res(1, predicate_);
         res.insert(res.end(), objects_.begin(), objects_.end());
         return res;
     }
 
-    std::string as_str(const Sample &sample) const;
+    [[nodiscard]] std::string as_str(const Sample &sample) const;
 };
 
 // An instance stores information shared by the states that
@@ -316,12 +316,12 @@ protected:
     AtomIndex atom_index_;
 
 public:
-    Instance(const std::string &name,
+    Instance(std::string name,
              std::vector<Object> &&objects,
              std::vector<Atom> &&atoms,
              ObjectIndex &&object_index,
              AtomIndex &&atom_index)
-            : name_(name),
+            : name_(std::move(name)),
               objects_(std::move(objects)),
               atoms_(std::move(atoms)),
               object_index_(std::move(object_index)),
@@ -370,20 +370,21 @@ public:
     State(const State &state) = default;
     State(State &&state) = default;
 
-    unsigned id() const {
+    [[nodiscard]] unsigned id() const {
         return id_;
     }
-    const std::vector<atom_id_t>& atoms() const {
+    [[nodiscard]] const std::vector<atom_id_t>& atoms() const {
         return atoms_;
     }
-    int num_objects() const {
+    [[nodiscard]] unsigned num_objects() const {
         return instance_.num_objects();
     }
 
-    const Instance& instance() const {
+    [[nodiscard]] const Instance& instance() const {
         return instance_;
     }
-    const Atom& atom(atom_id_t id) const {
+
+    [[nodiscard]] const Atom& atom(atom_id_t id) const {
         return instance_.atom(id);
     }
 };
@@ -493,14 +494,14 @@ protected:
 
 public:
     explicit Base(int complexity) : complexity_(complexity) { }
-    int complexity() const { return complexity_; }
+    [[nodiscard]] int complexity() const { return complexity_; }
 
     //virtual void denotation(Denotation &d) const = 0;
     virtual const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const = 0;
     virtual const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const = 0;
-    virtual std::string as_str() const = 0;
+    [[nodiscard]] virtual std::string as_str() const = 0;
 
-    std::string as_str_with_complexity() const {
+    [[nodiscard]] std::string as_str_with_complexity() const {
         return std::to_string(complexity_) + "." + as_str();
     }
 
@@ -517,14 +518,14 @@ class Concept : public Base {
 public:
     explicit Concept(int complexity) : Base(complexity) { }
     virtual ~Concept() = default;
-    virtual const Concept* clone() const = 0;
+    [[nodiscard]] virtual const Concept* clone() const = 0;
 };
 
 class Role : public Base {
 public:
     explicit Role(int complexity) : Base(complexity) { }
     virtual ~Role() = default;
-    virtual const Role* clone() const = 0;
+    [[nodiscard]] virtual const Role* clone() const = 0;
 };
 
 class PrimitiveConcept : public Concept {
@@ -534,7 +535,7 @@ protected:
 public:
     explicit PrimitiveConcept(const Predicate *predicate) : Concept(PRIMITIVE_COMPLEXITY), predicate_(predicate) { }
     ~PrimitiveConcept() override = default;
-    const Concept* clone() const override {
+    [[nodiscard]] const Concept* clone() const override {
         return new PrimitiveConcept(*this);
     }
 
@@ -565,7 +566,7 @@ public:
         }
         return cache.find_or_insert_state_denotation(sd);
     }
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         return predicate_->name_;
     }
 };
@@ -579,7 +580,7 @@ public:
     explicit NominalConcept(const std::string &name) : Concept(1), name_(name) {}
     ~NominalConcept() override = default;
 
-    const Concept* clone() const override {
+    [[nodiscard]] const Concept* clone() const override {
         return new NominalConcept(*this);
     }
 
@@ -606,7 +607,7 @@ public:
 
         return cache.find_or_insert_state_denotation(sd);
     }
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         return std::string("Nominal(") + name_ + ")";
     }
 };
@@ -615,7 +616,7 @@ class UniversalConcept : public Concept {
 public:
     UniversalConcept() : Concept(0) { }
     ~UniversalConcept() override = default;
-    const Concept* clone() const override {
+    [[nodiscard]] const Concept* clone() const override {
         return new UniversalConcept;
     }
 
@@ -640,7 +641,7 @@ public:
         throw std::runtime_error("Unexpected call: UniversalConcept::denotation(Cache&, const Sample&, const State&)");
         return nullptr;
     }
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         return "<universe>";
     }
 };
@@ -650,7 +651,7 @@ class EmptyConcept : public Concept {
 public:
     EmptyConcept() : Concept(0) { }
     ~EmptyConcept() override = default;
-    const Concept* clone() const override {
+    [[nodiscard]] const Concept* clone() const override {
         return new EmptyConcept;
     }
 
@@ -675,7 +676,7 @@ public:
         throw std::runtime_error("Unexpected call: EmptyConcept::denotation(Cache&, const Sample&, const State&)");
         return nullptr;
     }
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         return "<empty>";
     }
 };
@@ -693,7 +694,7 @@ public:
             concept2_(concept2) {
     }
     ~AndConcept() override = default;
-    const Concept* clone() const override {
+    [[nodiscard]] const Concept* clone() const override {
         return new AndConcept(*this);
     }
 
@@ -729,7 +730,7 @@ public:
         return nullptr;
     }
 
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         return std::string("And(") +  concept1_->as_str() + "," + concept2_->as_str() + ")";
     }
 };
@@ -740,11 +741,11 @@ protected:
 
 public:
     explicit NotConcept(const Concept *concept)
-    : Concept(1 + concept->complexity()),
-    concept_(concept) {
-    }
+        : Concept(1 + concept->complexity()),
+        concept_(concept)
+    {}
     ~NotConcept() override = default;
-    const Concept* clone() const override {
+    [[nodiscard]] const Concept* clone() const override {
         return new NotConcept(*this);
     }
 
@@ -776,7 +777,7 @@ public:
         return nullptr;
     }
 
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         return std::string("Not(") + concept_->as_str() + ")";
     }
 };
@@ -788,12 +789,12 @@ protected:
 
 public:
     ExistsConcept(const Concept *concept, const Role *role)
-    : Concept(1 + concept->complexity() + role->complexity()),
+        : Concept(1 + concept->complexity() + role->complexity()),
     concept_(concept),
     role_(role) {
     }
     ~ExistsConcept() override = default;
-    const Concept* clone() const override {
+    [[nodiscard]] const Concept* clone() const override {
         return new ExistsConcept(*this);
     }
 
@@ -842,7 +843,7 @@ public:
         return nullptr;
     }
 
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         return std::string("Exists(") + role_->as_str() + "," + concept_->as_str() + ")";
     }
 };
@@ -854,12 +855,12 @@ protected:
 
 public:
     ForallConcept(const Concept *concept, const Role *role)
-    : Concept(1 + concept->complexity() + role->complexity()),
+        : Concept(1 + concept->complexity() + role->complexity()),
     concept_(concept),
     role_(role) {
     }
     ~ForallConcept() override = default;
-    const Concept* clone() const override {
+    [[nodiscard]] const Concept* clone() const override {
         return new ForallConcept(*this);
     }
 
@@ -909,7 +910,7 @@ public:
         return nullptr;
     }
 
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         return std::string("Forall(") + role_->as_str() + "," + concept_->as_str() + ")";
     }
 };
@@ -927,7 +928,7 @@ public:
               r2_(r2) {
     }
     ~EqualConcept() override = default;
-    const Concept* clone() const override { return new EqualConcept(*this); }
+    [[nodiscard]] const Concept* clone() const override { return new EqualConcept(*this); }
 
     const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
         const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
@@ -978,7 +979,7 @@ public:
         throw std::runtime_error("Unexpected call: EqualConcept::denotation(Cache&, const Sample&, const State&)");
         return nullptr;
     }
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         return std::string("Equal(") + r1_->as_str() + "," + r2_->as_str() + ")";
     }
 };
@@ -990,8 +991,8 @@ protected:
 
 public:
     explicit PrimitiveRole(const Predicate *predicate) : Role(PRIMITIVE_COMPLEXITY), predicate_(predicate) { }
-    ~PrimitiveRole() override { }
-    const Role* clone() const override {
+    ~PrimitiveRole() override = default;
+    [[nodiscard]] const Role* clone() const override {
         return new PrimitiveRole(*this);
     }
 
@@ -1023,9 +1024,9 @@ public:
         return cache.find_or_insert_state_denotation(sr);
     }
 
-    const Predicate* predicate() const { return predicate_; }
+    [[nodiscard]] const Predicate* predicate() const { return predicate_; }
 
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         return predicate_->name_;
     }
 };
@@ -1037,7 +1038,7 @@ protected:
 public:
     explicit PlusRole(const Role *role) : Role(1 + role->complexity()), role_(role) { }
     ~PlusRole() override = default;
-    const Role* clone() const override {
+    [[nodiscard]] const Role* clone() const override {
         return new PlusRole(*this);
     }
 
@@ -1096,9 +1097,9 @@ public:
         return nullptr;
     }
 
-    const Role* role() const { return role_; }
+    [[nodiscard]] const Role* role() const { return role_; }
 
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         // ATM let us call these Star(X) to get the same output than the Python module
         return std::string("Star(") + role_->as_str() + ")";
     }
@@ -1118,7 +1119,7 @@ public:
     ~StarRole() override {
         delete plus_role_;
     }
-    const Role* clone() const override {
+    [[nodiscard]] const Role* clone() const override {
         return new StarRole(*this);
     }
 
@@ -1153,10 +1154,10 @@ public:
         return nullptr;
     }
 
-    const Role* role() const { return role_; }
+    [[nodiscard]] const Role* role() const { return role_; }
 
 
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         return std::string("Star(") + role_->as_str() + ")";
     }
 };
@@ -1168,7 +1169,7 @@ protected:
 public:
     explicit InverseRole(const Role *role) : Role(1 + role->complexity()), role_(role) { }
     ~InverseRole() override = default;
-    const Role* clone() const override {
+    [[nodiscard]] const Role* clone() const override {
         return new InverseRole(*this);
     }
 
@@ -1207,9 +1208,9 @@ public:
         return nullptr;
     }
 
-    const Role* role() const { return role_; }
+    [[nodiscard]] const Role* role() const { return role_; }
 
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         return std::string("Inverse(") + role_->as_str() + ")";
     }
 };
@@ -1228,7 +1229,7 @@ public:
               restriction_(restriction) {
     }
     ~RoleRestriction() override = default;
-    const Role* clone() const override {
+    [[nodiscard]] const Role* clone() const override {
         return new RoleRestriction(*this);
     }
 
@@ -1269,9 +1270,9 @@ public:
         return nullptr;
     }
 
-    const Role* role() const { return role_; }
+    [[nodiscard]] const Role* role() const { return role_; }
 
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         return std::string("Restrict(") + role_->as_str() + "," + restriction_->as_str() + ")";
     }
 };
@@ -1290,7 +1291,7 @@ public:
               r2_(r2) {
     }
     ~RoleDifference() override = default;
-    const Role* clone() const override {
+    [[nodiscard]] const Role* clone() const override {
         return new RoleDifference(*this);
     }
 
@@ -1332,7 +1333,7 @@ public:
         return nullptr;
     }
 
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         return std::string("RoleDifference(") + r1_->as_str() + "," + r2_->as_str() + ")";
     }
 };
@@ -1343,11 +1344,11 @@ public:
     virtual ~Feature() = default;
     virtual const Feature* clone() const = 0;
 
-    virtual int complexity() const = 0;
-    virtual int value(const Cache &cache, const Sample &sample, const State &state) const = 0;
-    virtual std::string as_str() const = 0;
+    [[nodiscard]] virtual int complexity() const = 0;
+    [[nodiscard]] virtual int value(const Cache &cache, const Sample &sample, const State &state) const = 0;
+    [[nodiscard]] virtual std::string as_str() const = 0;
 
-    std::string as_str_with_complexity() const {
+    [[nodiscard]] std::string as_str_with_complexity() const {
         return std::to_string(complexity()) + "." + as_str();
     }
 
@@ -1355,7 +1356,7 @@ public:
         return os << f.as_str() << std::flush;
     }
 
-    virtual bool is_boolean() const = 0;
+    [[nodiscard]] virtual bool is_boolean() const = 0;
 };
 
 class NullaryAtomFeature : public Feature {
@@ -1366,15 +1367,15 @@ public:
     explicit NullaryAtomFeature(const Predicate* predicate) : predicate_(predicate) { }
     ~NullaryAtomFeature() override = default;
 
-    const Feature* clone() const override {
+    [[nodiscard]] const Feature* clone() const override {
         return new NullaryAtomFeature(*this);
     }
 
-    int complexity() const override { // Nullary atoms have complexity 0 by definition
+    [[nodiscard]] int complexity() const override { // Nullary atoms have complexity 0 by definition
         return 1;
     }
 
-    int value(const Cache &cache, const Sample &sample, const State &state) const override {
+    [[nodiscard]] int value(const Cache &cache, const Sample &sample, const State &state) const override {
         // Return true (1) iff some atom in the state has the coindiding predicate ID with the predicate of the
         // nullary atom, since there can only be one single atom with this predicate
         // TODO: This is unnecessarily expensive, and it is not cached anywhere
@@ -1386,11 +1387,11 @@ public:
         }
         return 0;
     }
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         return std::string("Atom[") + predicate_->name_ + "]";
     }
 
-    bool is_boolean() const override { return true; }
+    [[nodiscard]] bool is_boolean() const override { return true; }
 };
 
 class BooleanFeature : public Feature {
@@ -1400,14 +1401,14 @@ protected:
 public:
     explicit BooleanFeature(const Concept *concept) : Feature(), concept_(concept) { }
     ~BooleanFeature() override = default;
-    const Feature* clone() const override {
+    [[nodiscard]] const Feature* clone() const override {
         return new BooleanFeature(concept_);
     }
 
-    int complexity() const override {
+    [[nodiscard]] int complexity() const override {
         return concept_->complexity();
     }
-    int value(const Cache &cache, const Sample &sample, const State &state) const override {
+    [[nodiscard]] int value(const Cache &cache, const Sample &sample, const State &state) const override {
         // we look into cache for sample denotation using the concept name,
         // then index sample denotation with state id to find state denotation,
         // for finally computing cardinality (this assumes that state id is
@@ -1420,11 +1421,11 @@ public:
         assert(sd->cardinality() < 2);
         return sd->cardinality();
     }
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         return std::string("Bool[") + concept_->as_str() + "]";
     }
 
-    bool is_boolean() const override { return true; }
+    [[nodiscard]] bool is_boolean() const override { return true; }
 };
 
 class NumericalFeature : public Feature {
@@ -1434,14 +1435,15 @@ protected:
 public:
     explicit NumericalFeature(const Concept *concept) : Feature(), concept_(concept) { }
     ~NumericalFeature() override = default;
-    const Feature* clone() const override {
+    [[nodiscard]] const Feature* clone() const override {
         return new NumericalFeature(concept_);
     }
 
-    int complexity() const override {
+    [[nodiscard]] int complexity() const override {
         return concept_->complexity();
     }
-    int value(const Cache &cache, const Sample &sample, const State &state) const override {
+
+    [[nodiscard]] int value(const Cache &cache, const Sample &sample, const State &state) const override {
         // we look into cache for sample denotation using the concept name,
         // then index sample denotation with state id to find state denotation,
         // for finally computing cardinality (this assumes that state id is
@@ -1453,11 +1455,11 @@ public:
         assert((sd != nullptr) && (sd->size() == state.num_objects()));
         return sd->cardinality();
     }
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         return std::string("Num[") + concept_->as_str() + "]";
     }
 
-    bool is_boolean() const override { return false; }
+    [[nodiscard]] bool is_boolean() const override { return false; }
 };
 
 class DistanceFeature : public Feature {
@@ -1483,7 +1485,7 @@ public:
     }
     ~DistanceFeature() override = default;
     const Feature* clone() const override {
-        DistanceFeature *f = new DistanceFeature(start_, end_, role_);
+        auto *f = new DistanceFeature(start_, end_, role_);
         f->valid_cache_ = valid_cache_;
         f->cached_distances_ = cached_distances_;
         f->denotation_is_constant_ = denotation_is_constant_;
@@ -1526,7 +1528,7 @@ public:
         }
         return cached_distances_[state.id()];
     }
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         return std::string("Dist[") + start_->as_str() + ";" + role_->as_str() + ";" + end_->as_str() + "]";
     }
 
@@ -1554,15 +1556,15 @@ public:
             Feature(), condition_(condition), body_(body) { }
 
     ~ConditionalFeature() override = default;
-    const Feature* clone() const override {
+    [[nodiscard]] const Feature* clone() const override {
         return new ConditionalFeature(condition_, body_);
     }
 
-    int complexity() const override {
+    [[nodiscard]] int complexity() const override {
         return 1 + condition_->complexity() + body_->complexity();
     }
 
-    int value(const Cache &cache, const Sample &sample, const State &state) const override {
+    [[nodiscard]] int value(const Cache &cache, const Sample &sample, const State &state) const override {
         return value_from_components(cache, sample, state, condition_, body_);
     }
 
@@ -1572,11 +1574,11 @@ public:
         return (condval) ? body->value(cache, sample, state) : std::numeric_limits<int>::max();
     }
 
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         return std::string("If{") + condition_->as_str() + "}{" + body_->as_str() + "}{Infty}";
     }
 
-    bool is_boolean() const override { return false; }
+    [[nodiscard]] bool is_boolean() const override { return false; }
 };
 
 
@@ -1592,25 +1594,25 @@ public:
     {}
 
     ~DifferenceFeature() override = default;
-    const Feature* clone() const override {
+    [[nodiscard]] const Feature* clone() const override {
         return new DifferenceFeature(f1, f2);
     }
 
-    int complexity() const override {
+    [[nodiscard]] int complexity() const override {
         return 1 + f1->complexity() + f2->complexity();
     }
 
-    int value(const Cache &cache, const Sample &sample, const State &state) const override {
+    [[nodiscard]] int value(const Cache &cache, const Sample &sample, const State &state) const override {
         const auto f1val = f1->value(cache, sample, state);
         const auto f2val = f2->value(cache, sample, state);
         return f1val < f2val;
     }
 
-    std::string as_str() const override {
+    [[nodiscard]] std::string as_str() const override {
         return std::string("LessThan{") + f1->as_str() + "}{" + f2->as_str() + "}";
     }
 
-    bool is_boolean() const override { return true; }
+    [[nodiscard]] bool is_boolean() const override { return true; }
 };
 
 class Factory {
@@ -1632,8 +1634,8 @@ protected:
     std::unordered_set<unsigned> goal_features_;
 
 public:
-    Factory(const std::vector<std::string>& nominals, Options options) :
-            nominals_(nominals),
+    Factory(std::vector<std::string>  nominals, Options options) :
+            nominals_(std::move(nominals)),
             options(std::move(options))
     {}
     virtual ~Factory() = default;
@@ -2215,7 +2217,6 @@ public:
         }
 
 
-//        if (all_values_greater_than_zero) std::cout << "ALL>0: " << c->as_str() << std::endl;
         if (can_be_pruned && denotation_is_constant) return false;
 
         auto it = seen_denotations.find(fd);
@@ -2517,4 +2518,4 @@ public:
     }
 };
 
-}; // namespaces
+} // namespaces
