@@ -331,7 +331,7 @@ def extract_features(config, sample):
 
     parsed_problems = parse_all_instances(config.domain, config.instances)  # Parse all problem instances
 
-    language, nominals, model_cache, infos = compute_models(
+    language, nominals, model_cache, infos, goal_predicates = compute_models(
         config.domain, sample, parsed_problems, config.parameter_generator)
 
     processor = SemanticProcessor(sample.states, model_cache)
@@ -463,7 +463,10 @@ def create_model_factory(domain, instance, parameter_generator):
     problem, language, _ = parse_pddl(domain, instance)
     vocabulary = compute_dl_vocabulary(language)
     use_goal_denotation = report_use_goal_denotation(parameter_generator)
-    info = compute_instance_information(problem, use_goal_denotation)
+
+    goal_predicates = compute_predicates_appearing_in_goal(problem, use_goal_denotation)
+    info = compute_instance_information(problem, goal_predicates)
+
     return problem, DLModelFactory(vocabulary, nominals, info)
 
 
