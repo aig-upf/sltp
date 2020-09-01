@@ -99,6 +99,7 @@ def blocksworld_names(feature):
         "Exists(Star(loc),Exists(loc_g,Not(Equal(Inverse(loc_g),Inverse(loc)))))": "n-x-with-misplaced-block-below",  # FSTRIPS
         "clear": "num-clear",
         "And(Equal(loc_g,loc),Forall(Star(loc),Equal(loc_g,loc)))": "n-well-placed",  # FSTRIPS
+        "And(Forall(Star(loc),Equal(loc_g,loc)),Equal(loc_g,loc))": "n-well-placed",  # Same as above, just rearranging AND elements
         "Equal(Star(loc_g),Star(loc))": "n-superficially-well-placed",  # FSTRIPS
         "Equal(loc_g,loc)": "n-ontarget",  # FSTRIPS
         "Equal(Inverse(loc_g),Inverse(loc))": "n-right-under-target",  # FSTRIPS
