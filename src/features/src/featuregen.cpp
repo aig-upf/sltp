@@ -4,17 +4,15 @@
 #include <iostream>
 #include <string>
 
-#include <boost/algorithm/string.hpp>
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
-#include <common/utils.h>
 #include <common/helpers.h>
 
 using namespace std;
 namespace po = boost::program_options;
 
-SLTP::DL::Options parse_options(int argc, const char **argv) {
+sltp::dl::Options parse_options(int argc, const char **argv) {
     po::options_description description("Generate a pool of non-redundante candidate features given"
                                         " a sample of states.\n\nOptions");
 
@@ -59,7 +57,7 @@ SLTP::DL::Options parse_options(int argc, const char **argv) {
         exit(1);
     }
 
-    SLTP::DL::Options options;
+    sltp::dl::Options options;
 
     options.workspace = vm["workspace"].as<std::string>();
     options.timeout = vm["timeout"].as<int>();
@@ -72,31 +70,10 @@ SLTP::DL::Options parse_options(int argc, const char **argv) {
     return options;
 }
 
-SLTP::DL::Sample parse_input_sample(const string &filename) {
-    auto ifs = get_ifstream(filename);
-    auto res = SLTP::DL::Sample::read(ifs);
-    ifs.close();
-    return res;
-}
-
-std::vector<std::string> parse_nominals(const string &filename) {
-    auto ifs = get_ifstream(filename);
-
-    std::string nominals_line;
-    std::getline(ifs, nominals_line);
-    ifs.close();
-
-    if (nominals_line.empty()) return {};
-
-    std::vector<std::string> nominals;
-    boost::split(nominals, nominals_line, boost::is_any_of(" \t"));
-    return nominals;
-}
-
-void output_results(const SLTP::DL::Options &options,
-                    const SLTP::DL::Factory &factory,
-                    const SLTP::DL::Sample &sample,
-                    const SLTP::DL::Cache &cache) {
+void output_results(const sltp::dl::Options &options,
+                    const sltp::dl::Factory &factory,
+                    const sltp::Sample &sample,
+                    const sltp::dl::Cache &cache) {
 
     // Print feature matrix
     string output(options.workspace + "/feature-matrix.io");
@@ -113,18 +90,18 @@ void output_results(const SLTP::DL::Options &options,
 
 int main(int argc, const char **argv) {
     auto start_time = std::clock();
-    SLTP::DL::Options options = parse_options(argc, argv);
+    sltp::dl::Options options = parse_options(argc, argv);
 
-    const SLTP::DL::Sample sample = parse_input_sample(options.workspace + "/sample.io");
-    std::vector<std::string> nominals = parse_nominals(options.workspace + "/nominals.io");
+    const sltp::Sample sample = parse_input_sample(options.workspace);
+    const std::vector<std::string> nominals = parse_nominals(options.workspace);
     auto transitions = read_transition_data(options.workspace, false);
 
-    SLTP::DL::Factory factory(nominals, options);
+    sltp::dl::Factory factory(nominals, options);
 
-    SLTP::DL::Cache cache;
+    sltp::dl::Cache cache;
     factory.generate_basis(sample);
 
-    std::vector<const SLTP::DL::Concept*> goal_concepts{};
+    std::vector<const sltp::dl::Concept*> goal_concepts{};
     if (options.generate_goal_concepts) {
         goal_concepts = factory.generate_goal_concepts_and_roles(cache, sample);
     }

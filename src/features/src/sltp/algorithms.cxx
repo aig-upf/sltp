@@ -7,7 +7,7 @@
 #include <sltp/base.hxx>
 #include <sltp/algorithms.hxx>
 
-namespace SLTP {
+namespace sltp {
 
 int compute_distance(unsigned num_objects,
                      const state_denotation_t &start_sd,

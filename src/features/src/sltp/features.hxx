@@ -17,6 +17,7 @@
 #include <sltp/base.hxx>
 #include <sltp/utils.hxx>
 #include <sltp/algorithms.hxx>
+#include <common/base.h>
 
 #include <ctime>
 
@@ -24,22 +25,19 @@ namespace Sample {
     class TransitionSample;
 }
 
+namespace sltp {
+    class Atom;
+    class Sample;
+    class State;
+}
 
-namespace SLTP::DL {
+namespace sltp::dl {
 
 const unsigned PRIMITIVE_COMPLEXITY = 1;
 
-using object_id_t = unsigned;
-using predicate_id_t = unsigned;
-using atom_id_t = unsigned;
-using state_id_t = unsigned;
-
-class Atom;
-class Sample;
 class Concept;
 class Role;
 class Feature;
-class State;
 
 using feature_cache_t = std::unordered_map<feature_sample_denotation_t, const Feature*, utils::container_hash<feature_sample_denotation_t> >;
 
@@ -181,288 +179,6 @@ public:
     const state_denotation_t& retrieve_concept_denotation(const Concept &element, const State &state) const;
     const state_denotation_t& retrieve_role_denotation(const Role &element, const State &state) const;
 };
-
-// We represent states as subets of atoms
-// An atom is a predicate and a vector of objects to ground the predicates.
-class Object {
-protected:
-    const object_id_t id_;
-    const std::string name_;
-
-public:
-    Object(unsigned id, std::string name) : id_(id), name_(std::move(name)) { }
-    [[nodiscard]] int id() const {
-        return id_;
-    }
-    [[nodiscard]] const std::string& as_str() const {
-        return name_;
-    }
-    friend std::ostream& operator<<(std::ostream &os, const Object &obj) {
-        return os << obj.as_str() << std::flush;
-    }
-};
-
-struct Predicate {
-    const predicate_id_t id_;
-    const std::string name_;
-    const int arity_;
-    Predicate(unsigned id, std::string name, int arity)
-            : id_(id), name_(std::move(name)), arity_(arity) {
-    }
-    [[nodiscard]] predicate_id_t id() const {
-        return id_;
-    }
-    [[nodiscard]] const std::string& name() const {
-        return name_;
-    }
-    [[nodiscard]] int arity() const {
-        return arity_;
-    }
-    std::string as_str(const std::vector<object_id_t> *objects) const {
-        std::string str = name_ + "(";
-        if( objects == nullptr ) {
-            for( int i = 0; i < arity_; ++i ) {
-                str += std::string("x") + std::to_string(1 + i);
-                if( 1 + i < arity_ ) str += ",";
-            }
-        } else {
-            assert(objects->size() == arity_);
-            for( int i = 0; i < arity_; ++i ) {
-                //str += (*objects)[i]->as_str();
-                str += std::to_string((*objects)[i]);
-                if( 1 + i < arity_ ) str += ",";
-            }
-        }
-        return str + ")";
-    }
-    friend std::ostream& operator<<(std::ostream &os, const Predicate &pred) {
-        return os << pred.as_str(nullptr) << std::flush;
-    }
-};
-
-class Atom {
-protected:
-    const predicate_id_t predicate_;
-    const std::vector<object_id_t> objects_;
-
-public:
-    Atom(const predicate_id_t &predicate, std::vector<object_id_t> &&objects)
-            : predicate_(predicate), objects_(std::move(objects)) {
-    }
-
-    [[nodiscard]] predicate_id_t pred_id() const {
-        return predicate_;
-    }
-    [[nodiscard]] const std::vector<object_id_t>& objects() const {
-        return objects_;
-    }
-
-    // Return the i-th object of the current atom
-    [[nodiscard]] object_id_t object(int i) const {
-        return objects_.at(i);
-    }
-
-    [[nodiscard]] bool is_instance(const Predicate &predicate) const {
-        return predicate_ == predicate.id();
-    }
-
-    [[nodiscard]] std::vector<unsigned> data() const {
-        std::vector<unsigned> res(1, predicate_);
-        res.insert(res.end(), objects_.begin(), objects_.end());
-        return res;
-    }
-
-    [[nodiscard]] std::string as_str(const Sample &sample) const;
-};
-
-// An instance stores information shared by the states that
-// belong to the instance: objects and atoms mostly
-class Instance {
-public:
-    // map from object name to object id in instance
-//    using ObjectIndex = std::unordered_map<std::string, object_id_t>;
-    using ObjectIndex = boost::bimap<std::string, object_id_t>;
-    // map from atom of the form <pred_id, oid_1, ..., oid_n> to atom id in instance
-    using AtomIndex = std::unordered_map<std::vector<unsigned>, atom_id_t, utils::container_hash<std::vector<unsigned> > >;
-
-    const unsigned id;
-
-protected:
-    const std::vector<Object> objects_;
-    const std::vector<Atom> atoms_;
-
-    // mapping from object names to their ID in the sample
-    ObjectIndex object_index_;
-
-    // mapping from <predicate name, obj_name, ..., obj_name> to the ID of the corresponding GroundPredicate
-    AtomIndex atom_index_;
-
-public:
-    Instance(unsigned id,
-             std::vector<Object> &&objects,
-             std::vector<Atom> &&atoms,
-             ObjectIndex &&object_index,
-             AtomIndex &&atom_index)
-            :
-        id(id),
-        objects_(std::move(objects)),
-        atoms_(std::move(atoms)),
-        object_index_(std::move(object_index)),
-        atom_index_(std::move(atom_index))
-    {
-    }
-
-    Instance(const Instance& ins) = default;
-    Instance(Instance &&ins) = default;
-    ~Instance() = default;
-
-    unsigned num_objects() const {
-        return (unsigned) objects_.size();
-    }
-    int num_atoms() const {
-        return atoms_.size();
-    }
-    const Atom& atom(unsigned id_) const {
-        return atoms_.at(id_);
-    }
-
-    const std::vector<Atom>& atoms() const {
-        return atoms_;
-    }
-    const ObjectIndex& object_index() const {
-        return object_index_;
-    }
-    const AtomIndex& atom_index() const {
-        return atom_index_;
-    }
-};
-
-// A state is a collections of atoms
-class State {
-protected:
-    const Instance &instance_;
-    const state_id_t id_;
-    std::vector<atom_id_t> atoms_;
-
-public:
-    explicit State(const Instance &instance, unsigned id, std::vector<atom_id_t> &&atoms)
-            : instance_(instance), id_(id), atoms_(std::move(atoms)) {
-    }
-    State(const State &state) = default;
-    State(State &&state) = default;
-
-    [[nodiscard]] unsigned id() const {
-        return id_;
-    }
-    [[nodiscard]] const std::vector<atom_id_t>& atoms() const {
-        return atoms_;
-    }
-    [[nodiscard]] unsigned num_objects() const {
-        return instance_.num_objects();
-    }
-
-    [[nodiscard]] const Instance& instance() const {
-        return instance_;
-    }
-
-    [[nodiscard]] const Atom& atom(atom_id_t id) const {
-        return instance_.atom(id);
-    }
-};
-
-// A sample is a bunch of states and transitions among them. The
-// sample contains the predicates used in the states, the objects,
-// and the atoms
-class Sample {
-public:
-    using PredicateIndex = std::unordered_map<std::string, predicate_id_t>;
-
-protected:
-    const std::vector<Predicate> predicates_;
-    const std::vector<Instance> instances_;
-    const std::vector<State> states_;
-
-    // The IDs of predicates that are mentioned in the goal
-    const std::vector<predicate_id_t> goal_predicates_;
-
-    // mapping from predicate names to their ID in the sample
-    PredicateIndex predicate_index_;
-
-    Sample(std::vector<Predicate> &&predicates,
-           std::vector<Instance> &&instances,
-           std::vector<State> &&states,
-           std::vector<predicate_id_t> &&goal_predicates,
-           PredicateIndex &&predicate_index)
-            : predicates_(std::move(predicates)),
-              instances_(std::move(instances)),
-              states_(std::move(states)),
-              goal_predicates_(std::move(goal_predicates)),
-              predicate_index_(std::move(predicate_index)) {
-        std::cout << "SAMPLE:"
-                  << " #predicates=" << predicates_.size()
-                  << ", #instances=" << instances_.size()
-                  << ", #states=" << states_.size()
-                  << std::endl;
-    }
-
-public:
-    Sample(const Sample &sample) = default;
-    Sample(Sample &&sample) = default;
-    ~Sample() = default;
-
-    std::size_t num_predicates() const {
-        return predicates_.size();
-    }
-    std::size_t num_states() const {
-        return states_.size();
-    }
-
-    const std::vector<Predicate>& predicates() const {
-        return predicates_;
-    }
-    const std::vector<predicate_id_t>& goal_predicates() const {
-        return goal_predicates_;
-    }
-    const std::vector<State>& states() const {
-        return states_;
-    }
-
-    const Predicate& predicate(predicate_id_t id) const {
-        return predicates_.at(id);
-    }
-    const State& state(unsigned id) const {
-        return states_.at(id);
-    }
-    const PredicateIndex& predicate_index() const {
-        return predicate_index_;
-    }
-
-    // factory method - reads sample from serialized data
-    static Sample read(std::istream &is);
-};
-
-inline std::string Atom::as_str(const Sample &sample) const {
-    return sample.predicate(predicate_).as_str(&objects_);
-}
-
-//struct Denotation {
-//    enum class denotation_t : bool { concept_denotation_t, role_denotation_t };
-//    denotation_t type_;
-//    std::vector<bool> values_;
-//    Denotation(denotation_t type, size_t dimension)
-//      : type_(type),
-//        values_(std::vector<bool>(dimension, false)) {
-//    }
-//};
-//
-//// Denotation matrix is just a matrix of DL Denotations, each state being a row, each concept / role a column
-//class DenotationMatrix {
-//  protected:
-//    std::vector<std::vector<Denotation> > data_;
-//};
-//
-//class Model {
-//};
 
 class Base {
 protected:
@@ -1993,7 +1709,7 @@ public:
         bool some_new_concepts = true;
         bool timeout_reached = false;
         for( int iteration = 0; some_new_concepts && !timeout_reached; ++iteration ) {
-            std::cout << "DL::concept-generation: iteration=" << iteration
+            std::cout << "dl::concept-generation: iteration=" << iteration
                       << ", #concepts=" << num_concepts
                       << ", #concepts-in-last-layer=" << (concepts_.empty() ? 0 : concepts_.back().size())
                       << std::endl;
@@ -2022,7 +1738,7 @@ public:
         auto all_concepts = consolidate_concepts();
         assert(all_concepts.size() == num_concepts);
 
-        std::cout << "DL::Factory: #concepts-final=" << num_concepts << std::endl;
+        std::cout << "dl::Factory: #concepts-final=" << num_concepts << std::endl;
         return all_concepts;
     }
 
@@ -2346,7 +2062,7 @@ public:
     }
 
     void log_all_concepts_and_features(const std::vector<const Concept*>& concepts,
-                                       const SLTP::DL::Cache &cache, const SLTP::DL::Sample &sample,
+                                       const sltp::dl::Cache &cache, const Sample &sample,
                                        const std::string& workspace, bool print_denotations);
 
     //! Return all generated concepts in a single, *unlayered* vector, and sorted by increasing complexity

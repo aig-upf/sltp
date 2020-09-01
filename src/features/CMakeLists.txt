@@ -20,6 +20,7 @@ set(SOURCE_FILES
         src/sltp/base
         src/common/utils
         src/common/helpers
+        src/common/base
 )
 
 
@@ -33,6 +34,7 @@ set(CNFGEN_SOURCE_FILES
         src/cnf/d2tree.h
         src/common/utils
         src/common/helpers
+        src/common/base
         src/blai/sample.h
         src/blai/matrix.h
         src/blai/transitions.h

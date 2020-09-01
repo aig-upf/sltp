@@ -1,7 +1,7 @@
 
 #pragma once
 
-namespace SLTP {
+namespace sltp {
 
 //! Compute the distance from the concept denotation represented in start_sd to that represented in end_sd,
 //! along the role denotation represented in role_sd

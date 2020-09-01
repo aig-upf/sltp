@@ -1,7 +1,7 @@
 
 #pragma once
 
-namespace SLTP {
+namespace sltp {
 
 
 // A state denotation for concept C is a subset of objects
