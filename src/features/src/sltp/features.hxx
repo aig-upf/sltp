@@ -100,13 +100,11 @@ public:
     using cache1_t = std::unordered_map<const sample_denotation_t*, std::string, cache_support_t, cache_support_t>;
     using cache2_t = std::unordered_map<std::string, const sample_denotation_t*>;
     using cache3_t = std::unordered_set<const state_denotation_t*, cache_support_t, cache_support_t>;
-    using cache4_t = std::unordered_map<std::string, const Atom*>;
 
 protected:
     cache1_t cache1_;
     cache2_t cache2_;
     cache3_t cache3_;
-    cache4_t cache4_;
 
 public:
     Cache() = default;
@@ -160,17 +158,6 @@ public:
         return it == cache2_.end() ? nullptr : it->second;
     }
 
-    void remove_sample_denotation(const std::string &name) {
-        auto it2 = cache2_.find(name);
-        assert(it2 != cache2_.end());
-
-        auto it1 = cache1_.find(it2->second);
-        assert(it1 != cache1_.end());
-        cache1_.erase(it1); // TODO Delete denotation
-
-        cache2_.erase(it2);
-    }
-
     // cache3: state denotations (bit vectors)
     //
     // We maintain a hash of these denotations such as to keep just one
@@ -180,11 +167,6 @@ public:
     // for different concepts
     //
     // state denotation -> pointer
-    const state_denotation_t* find_state_denotation(const state_denotation_t &sd) const {
-        auto it = cache3_.find(&sd);
-        return it == cache3_.end() ? nullptr : *it;
-    }
-
     const state_denotation_t* find_or_insert_state_denotation(const state_denotation_t &sd) {
         auto it = cache3_.find(&sd);
         if( it == cache3_.end() ) {
@@ -195,15 +177,6 @@ public:
             return *it;
         }
     }
-
-    // cache4: atoms
-    //
-    // name -> atom
-    const Atom* find_atom(const std::string &name) const {
-        auto it = cache4_.find(name);
-        return it == cache4_.end() ? nullptr : it->second;
-    }
-    const Atom* find_or_insert_atom(const Atom &atom);
 
     const state_denotation_t& retrieve_concept_denotation(const Concept &element, const State &state) const;
     const state_denotation_t& retrieve_role_denotation(const Role &element, const State &state) const;
@@ -349,8 +322,8 @@ public:
     int num_atoms() const {
         return atoms_.size();
     }
-    const Atom& atom(unsigned id) const {
-        return atoms_.at(id);
+    const Atom& atom(unsigned id_) const {
+        return atoms_.at(id_);
     }
 
     const std::vector<Atom>& atoms() const {
