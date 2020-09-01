@@ -34,7 +34,7 @@ sltp::cnf::CNFGenerationOutput AAAI19Generator::write(CNFWriter& writer) {
     std::vector<cnfvar_t> var_selected;
     var_selected.reserve(nf_);
     for (unsigned f = 0; f < nf_; ++f) {
-//            std::cout << "#" << f << ": " << sample_.matrix().feature_name(f) << std::endl;
+//            std::cout << "#" << f << ": " << tr_set_.matrix().feature_name(f) << std::endl;
         var_selected.push_back(writer.variable());
     }
 
@@ -67,7 +67,7 @@ sltp::cnf::CNFGenerationOutput AAAI19Generator::write(CNFWriter& writer) {
                     assert(res.second); // Make sure this D2 variable was not already declared
 
                     // Register the set of d2-distinguishing features for this pair of transitions
-                    d2_features_cache_.push_back(compute_d2_distinguishing_features(sample_, s, sprime, t, tprime));
+                    d2_features_cache_.push_back(compute_d2_distinguishing_features(tr_set_, s, sprime, t, tprime));
                 }
 
                 bridge_clauses.emplace(s, sprime, t);
@@ -146,7 +146,7 @@ sltp::cnf::CNFGenerationOutput AAAI19Generator::write(CNFWriter& writer) {
     // Force D1(s1, s2) to be true if exactly one of the two states is a dead-end
     for (const transition_t& tx1:sound_transitions()) {
         unsigned s = tx1.first;
-        for (unsigned t:sample_.matrix().deadends()) {
+        for (unsigned t:tr_set_.matrix().deadends()) {
             const auto& d1feats = d1_distinguishing_features(s, t);
             if (d1feats.empty()) {
                 undist_deadend_warning(s, t);

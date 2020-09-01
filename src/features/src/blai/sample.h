@@ -24,12 +24,13 @@ public:
     const sltp::Sample sample_;
 
     TrainingSet(FeatureMatrix&& matrix, TransitionSample&& transitions, sltp::Sample&& sample) :
-      matrix_(std::move(matrix)), transitions_(std::move(transitions)), sample_(sample)
+        matrix_(std::move(matrix)), transitions_(std::move(transitions)), sample_(std::move(sample))
     {}
     virtual ~TrainingSet() = default;
 
     const FeatureMatrix& matrix() const { return matrix_; }
     const TransitionSample& transitions() const { return transitions_; }
+    const sltp::Sample& sample() const { return sample_; }
 
     bool is_deadend(unsigned s) const {
         return matrix_.is_deadend(s);
@@ -74,15 +75,37 @@ public:
     friend std::ostream& operator<<(std::ostream &os, const TrainingSet& o) { return o.print(os); }
     std::ostream& print(std::ostream &os) const {
 
-        auto est_size = matrix_.num_features() * matrix_.num_states() * sizeof(FeatureMatrix::feature_value_t) /
+        auto est_size = (double) matrix_.num_features() * matrix_.num_states() * sizeof(FeatureMatrix::feature_value_t) /
                         (1024.0 * 1024.0);
-        os << "TransitionSample[states: " << transitions_.num_states()
-           << ", transitions: " << transitions_.num_transitions()
-           << " (" << transitions_.num_marked_transitions() << " marked)"
-           << ", deadends: " << matrix_.deadends().size()
-           << ", goals: " << matrix_.num_goals()
-           << ", features: " << matrix_.num_features()
-           << ", est. size: " << std::setprecision(2) << std::fixed << est_size << " MB.]";
+
+        unsigned num_alive = 0;
+        std::unordered_map<unsigned, unsigned> num_alive_per_instance;
+
+        for (const auto s:transitions_.all_alive()) {
+            auto nsuccessors = transitions_.successors(s).size();
+            auto instanceid = sample_.state(s).instance_id();
+            num_alive += nsuccessors;
+            num_alive_per_instance[instanceid] += nsuccessors;
+        }
+
+        // here we use the fact that instance IDs are consecutive
+        auto ninstances = num_alive_per_instance.size();
+        std::string alive_string;
+        for (unsigned i=0; i < ninstances; ++i) {
+            alive_string += std::to_string(num_alive_per_instance[i]);
+            if (i < ninstances-1) alive_string += "/";
+        }
+
+        os
+            << "TransitionSample[instances: " << ninstances
+            << ", states: " << transitions_.num_states()
+            << ", transitions: " << transitions_.num_transitions()
+            << " (" << num_alive << " alive: " << alive_string << ")"
+//          << " (" << transitions_.num_marked_transitions() << " marked)"
+            << ", deadends: " << matrix_.deadends().size()
+            << ", goals: " << matrix_.num_goals()
+            << ", features: " << matrix_.num_features()
+            << ", est. size: " << std::setprecision(2) << std::fixed << est_size << " MB.]";
         return os;
     }
 };

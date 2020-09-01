@@ -140,12 +140,12 @@ int main(int argc, const char **argv) {
     auto options = parse_options(argc, argv);
 
     // Read input training set
-    auto sample = sltp::TrainingSet(
+    sltp::TrainingSet trset(
             read_feature_matrix(options.workspace, options.verbose),
             read_transition_data(options.workspace, options.verbose),
             read_input_sample(options.workspace));
 
-    std::cout << "Training sample: " << sample << std::endl;
+    std::cout << "Training sample: " << trset << std::endl;
 
     // We write the MaxSAT instance progressively as we generate the CNF. We do so into a temporary "*.tmp" file
     // which will be later processed by the Python pipeline to inject the value of the TOP weight, which we can
@@ -155,7 +155,7 @@ int main(int argc, const char **argv) {
     auto allvarsstream = get_ofstream(options.workspace + "/allvars.wsat");
 
     CNFWriter writer(wsatstream, &allvarsstream);
-    auto output = write_encoding(writer, sample, options);
+    auto output = write_encoding(writer, trset, options);
 
     wsatstream.close();
     allvarsstream.close();

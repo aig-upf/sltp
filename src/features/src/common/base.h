@@ -172,33 +172,23 @@ public:
 // A state is a collections of atoms
 class State {
 protected:
-    const Instance &instance_;
+    const unsigned instance_id_;
     const state_id_t id_;
     std::vector<atom_id_t> atoms_;
 
 public:
-    explicit State(const Instance &instance, unsigned id, std::vector<atom_id_t> &&atoms)
-            : instance_(instance), id_(id), atoms_(std::move(atoms)) {
+    explicit State(const unsigned instance_id, unsigned id, std::vector<atom_id_t> &&atoms)
+            : instance_id_(instance_id), id_(id), atoms_(std::move(atoms)) {
     }
     State(const State &state) = default;
     State(State &&state) = default;
 
-    [[nodiscard]] unsigned id() const {
-        return id_;
-    }
+    [[nodiscard]] unsigned id() const { return id_; }
+
+    [[nodiscard]] unsigned instance_id() const { return instance_id_; }
+
     [[nodiscard]] const std::vector<atom_id_t>& atoms() const {
         return atoms_;
-    }
-    [[nodiscard]] unsigned num_objects() const {
-        return instance_.num_objects();
-    }
-
-    [[nodiscard]] const Instance& instance() const {
-        return instance_;
-    }
-
-    [[nodiscard]] const Atom& atom(atom_id_t id) const {
-        return instance_.atom(id);
     }
 };
 
@@ -228,18 +218,25 @@ protected:
               instances_(std::move(instances)),
               states_(std::move(states)),
               goal_predicates_(std::move(goal_predicates)),
-              predicate_index_(std::move(predicate_index)) {
-        std::cout << "SAMPLE:"
-                  << " #predicates=" << predicates_.size()
-                  << ", #instances=" << instances_.size()
-                  << ", #states=" << states_.size()
-                  << std::endl;
-    }
+              predicate_index_(std::move(predicate_index))
+   {}
 
 public:
     Sample(const Sample &sample) = default;
     Sample(Sample &&sample) = default;
     ~Sample() = default;
+
+    const Instance& instance(unsigned sid) const {
+        return instances_.at(state(sid).instance_id());
+    }
+
+    unsigned num_objects(unsigned sid) const {
+        return instance(sid).num_objects();
+    }
+
+    const Atom& atom(unsigned sid, atom_id_t id) const {
+        return instance(sid).atom(id);
+    }
 
     std::size_t num_predicates() const {
         return predicates_.size();
@@ -261,8 +258,8 @@ public:
     const Predicate& predicate(predicate_id_t id) const {
         return predicates_.at(id);
     }
-    const State& state(unsigned id) const {
-        return states_.at(id);
+    const State& state(unsigned sid) const {
+        return states_.at(sid);
     }
     const PredicateIndex& predicate_index() const {
         return predicate_index_;
@@ -271,10 +268,6 @@ public:
     // factory method - reads sample from serialized data
     static Sample read(std::istream &is);
 };
-
-inline std::string Atom::as_str(const Sample &sample) const {
-    return sample.predicate(predicate_).as_str(&objects_);
-}
 
 }
 

@@ -245,14 +245,14 @@ public:
         }
     }
     const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
-        state_denotation_t sd(state.num_objects(), false);
+        state_denotation_t sd(sample.num_objects(state.id()), false);
         for( int i = 0; i < int(state.atoms().size()); ++i ) {
             atom_id_t id = state.atoms()[i];
-            const Atom &atom = state.atom(id);
+            const Atom &atom = sample.atom(state.id(), id);
             if( atom.is_instance(*predicate_) ) {
                 assert(atom.objects().size() == 1);
                 object_id_t index = atom.object(0);
-                assert(index < state.num_objects());
+                assert(index < sample.num_objects(state.id()));
                 sd[index] = true;
             }
         }
@@ -290,11 +290,11 @@ public:
         }
     }
     const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
-        const Instance::ObjectIndex& oidx = state.instance().object_index();
+        const auto& oidx = sample.instance(state.id()).object_index();
         object_id_t id = oidx.left.at(name_);
-        assert(id < state.num_objects());
+        assert(id < sample.num_objects(state.id()));
 
-        state_denotation_t sd(state.num_objects(), false);
+        state_denotation_t sd(sample.num_objects(state.id()), false);
         sd[id] = true;
 
         return cache.find_or_insert_state_denotation(sd);
@@ -318,9 +318,7 @@ public:
             sample_denotation_t nd;
             nd.reserve(sample.num_states());
             for( int i = 0; i < sample.num_states(); ++i ) {
-                const State &state = sample.state(i);
-                assert(state.id() == i);
-                state_denotation_t sd(state.num_objects(), true);
+                state_denotation_t sd(sample.num_objects(i), true);
                 const state_denotation_t *cached_sd = cache.find_or_insert_state_denotation(sd);
                 nd.emplace_back(cached_sd);
             }
@@ -353,9 +351,7 @@ public:
             sample_denotation_t nd;
             nd.reserve(sample.num_states());
             for( int i = 0; i < sample.num_states(); ++i ) {
-                const State &state = sample.state(i);
-                assert(state.id() == i);
-                state_denotation_t sd(state.num_objects(), false);
+                state_denotation_t sd(sample.num_objects(i), false);
                 const state_denotation_t *cached_sd = cache.find_or_insert_state_denotation(sd);
                 nd.emplace_back(cached_sd);
             }
@@ -400,15 +396,13 @@ public:
 
             sample_denotation_t nd;
             for( int i = 0; i < sample.num_states(); ++i ) {
-                const State &state = sample.state(i);
-                assert(state.id() == i);
                 const state_denotation_t *sd1 = (*d1)[i];
-                assert((sd1 != nullptr) && (sd1->size() == state.num_objects()));
+                assert((sd1 != nullptr) && (sd1->size() == sample.num_objects(i)));
                 const state_denotation_t *sd2 = (*d2)[i];
-                assert((sd2 != nullptr) && (sd2->size() == state.num_objects()));
+                assert((sd2 != nullptr) && (sd2->size() == sample.num_objects(i)));
 
-                state_denotation_t nsd(state.num_objects(), false);
-                for( int j = 0; j < state.num_objects(); ++j )
+                state_denotation_t nsd(sample.num_objects(i), false);
+                for( int j = 0; j < sample.num_objects(i); ++j )
                     nsd[j] = (*sd1)[j] && (*sd2)[j];
                 nd.emplace_back(cache.find_or_insert_state_denotation(nsd));
             }
@@ -449,13 +443,11 @@ public:
 
             sample_denotation_t nd;
             for( int i = 0; i < sample.num_states(); ++i ) {
-                const State &state = sample.state(i);
-                assert(state.id() == i);
                 const state_denotation_t *sd = (*d)[i];
-                assert((sd != nullptr) && (sd->size() == state.num_objects()));
+                assert((sd != nullptr) && (sd->size() == sample.num_objects(i)));
 
-                state_denotation_t nsd(state.num_objects(), false);
-                for( int j = 0; j < state.num_objects(); ++j )
+                state_denotation_t nsd(sample.num_objects(i), false);
+                for( int j = 0; j < sample.num_objects(i); ++j )
                     nsd[j] = !(*sd)[j];
                 nd.emplace_back(cache.find_or_insert_state_denotation(nsd));
             }
@@ -500,9 +492,7 @@ public:
 
             sample_denotation_t nd;
             for( int i = 0; i < sample.num_states(); ++i ) {
-                const State &state = sample.state(i);
-                unsigned m = state.num_objects();
-                assert(state.id() == i);
+                unsigned m = sample.num_objects(i);
                 const state_denotation_t *c_den = (*d)[i];
                 assert((c_den != nullptr) && (c_den->size() == m));
                 const state_denotation_t *r_den = (*r)[i];
@@ -566,9 +556,7 @@ public:
 
             sample_denotation_t nd;
             for( int i = 0; i < sample.num_states(); ++i ) {
-                const State &state = sample.state(i);
-                unsigned m = state.num_objects();
-                assert(state.id() == i);
+                const auto m = sample.num_objects(i);
                 const state_denotation_t *c_den = (*d)[i];
                 assert((c_den != nullptr) && (c_den->size() == m));
                 const state_denotation_t *r_den = (*r)[i];
@@ -632,9 +620,7 @@ public:
 
             sample_denotation_t nd;
             for( int i = 0; i < sample.num_states(); ++i ) {
-                const State &state = sample.state(i);
-                unsigned m = state.num_objects();
-                assert(state.id() == i);
+                unsigned m = sample.num_objects(i);
                 const state_denotation_t *sd1 = (*r1_den)[i];
                 assert((sd1 != nullptr) && (sd1->size() == m*m));
                 const state_denotation_t *sd2 = (*r2_den)[i];
@@ -642,7 +628,7 @@ public:
 
                 state_denotation_t nsd(m, false);
 
-                for(int x = 0; x < state.num_objects(); ++x) {
+                for(int x = 0; x < sample.num_objects(i); ++x) {
                     // If the set of y such that (x, y) in sd1 is equal to the set of z such that (x, z) in sd2,
                     // then x makes it into the denotation of this concept
                     bool in_denotation = true;
@@ -702,14 +688,14 @@ public:
         }
     }
     const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
-        state_denotation_t sr(state.num_objects() * state.num_objects(), false);
-        for( int i = 0; i < int(state.atoms().size()); ++i ) {
-            atom_id_t id = state.atoms()[i];
-            const Atom &atom = state.atom(id);
+        const unsigned m = sample.num_objects(state.id());
+        state_denotation_t sr(m*m, false);
+        for (const auto atom_id : state.atoms()) {
+            const Atom &atom = sample.atom(state.id(), atom_id);
             if( atom.is_instance(*predicate_) ) {
                 assert(atom.objects().size() == 2);
-                int index = atom.object(0) * state.num_objects() + atom.object(1);
-                assert(index < state.num_objects() * state.num_objects());
+                unsigned index = atom.object(0) * m + atom.object(1);
+                assert(index < m * m);
                 sr[index] = true;
             }
         }
@@ -770,13 +756,11 @@ public:
 
             sample_denotation_t nr;
             for( int i = 0; i < sample.num_states(); ++i ) {
-                const State &state = sample.state(i);
-                assert(state.id() == i);
                 const state_denotation_t *sr = (*r)[i];
-                assert((sr != nullptr) && (sr->size() == state.num_objects() * state.num_objects()));
+                assert((sr != nullptr) && (sr->size() == sample.num_objects(i) * sample.num_objects(i)));
 
                 state_denotation_t nsr(*sr);
-                transitive_closure(state.num_objects(), nsr);
+                transitive_closure(sample.num_objects(i), nsr);
                 nr.emplace_back(cache.find_or_insert_state_denotation(nsr));
             }
             return use_cache ? cache.find_or_insert_sample_denotation(nr, as_str()) : new sample_denotation_t(nr);
@@ -824,14 +808,12 @@ public:
 
             sample_denotation_t nr;
             for( int i = 0; i < sample.num_states(); ++i ) {
-                const State &state = sample.state(i);
-                assert(state.id() == i);
                 const state_denotation_t *sr = (*pr)[i];
-                assert((sr != nullptr) && (sr->size() == state.num_objects() * state.num_objects()));
+                assert((sr != nullptr) && (sr->size() == sample.num_objects(i) * sample.num_objects(i)));
 
                 state_denotation_t nsr(*sr);
-                for( int j = 0; j < state.num_objects(); ++j ) {
-                    int index = j * state.num_objects() + j;
+                for( int j = 0; j < sample.num_objects(i); ++j ) {
+                    int index = j * sample.num_objects(i) + j;
                     nsr[index] = true;
                 }
                 nr.emplace_back(cache.find_or_insert_state_denotation(nsr));
@@ -873,17 +855,18 @@ public:
 
             sample_denotation_t nr;
             for( int i = 0; i < sample.num_states(); ++i ) {
+                const auto m = sample.num_objects(i);
                 const State &state = sample.state(i);
                 assert(state.id() == i);
                 const state_denotation_t *sr = (*r)[i];
-                assert((sr != nullptr) && (sr->size() == state.num_objects() * state.num_objects()));
+                assert((sr != nullptr) && (sr->size() == m*m));
 
-                state_denotation_t nsr(state.num_objects() * state.num_objects(), false);
-                for( int j = 0; j < state.num_objects(); ++j ) {
-                    for( int k = 0; k < state.num_objects(); ++k ) {
-                        int index = j * state.num_objects() + k;
+                state_denotation_t nsr(m*m, false);
+                for( int j = 0; j < m; ++j ) {
+                    for( int k = 0; k < m; ++k ) {
+                        int index = j * m + k;
                         if( (*sr)[index] ) {
-                            int inv_index = k * state.num_objects() + j;
+                            int inv_index = k * m + j;
                             nsr[inv_index] = true;
                         }
                     }
@@ -935,18 +918,17 @@ public:
 
             sample_denotation_t nr;
             for( int i = 0; i < sample.num_states(); ++i ) {
-                const State &state = sample.state(i);
-                assert(state.id() == i);
+                const auto m = sample.num_objects(i);
                 const state_denotation_t *sr = (*r)[i];
-                assert((sr != nullptr) && (sr->size() == state.num_objects() * state.num_objects()));
+                assert((sr != nullptr) && (sr->size() == m*m));
                 const state_denotation_t *sd = (*d)[i];
-                assert((sd != nullptr) && (sd->size() == state.num_objects()));
+                assert((sd != nullptr) && (sd->size() == m));
 
                 state_denotation_t nsr(*sr);
-                for( int j = 0; j < state.num_objects() * state.num_objects(); ++j ) {
+                for( int j = 0; j < m * m; ++j ) {
                     if( nsr[j] ) {
-                        //int src = j / state.num_objects();
-                        int dst = j % state.num_objects();
+                        //int src = j / m;
+                        int dst = j % m;
                         nsr[j] = (*sd)[dst];
                     }
                 }
@@ -997,9 +979,9 @@ public:
 
             sample_denotation_t nd;
             for( int i = 0; i < sample.num_states(); ++i ) {
+                const auto m = sample.num_objects(i);
+
                 const State &state = sample.state(i);
-                unsigned m = state.num_objects();
-                assert(state.id() == i);
                 const state_denotation_t *sd1 = (*r1_den)[i];
                 assert((sd1 != nullptr) && (sd1->size() == m*m));
                 const state_denotation_t *sd2 = (*r2_den)[i];
@@ -1072,7 +1054,7 @@ public:
         // nullary atom, since there can only be one single atom with this predicate
         // TODO: This is unnecessarily expensive, and it is not cached anywhere
         for (const auto& atom_id:state.atoms()) {
-            const Atom &atom = state.atom(atom_id);
+            const Atom &atom = sample.atom(state.id(), atom_id);
             if( atom.is_instance(*predicate_)) {
                 return 1;
             }
@@ -1105,11 +1087,10 @@ public:
         // then index sample denotation with state id to find state denotation,
         // for finally computing cardinality (this assumes that state id is
         // index of state into sample.states())
-        assert(sample.state(state.id()).id() == state.id());
         const sample_denotation_t *d = cache.find_sample_denotation(concept_->as_str());
         assert((d != nullptr) && (d->size() == sample.num_states()));
         const state_denotation_t *sd = (*d)[state.id()];
-        assert((sd != nullptr) && (sd->size() == state.num_objects()));
+        assert((sd != nullptr) && (sd->size() == sample.num_objects(state.id())));
         assert(sd->cardinality() < 2);
         return sd->cardinality();
     }
@@ -1140,11 +1121,10 @@ public:
         // then index sample denotation with state id to find state denotation,
         // for finally computing cardinality (this assumes that state id is
         // index of state into sample.states())
-        assert(sample.state(state.id()).id() == state.id());
         const sample_denotation_t *d = cache.find_sample_denotation(concept_->as_str());
         assert((d != nullptr) && (d->size() == sample.num_states()));
         const state_denotation_t *sd = (*d)[state.id()];
-        assert((sd != nullptr) && (sd->size() == state.num_objects()));
+        assert((sd != nullptr) && (sd->size() == sample.num_objects(state.id())));
         return sd->cardinality();
     }
     [[nodiscard]] std::string as_str() const override {
@@ -1184,26 +1164,26 @@ public:
     }
     int value(const Cache &cache, const Sample &sample, const State &state) const override {
         assert(sample.state(state.id()).id() == state.id());
-        const auto m = sample.num_states();
+        const auto k = sample.num_states();
         if( !valid_cache_ ) {
             const sample_denotation_t *start_d = cache.find_sample_denotation(start_->as_str());
-            assert((start_d != nullptr) && (start_d->size() == m));
+            assert((start_d != nullptr) && (start_d->size() == k));
             const sample_denotation_t *end_d = cache.find_sample_denotation(end_->as_str());
-            assert((end_d != nullptr) && (end_d->size() == m));
+            assert((end_d != nullptr) && (end_d->size() == k));
             const sample_denotation_t *role_d = cache.find_sample_denotation(role_->as_str());
-            assert((role_d != nullptr) && (role_d->size() == m));
+            assert((role_d != nullptr) && (role_d->size() == k));
 
-            cached_distances_ = std::vector<int>(m, std::numeric_limits<int>::max());
-            for( int i = 0; i < m; ++i ) {
-                const State &state = sample.state(i);
-                assert(state.id() == i);
+            cached_distances_ = std::vector<int>(k, std::numeric_limits<int>::max());
+            for(int i = 0; i < k; ++i ) {
+                const auto m = sample.num_objects(i);
+
                 const state_denotation_t *start_sd = (*start_d)[i];
-                assert((start_sd != nullptr) && (start_sd->size() == state.num_objects()));
+                assert((start_sd != nullptr) && (start_sd->size() == m));
                 const state_denotation_t *end_sd = (*end_d)[i];
-                assert((end_sd != nullptr) && (end_sd->size() == state.num_objects()));
+                assert((end_sd != nullptr) && (end_sd->size() == m));
                 const state_denotation_t *role_sd = (*role_d)[i];
-                assert((role_sd != nullptr) && (role_sd->size() == state.num_objects() * state.num_objects()));
-                int distance = compute_distance(state.num_objects(), *start_sd, *end_sd, *role_sd);
+                assert((role_sd != nullptr) && (role_sd->size() == m * m));
+                int distance = compute_distance(m, *start_sd, *end_sd, *role_sd);
                 cached_distances_[i] = distance;
             }
             valid_cache_ = true;

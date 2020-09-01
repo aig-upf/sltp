@@ -23,7 +23,7 @@ sltp::cnf::transition_denotation compute_transition_denotation(feature_value_t s
 
 
 void TransitionClassificationEncoding::compute_equivalence_relations() {
-    const auto& mat = sample_.matrix();
+    const auto& mat = tr_set_.matrix();
 
     // A mapping from a full transition trace to the ID of the corresponding equivalence class
     std::unordered_map<transition_trace, unsigned> from_trace_to_class_repr;
@@ -101,7 +101,7 @@ void TransitionClassificationEncoding::compute_equivalence_relations() {
 
 std::vector<bool> TransitionClassificationEncoding::
 check_feature_dominance() {
-    const auto& mat = sample_.matrix();
+    const auto& mat = tr_set_.matrix();
 
     std::vector<bool> dominated(nf_, false);
     if (!options.use_feature_dominance) return dominated;  // No feature will be considered as dominated
@@ -152,7 +152,7 @@ check_feature_dominance() {
 
 std::vector<transition_pair> TransitionClassificationEncoding::
 compute_dt(unsigned f) {
-    const auto& mat = sample_.matrix();
+    const auto& mat = tr_set_.matrix();
 
 //    boost::container::flat_set<transition_pair> dt;
     std::vector<transition_pair> dt;
@@ -222,9 +222,9 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
     /////// CNF variables ///////
     for (unsigned f = 0; f < nf_; ++f) {
         if (!ignore_features[f]) {
-            auto v = wr.var("Select(" + sample_.matrix().feature_name(f) + ")");
+            auto v = wr.var("Select(" + tr_set_.matrix().feature_name(f) + ")");
             var_selected.push_back(v);
-            selected_map_stream << f << "\t" << v << "\t" << sample_.matrix().feature_name(f) << std::endl;
+            selected_map_stream << f << "\t" << v << "\t" << tr_set_.matrix().feature_name(f) << std::endl;
             ++n_select_vars;
 
         } else {
@@ -404,7 +404,7 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
         cnfclause_t clause{Wr::lit(good_vars.at(tpair.tx1), false)};
 
         // Compute first the Selected(f) terms
-        for (feature_t f:compute_d1d2_distinguishing_features(sample_, s, sprime, t, tprime)) {
+        for (feature_t f:compute_d1d2_distinguishing_features(tr_set_, s, sprime, t, tprime)) {
             if (!ignore_features[f]) {
                 clause.push_back(Wr::lit(var_selected.at(f), true));
             }
@@ -482,10 +482,19 @@ CNFGenerationOutput TransitionClassificationEncoding::refine_theory(CNFWriter& w
 std::vector<transition_pair> TransitionClassificationEncoding::distinguish_all_transitions() const {
     std::vector<transition_pair> transitions_to_distinguish;
     transitions_to_distinguish.reserve(class_representatives_.size() * class_representatives_.size());
+    const auto& sample = tr_set_.sample();
 
     for (const auto tx1:class_representatives_) {
         if (is_necessarily_bad(tx1)) continue;
+
+        const auto& tx1pair = get_state_pair(tx1);
+        const auto s = tx1pair.first;
+
         for (const auto tx2:class_representatives_) {
+            const auto& tx2pair = get_state_pair(tx2);
+            const auto t = tx2pair.first;
+
+//            if (sample.state(s).instance_id() != sample.state(t).instance_id()) continue;
             transitions_to_distinguish.emplace_back(tx1, tx2);
         }
     }
@@ -588,7 +597,7 @@ bool TransitionClassificationEncoding::check_existing_solution_for_flaws(flaw_in
 
 bool TransitionClassificationEncoding::are_transitions_d1d2_distinguishable(
         uint16_t s, uint16_t sprime, uint16_t t, uint16_t tprime, const std::vector<unsigned>& features) const {
-    const auto& mat = sample_.matrix();
+    const auto& mat = tr_set_.matrix();
     for (unsigned f:features) {
         if (are_transitions_d1d2_distinguished(mat.entry(s, f), mat.entry(sprime, f),
                                                mat.entry(t, f), mat.entry(tprime, f))) {

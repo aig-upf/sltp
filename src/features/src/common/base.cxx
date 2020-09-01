@@ -70,7 +70,8 @@ State parse_state(const std::vector<Instance> &instances,
     boost::split(state_parts, line, boost::is_any_of("\t"));
     assert(!state_parts.empty());  // At least we'll have the ID of the instance
 
-    const Instance &instance = instances.at((unsigned) std::stoi(state_parts[0]));
+    auto instance_id = (unsigned) std::stoi(state_parts[0]);
+    const Instance &instance = instances.at(instance_id);
     const auto &object_index = instance.object_index();
     const auto &atom_index = instance.atom_index();
 
@@ -82,7 +83,7 @@ State parse_state(const std::vector<Instance> &instances,
         atom_ids.push_back(atom_index.at(atom.data()));
     }
 
-    return State(instance, id, std::move(atom_ids));
+    return State(instance_id, id, std::move(atom_ids));
 }
 
 std::vector<Object> parse_objects(const std::string &line, Instance::ObjectIndex &object_index) {

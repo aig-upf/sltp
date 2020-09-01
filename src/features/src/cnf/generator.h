@@ -93,10 +93,10 @@ public:
     using transition_list_t = TransitionSample::transition_list_t;
 
     CNFEncoding(const TrainingSet& sample, const sltp::cnf::Options& options) :
-        sample_(sample),
-        options(options),
-        ns_(sample.matrix().num_states()),
-        nf_(sample.matrix().num_features())
+            tr_set_(sample),
+            options(options),
+            ns_(sample.matrix().num_states()),
+            nf_(sample.matrix().num_features())
     {
         for (unsigned s = 0; s < ns_; ++s) {
             if (is_goal(s)) goals_.push_back(s);
@@ -104,25 +104,25 @@ public:
         }
     }
 
-    [[nodiscard]] const std::vector<unsigned>& all_alive() const { return sample_.transitions().all_alive(); }
+    [[nodiscard]] const std::vector<unsigned>& all_alive() const { return tr_set_.transitions().all_alive(); }
 
-    [[nodiscard]] bool is_goal(unsigned s) const { return sample_.matrix().goal(s); }
+    [[nodiscard]] bool is_goal(unsigned s) const { return tr_set_.matrix().goal(s); }
 
-    [[nodiscard]] bool is_alive(unsigned s) const { return sample_.transitions().is_alive(s); }
+    [[nodiscard]] bool is_alive(unsigned s) const { return tr_set_.transitions().is_alive(s); }
 
     [[nodiscard]] bool is_solvable(unsigned s) const { return is_alive(s) || is_goal(s); }
 
     [[nodiscard]] unsigned feature_weight(unsigned f) const {
-        return sample_.matrix().feature_cost(f);
+        return tr_set_.matrix().feature_cost(f);
     }
 
     [[nodiscard]] const std::vector<unsigned>& successors(unsigned s) const {
-        return sample_.transitions().successors(s);
+        return tr_set_.transitions().successors(s);
     }
 
 protected:
     //! The transition sample data
-    const TrainingSet& sample_;
+    const TrainingSet& tr_set_;
 
     //! The CNF encoding options
     const sltp::cnf::Options& options;

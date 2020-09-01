@@ -26,7 +26,6 @@ public:
             from_transition_to_eq_class_(),
             types_(),
             necessarily_bad_transitions_()
-//            statesample(read_input_sample(options.workspace))
     {
         compute_equivalence_relations();
     }
@@ -49,7 +48,7 @@ public:
     }
 
     inline int get_max_v(unsigned s) const {
-        int vstar = sample_.transitions().vstar(s);
+        int vstar = tr_set_.transitions().vstar(s);
         if (vstar < 0) return -1;
         return std::ceil(options.v_slack * vstar);
     }

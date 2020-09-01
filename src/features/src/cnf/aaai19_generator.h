@@ -49,7 +49,7 @@ public:
     }
 
     bool is_marked_transition(unsigned s, unsigned sprime) const {
-        return sample_.transitions().marked(s, sprime);
+        return tr_set_.transitions().marked(s, sprime);
     }
 
     const transition_set_t& sound_transitions() const {
@@ -57,23 +57,23 @@ public:
     }
 
     const transition_set_t& marked_transitions() const {
-        return sample_.transitions().marked_transitions();
+        return tr_set_.transitions().marked_transitions();
     }
 
     const transition_list_t& unmarked_transitions() const {
-        return sample_.transitions().unmarked_transitions();
+        return tr_set_.transitions().unmarked_transitions();
     }
 
     const transition_list_t& unmarked_and_alive_transitions() const {
-        return sample_.transitions().unmarked_and_alive_transitions();
+        return tr_set_.transitions().unmarked_and_alive_transitions();
     }
 
     const transition_list_t& get_relevant_unmarked_transitions(unsigned s) const {
         if (options.distinguish_transitions_locally) {
             assert(is_alive(s));
-            return sample_.transitions().unmarked_transitions_starting_at(s);
+            return tr_set_.transitions().unmarked_transitions_starting_at(s);
         } else {
-            return sample_.transitions().unmarked_transitions();
+            return tr_set_.transitions().unmarked_transitions();
         }
     }
 
@@ -84,7 +84,7 @@ public:
         if (it != d1_features_cache_.end()) return it->second;
 
         std::vector<unsigned>& features = d1_features_cache_[idx];
-        features = compute_d1_distinguishing_features(sample_, s, t);
+        features = compute_d1_distinguishing_features(tr_set_, s, t);
         return features;
     }
 

@@ -15,17 +15,14 @@ const state_denotation_t& Cache::retrieve_concept_denotation(const Concept &elem
     const sample_denotation_t *d = find_sample_denotation(element.as_str());
     assert(d);
     const state_denotation_t *sd = (*d)[state.id()];
-    assert(sd && (sd->size() == state.num_objects()));
     return *sd;
 }
 
 
 const state_denotation_t& Cache::retrieve_role_denotation(const Role &element, const State &state) const {
-    unsigned nobjects = state.num_objects();
     const sample_denotation_t *d = find_sample_denotation(element.as_str());
     assert(d);
     const state_denotation_t *sd = (*d)[state.id()];
-    assert(sd && (sd->size() == nobjects*nobjects));
     return *sd;
 }
 
@@ -44,7 +41,7 @@ void Factory::log_all_concepts_and_features(
 
         for (unsigned i = 0; i < sample.num_states(); ++i) {
             const State &state = sample.state(i);
-            const Instance::ObjectIndex &oidx = state.instance().object_index();
+            const auto& oidx = sample.instance(i).object_index();
 
             for (const Concept *c:concepts) {
                 const state_denotation_t &denotation = cache.retrieve_concept_denotation(*c, state);
@@ -70,8 +67,9 @@ void Factory::log_all_concepts_and_features(
 
         for (unsigned i = 0; i < sample.num_states(); ++i) {
             const State &state = sample.state(i);
-            const Instance::ObjectIndex &oidx = state.instance().object_index();
-            unsigned m = state.num_objects();
+            const auto& oidx = sample.instance(i).object_index();
+            unsigned m = sample.num_objects(i);
+
 
             for (const Role *r:roles_) {
                 const state_denotation_t &denotation = cache.retrieve_role_denotation(*r, state);
@@ -202,7 +200,7 @@ bool Factory::generate_cardinality_feature_if_not_redundant(
         assert(state.id() == sid);
 
         const state_denotation_t *sd = (*d)[sid];
-        assert((sd != nullptr) && (sd->size() == state.num_objects()));
+        assert((sd != nullptr) && (sd->size() == sample.num_objects(sid)));
 
         int value = static_cast<int>(sd->cardinality());
         fd.push_back(value);
@@ -231,8 +229,8 @@ bool Factory::generate_cardinality_feature_if_not_redundant(
             last_sf = sf;
         }
 
-        if (prev_instance_id < 0) prev_instance_id = (int) state.instance().id;
-        if (state.instance().id != prev_instance_id) {
+        if (prev_instance_id < 0) prev_instance_id = (int) state.instance_id();
+        if (state.instance_id() != prev_instance_id) {
             last_sfprime = -1;
         }
     }
