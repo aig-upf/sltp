@@ -122,7 +122,7 @@ public:
     }
 
     const sample_denotation_t* find_or_insert_sample_denotation(const sample_denotation_t &d, const std::string &name) {
-        cache1_t::const_iterator it = cache1_.find(&d);
+        auto it = cache1_.find(&d);
         if( it == cache1_.end() ) {
             assert(cache2_.find(name) == cache2_.end());
             const sample_denotation_t *nd = new sample_denotation_t(d);
@@ -134,7 +134,7 @@ public:
         }
     }
     const sample_denotation_t* find_or_insert_sample_denotation_by_name(const std::string &name, const sample_denotation_t &d) {
-        cache2_t::const_iterator it = cache2_.find(name);
+        auto it = cache2_.find(name);
         if( it == cache2_.end() ) {
             const sample_denotation_t *nd = new sample_denotation_t(d);
             cache2_.emplace(name, nd);
@@ -153,10 +153,10 @@ public:
     }
 
     void remove_sample_denotation(const std::string &name) {
-        cache2_t::const_iterator it2 = cache2_.find(name);
+        auto it2 = cache2_.find(name);
         assert(it2 != cache2_.end());
 
-        cache1_t::const_iterator it1 = cache1_.find(it2->second);
+        auto it1 = cache1_.find(it2->second);
         assert(it1 != cache1_.end());
         cache1_.erase(it1); // TODO Delete denotation
 
@@ -178,7 +178,7 @@ public:
     }
 
     const state_denotation_t* find_or_insert_state_denotation(const state_denotation_t &sd) {
-        cache3_t::const_iterator it = cache3_.find(&sd);
+        auto it = cache3_.find(&sd);
         if( it == cache3_.end() ) {
             const state_denotation_t *nsd = new state_denotation_t(sd);
             cache3_.insert(nsd);
@@ -1671,12 +1671,7 @@ public:
     static void insert_new_denotation_by_name(Cache &cache, const std::string &name, const sample_denotation_t *d) {
         cache.find_or_insert_sample_denotation_by_name(name, *d);
     }
-    int insert_new_concept(Cache &cache, const Concept *concept, const sample_denotation_t *d) const {
-        assert(!concepts_.empty());
-        concepts_.back().push_back(concept);
-        cache.find_or_insert_sample_denotation(*d, concept->as_str());
-        return concepts_.back().size();
-    }
+
     int insert_new_role(Cache &cache, const Role *role, const sample_denotation_t *d) const {
         roles_.push_back(role);
         cache.find_or_insert_sample_denotation(*d, role->as_str());
@@ -1707,18 +1702,50 @@ public:
     is_superfluous_or_exceeds_complexity_bound(const Base &base, Cache &cache, const Sample &sample) const {
         if(base.complexity() > options.complexity_bound) {
 //            std::cout << base.as_str() << " superfluous because complexity " << base.complexity() << ">" << options.complexity_bound << std::endl;
-            return std::make_pair(true, nullptr);
+            return {true, nullptr};
         }
 
         const sample_denotation_t *d = base.denotation(cache, sample, false);
-        auto denotation_idx = cache.cache1();
+        const auto& denotation_idx = cache.cache1();
         auto it = denotation_idx.find(d);
 
         if (it != denotation_idx.end()) {
-//            std::cout << base.as_str() << " superfluous because equivalent to " << it->second << std::endl;
-            return std::make_pair(true, d);
+//            std::cout << base.as_str() << " (k=" << base.complexity() << ") superfluous because equivalent to " << it->second << std::endl;
+            return {true, d};
         }
-        return std::make_pair(false, d);
+        return {false, d};
+    }
+
+    //!
+    void attempt_concept_insertion(const Concept& concept, Cache& cache, const Sample& sample, int& pruning_count) const {
+        if (concept.complexity() > options.complexity_bound) {
+//            std::cout << concept.as_str() << " superfluous because complexity " << concept.complexity() << ">" << options.complexity_bound << std::endl;
+            pruning_count++;
+            return;
+        }
+
+        const sample_denotation_t *d = concept.denotation(cache, sample, false);
+        const auto& index = cache.cache1();
+
+        auto it = index.find(d);
+        if (it != index.end()) {
+            // Some other concept has the exact same denotation over the whole sample.
+//            std::cout << concept.as_str() << " (k=" << concept.complexity() << ") superfluous because equivalent to " << it->second << std::endl;
+            pruning_count++;
+
+            // TODO Here we should be making sure that we're not pruning one simpler concept in favor of a
+            //      more complex one. This is not trivial to do now due to the current architecture, because
+            //      if we want to replace an already-existing concept with a new one, we should guarantee that there
+            //      are no third concepts that have been generated in the meantime and make use of the one we want
+            //      to eliminate
+
+        } else {
+            assert(!concepts_.empty());
+            concepts_.back().push_back(concept.clone());
+            cache.find_or_insert_sample_denotation(*d, concept.as_str());
+        }
+
+        delete d;
     }
 
     bool check_timeout(const std::clock_t& start_time) const {
@@ -1739,11 +1766,7 @@ public:
         if( concepts_.empty() ) { // On the first iteration, we simply process the basis concepts and return
             concepts_.emplace_back();
             for (const auto* concept : basis_concepts_) {
-                auto p = is_superfluous_or_exceeds_complexity_bound(*concept, cache, sample);
-                if (!p.first) insert_new_concept(cache, concept->clone(), p.second);
-                //else std::cout << "PRUNE: " + concept.as_str() << std::endl;
-                delete p.second;
-                num_pruned_concepts += p.first;
+                attempt_concept_insertion(*concept, cache, sample, num_pruned_concepts);
             }
             return num_pruned_concepts;
         }
@@ -1785,14 +1808,15 @@ public:
                     if (name1.substr(name1.size()-2) != "_g") continue;
                     if (name1.substr(0, name1.size()-2) != name2) continue;
 
-                    // Force the complexity of R=R' to be 1, if both roles are of the same type
                     EqualConcept eq_concept(r1, r2);
-                    if (typeid(*r1) == typeid(*r2)) eq_concept.force_complexity(1);
+                    // Force the complexity of R=R' to be 1, if both roles are of the same type
+                    // This is currently disabled, as the concept-pruning strategy doesn't work as expected when
+                    // this is enabled - sometimes concepts with lower complexity get pruned in favor of others
+                    // with higher complexity
+                    // if (typeid(*r1) == typeid(*r2)) eq_concept.force_complexity(1);
 
-                    auto p = is_superfluous_or_exceeds_complexity_bound(eq_concept, cache, sample);
-                    if (!p.first) insert_new_concept(cache, eq_concept.clone(), p.second);
-                    delete p.second;
-                    num_pruned_concepts += p.first;
+                    attempt_concept_insertion(eq_concept, cache, sample, num_pruned_concepts);
+
                     if (check_timeout(start_time)) return -1;
                 }
             }
@@ -1803,33 +1827,16 @@ public:
 
                 // Negate concepts in the last layer, only if they are not already negations
                 if (!dynamic_cast<const NotConcept*>(concept)) {
-                    NotConcept not_concept(concept);
-                    auto p = is_superfluous_or_exceeds_complexity_bound(not_concept, cache, sample);
-                    if (!p.first) insert_new_concept(cache, not_concept.clone(), p.second);
-                    //else std::cout << "PRUNE: " + not_concept.as_str() << std::endl;
-                    delete p.second;
-                    num_pruned_concepts += p.first;
+                    attempt_concept_insertion(NotConcept(concept), cache, sample, num_pruned_concepts);
                 }
 
 
                 // generate exist and forall combining a role with a concept in the last layer
                 for (int k2 = 0; k2 <= (options.complexity_bound-k-1); ++k2) {
                     for (const auto *role:roles_by_complexity[k2]) {
-                        ExistsConcept exists_concept(concept, role);
-                        std::pair<bool, const sample_denotation_t *> p = is_superfluous_or_exceeds_complexity_bound(
-                                exists_concept, cache, sample);
-                        if (!p.first) insert_new_concept(cache, exists_concept.clone(), p.second);
-                        //else std::cout << "PRUNE: " + exists_concept.as_str() << std::endl;
-                        delete p.second;
-                        num_pruned_concepts += p.first;
+                        attempt_concept_insertion(ExistsConcept(concept, role), cache, sample, num_pruned_concepts);
+                        attempt_concept_insertion(ForallConcept(concept, role), cache, sample, num_pruned_concepts);
 
-                        ForallConcept forall_concept(concept, role);
-                        std::pair<bool, const sample_denotation_t *> q = is_superfluous_or_exceeds_complexity_bound(
-                                forall_concept, cache, sample);
-                        if (!q.first) insert_new_concept(cache, forall_concept.clone(), q.second);
-                        //else std::cout << "PRUNE: " + forall_concept.as_str() << std::endl;
-                        delete q.second;
-                        num_pruned_concepts += q.first;
                         if (check_timeout(start_time)) return -1;
                     }
                 }
@@ -1838,35 +1845,29 @@ public:
         }
 
 
-        // generate conjunctions of (a) a concept in previous layer with a concept of the last layer, and
+        // generate conjunctions of (a) a concept of the last layer with a concept in some previous layer, and
         // (b) two concepts of the last layer, avoiding symmetries
         for (int k = 0; k <= (options.complexity_bound-1); ++k) {
             for (unsigned i_k = 0; i_k < concepts_in_last_layer_by_complexity[k].size(); ++i_k) {
                 const auto& concept1 = concepts_in_last_layer_by_complexity[k][i_k];
 
-                for (int k2 = 0; k2 <= (options.complexity_bound-k); ++k2) { // TODO Change if measuring AND-concept complexity by multiplication!
+                // (a) a concept of the last layer with a concept in some previous layer
+                for (int k2 = 0; k2 <= (options.complexity_bound-k); ++k2) {
                     for (const auto *concept2:concepts_in_previous_layers_by_complexity[k2]) {
-                        AndConcept and_concept(concept1, concept2);
-                        std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(and_concept, cache, sample);
-                        if( !p.first ) insert_new_concept(cache, and_concept.clone(), p.second);
-                        //else std::cout << "PRUNE: " + and_concept.as_str() << std::endl;
-                        delete p.second;
-                        num_pruned_concepts += p.first;
+                        attempt_concept_insertion(AndConcept(concept1, concept2), cache, sample, num_pruned_concepts);
+
                         if (check_timeout(start_time)) return -1;
                     }
                 }
 
 
-                for (int k2 = k; k2 <= (options.complexity_bound-k); ++k2) { // TODO Change if measuring AND-concept complexity by multiplication!
+                // (b) two concepts of the last layer, avoiding symmetries
+                for (int k2 = k; k2 <= (options.complexity_bound-k); ++k2) {
                     unsigned start_at = (k == k2) ? i_k+1: 0; // Break symmetries within same complexity bucket
                     for (unsigned i_k2 = start_at; i_k2 < concepts_in_last_layer_by_complexity[k2].size(); ++i_k2) {
                         const auto& concept2 = concepts_in_last_layer_by_complexity[k2][i_k2];
-                        AndConcept and_concept(concept1, concept2);
-                        std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(and_concept, cache, sample);
-                        if( !p.first ) insert_new_concept(cache, and_concept.clone(), p.second);
-                        //else std::cout << "PRUNE: " + and_concept.as_str() << std::endl;
-                        delete p.second;
-                        num_pruned_concepts += p.first;
+                        attempt_concept_insertion(AndConcept(concept1, concept2), cache, sample, num_pruned_concepts);
+
                         if (check_timeout(start_time)) return -1;
                     }
                 }
@@ -1997,7 +1998,7 @@ public:
 
         // Insert the basis (i.e. primitive) roles as long as they are not redundant
         for (const auto *role : basis_roles_) {
-            std::pair<bool, const sample_denotation_t*> p = is_superfluous_or_exceeds_complexity_bound(*role, cache, sample);
+            auto p = is_superfluous_or_exceeds_complexity_bound(*role, cache, sample);
             if( !p.first ) {
                 insert_new_role(cache, role->clone(), p.second);
             } else {
@@ -2199,7 +2200,6 @@ public:
         // track whether feature would be boolean or numeric, or non-informative
         bool boolean_feature = true;
         bool denotation_is_constant = true;
-        bool all_values_greater_than_zero = true;
         int previous_value = -1;
 
         for(unsigned j = 0; j < m; ++j) {
@@ -2210,13 +2210,13 @@ public:
             int value = static_cast<int>(sd->cardinality());
             boolean_feature = boolean_feature && (value < 2);
             denotation_is_constant = (previous_value == -1) || (denotation_is_constant && (previous_value == value));
-            all_values_greater_than_zero = all_values_greater_than_zero && (value > 0);
             previous_value = value;
             fd.push_back(value);
         }
 
+
 //        if (all_values_greater_than_zero) std::cout << "ALL>0: " << c->as_str() << std::endl;
-        if (can_be_pruned && (denotation_is_constant || all_values_greater_than_zero)) return false;
+        if (can_be_pruned && denotation_is_constant) return false;
 
         auto it = seen_denotations.find(fd);
         if( it == seen_denotations.end() ) { // The feature denotation is new, keep the feature
