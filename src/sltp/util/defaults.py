@@ -196,6 +196,9 @@ def generate_experiment(expid, domain_dir, domain, **kwargs):
         # dominated features and reduce the size of the encoding
         use_feature_dominance=False,
 
+        # Whether to automatically generate goal-distinguishing concepts and roles
+        generate_goal_concepts=False,
+
         # The slack value for the maximum allowed value for V_pi(s) = slack * V^*(s)
         v_slack=2,
 

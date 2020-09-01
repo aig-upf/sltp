@@ -36,6 +36,8 @@ SLTP::DL::Options parse_options(int argc, const char **argv) {
 
             ("comparison-features", "Use comparison features of the type F1 < F2")
 
+            ("generate-goal-concepts", "Whether to automatically generate goal-distinguishing concepts and roles.")
+
             ("print-denotations", "Whether print the denotations of all generated features.")
             ;
 
@@ -63,6 +65,7 @@ SLTP::DL::Options parse_options(int argc, const char **argv) {
     options.dist_complexity_bound = vm["dist-complexity-bound"].as<unsigned>();
     options.cond_complexity_bound = vm["cond-complexity-bound"].as<unsigned>();
     options.comparison_features = vm.count("comparison-features") > 0;
+    options.generate_goal_concepts = vm.count("generate-goal-concepts") > 0;
     options.print_denotations = vm.count("print-denotations") > 0;
     return options;
 }
@@ -113,13 +116,16 @@ int main(int argc, const char **argv) {
 
     SLTP::DL::Cache cache;
     factory.generate_basis(sample);
-    // TODO Make this optional adding an extra command-line option:
-    auto forced_goal_features = factory.generate_goal_concepts_and_roles(cache, sample);
+
+    std::vector<const SLTP::DL::Concept*> goal_concepts{};
+    if (options.generate_goal_concepts) {
+        goal_concepts = factory.generate_goal_concepts_and_roles(cache, sample);
+    }
 
     factory.generate_roles(cache, sample);
 
     auto concepts = factory.generate_concepts(cache, sample, start_time);
-    factory.generate_features(concepts, cache, sample, forced_goal_features);
+    factory.generate_features(concepts, cache, sample, goal_concepts);
 //    factory.report_dl_data(cout);
     factory.log_all_concepts_and_features(concepts, cache, sample, options.workspace, options.print_denotations);
 

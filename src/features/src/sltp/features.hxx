@@ -47,6 +47,7 @@ struct Options {
     unsigned dist_complexity_bound;
     unsigned cond_complexity_bound;
     bool comparison_features;
+    bool generate_goal_concepts;
     bool print_denotations;
 };
 

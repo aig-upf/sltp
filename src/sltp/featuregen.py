@@ -288,6 +288,7 @@ def extract_features(config, sample):
            + f" --dist-complexity-bound {config.distance_feature_max_complexity}" \
            + f" --cond-complexity-bound {config.cond_feature_max_complexity}" \
            + (f" --comparison-features" if config.comparison_features else "") \
+           + (f" --generate-goal-concepts" if config.generate_goal_concepts else "") \
            + (f" --print-denotations" if config.print_denotations else "") \
            + f" --workspace {config.experiment_dir}"
 
