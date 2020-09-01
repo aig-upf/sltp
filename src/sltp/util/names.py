@@ -95,6 +95,13 @@ def blocksworld_names(feature):
         "Atom[handempty]": "handempty",
         # "superficially-well-placed": all blocks below are the same as in goal
         "And(Equal(Star(on_g),Star(on)),clear)": "n-clear-and-superficially-well-placed-blocks",
+        "Equal(Inverse(loc_g),Inverse(Star(loc)))": "n-blocks-below-their-hat",  # FSTRIPS
+        "Exists(Star(loc),Exists(loc_g,Not(Equal(Inverse(loc_g),Inverse(loc)))))": "n-x-with-misplaced-block-below",  # FSTRIPS
+        "clear": "num-clear",
+        "And(Equal(loc_g,loc),Forall(Star(loc),Equal(loc_g,loc)))": "n-well-placed",  # FSTRIPS
+        "Equal(Star(loc_g),Star(loc))": "n-superficially-well-placed",  # FSTRIPS
+        "Equal(loc_g,loc)": "n-ontarget",  # FSTRIPS
+        "Equal(Inverse(loc_g),Inverse(loc))": "n-right-under-target",  # FSTRIPS
     }
     return extend_namer_to_all_features(base).get(s, s)
 
