@@ -14,6 +14,7 @@
 #include <common/utils.h>
 #include <cnf/transition_classification.h>
 #include <cnf/aaai19_generator.h>
+#include <common/helpers.h>
 
 
 using namespace std;
@@ -139,20 +140,8 @@ int main(int argc, const char **argv) {
     auto options = parse_options(argc, argv);
 
     // Read feature matrix
-    std::string matrix_filename = options.workspace + "/feature-matrix.dat";
-    std::cout << Utils::blue() << "reading" << Utils::normal() << " '" << matrix_filename << std::endl;
-    auto ifs_matrix = get_ifstream(matrix_filename);
-    auto matrix = Sample::FeatureMatrix::read_dump(ifs_matrix, options.verbose);
-    ifs_matrix.close();
-
-    // Read transition data
-    std::string transitions_filename = options.workspace + "/sat_transitions.dat";
-    std::cout << Utils::blue() << "reading" << Utils::normal() << " '" << transitions_filename << std::endl;
-    auto ifs_transitions = get_ifstream(transitions_filename);
-    auto transitions = Sample::TransitionSample::read_dump(ifs_transitions, options.verbose);
-    ifs_transitions.close();
-
-    auto sample = Sample::Sample(std::move(matrix), std::move(transitions));
+    auto sample = Sample::Sample(read_feature_matrix(options.workspace, options.verbose),
+                                 read_transition_data(options.workspace, options.verbose));
     std::cout << "Training sample: " << sample << std::endl;
 
     // We write the MaxSAT instance progressively as we generate the CNF. We do so into a temporary "*.tmp" file

@@ -8,8 +8,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Uncomment for debug build. Alternatively, build with `cmake -DCMAKE_BUILD_TYPE=Debug .`
 #set(CMAKE_BUILD_TYPE Debug)
-#set(CMAKE_CXX_FLAGS "-g -DDEBUG")
-set(CMAKE_CXX_FLAGS "-O3 -DNDEBUG")  # -Wall -Wextra
+set(CMAKE_CXX_FLAGS "-g -DDEBUG")
+#set(CMAKE_CXX_FLAGS "-O3 -DNDEBUG")  # -Wall -Wextra
 
 
 set(SOURCE_FILES
@@ -18,6 +18,8 @@ set(SOURCE_FILES
         src/sltp/utils.hxx
         src/sltp/algorithms
         src/sltp/base
+        src/common/utils
+        src/common/helpers
 )
 
 
@@ -30,6 +32,7 @@ set(CNFGEN_SOURCE_FILES
         src/cnf/cnfwriter.h
         src/cnf/d2tree.h
         src/common/utils
+        src/common/helpers
         src/blai/sample.h
         src/blai/matrix.h
         src/blai/transitions.h
