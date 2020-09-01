@@ -22,3 +22,12 @@ Sample::FeatureMatrix read_feature_matrix(const std::string& workspace, bool ver
     ifs_matrix.close();
     return matrix;
 }
+
+int transition_sign(int s_f, int sprime_f) {
+    int type_s = sprime_f - s_f; // <0 if DEC, =0 if unaffected, >0 if INC
+    return (type_s > 0) ? 1 : ((type_s < 0) ? -1 : 0);
+}
+
+bool are_transitions_d1d2_distinguished(int s_f, int sprime_f, int t_f, int tprime_f) {
+    return (s_f == 0) != (t_f == 0) || transition_sign(s_f, sprime_f) != transition_sign(t_f, tprime_f);
+}

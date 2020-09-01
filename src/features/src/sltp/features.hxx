@@ -20,6 +20,11 @@
 
 #include <ctime>
 
+namespace Sample {
+    class TransitionSample;
+}
+
+
 namespace SLTP::DL {
 
 const unsigned PRIMITIVE_COMPLEXITY = 1;
@@ -307,8 +312,9 @@ public:
     // map from atom of the form <pred_id, oid_1, ..., oid_n> to atom id in instance
     using AtomIndex = std::unordered_map<std::vector<unsigned>, atom_id_t, utils::container_hash<std::vector<unsigned> > >;
 
+    const unsigned id;
+
 protected:
-    const std::string name_;
     const std::vector<Object> objects_;
     const std::vector<Atom> atoms_;
 
@@ -319,24 +325,23 @@ protected:
     AtomIndex atom_index_;
 
 public:
-    Instance(std::string name,
+    Instance(unsigned id,
              std::vector<Object> &&objects,
              std::vector<Atom> &&atoms,
              ObjectIndex &&object_index,
              AtomIndex &&atom_index)
-            : name_(std::move(name)),
-              objects_(std::move(objects)),
-              atoms_(std::move(atoms)),
-              object_index_(std::move(object_index)),
-              atom_index_(std::move(atom_index)) {
+            :
+        id(id),
+        objects_(std::move(objects)),
+        atoms_(std::move(atoms)),
+        object_index_(std::move(object_index)),
+        atom_index_(std::move(atom_index))
+    {
     }
+
     Instance(const Instance& ins) = default;
     Instance(Instance &&ins) = default;
     ~Instance() = default;
-
-    const std::string& name() const {
-        return name_;
-    }
 
     unsigned num_objects() const {
         return (unsigned) objects_.size();
@@ -445,15 +450,10 @@ public:
     const std::vector<predicate_id_t>& goal_predicates() const {
         return goal_predicates_;
     }
-    const std::vector<Instance>& instances() const {
-        return instances_;
-    }
     const std::vector<State>& states() const {
         return states_;
     }
-    const Instance& instance(unsigned i) const {
-        return instances_.at(i);
-    }
+
     const Predicate& predicate(predicate_id_t id) const {
         return predicates_.at(id);
     }
@@ -1473,8 +1473,6 @@ protected:
 
     mutable bool valid_cache_;
     mutable std::vector<int> cached_distances_;
-    mutable bool denotation_is_constant_;
-    mutable bool all_values_greater_than_zero_;
 
 public:
     DistanceFeature(const Concept *start, const Concept *end, const Role *role)
@@ -1482,17 +1480,13 @@ public:
               start_(start),
               end_(end),
               role_(role),
-              valid_cache_(false),
-              denotation_is_constant_(false),
-              all_values_greater_than_zero_(false) {
-    }
+              valid_cache_(false)
+    {}
     ~DistanceFeature() override = default;
     const Feature* clone() const override {
         auto *f = new DistanceFeature(start_, end_, role_);
         f->valid_cache_ = valid_cache_;
         f->cached_distances_ = cached_distances_;
-        f->denotation_is_constant_ = denotation_is_constant_;
-        f->all_values_greater_than_zero_ = all_values_greater_than_zero_;
         return f;
     }
 
@@ -1510,8 +1504,6 @@ public:
             const sample_denotation_t *role_d = cache.find_sample_denotation(role_->as_str());
             assert((role_d != nullptr) && (role_d->size() == m));
 
-            denotation_is_constant_ = true;
-            all_values_greater_than_zero_ = true;
             cached_distances_ = std::vector<int>(m, std::numeric_limits<int>::max());
             for( int i = 0; i < m; ++i ) {
                 const State &state = sample.state(i);
@@ -1523,8 +1515,6 @@ public:
                 const state_denotation_t *role_sd = (*role_d)[i];
                 assert((role_sd != nullptr) && (role_sd->size() == state.num_objects() * state.num_objects()));
                 int distance = compute_distance(state.num_objects(), *start_sd, *end_sd, *role_sd);
-                denotation_is_constant_ = denotation_is_constant_ && ((i == 0) || (cached_distances_[i - 1] == distance));
-                all_values_greater_than_zero_ = all_values_greater_than_zero_ && (distance > 0);
                 cached_distances_[i] = distance;
             }
             valid_cache_ = true;
@@ -1533,16 +1523,6 @@ public:
     }
     [[nodiscard]] std::string as_str() const override {
         return std::string("Dist[") + start_->as_str() + ";" + role_->as_str() + ";" + end_->as_str() + "]";
-    }
-
-    bool valid_cache() const {
-        return valid_cache_;
-    }
-    bool denotation_is_constant() const {
-        return denotation_is_constant_;
-    }
-    bool all_values_greater_than_zero() const {
-        return all_values_greater_than_zero_;
     }
 
     bool is_boolean() const override { return false; }
@@ -2129,43 +2109,11 @@ public:
         }
     }
 
-    void generate_features(const std::vector<const Concept*>& concepts, Cache &cache, const Sample &sample, const std::vector<const Concept*>& forced_goal_features) {
-        feature_cache_t seen_denotations;
-
-        // Insert first the features that allow us to express the goal
-        // goal_features will contain the indexes of those features
-        goal_features_.clear();
-        for (const auto *c:forced_goal_features) {
-            if (generate_cardinality_feature_if_not_redundant(c, cache, sample, seen_denotations, false)) {
-                goal_features_.insert(features_.size()-1);
-            }
-        }
-        std::cout << "A total of " << goal_features_.size() << " features were marked as goal-identifying" << std::endl;
-
-        // create features that derive from nullary predicates
-        // TODO Keep track of the denotation of nullary-atom features and prune them if necessary
-        for (const auto& predicate:sample.predicates()) {
-            if (predicate.arity() == 0) {
-                features_.push_back(new NullaryAtomFeature(&predicate));
-            }
-        }
-
-        // create boolean/numerical features from concepts
-        for (const Concept* c:concepts) {
-            generate_cardinality_feature_if_not_redundant(c, cache, sample, seen_denotations);
-        }
-
-        // create comparison features here so that only cardinality features are used to build them
-        generate_comparison_features(features_, cache, sample, seen_denotations);
-
-        // create distance features
-        generate_distance_features(concepts, cache, sample, seen_denotations);
-
-        // create conditional features from boolean conditions and numeric bodies
-        generate_conditional_features(features_, cache, sample, seen_denotations);
-
-        print_feature_count();
-    }
+    void generate_features(
+            const std::vector<const Concept*>& concepts,
+            Cache &cache, const Sample &sample,
+            const ::Sample::TransitionSample& transitions,
+            const std::vector<const Concept*>& forced_goal_features);
 
     void print_feature_count() const {
         unsigned num_nullary_features = 0, num_boolean_features = 0, num_numeric_features = 0,
@@ -2193,99 +2141,19 @@ public:
                   << std::endl;
     }
 
-    bool generate_cardinality_feature_if_not_redundant(const Concept* c, Cache &cache, const Sample &sample, feature_cache_t& seen_denotations, bool can_be_pruned=true) {
-        const auto m = sample.num_states();
-        const sample_denotation_t *d = cache.find_sample_denotation(c->as_str());
-        assert((d != nullptr) && (d->size() == m));
-
-        // generate feature denotation associated to concept's sample denotation
-        feature_sample_denotation_t fd;
-        fd.reserve(m);
-
-        // track whether feature would be boolean or numeric, or non-informative
-        bool boolean_feature = true;
-        bool denotation_is_constant = true;
-        int previous_value = -1;
-
-        for(unsigned j = 0; j < m; ++j) {
-            const State &state = sample.state(j);
-            assert(state.id() == j);
-            const state_denotation_t *sd = (*d)[j];
-            assert((sd != nullptr) && (sd->size() == state.num_objects()));
-            int value = static_cast<int>(sd->cardinality());
-            boolean_feature = boolean_feature && (value < 2);
-            denotation_is_constant = (previous_value == -1) || (denotation_is_constant && (previous_value == value));
-            previous_value = value;
-            fd.push_back(value);
-        }
-
-
-        if (can_be_pruned && denotation_is_constant) return false;
-
-        auto it = seen_denotations.find(fd);
-        if( it == seen_denotations.end() ) { // The feature denotation is new, keep the feature
-            const Feature *feature = boolean_feature ? static_cast<Feature*>(new BooleanFeature(c)) :
-                                     static_cast<Feature*>(new NumericalFeature(c));
-            features_.emplace_back(feature);
-            seen_denotations.emplace(fd, feature);
-            //std::cout << "ACCEPT: " << feature->as_str_with_complexity() << std::endl;
-            return true;
-        }
-
-        // Make sure that we don't prune a feature of lower complexity in favor of a feature of higher complexity
-        assert(it->second->complexity() <= c->complexity());
-
-        // From here on, the we know the feature is redundant, but still it may be that we want to force it (e.g.
-        // because it is goal-identifying).
-
-//        std::cout << "REJECT: " << c->as_str() << std::endl;
-//        std::cout << "PRUNED-BY: " << it->second->as_str() << std::endl;
-        if (can_be_pruned) {
-            return false; // If can be pruned, we don't generate anything and return false
-
-        } else { // Otherwise, we generate it (even if it is redundant, and return true
-            const Feature *feature = boolean_feature ? static_cast<Feature*>(new BooleanFeature(c)) :
-                                     static_cast<Feature*>(new NumericalFeature(c));
-            features_.emplace_back(feature);
-            return true;
-        }
-    }
+    bool generate_cardinality_feature_if_not_redundant(
+            const Concept* c,
+            Cache &cache,
+            const Sample &sample,
+            const ::Sample::TransitionSample& transitions,
+            feature_cache_t& seen_denotations,
+            bool can_be_pruned);
 
     //! Insert the given feature if its complexity is below the given bound, its denotation is not constant,
     //! and its denotation trail is not redundant with that of some previously-generated feature
     bool insert_feature_if_necessary(
             const Feature* feature, unsigned bound,
-            Cache &cache, const Sample &sample, feature_cache_t& seen_denotations)
-    {
-        if (feature->complexity() > bound) return false;
-
-        const auto m = sample.num_states();
-        feature_sample_denotation_t fd;
-        fd.reserve(m);
-
-        bool denotation_is_constant = true;
-        bool all_values_greater_than_zero = true;
-        int previous_value = -1;
-
-        for (unsigned j = 0; j < m; ++j) {
-            const State &state = sample.state(j);
-            int value = feature->value(cache, sample, state);
-            denotation_is_constant = (previous_value == -1) || (denotation_is_constant && (previous_value == value));
-            all_values_greater_than_zero = all_values_greater_than_zero && (value > 0);
-            previous_value = value;
-            fd.push_back(value);
-        }
-
-        if (!denotation_is_constant && !all_values_greater_than_zero) {
-            if (seen_denotations.find(fd)  == seen_denotations.end()) {
-                // The feature denotation is new, so let's insert it
-                features_.emplace_back(feature);
-                seen_denotations.emplace(fd, feature);
-                return true;
-            }
-        }
-        return false;
-    }
+            Cache &cache, const Sample &sample, feature_cache_t& seen_denotations);
 
     void generate_distance_features(const std::vector<const Concept*>& concepts, Cache &cache, const Sample &sample, feature_cache_t& seen_denotations) {
         if (options.dist_complexity_bound<=0) return;

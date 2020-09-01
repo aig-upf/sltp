@@ -8,6 +8,8 @@
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
+#include <common/utils.h>
+#include <common/helpers.h>
 
 using namespace std;
 namespace po = boost::program_options;
@@ -71,18 +73,21 @@ SLTP::DL::Options parse_options(int argc, const char **argv) {
 }
 
 SLTP::DL::Sample parse_input_sample(const string &filename) {
-    ifstream sample_file(filename);
-    if( sample_file.fail() ) throw runtime_error("Could not open filename '" + filename + "'");
-    return SLTP::DL::Sample::read(sample_file);
+    auto ifs = get_ifstream(filename);
+    auto res = SLTP::DL::Sample::read(ifs);
+    ifs.close();
+    return res;
 }
 
 std::vector<std::string> parse_nominals(const string &filename) {
-    ifstream file(filename);
-    if( file.fail() ) throw runtime_error("Could not open filename '" + filename + "'");
+    auto ifs = get_ifstream(filename);
 
     std::string nominals_line;
-    std::getline(file, nominals_line);
+    std::getline(ifs, nominals_line);
+    ifs.close();
+
     if (nominals_line.empty()) return {};
+
     std::vector<std::string> nominals;
     boost::split(nominals, nominals_line, boost::is_any_of(" \t"));
     return nominals;
@@ -112,6 +117,8 @@ int main(int argc, const char **argv) {
 
     const SLTP::DL::Sample sample = parse_input_sample(options.workspace + "/sample.io");
     std::vector<std::string> nominals = parse_nominals(options.workspace + "/nominals.io");
+    auto transitions = read_transition_data(options.workspace, false);
+
     SLTP::DL::Factory factory(nominals, options);
 
     SLTP::DL::Cache cache;
@@ -125,7 +132,7 @@ int main(int argc, const char **argv) {
     factory.generate_roles(cache, sample);
 
     auto concepts = factory.generate_concepts(cache, sample, start_time);
-    factory.generate_features(concepts, cache, sample, goal_concepts);
+    factory.generate_features(concepts, cache, sample, transitions, goal_concepts);
 //    factory.report_dl_data(cout);
     factory.log_all_concepts_and_features(concepts, cache, sample, options.workspace, options.print_denotations);
 

@@ -86,8 +86,6 @@ std::vector<feature_t> compute_d2_distinguishing_features(const Sample::Sample& 
 std::vector<feature_t> compute_d1d2_distinguishing_features(const Sample::Sample& sample,
                                                           unsigned s, unsigned sprime, unsigned t, unsigned tprime);
 
-bool are_transitions_d1d2_distinguished(int s_f, int sprime_f, int t_f, int tprime_f);
-
 class CNFEncoding {
 public:
 
