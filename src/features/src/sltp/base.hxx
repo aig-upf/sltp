@@ -9,7 +9,7 @@ namespace SLTP {
 // cached so that at most one copy of a bitmap exists.
 struct state_denotation_t : public std::vector<bool> {
     state_denotation_t(size_t n, bool value) : std::vector<bool>(n, value) { }
-    size_t cardinality() const {
+    [[nodiscard]] size_t cardinality() const {
         size_t n = 0;
         for( size_t i = 0; i < size(); ++i )
             n += (*this)[i];

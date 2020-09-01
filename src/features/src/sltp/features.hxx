@@ -66,11 +66,12 @@ public:
             assert(d1->size() == d2->size()); // number of states is fixed in sample
             return *d1 == *d2;
         }
+
         size_t operator()(const sample_denotation_t *obj) const {
             assert(obj != nullptr);
             size_t hash = (*this)((*obj)[0]);
-            for( int i = 0; i < int(obj->size()); ++i )
-                hash = hash ^ (*this)((*obj)[i]);
+            for (auto elem:*obj)
+                hash = hash ^ (*this)(elem);
             return hash;
         }
 
@@ -82,6 +83,7 @@ public:
             // denotation of concept/roles
             return *sd1 == *sd2;
         }
+
         size_t operator()(const state_denotation_t *obj) const {
             assert(obj != nullptr);
             std::hash<std::vector<bool> > hasher;
