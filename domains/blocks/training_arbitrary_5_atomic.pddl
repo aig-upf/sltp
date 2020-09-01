@@ -1,6 +1,6 @@
 (define (problem BLOCKS-5-0)
 (:domain strips-blocksworld)
-(:objects a b c d e - block)
+(:objects a b c d e)
 
 (:init
     (on a table)
