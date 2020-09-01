@@ -7,7 +7,7 @@
 #include <unordered_map>
 
 #include <boost/functional/hash.hpp>
-
+#include <common/helpers.h>
 
 
 namespace sltp::cnf {
