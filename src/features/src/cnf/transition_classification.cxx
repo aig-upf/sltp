@@ -494,7 +494,7 @@ std::vector<transition_pair> TransitionClassificationEncoding::distinguish_all_t
             const auto& tx2pair = get_state_pair(tx2);
             const auto t = tx2pair.first;
 
-//            if (sample.state(s).instance_id() != sample.state(t).instance_id()) continue;
+            if (sample.state(s).instance_id() != sample.state(t).instance_id()) continue;
             transitions_to_distinguish.emplace_back(tx1, tx2);
         }
     }
