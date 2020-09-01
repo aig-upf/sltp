@@ -199,7 +199,7 @@ def generate_output_from_handcrafted_features(sample, config, features, model_ca
         matrix[i] = [cast_feature_value_to_numpy_value(int(x)) for x in denotations]
 
     # These next 3 lines just to print the denotation of all features
-    if config.print_all_denotations:
+    if config.print_denotations:
         state_ids = sample.get_sorted_state_ids()
         models = {sid: model_cache.get_feature_model(sid) for sid in sample.states}
         log_feature_denotations(state_ids, features, models, config.feature_denotation_filename, None)
@@ -288,7 +288,7 @@ def extract_features(config, sample):
            + f" --dist-complexity-bound {config.distance_feature_max_complexity}" \
            + f" --cond-complexity-bound {config.cond_feature_max_complexity}" \
            + (f" --comparison-features" if config.comparison_features else "") \
-           + (f" --print-denotations" if config.print_all_denotations else "") \
+           + (f" --print-denotations" if config.print_denotations else "") \
            + f" --workspace {config.experiment_dir}"
 
     args = args.split()
