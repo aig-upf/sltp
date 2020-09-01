@@ -11,24 +11,22 @@
 #include <common/utils.h>
 #include <blai/matrix.h>
 #include <blai/transitions.h>
+#include <common/base.h>
 #include "utils.h"
 
-namespace Sample {
+namespace sltp {
 
 //! A simple container for a pair of feature matrix and transition sample
-class Sample {
+class TrainingSet {
 public:
     const FeatureMatrix matrix_;
     const TransitionSample transitions_;
+    const sltp::Sample sample_;
 
-    Sample(FeatureMatrix&& matrix, TransitionSample&& transitions) :
-      matrix_(std::move(matrix)), transitions_(std::move(transitions))
-    {
-//        std::cout << "Dead-end states: ";
-//        for (auto s:matrix_.deadends()) std::cout << " " << s;
-//        std::cout << std::endl;
-    }
-    virtual ~Sample() = default;
+    TrainingSet(FeatureMatrix&& matrix, TransitionSample&& transitions, sltp::Sample&& sample) :
+      matrix_(std::move(matrix)), transitions_(std::move(transitions)), sample_(sample)
+    {}
+    virtual ~TrainingSet() = default;
 
     const FeatureMatrix& matrix() const { return matrix_; }
     const TransitionSample& transitions() const { return transitions_; }
@@ -39,7 +37,8 @@ public:
 
     //! Remap the states in the current sample, whose IDs are assumed to span the full range [0..n],
     //! into a smaller range [0..m] with the m states that are either contained in `selected` or a successor of them
-    Sample resample(const std::unordered_set<unsigned>& selected) const {
+    /*
+    TrainingSet resample(const std::unordered_set<unsigned>& selected) const {
 
         // Add all successors of selected states
         std::set<unsigned> closed; // set must be sorted
@@ -68,10 +67,11 @@ public:
 //        for (auto& elem:mapping)  std::cout << elem.first << ": " << elem.second << ", ";
 //        std::cout << std::endl;
 
-        return Sample(matrix_.resample(mapping), transitions_.resample(selected, mapping));
+        return TrainingSet(matrix_.resample(mapping), transitions_.resample(selected, mapping));
     }
+     */
 
-    friend std::ostream& operator<<(std::ostream &os, const Sample& o) { return o.print(os); }
+    friend std::ostream& operator<<(std::ostream &os, const TrainingSet& o) { return o.print(os); }
     std::ostream& print(std::ostream &os) const {
 
         auto est_size = matrix_.num_features() * matrix_.num_states() * sizeof(FeatureMatrix::feature_value_t) /

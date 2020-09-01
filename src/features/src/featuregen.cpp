@@ -92,8 +92,8 @@ int main(int argc, const char **argv) {
     auto start_time = std::clock();
     sltp::dl::Options options = parse_options(argc, argv);
 
-    const sltp::Sample sample = parse_input_sample(options.workspace);
-    const std::vector<std::string> nominals = parse_nominals(options.workspace);
+    const sltp::Sample sample = read_input_sample(options.workspace);
+    const std::vector<std::string> nominals = read_nominals(options.workspace);
     auto transitions = read_transition_data(options.workspace, false);
 
     sltp::dl::Factory factory(nominals, options);

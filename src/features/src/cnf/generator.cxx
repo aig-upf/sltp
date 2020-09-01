@@ -3,9 +3,10 @@
 #include "generator.h"
 #include "types.h"
 
+namespace sltp::cnf {
 
 //! Return a sorted vector with those features that d1-distinguish s from t
-std::vector<feature_t> compute_d1_distinguishing_features(const Sample::Sample& sample, unsigned s, unsigned t) {
+std::vector<feature_t> compute_d1_distinguishing_features(const TrainingSet& sample, unsigned s, unsigned t) {
     std::vector<unsigned> features;
     const auto& mat = sample.matrix();
     for (unsigned f = 0; f < mat.num_features(); ++f) {
@@ -19,7 +20,7 @@ std::vector<feature_t> compute_d1_distinguishing_features(const Sample::Sample& 
 }
 
 //! Return a sorted vector with those features that d2-distinguish transition (s, s') from (t, t')
-std::vector<feature_t> compute_d2_distinguishing_features(const Sample::Sample& sample,
+std::vector<feature_t> compute_d2_distinguishing_features(const TrainingSet& sample,
                                                           unsigned s, unsigned sprime, unsigned t, unsigned tprime) {
 
     std::vector<unsigned> features;
@@ -44,7 +45,7 @@ std::vector<feature_t> compute_d2_distinguishing_features(const Sample::Sample& 
 
 //! Return a sorted vector with those features that either d1-distinguish or d2-distinguish (s, s') from (t, t')
 std::vector<feature_t> compute_d1d2_distinguishing_features(
-        const Sample::Sample& sample,
+        const TrainingSet& sample,
         unsigned s, unsigned sprime,
         unsigned t, unsigned tprime)
 {
@@ -64,7 +65,7 @@ std::vector<feature_t> compute_d1d2_distinguishing_features(
 
 
 //! Check whether t appears isomorphic to s, and in that case, add it to the given list of isomorphisms
-void check_isomorphic(const Sample::Sample& sample, unsigned s, unsigned t, isomorphism_t& isomorphisms) {
+void check_isomorphic(const TrainingSet& sample, unsigned s, unsigned t, isomorphism_t& isomorphisms) {
     // if either s or t are isomorphic of some other state no need to recheck, will be detected in due time
     if (isomorphisms.find(s) != isomorphisms.end() || isomorphisms.find(t) != isomorphisms.end()) return;
 
@@ -89,7 +90,7 @@ void check_isomorphic(const Sample::Sample& sample, unsigned s, unsigned t, isom
 }
 
 
-isomorphism_t compute_redundant_states(const Sample::Sample& sample) {
+isomorphism_t compute_redundant_states(const TrainingSet& sample) {
     isomorphism_t isomorphisms;
 
     // Collect optimal and non-optimal states
@@ -123,7 +124,7 @@ isomorphism_t compute_redundant_states(const Sample::Sample& sample) {
     return isomorphisms;
 }
 
-bool all_tx_have_analogs(const Sample::Sample& sample, unsigned s, unsigned t) {
+bool all_tx_have_analogs(const TrainingSet& sample, unsigned s, unsigned t) {
 
     for (unsigned sprime:sample.transitions().successors(s)) {
         bool tx_has_analog = false;
@@ -137,4 +138,4 @@ bool all_tx_have_analogs(const Sample::Sample& sample, unsigned s, unsigned t) {
     return true;
 }
 
-
+} // namespaces

@@ -117,7 +117,7 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
 }
 
 sltp::cnf::CNFGenerationOutput
-write_encoding(CNFWriter& wr, const Sample::Sample& sample, const sltp::cnf::Options& options) {
+write_encoding(CNFWriter& wr, const sltp::TrainingSet& sample, const sltp::cnf::Options& options) {
     if (options.use_separation_encoding()) {
         sltp::cnf::TransitionClassificationEncoding generator(sample, options);
         return generator.refine_theory(wr);
@@ -139,9 +139,12 @@ int main(int argc, const char **argv) {
     float start_time = Utils::read_time_in_seconds();
     auto options = parse_options(argc, argv);
 
-    // Read feature matrix
-    auto sample = Sample::Sample(read_feature_matrix(options.workspace, options.verbose),
-                                 read_transition_data(options.workspace, options.verbose));
+    // Read input training set
+    auto sample = sltp::TrainingSet(
+            read_feature_matrix(options.workspace, options.verbose),
+            read_transition_data(options.workspace, options.verbose),
+            read_input_sample(options.workspace));
+
     std::cout << "Training sample: " << sample << std::endl;
 
     // We write the MaxSAT instance progressively as we generate the CNF. We do so into a temporary "*.tmp" file

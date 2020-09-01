@@ -6,7 +6,7 @@
 namespace sltp::cnf {
 
 
-Sample::Sample AAAI19Generator::preprocess_sample(const Sample::Sample& sample, const sltp::cnf::Options& options) {
+TrainingSet AAAI19Generator::preprocess_sample(const TrainingSet& sample, const sltp::cnf::Options& options) {
     auto isomorphisms = compute_redundant_states(sample);
 
     std::cout << isomorphisms.size() << " / " << sample.matrix().num_states()
@@ -17,9 +17,12 @@ Sample::Sample AAAI19Generator::preprocess_sample(const Sample::Sample& sample, 
         if (isomorphisms.find(s) == isomorphisms.end()) nonisomorphic.insert(s);
     }
 
-    auto resampled = Sample::Sample(sample.resample(nonisomorphic));
-    std::cout << "Pruned training sample: " << resampled << std::endl;
-    return resampled;
+    // TODO
+    throw std::runtime_error("Latest refactorings require reimplementing the resample method");
+//    auto resampled = TrainingSet(sample.resample(nonisomorphic));
+//    std::cout << "Pruned training sample: " << resampled << std::endl;
+//    return resampled;
+    return sample;
 }
 
 //! Generate and write the actual CNF instance as we go

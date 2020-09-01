@@ -1,6 +1,7 @@
 
 #pragma once
 
+#include <common/helpers.h>
 #include "generator.h"
 #include "types.h"
 
@@ -17,7 +18,7 @@ public:
 
     using state_pair = std::pair<uint16_t, uint16_t>;
 
-    TransitionClassificationEncoding(const Sample::Sample& sample, const Options& options) :
+    TransitionClassificationEncoding(const TrainingSet& sample, const Options& options) :
             CNFEncoding(sample, options),
             transition_ids_(),
             transition_ids_inv_(),
@@ -25,6 +26,7 @@ public:
             from_transition_to_eq_class_(),
             types_(),
             necessarily_bad_transitions_()
+//            statesample(read_input_sample(options.workspace))
     {
         compute_equivalence_relations();
     }

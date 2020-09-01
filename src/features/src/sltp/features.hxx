@@ -21,7 +21,7 @@
 
 #include <ctime>
 
-namespace Sample {
+namespace sltp {
     class TransitionSample;
 }
 
@@ -1801,7 +1801,7 @@ public:
     void generate_features(
             const std::vector<const Concept*>& concepts,
             Cache &cache, const Sample &sample,
-            const ::Sample::TransitionSample& transitions,
+            const TransitionSample& transitions,
             const std::vector<const Concept*>& forced_goal_features);
 
     void print_feature_count() const {
@@ -1834,7 +1834,7 @@ public:
             const Concept* c,
             Cache &cache,
             const Sample &sample,
-            const ::Sample::TransitionSample& transitions,
+            const TransitionSample& transitions,
             feature_cache_t& seen_denotations,
             bool can_be_pruned);
 

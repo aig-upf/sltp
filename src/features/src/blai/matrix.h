@@ -12,7 +12,7 @@
 #include <algorithm>
 #include "utils.h"
 
-namespace Sample {
+namespace sltp {
 
 class FeatureMatrix {
     public:
@@ -161,7 +161,7 @@ class FeatureMatrix {
                 feature_data_[i].second = cost;
             }
 
-            // read goals (TODO: Should be in Sample class)
+            // read goals (TODO: Should be in TrainingSet class)
             for (unsigned i = 0; i < num_goals_; ++i) {
                 unsigned s;
                 is >> s;
@@ -169,7 +169,7 @@ class FeatureMatrix {
             }
             assert(goals_.size() == num_goals_);
 
-            // read expanded states (TODO: Should be in Sample class)
+            // read expanded states (TODO: Should be in TrainingSet class)
             std::getline(is, line); // Eat up one line break
             std::getline(is, line); // Read the actual line
             auto deadend = Utils::split<unsigned>(line);

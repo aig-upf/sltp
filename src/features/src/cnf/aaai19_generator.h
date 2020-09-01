@@ -32,7 +32,7 @@ public:
     unsigned n_goal_clauses;
     unsigned n_deadend_clauses;
 
-    AAAI19Generator(const Sample::Sample& sample, const sltp::cnf::Options& options) :
+    AAAI19Generator(const TrainingSet& sample, const sltp::cnf::Options& options) :
             CNFEncoding(sample, options),
             n_selected_clauses(0),
             n_d2_clauses(0),
@@ -41,7 +41,7 @@ public:
             n_deadend_clauses(0)
     {}
 
-    static Sample::Sample preprocess_sample(const Sample::Sample& sample, const sltp::cnf::Options& options);
+    static TrainingSet preprocess_sample(const TrainingSet& sample, const sltp::cnf::Options& options);
 
 
     bool is_sound_transition(unsigned s, unsigned sprime) const {

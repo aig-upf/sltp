@@ -12,7 +12,7 @@
 #include <boost/functional/hash.hpp>
 
 
-namespace Sample {
+namespace sltp {
 
 class TransitionSample {
 public:

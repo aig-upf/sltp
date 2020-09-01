@@ -61,7 +61,6 @@ enum class CNFGenerationOutput : unsigned {
     ValidationCorrectNoRefinementNecessary = 2
 };
 
-} // namespaces
 
 inline void undist_goal_warning(unsigned s, unsigned t) {
     std::cout << Utils::warning()
@@ -76,24 +75,24 @@ inline void undist_deadend_warning(unsigned s, unsigned t) {
 }
 
 //! Return a sorted vector with those features that d1-distinguish s from t
-std::vector<feature_t> compute_d1_distinguishing_features(const Sample::Sample& sample, unsigned s, unsigned t);
+std::vector<feature_t> compute_d1_distinguishing_features(const TrainingSet& sample, unsigned s, unsigned t);
 
 //! Return a sorted vector with those features that d2-distinguish transition (s, s') from (t, t')
-std::vector<feature_t> compute_d2_distinguishing_features(const Sample::Sample& sample,
+std::vector<feature_t> compute_d2_distinguishing_features(const TrainingSet& sample,
         unsigned s, unsigned sprime, unsigned t, unsigned tprime);
 
 //! Return a sorted vector with those features that d2-distinguish transition (s, s') from (t, t')
-std::vector<feature_t> compute_d1d2_distinguishing_features(const Sample::Sample& sample,
+std::vector<feature_t> compute_d1d2_distinguishing_features(const TrainingSet& sample,
                                                           unsigned s, unsigned sprime, unsigned t, unsigned tprime);
 
 class CNFEncoding {
 public:
 
-    using transition_t = Sample::TransitionSample::transition_t;
-    using transition_set_t = Sample::TransitionSample::transition_set_t;
-    using transition_list_t = Sample::TransitionSample::transition_list_t;
+    using transition_t = TransitionSample::transition_t;
+    using transition_set_t = TransitionSample::transition_set_t;
+    using transition_list_t = TransitionSample::transition_list_t;
 
-    CNFEncoding(const Sample::Sample& sample, const sltp::cnf::Options& options) :
+    CNFEncoding(const TrainingSet& sample, const sltp::cnf::Options& options) :
         sample_(sample),
         options(options),
         ns_(sample.matrix().num_states()),
@@ -123,7 +122,7 @@ public:
 
 protected:
     //! The transition sample data
-    const Sample::Sample& sample_;
+    const TrainingSet& sample_;
 
     //! The CNF encoding options
     const sltp::cnf::Options& options;
@@ -144,10 +143,12 @@ using isomorphism_t = std::unordered_map<unsigned, unsigned>;
 
 //! Check whether all transitions starting in s have some transition starting in t with same qualitative nature
 //! on the set of all features in the given feature matrix
-bool all_tx_have_analogs(const Sample::Sample& sample, unsigned s, unsigned t);
+bool all_tx_have_analogs(const TrainingSet& sample, unsigned s, unsigned t);
 
 //! Check whether t appears isomorphic to s, and in that case, add it to the given list of isomorphisms
-void check_isomorphic(const Sample::Sample& sample, unsigned s, unsigned t, isomorphism_t& isomorphisms);
+void check_isomorphic(const TrainingSet& sample, unsigned s, unsigned t, isomorphism_t& isomorphisms);
 
 //!
-isomorphism_t compute_redundant_states(const Sample::Sample& sample);
+isomorphism_t compute_redundant_states(const TrainingSet& sample);
+
+} // namespaces
