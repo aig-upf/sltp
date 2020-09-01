@@ -1,5 +1,5 @@
 (define (problem BLOCKS-5-0)
-(:domain blocksworld-fn)
+(:domain blocksworld-fn-cond)
 (:objects a b c d e - block)
 
   (:init
