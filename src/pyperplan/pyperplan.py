@@ -295,7 +295,7 @@ def main(args):
     else:
         solution_file = args.problem + '.soln'
         logging.info('Plan length: %s' % len(solution))
-        # _write_solution(solution, solution_file)
+        _write_solution(solution, solution_file)
         validate_solution(args.domain, args.problem, solution_file)
 
 

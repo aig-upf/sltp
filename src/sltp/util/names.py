@@ -100,10 +100,13 @@ def blocksworld_names(feature):
         "clear": "num-clear",
         "And(Equal(loc_g,loc),Forall(Star(loc),Equal(loc_g,loc)))": "n-well-placed",  # FSTRIPS
         "And(Forall(Star(loc),Equal(loc_g,loc)),Equal(loc_g,loc))": "n-well-placed",  # Same as above, just rearranging AND elements
+        "And(Equal(on_g,on),Forall(Star(on),Equal(on_g,on)))": "n-well-placed",
+        "And(Forall(Star(on),Equal(on_g,on)),Equal(on_g,on))": "n-well-placed",
         "Equal(Star(loc_g),Star(loc))": "n-superficially-well-placed",  # FSTRIPS
         "Equal(loc_g,loc)": "n-ontarget",  # FSTRIPS
         "Equal(Inverse(loc_g),Inverse(loc))": "n-right-under-target",  # FSTRIPS
     }
+
     return extend_namer_to_all_features(base).get(s, s)
 
 

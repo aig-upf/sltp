@@ -81,7 +81,8 @@ def experiments():
         prune_redundant_states=False,
         optimal_selection_strategy="complete",
         use_equivalence_classes=True,
-        use_feature_dominance=True,
+        # use_feature_dominance=True,
+        # use_incremental_refinement=True,
     )
 
     exps["on_fn"] = update_dict(
@@ -117,7 +118,7 @@ def experiments():
         # sampling="all",
         num_states="all",
         max_concept_size=8,
-        concept_generation_timeout=10,  # in seconds
+        # concept_generation_timeout=10,  # in seconds
         concept_generator=None,
         parameter_generator=None,
         maxsat_encoding="separation",
@@ -125,6 +126,8 @@ def experiments():
         prune_redundant_states=False,
         optimal_selection_strategy="complete",
         use_equivalence_classes=True,
+        use_incremental_refinement=True,
+        maxsat_timeout=None,
     )
 
     exps["all+"] = update_dict(
@@ -133,6 +136,136 @@ def experiments():
             "probBLOCKS-5-0.pddl",
             "training_arbitrary_5.pddl",
         ],
+        use_incremental_refinement=True,
+        maxsat_timeout=120,
+    )
+
+    exps["all_fn"] = update_dict(
+        exps["all"],
+        domain="domain_fstrips.pddl",
+        test_domain="domain_fstrips.pddl",
+        instances=[
+            # "training_singletower_5_fs.pddl",
+            # "training_singletower_6_fs.pddl",
+            # "training_arbitrary_5_fs.pddl",
+            "training_arbitrary_6_fs.pddl",
+            # "training_singletower_8_fs.pddl",
+            # "training_singletower_10_fs.pddl",
+        ],
+        test_instances=[],
+        test_policy_instances=[
+            # "testing_singletower_10_fs.pddl"
+        ],
+        use_incremental_refinement=True,
+        maxsat_timeout=None,
+        # feature_generator=fs_debug_features,
+        # transition_classification_policy=fs_debug_policy
+    )
+
+    exps["all_fn_5"] = update_dict(
+        exps["all_fn"],
+        instances=[
+            "training_arbitrary_5_fs.pddl",
+            # "training_singletower_5_fs.pddl",
+        ],
+        max_concept_size=10,
+        # feature_generator=fs_debug_features,
+        use_incremental_refinement=False,
+        use_equivalence_classes=False,
+        use_feature_dominance=False,
+        maxsat_timeout=None,
+    )
+
+    exps["all_at_5"] = update_dict(
+        exps["all"],
+        domain="domain_atomic_move.pddl",
+        test_domain="domain_atomic_move.pddl",
+        instances=[
+            "training_arbitrary_5_atomic.pddl",
+        ],
+        test_instances=[],
+        test_policy_instances=[
+            "training_arbitrary_5_atomic.pddl",
+            "testing_arbitrary_10_atomic.pddl",
+        ],
+
+        max_concept_size=10,
+        feature_generator=debug_features_at,
+        use_incremental_refinement=False,
+        use_equivalence_classes=False,
+        use_feature_dominance=False,
+        maxsat_timeout=None,
+    )
+
+    exps["all_fn_4"] = update_dict(
+        exps["all_fn"],
+        instances=[
+            "training_arbitrary_4_fs.pddl",
+            # "training_arbitrary_4_2_fs.pddl",
+            # "training_singletower_4_fs.pddl",
+        ],
+        max_concept_size=10,
+        # feature_generator=fs_debug_features,
+        # use_incremental_refinement=False,
+        use_equivalence_classes=True,
+        use_feature_dominance=False,
+        maxsat_timeout=None,
+        # print_denotations=True,
+    )
+
+    exps["all_fn_4_5"] = update_dict(
+        exps["all_fn"],
+        instances=[
+            "training_arbitrary_4_fs.pddl",
+            "training_singletower_5_fs.pddl",
+        ],
+        max_concept_size=10,
+        # feature_generator=fs_debug_features,
+        use_incremental_refinement=True,
+        use_equivalence_classes=True,
+        use_feature_dominance=False,
+        maxsat_timeout=None,
+        # print_denotations=True,
     )
 
     return exps
+
+
+def fs_debug_policy():
+    on = "loc"
+    eqons = f'Equal({on}_g,{on})'
+    wellplaced = f"Num[And({eqons},Forall(Star({on}),{eqons}))]"
+    nclear = f"Num[clear]"
+
+    return [
+        # Increasing the number of well-placed blocks is always good
+        [(wellplaced, 'INC')],
+
+        # Increasing the # of clear blocks (i.e. by putting some block on the table) is always good as long
+        # as that doesn't affect the number of well placed blocks
+        [(wellplaced, 'NIL'), (nclear, 'INC')],
+    ]
+
+
+def fs_debug_features(lang):
+    on = "loc"
+    eqons = f'Equal({on}_g,{on})'
+    wellplaced = f"Num[And({eqons},Forall(Star({on}),{eqons}))]"
+    nclear = f"Num[clear]"
+    return [wellplaced, nclear]
+
+
+def fs_debug_features2(lang):
+    nclear = "Num[clear]"
+    sup_wp = "Num[Equal(Star(loc_g),Star(loc))]"
+    ontarget = "Num[Equal(loc_g,loc)]"
+    return [sup_wp, nclear, ontarget]
+
+
+def debug_features_at(lang):
+    # This alone is UNSAT
+    on = "on"
+    eqons = f'Equal({on}_g,{on})'
+    wellplaced = f"Num[And({eqons},Forall(Star({on}),{eqons}))]"
+    nclear = f"Num[clear]"
+    return [wellplaced, nclear]
