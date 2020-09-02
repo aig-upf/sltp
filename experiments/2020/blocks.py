@@ -35,6 +35,7 @@ def experiments():
         optimal_selection_strategy="complete",
         use_equivalence_classes=True,
         use_feature_dominance=True,
+        use_incremental_refinement=True,
     )
 
     exps["clear_fn"] = update_dict(

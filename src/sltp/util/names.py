@@ -92,6 +92,7 @@ def blocksworld_names(feature):
         "Exists(Star(on),Exists(on,Nominal(b)))": "n-at-least-2-above-b",
         "Not(clear)": "num-unclear",
         "And(clear,ontable)": "n-single-blocks",
+        "ontable": "n-ontable",
         "Atom[handempty]": "handempty",
         # "superficially-well-placed": all blocks below are the same as in goal
         "And(Equal(Star(on_g),Star(on)),clear)": "n-clear-and-superficially-well-placed-blocks",

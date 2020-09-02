@@ -57,11 +57,11 @@ def compute_transition_classification_policy(config, data, rng):
     if config.transition_classification_policy is not None:
         return ExitCode.Success, dict(transition_classification_policy=generate_user_provided_policy(config))
 
-    policy = generate_policy_from_sat_solution(config, data.cnf_solution, data.model_cache)
+    features, good_transitions, policy = generate_policy_from_sat_solution(config, data.cnf_solution, data.model_cache)
     return ExitCode.Success, dict(transition_classification_policy=policy)
 
 
-def generate_policy_from_sat_solution(config, solution, model_cache):
+def generate_policy_from_sat_solution(config, solution, model_cache, print_policy=True):
     assert solution.solved
     features = extract_features_from_sat_solution(config, solution)
     # print_maxsat_solution(solution.assignment, config.wsat_allvars_filename)
@@ -79,8 +79,9 @@ def generate_policy_from_sat_solution(config, solution, model_cache):
 
         policy.add_clause(frozenset(clause))
     policy.minimize()
-    policy.print()
-    return policy
+    if print_policy:
+        policy.print()
+    return features, good_transitions, policy
 
 
 def extract_features_from_sat_solution(config, solution):

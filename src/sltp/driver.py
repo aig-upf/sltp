@@ -274,7 +274,7 @@ class CPPMaxsatProblemGenerationStep(Step):
         return ["experiment_dir", "prune_redundant_states", "maxsat_encoding"]
 
     def get_required_data(self):
-        return ["in_goal_features"]
+        return ["in_goal_features", "model_cache"]
 
     def process_config(self, config):
         config["top_filename"] = compute_info_filename(config, "top.dat")
@@ -769,8 +769,8 @@ PIPELINES = dict(
         TransitionSamplingStep,
         CPPFeatureGenerationStep,
         CPPMaxsatProblemGenerationStep,
-        MaxsatProblemSolutionStep,
-        TransitionClassificationPolicyStep,
+        # MaxsatProblemSolutionStep,
+        # TransitionClassificationPolicyStep,
         TransitionClassificationPolicyTestingStep,
     ],
 )
