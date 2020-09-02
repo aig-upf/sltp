@@ -17,7 +17,6 @@
 
     (clear c)
     (clear f)
-    (clear i)
 
     (clear table)
 
