@@ -8,13 +8,13 @@ def experiments():
         domain="domain.pddl",
         test_domain="domain.pddl",
         feature_namer=blocksworld_names,
+        pipeline="transition_classifier",
     )
 
     exps = dict()
 
     exps["clear"] = update_dict(
         base,
-        pipeline="transition_classifier",
         instances=["training_clear_5.pddl"],
         test_instances=[
             "instance_5_clear_x_1.pddl",
@@ -48,7 +48,6 @@ def experiments():
 
     exps["on"] = update_dict(
         base,
-        pipeline="transition_classifier",
         # instances=["inst_on_x_y_16.pddl",
         #            "inst_on_x_y_14.pddl",
         #            "holding_a_b_unclear.pddl",
@@ -96,7 +95,6 @@ def experiments():
 
     exps["all"] = update_dict(
         base,
-        pipeline="transition_classifier",
 
         instances=[
             "probBLOCKS-5-0.pddl"
@@ -187,12 +185,15 @@ def experiments():
         test_policy_instances=[
             "training_arbitrary_5_atomic.pddl",
             "testing_arbitrary_10_atomic.pddl",
+            "testing_arbitrary_10_1_atomic.pddl",
+            "testing_arbitrary_17-0_atomic.pddl",
+            "testing_arbitrary_17-1_atomic.pddl",
         ],
 
         max_concept_size=10,
-        feature_generator=debug_features_at,
-        use_incremental_refinement=False,
-        use_equivalence_classes=False,
+        # feature_generator=debug_features_at,
+        use_incremental_refinement=True,
+        use_equivalence_classes=True,
         use_feature_dominance=False,
         maxsat_timeout=None,
     )
@@ -201,8 +202,8 @@ def experiments():
         exps["all_fn"],
         instances=[
             "training_arbitrary_4_fs.pddl",
-            # "training_arbitrary_4_2_fs.pddl",
-            # "training_singletower_4_fs.pddl",
+            "training_arbitrary_4_2_fs.pddl",
+            "training_singletower_4_fs.pddl",
         ],
         max_concept_size=10,
         # feature_generator=fs_debug_features,
@@ -226,6 +227,28 @@ def experiments():
         use_feature_dominance=False,
         maxsat_timeout=None,
         # print_denotations=True,
+    )
+
+    exps["all_at_testing"] = update_dict(
+        exps["all"],
+        domain="domain_atomic_move.pddl",
+        test_domain="domain_atomic_move.pddl",
+        instances=[
+            "training_arbitrary_5_atomic.pddl",
+        ],
+        test_instances=[],
+        test_policy_instances=[
+            "training_arbitrary_5_atomic.pddl",
+            "testing_arbitrary_10_atomic.pddl",
+            "testing_arbitrary_10_1_atomic.pddl",
+            "testing_arbitrary_17-0_atomic.pddl",
+            "testing_arbitrary_17-1_atomic.pddl",
+        ],
+        feature_generator=debug_features_at2,
+        use_incremental_refinement=False,
+        use_equivalence_classes=True,
+        use_feature_dominance=False,
+        maxsat_timeout=None,
     )
 
     return exps
@@ -269,3 +292,10 @@ def debug_features_at(lang):
     wellplaced = f"Num[And({eqons},Forall(Star({on}),{eqons}))]"
     nclear = f"Num[clear]"
     return [wellplaced, nclear]
+
+
+def debug_features_at2(lang):
+    nallbelow_wellplaced = "Num[Forall(Star(on),Equal(on_g,on))]"
+    ontarget = "Num[Equal(on_g,on)]"
+    nclear = f"Num[clear]"
+    return [nallbelow_wellplaced, nclear, ontarget]

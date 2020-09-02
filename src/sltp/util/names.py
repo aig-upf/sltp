@@ -103,8 +103,12 @@ def blocksworld_names(feature):
         "And(Equal(on_g,on),Forall(Star(on),Equal(on_g,on)))": "n-well-placed",
         "And(Forall(Star(on),Equal(on_g,on)),Equal(on_g,on))": "n-well-placed",
         "Equal(Star(loc_g),Star(loc))": "n-superficially-well-placed",  # FSTRIPS
+        "Equal(Star(on_g),Star(on))": "n-superficially-well-placed",
         "Equal(loc_g,loc)": "n-ontarget",  # FSTRIPS
+        "Equal(on_g,on)": "n-ontarget",
         "Equal(Inverse(loc_g),Inverse(loc))": "n-right-under-target",  # FSTRIPS
+        "Forall(Star(loc),Equal(loc_g,loc))": "n-all-below-well-placed",  # FSTRIPS
+        "Forall(Star(on),Equal(on_g,on))": "n-all-below-well-placed",
     }
 
     return extend_namer_to_all_features(base).get(s, s)
