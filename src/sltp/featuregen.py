@@ -249,14 +249,6 @@ def extract_features(config, sample):
     language, nominals, model_cache, infos, all_goal_predicates = compute_models(
         config.domain, sample, parsed_problems, config.parameter_generator)
 
-    # If user provides handcrafted features, no need to go further than here
-    if config.feature_generator is not None:
-        features = deal_with_serialized_features(language, config.feature_generator, config.serialized_feature_filename)
-        generate_output_from_handcrafted_features(sample, config, features, model_cache)
-        return ExitCode.Success, dict(enforced_feature_idxs=[], in_goal_features=[], sat_feature_mapping={},
-                                      num_features=len(features),
-                                      model_cache=model_cache)
-
     all_objects = []
     all_predicates, all_functions = set(), set()
     goal_predicate_info = set()
@@ -278,6 +270,14 @@ def extract_features(config, sample):
     # Write sample information
     print_sample_info(sample, infos, model_cache, all_predicates, all_functions, nominals,
                       all_objects, goal_predicate_info, config)
+
+    # If user provides handcrafted features, no need to go further than here
+    if config.feature_generator is not None:
+        features = deal_with_serialized_features(language, config.feature_generator, config.serialized_feature_filename)
+        generate_output_from_handcrafted_features(sample, config, features, model_cache)
+        return ExitCode.Success, dict(enforced_feature_idxs=[], in_goal_features=[], sat_feature_mapping={},
+                                      num_features=len(features),
+                                      model_cache=model_cache)
 
     # Invoke C++ feature generation module
     logging.info('Invoking C++ feature generation module'.format())
