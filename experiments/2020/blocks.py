@@ -202,7 +202,8 @@ def experiments():
         use_feature_dominance=False,
         maxsat_timeout=None,
         # print_denotations=True,
-        distinguish_goals=False,
+        distinguish_goals=True,
+        cross_instance_constraints=False,
     )
 
     exps["all_at_testing"] = update_dict(

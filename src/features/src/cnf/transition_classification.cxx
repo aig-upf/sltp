@@ -432,6 +432,10 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
     if (options.distinguish_goals) {
         for (unsigned s:goals_) {
             for (unsigned t:nongoals_) {
+
+                if (!options.cross_instance_constraints &&
+                    tr_set_.sample().state(s).instance_id() != tr_set_.sample().state(t).instance_id()) continue;
+
                 const auto d1feats = compute_d1_distinguishing_features(tr_set_, s, t);
                 if (d1feats.empty()) {
                     undist_goal_warning(s, t);
@@ -524,6 +528,7 @@ TransitionClassificationEncoding::compute_transitions_to_distinguish(
         const flaw_index_t& flaws) const {
 
 
+    // Load the transitions from the last iteration, either from disk, or bootstrapping them
     std::vector<transition_pair> last_transitions;
     if (load_transitions_from_previous_iteration) {
         last_transitions = load_transitions_to_distinguish();
@@ -585,20 +590,35 @@ bool TransitionClassificationEncoding::check_existing_solution_for_flaws(flaw_in
         }
     }
 
-    // Let's check whether the policy is indeed able to distinguish between all pairs of good and bad transitions
+
+    // Let's consider pairs of transitions where the first one is Good, the second one is Bad, and (optionally)
+    // both transitions belong to the same instance, and check whether they can be distinguished with the current
+    // selection of features
     unsigned num_flaws = 0;
-    for (auto gtx:good_transitions_repr) {
-        const auto& tx1pair = get_state_pair(gtx);
+    const auto ntxs = transition_ids_.size();
+    const auto& sample = tr_set_.sample();
+    for (unsigned tx1=0; tx1 < ntxs; ++tx1) {
+        const auto repr1 = get_representative_id(tx1);
+        if (good_set.find(repr1) == good_set.end()) continue; // make sure tx2 is good
 
-        for (auto btx:bad_transitions_repr) {
-            const auto& tx2pair = get_state_pair(btx);
+        const auto& tx1pair = get_state_pair(tx1);
+        const auto inst1 = sample.state(tx1pair.first).instance_id();
 
-            if (!are_transitions_d1d2_distinguishable(tx1pair.first, tx1pair.second, tx2pair.first, tx2pair.second, good_features)) {
-                // We found a flaw in the computed policy: Transitions gtx, which is labeled as Good, cannot be
-                // distinguished from transition btx, labeled as bad, based only on the selected ("good") features.
-                flaws[gtx].push_back(btx);
+
+        for (unsigned tx2=0; tx2 < ntxs; ++tx2) {
+            const auto repr2 = get_representative_id(tx2);
+            if (good_set.find(repr2) != good_set.end()) continue; // make sure tx2 is bad
+
+            const auto& tx2pair = get_state_pair(tx2);
+            const auto inst2 = sample.state(tx2pair.first).instance_id();
+
+            if (!options.cross_instance_constraints && inst1 != inst2) continue;
+
+            if (!are_transitions_d1d2_distinguishable(
+                    tx1pair.first, tx1pair.second, tx2pair.first, tx2pair.second, good_features)) {
+                // We found a pair of good/bad transitions that cannot be distinguished based on the selected features.
+                flaws[repr1].push_back(repr2);
                 ++num_flaws;
-                // break;
             }
         }
     }

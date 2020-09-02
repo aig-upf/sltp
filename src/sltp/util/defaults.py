@@ -207,6 +207,10 @@ def generate_experiment(expid, domain_dir, domain, **kwargs):
 
         # In the transition-separation encoding, whether to post constraints to ensure distinguishability of goals
         distinguish_goals=False,
+
+        # In the transition-separation encoding, whether to post constraints to ensure distinguishability of goals
+        # and transitions coming from different training instances
+        cross_instance_constraints=True,
     )
 
     parameters = {**defaults, **kwargs}  # Copy defaults, overwrite with user-specified parameters

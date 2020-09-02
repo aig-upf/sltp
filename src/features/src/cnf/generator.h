@@ -45,6 +45,10 @@ struct Options {
     //! In the transition-separation encoding, whether to post constraints to ensure distinguishability of goals
     bool distinguish_goals;
 
+    //! In the transition-separation encoding, whether to post constraints to ensure distinguishability of goals
+    //! and transitions coming from different training instances
+    bool cross_instance_constraints;
+
     //! In the transition-separation CNF encoding, whether to distinguish good transitions *only from*
     //! unmarked transitions that start in the same state as the good transition
     bool distinguish_transitions_locally;
