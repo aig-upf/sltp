@@ -48,6 +48,9 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
         ("use-incremental-refinement",
          "In the transition-separation encoding, whether to use the incremental refinement approach")
 
+        ("distinguish-goals",
+         "In the transition-separation encoding, whether to post constraints to ensure distinguishability of goals")
+
         ("encoding", po::value<std::string>()->default_value("basic"),
              "The encoding to be used (options: {basic, d2tree, separation}).")
 
@@ -89,6 +92,7 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
     options.use_equivalence_classes = vm.count("use-equivalence-classes") > 0;
     options.use_feature_dominance = vm.count("use-feature-dominance") > 0;
     options.use_incremental_refinement = vm.count("use-incremental-refinement") > 0;
+    options.distinguish_goals = vm.count("distinguish-goals") > 0;
     options.v_slack = vm["v_slack"].as<double>();
 
     auto enc = vm["encoding"].as<std::string>();

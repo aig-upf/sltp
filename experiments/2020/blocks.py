@@ -212,6 +212,7 @@ def experiments():
         use_feature_dominance=False,
         maxsat_timeout=None,
         # print_denotations=True,
+        distinguish_goals=False,
     )
 
     exps["all_fn_4_5"] = update_dict(

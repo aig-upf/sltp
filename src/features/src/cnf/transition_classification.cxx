@@ -217,6 +217,7 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
     unsigned n_selected_clauses = 0;
     unsigned n_separation_clauses = 0;
     unsigned n_max_v_s_clauses = 0;
+    unsigned n_goal_clauses = 0;
 
 
     /////// CNF variables ///////
@@ -427,6 +428,27 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
         n_max_v_s_clauses += 1;
     }
 
+    // Force D1(s1, s2) to be true if exactly one of the two states is a goal state
+    if (options.distinguish_goals) {
+        for (unsigned s:goals_) {
+            for (unsigned t:nongoals_) {
+                const auto d1feats = compute_d1_distinguishing_features(tr_set_, s, t);
+                if (d1feats.empty()) {
+                    undist_goal_warning(s, t);
+                    return sltp::cnf::CNFGenerationOutput::UnsatTheory;
+                }
+
+                cnfclause_t clause;
+                for (unsigned f:d1feats) {
+                    clause.push_back(CNFWriter::literal(var_selected.at(f), true));
+                }
+
+                wr.print_clause(clause);
+                n_goal_clauses += 1;
+            }
+        }
+    }
+
 
     std::cout << "Posting (weighted) soft constraints for " << var_selected.size() << " features" << std::endl;
     for (unsigned f = 0; f < nf_; ++f) {
@@ -447,15 +469,10 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
     std::cout << "\tTransition-separation clauses [8,9]: " << n_separation_clauses << std::endl;
     std::cout << "\tMax V(s) clauses [10]: " << n_max_v_s_clauses << std::endl;
     std::cout << "\tGV(s, s', d) auxiliary clauses: " << n_gv_aux_clauses << std::endl;
+    std::cout << "\tGoal clauses: " << n_goal_clauses << std::endl;
     assert(wr.nclauses() == n_selected_clauses + n_good_tx_clauses + n_upper_bound_clauses + n_justification_clauses
-                            + n_leq_clauses + n_separation_clauses + n_gv_aux_clauses + n_max_v_s_clauses);
+                            + n_leq_clauses + n_separation_clauses + n_gv_aux_clauses + n_max_v_s_clauses + n_goal_clauses);
 
-    // For goal-identifying features that we want to enforce in the solution, we add a unary clause "selected(f)"
-    assert (options.enforced_features.empty()); // ATM haven't really thought whether this feature makes sense for this encoding
-//    for (auto f:options.enforced_features) {
-//        writer.print_clause({Wr::lit(var_selected.at(f), true)});
-//        n_goal_clauses += 1;
-//    }
 
     return sltp::cnf::CNFGenerationOutput::Success;
 }

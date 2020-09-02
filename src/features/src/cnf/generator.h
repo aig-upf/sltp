@@ -42,6 +42,9 @@ struct Options {
     //! In the transition-separation encoding, whether to use the incremental refinement approach
     bool use_incremental_refinement;
 
+    //! In the transition-separation encoding, whether to post constraints to ensure distinguishability of goals
+    bool distinguish_goals;
+
     //! In the transition-separation CNF encoding, whether to distinguish good transitions *only from*
     //! unmarked transitions that start in the same state as the good transition
     bool distinguish_transitions_locally;
