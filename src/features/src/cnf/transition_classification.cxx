@@ -581,7 +581,7 @@ bool TransitionClassificationEncoding::check_existing_solution_for_flaws(flaw_in
                 // distinguished from transition btx, labeled as bad, based only on the selected ("good") features.
                 flaws[gtx].push_back(btx);
                 ++num_flaws;
-                break;
+                // break;
             }
         }
     }
@@ -629,18 +629,26 @@ std::vector<transition_pair> TransitionClassificationEncoding::load_transitions_
     return transitions;
 }
 
-std::vector<transition_pair> TransitionClassificationEncoding::generate_t0_transitions() const {
+std::vector<transition_pair> TransitionClassificationEncoding::generate_t0_transitions(unsigned m) const {
     std::vector<transition_pair> transitions;
+
+    std::mt19937 engine{std::random_device()()};
+    std::uniform_int_distribution<int> dist(0, class_representatives_.size() - 1);
 
     for (const auto tx1:class_representatives_) {
         if (is_necessarily_bad(tx1)) continue;
         const auto& tx1pair = get_state_pair(tx1);
         const auto s = tx1pair.first;
 
-        std::unordered_set<uint32_t> transitions2;
+        // Add all local transitions first
         for (unsigned sprime:successors(s)) {
             if (sprime == tx1pair.second) continue;
             transitions.emplace_back(tx1, get_class_representative(s, sprime));
+        }
+
+        // Add m randomly-chosen other transitions
+        for (unsigned j = 0; j < m; ++j) {
+            transitions.emplace_back(tx1, class_representatives_[dist(engine)]);
         }
     }
 
