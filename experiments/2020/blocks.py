@@ -128,16 +128,6 @@ def experiments():
         maxsat_timeout=None,
     )
 
-    exps["all+"] = update_dict(
-        exps["all"],
-        instances=[
-            "probBLOCKS-5-0.pddl",
-            "training_arbitrary_5.pddl",
-        ],
-        use_incremental_refinement=True,
-        maxsat_timeout=120,
-    )
-
     exps["all_fn"] = update_dict(
         exps["all"],
         domain="domain_fstrips.pddl",
@@ -213,21 +203,6 @@ def experiments():
         maxsat_timeout=None,
         # print_denotations=True,
         distinguish_goals=False,
-    )
-
-    exps["all_fn_4_5"] = update_dict(
-        exps["all_fn"],
-        instances=[
-            "training_arbitrary_4_fs.pddl",
-            "training_singletower_5_fs.pddl",
-        ],
-        max_concept_size=10,
-        # feature_generator=fs_debug_features,
-        use_incremental_refinement=True,
-        use_equivalence_classes=True,
-        use_feature_dominance=False,
-        maxsat_timeout=None,
-        # print_denotations=True,
     )
 
     exps["all_at_testing"] = update_dict(
