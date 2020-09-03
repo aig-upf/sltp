@@ -14,6 +14,7 @@ def experiments():
         num_states="all",
         concept_generator=None,
         parameter_generator=None,
+        v_slack=2,
 
         # concept_generation_timeout=120,  # in seconds
         maxsat_timeout=None,

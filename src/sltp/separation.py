@@ -210,7 +210,7 @@ class TransitionClassificationPolicy:
 
     def print(self):
         print("Transition-classification policy with the following transitions labeled as good:")
-        for i, clause in enumerate(self.dnf, start=0):
+        for i, clause in enumerate(self.dnf, start=1):
             print(f"  {i}. " + self.print_clause(clause))
 
     @staticmethod

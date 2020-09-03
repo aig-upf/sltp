@@ -31,6 +31,7 @@ def gripper_names(feature):
         # "Not(And(Forall(at-robby,And(Not(Nominal(roomb)),Exists(Inverse(at),<universe>))),Forall(carry,<empty>)))":
         #     ""
         "And(Exists(carry,<universe>),Exists(at_g,at-robby))": "if-robot-at-B-then-num-carried-balls-else-emptyset",
+        "Exists(at_g,at-robby)": "robby-at-B",  # This one only works for a single target room
     }
     return extend_namer_to_all_features(base).get(s, s)
 
@@ -53,14 +54,18 @@ def spanner_names(feature):
         "Exists(at,Exists(link,Exists(Inverse(at),man)))": "n-spanners-on-cell-left-to-man",
         "Exists(Inverse(at),spanner)": "locations-with-a-spanner",
         "Exists(carrying,useable)": "bob-is-carrying-a-usable-spanner",
-        "tightened": "num-tightened-nuts",
+        "tightened": "n-tightened",
         "Exists(Star(link),Exists(Inverse(at),man))": "n-unreachable-locations",
         "Exists(at,Exists(Star(link),Exists(Inverse(at),man)))": "n-unreachable-spanners",
         "LessThan{Num[Exists(Inverse(carrying),<universe>)]}{Num[loose]}": "not-carrying-enough-spanners",
-        "Exists(at,Forall(Inverse(at),man))": "bob-in-empty-loc",
-        "Exists(Star(link),Exists(Inverse(at),spanner))": "num-locs-from-which-some-spanner-is-reachable",
-        "Exists(Inverse(Star(link)),Exists(Inverse(at),<universe>))": "num-locs-reachable-from-a-loc-with-things",
+        "Exists(at,Forall(Inverse(at),man))": "bobs-loc-empty",
+        "Exists(Star(link),Exists(Inverse(at),spanner))": "n-locs-from-which-some-spanner-is-reachable",
+        "Exists(Inverse(Star(link)),Exists(Inverse(at),<universe>))": "n-locs-reachable-from-a-loc-with-things",
         "And(Forall(at,<empty>),useable)": "picked-up-spanners",
+
+        "useable": "n-useable-spanners",
+        "Exists(at,<universe>)": "n-items-somewhere",
+        "Forall(at,<empty>)": "n-picked",
     }
     d = extend_namer_to_all_features(base)
     return d.get(s, s)
@@ -90,7 +95,7 @@ def blocksworld_names(feature):
         "And(And(And(Not(Exists(Star(on),Nominal(a))),Not(Exists(Star(Inverse(on)),Nominal(a)))),Not(Nominal(a))),Not(holding))": "m(a)",
         "And(And(Forall(Star(on),Not(Nominal(a))),Forall(Star(Inverse(on)),Not(Nominal(a)))),And(Not(holding),Not(Nominal(a))))": "m(a)",
         "Exists(Star(on),Exists(on,Nominal(b)))": "n-at-least-2-above-b",
-        "Not(clear)": "num-unclear",
+        "Not(clear)": "n-unclear",
         "And(clear,ontable)": "n-single-blocks",
         "ontable": "n-ontable",
         "Atom[handempty]": "handempty",
@@ -98,7 +103,7 @@ def blocksworld_names(feature):
         "And(Equal(Star(on_g),Star(on)),clear)": "n-clear-and-superficially-well-placed-blocks",
         "Equal(Inverse(loc_g),Inverse(Star(loc)))": "n-blocks-below-their-hat",  # FSTRIPS
         "Exists(Star(loc),Exists(loc_g,Not(Equal(Inverse(loc_g),Inverse(loc)))))": "n-x-with-misplaced-block-below",  # FSTRIPS
-        "clear": "num-clear",
+        "clear": "n-clear",
         "And(Equal(loc_g,loc),Forall(Star(loc),Equal(loc_g,loc)))": "n-well-placed",  # FSTRIPS
         "And(Forall(Star(loc),Equal(loc_g,loc)),Equal(loc_g,loc))": "n-well-placed",  # Same as above, just rearranging AND elements
         "And(Equal(on_g,on),Forall(Star(on),Equal(on_g,on)))": "n-well-placed",
@@ -131,7 +136,7 @@ def blocksworld_parameters_for_on(language):
 def reward_names(feature):
     s = str(feature)
     base = {
-        "reward": "num-rewards",
+        "reward": "n-rewards",
         "Dist[at, adjacent, reward]": "dist-to-closest-reward",
         "Dist[at, Restrict(adjacent,unblocked), reward]": "unblocked-dist-to-closest-reward",
     }

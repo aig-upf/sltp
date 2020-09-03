@@ -4,11 +4,23 @@ from sltp.util.names import spanner_names
 
 def experiments():
     base = dict(
+        # domain_dir="gripper-m",
         domain_dir="spanner-small",
         domain="domain.pddl",
         test_domain="domain.pddl",
-        complete_only_wrt_optimal=True,
         feature_namer=spanner_names,
+        pipeline="transition_classifier",
+        maxsat_encoding="separation",
+        complete_only_wrt_optimal=True,
+        prune_redundant_states=False,
+        optimal_selection_strategy="complete",
+        num_states="all",
+        concept_generator=None,
+        parameter_generator=None,
+        v_slack=2,
+
+        # concept_generation_timeout=120,  # in seconds
+        maxsat_timeout=None,
     )
 
     exps = dict()
@@ -38,19 +50,13 @@ def experiments():
             "prob-10-10-10-1540903568.pddl",
             "prob-15-10-8-1540913795.pddl"
         ],
-        num_states="all",
+
         max_concept_size=8,
-        comparison_features=True,
-        # concept_generation_timeout=120,  # in seconds
-        concept_generator=None,
-        parameter_generator=None,
-        maxsat_encoding="separation",
-        complete_only_wrt_optimal=True,
-        prune_redundant_states=False,
-        optimal_selection_strategy="complete",
-        use_equivalence_classes=True,
         # transition_classification_policy=debug_policy
-        v_slack=2,
+        # comparison_features=True,
+        use_equivalence_classes=True,
+        # use_feature_dominance=True,
+        use_incremental_refinement=True,
     )
 
     return exps
