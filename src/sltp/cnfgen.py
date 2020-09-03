@@ -51,7 +51,9 @@ def run(config, data, rng):
         features, good_transitions, policy = generate_policy_from_sat_solution(
             config, solution, data.model_cache, minimize_policy=False)
 
-    return ExitCode.Success, dict(transition_classification_policy=None)
+    # Recover the policy one more time, but doing policy minimization
+    _, _, policy = generate_policy_from_sat_solution(config, solution, data.model_cache, minimize_policy=True)
+    return ExitCode.Success, dict(transition_classification_policy=policy)
 
 
 def print_good_transition_list(good_txs, filename):

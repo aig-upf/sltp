@@ -8,8 +8,10 @@
 \urlstyle{rm} % DO NOT CHANGE THIS
 \def\UrlFont{\rm}  % DO NOT CHANGE THIS
 \frenchspacing  % DO NOT CHANGE THIS
-\setlength{\pdfpagewidth}{8.5in}  % DO NOT CHANGE THIS
-\setlength{\pdfpageheight}{11in}  % DO NOT CHANGE THIS
+%\setlength{\pdfpagewidth}{8.5in}  % DO NOT CHANGE THIS
+%\setlength{\pdfpageheight}{11in}  % DO NOT CHANGE THIS
+
+\usepackage[margin=1in]{geometry}
 
 % our packages
 \usepackage{amsthm}
@@ -233,7 +235,42 @@ We simply post a constraint $\neg Select(f)$ for each feature $f$ in the pool, w
 
 \section{Empirical Results}
 
+\subsection{Blocks:clear}
+Two instances of 5 blocks.
+1 iteration, 19759 vars + 69255 clauses
+Number of transitions/equivalence classes: 1161/55
+Optimal MAXSAT solution with cost 5 found
 
+\begin{verbatim}
+0. n(a) DECs AND n-ontable NILs AND n-ontable>0
+1. n(a) NILs AND n-ontable INCs AND n-ontable>0
+\end{verbatim}
+
+
+\subsection{Blocks:on}
+\begin{verbatim}
+0. clear(a) ADDs AND holding(·) ADDs AND n-single-blocks INCs AND not-clear(b) NILs
+1. clear(a) DELs AND holding(·) ADDs AND n-single-blocks DECs AND not-clear(b) NILs AND not-clear(b)=0
+2. clear(a) NILs AND clear(a)=0 AND holding(·) ADDs AND n-single-blocks NILs AND not-clear(b) NILs
+3. clear(a) ADDs AND holding(·) DELs AND n-single-blocks NILs AND not-clear(b) ADDs
+4. clear(a) ADDs AND holding(·) DELs AND n-single-blocks INCs AND not-clear(b) NILs AND not-clear(b)>0
+5. clear(a) NILs AND clear(a)>0 AND holding(·) ADDs AND n-single-blocks NILs AND not-clear(b) NILs AND not-clear(b)>0
+6. clear(a) DELs AND holding(·) ADDs AND n-single-blocks NILs AND not-clear(b) NILs
+7. clear(a) NILs AND clear(a)=0 AND holding(·) DELs AND n-single-blocks INCs AND not-clear(b) NILs AND not-clear(b)>0
+8. clear(a) NILs AND holding(·) DELs AND n-single-blocks INCs AND n-single-blocks=0 AND not-clear(b) NILs AND not-clear(b)=0
+9. clear(a) NILs AND clear(a)=0 AND holding(·) DELs AND n-single-blocks DECs AND not-clear(b) NILs
+10. clear(a) ADDs AND holding(·) DELs AND n-single-blocks DECs AND not-clear(b) NILs AND not-clear(b)>0
+11. clear(a) NILs AND clear(a)>0 AND holding(·) DELs AND n-single-blocks INCs AND n-single-blocks>0 AND not-clear(b) NILs
+12. clear(a) ADDs AND holding(·) DELs AND n-single-blocks DECs AND not-clear(b) ADDs
+13. clear(a) DELs AND holding(·) ADDs AND n-single-blocks INCs AND not-clear(b) NILs AND not-clear(b)=0
+14. clear(a) NILs AND clear(a)=0 AND holding(·) ADDs AND n-single-blocks INCs AND not-clear(b) DELs
+15. clear(a) NILs AND clear(a)=0 AND holding(·) DELs AND n-single-blocks INCs AND n-single-blocks>0 AND not-clear(b) NILs AND not-clear(b)=0
+16. clear(a) NILs AND holding(·) ADDs AND n-single-blocks NILs AND not-clear(b) DELs
+17. clear(a) NILs AND clear(a)>0 AND holding(·) ADDs AND n-single-blocks INCs AND n-single-blocks>0 AND not-clear(b) DELs
+18. clear(a) ADDs AND holding(·) ADDs AND n-single-blocks NILs AND not-clear(b) NILs
+19. clear(a) NILs AND clear(a)>0 AND holding(·) DELs AND n-single-blocks INCs AND n-single-blocks=0 AND not-clear(b) NILs AND not-clear(b)>0
+20. clear(a) NILs AND clear(a)>0 AND holding(·) DELs AND n-single-blocks DECs AND not-clear(b) NILs AND not-clear(b)>0
+\end{verbatim}
 
 \bibliographystyle{plain}
 % Cross-referenced entries need to go after the entries that cross-reference them
