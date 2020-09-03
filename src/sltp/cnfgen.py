@@ -21,7 +21,7 @@ def run(config, data, rng):
     maxiterations = 9999 if config.use_incremental_refinement else 1
     approach_name = "incremental refinement" if config.use_incremental_refinement else "standard"
 
-    policy = None
+    solution = None
     for it in range(1, maxiterations+1):
         logging.info(f"Starting iteration {it} of the {approach_name} approach")
 
@@ -32,6 +32,10 @@ def run(config, data, rng):
         if exitcode == ExitCode.IterativeMaxsatApproachSuccessful:
             # Here we subtract 1 because last iteration was only the check
             print(f"Iterative approach finished successfully after {it-1} iterations")
+
+            # Recover the policy one more time, but doing policy minimization
+            _, _, policy = generate_policy_from_sat_solution(config, solution, data.model_cache, minimize_policy=True)
+
             return ExitCode.Success, dict(transition_classification_policy=policy)
 
         solution = solve(config.experiment_dir, config.cnf_filename, config.maxsat_solver, config.maxsat_timeout)
@@ -45,7 +49,7 @@ def run(config, data, rng):
 
         # print_maxsat_solution(solution.assignment, config.wsat_allvars_filename)
         features, good_transitions, policy = generate_policy_from_sat_solution(
-            config, solution, data.model_cache)
+            config, solution, data.model_cache, minimize_policy=False)
 
     return ExitCode.Success, dict(transition_classification_policy=None)
 

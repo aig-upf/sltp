@@ -61,7 +61,7 @@ def compute_transition_classification_policy(config, data, rng):
     return ExitCode.Success, dict(transition_classification_policy=policy)
 
 
-def generate_policy_from_sat_solution(config, solution, model_cache, print_policy=True):
+def generate_policy_from_sat_solution(config, solution, model_cache, minimize_policy=True, print_policy=True):
     assert solution.solved
     features = extract_features_from_sat_solution(config, solution)
     # print_maxsat_solution(solution.assignment, config.wsat_allvars_filename)
@@ -78,7 +78,10 @@ def generate_policy_from_sat_solution(config, solution, model_cache, print_polic
             clause += compute_policy_clauses(f, den_s, den_t)
 
         policy.add_clause(frozenset(clause))
-    policy.minimize()
+
+    if minimize_policy:
+        policy.minimize()
+
     if print_policy:
         policy.print()
     return features, good_transitions, policy
