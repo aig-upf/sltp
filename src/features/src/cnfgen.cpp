@@ -62,7 +62,9 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
          "In the transition-separation encoding, whether we want to exploit the equivalence relation "
          "among transitions given by the feature pool")
 
-
+        ("force_zeros",
+         "In the transition-separation encoding, whether to post constraints to ensure that all selected features "
+         "decrease to zero in some transition")
 
         ("use-feature-dominance",
          "In the transition-separation encoding, whether we want to exploit the dominance among features to ignore "
@@ -97,6 +99,7 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
     options.use_feature_dominance = vm.count("use-feature-dominance") > 0;
     options.use_incremental_refinement = vm.count("use-incremental-refinement") > 0;
     options.distinguish_goals = vm.count("distinguish-goals") > 0;
+    options.force_zeros = vm.count("force_zeros") > 0;
     options.cross_instance_constraints = vm.count("cross_instance_constraints") > 0;
     options.v_slack = vm["v_slack"].as<double>();
 

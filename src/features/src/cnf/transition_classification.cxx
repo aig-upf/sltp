@@ -185,6 +185,7 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
         CNFWriter& wr, const std::vector<transition_pair>& transitions_to_distinguish)
 {
     using Wr = CNFWriter;
+    const auto& mat = tr_set_.matrix();
 
     auto ignore_features = check_feature_dominance();
 
@@ -218,6 +219,7 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
     unsigned n_separation_clauses = 0;
     unsigned n_max_v_s_clauses = 0;
     unsigned n_goal_clauses = 0;
+    unsigned n_zero_clauses = 0;
 
 
     /////// CNF variables ///////
@@ -444,12 +446,32 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
 
                 cnfclause_t clause;
                 for (unsigned f:d1feats) {
-                    clause.push_back(CNFWriter::literal(var_selected.at(f), true));
+                    clause.push_back(Wr::lit(var_selected.at(f), true));
                 }
 
-                wr.print_clause(clause);
+                wr.cl(clause);
                 n_goal_clauses += 1;
             }
+        }
+    }
+    
+
+    if (options.force_zeros) {
+        for (unsigned f = 0; f < nf_; ++f) {
+            cnfclause_t clause{Wr::lit(var_selected[f], false)};
+
+            for (unsigned tx=0; tx<transition_ids_.size(); ++tx) {
+                const auto& txpair = get_state_pair(tx);
+                auto s_f = mat.entry(txpair.first, f);
+                auto sprime_f = mat.entry(txpair.second, f);
+                
+                if (s_f > 0 && sprime_f == 0) {
+                    clause.push_back(Wr::lit(good_vars.at(get_representative_id(tx)), true));
+                }
+            }
+
+            wr.cl(clause);
+            n_zero_clauses += 1;
         }
     }
 
@@ -472,8 +494,9 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
     std::cout << "\tV(s)<=d consistency [6,7]: " << n_leq_clauses << std::endl;
     std::cout << "\tTransition-separation clauses [8,9]: " << n_separation_clauses << std::endl;
     std::cout << "\tMax V(s) clauses [10]: " << n_max_v_s_clauses << std::endl;
+    std::cout << "\tGoal clauses [11]: " << n_goal_clauses << std::endl;
+    std::cout << "\tZero clauses: " << n_zero_clauses << std::endl;
     std::cout << "\tGV(s, s', d) auxiliary clauses: " << n_gv_aux_clauses << std::endl;
-    std::cout << "\tGoal clauses: " << n_goal_clauses << std::endl;
     assert(wr.nclauses() == n_selected_clauses + n_good_tx_clauses + n_upper_bound_clauses + n_justification_clauses
                             + n_leq_clauses + n_separation_clauses + n_gv_aux_clauses + n_max_v_s_clauses + n_goal_clauses);
 

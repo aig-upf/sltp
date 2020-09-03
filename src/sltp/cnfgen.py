@@ -83,6 +83,7 @@ def generate_cnf(config, data):
     args += ["--use-incremental-refinement"] if config.use_incremental_refinement else []
     args += ["--distinguish-goals"] if config.distinguish_goals else []
     args += ["--cross_instance_constraints"] if config.cross_instance_constraints else []
+    args += ["--force_zeros"] if config.force_zeros else []
     retcode = execute([cmd] + args)
 
     if retcode == 0:
