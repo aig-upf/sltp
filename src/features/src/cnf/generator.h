@@ -49,8 +49,8 @@ struct Options {
     //! and transitions coming from different training instances
     bool cross_instance_constraints;
 
-    //! In the transition-separation encoding, whether to post constraints to ensure distinguishability of goals
-    //! and transitions coming from different training instances
+    //! In the transition-separation encoding, whether to post constraints to ensure that all selected features
+    //! decrease to zero in some transition
     bool force_zeros;
 
     //! A list of user-provided feature IDs for which we want to enforce selection

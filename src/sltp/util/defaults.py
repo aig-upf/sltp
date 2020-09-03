@@ -208,9 +208,9 @@ def generate_experiment(expid, domain_dir, domain, **kwargs):
         # and transitions coming from different training instances
         cross_instance_constraints=True,
 
-        # In the transition-separation encoding, whether to post constraints to ensure distinguishability of goals
-        # and transitions coming from different training instances
-        force_zeros=True,
+        # In the transition-separation encoding, whether to post constraints to ensure that all selected features
+        # decrease to zero in some transition
+        force_zeros=False,
     )
 
     parameters = {**defaults, **kwargs}  # Copy defaults, overwrite with user-specified parameters
