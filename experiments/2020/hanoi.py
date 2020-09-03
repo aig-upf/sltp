@@ -1,13 +1,14 @@
 from sltp.util.misc import update_dict
-from sltp.util.names import gripper_names, gripper_parameters
+from sltp.util.names import hanoi_names
 
 
 def experiments():
+
     base = dict(
-        domain_dir="gripper",
+        domain_dir="hanoi",
         domain="domain.pddl",
         test_domain="domain.pddl",
-        feature_namer=gripper_names,
+        feature_namer=hanoi_names,
         pipeline="transition_classifier",
         maxsat_encoding="separation",
         complete_only_wrt_optimal=True,
@@ -26,15 +27,23 @@ def experiments():
 
     exps["small"] = update_dict(
         base,
-        # instances=["sample-2balls.pddl", "sample-small.pddl"],
-        instances=["prob01.pddl"],
-        # test_instances=[f"prob{i:02d}.pddl" for i in range(3, 11)],
-        test_instances=[],
-        test_policy_instances=[f"prob{i:02d}.pddl" for i in range(3, 21)],
+        instances=[
+            # 'p01.pddl',
+            # 'p02.pddl',
+            'p03.pddl',
+            'p04.pddl',
+            'p05.pddl',
+        ],
 
-        max_concept_size=10,
-        # parameter_generator=gripper_parameters,  # Works also, but no real advantage
-        parameter_generator=None,
+        test_policy_instances=[
+            'p04.pddl',
+            'p05.pddl',
+            'p06.pddl',
+            'p07.pddl',
+            'p08.pddl',
+        ],
+
+        max_concept_size=8,
         use_equivalence_classes=True,
         # use_feature_dominance=True,
         use_incremental_refinement=True,

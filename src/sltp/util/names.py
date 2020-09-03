@@ -119,6 +119,8 @@ def blocksworld_names(feature):
         "Forall(Star(on),Equal(on_g,on))": "n-all-below-well-placed",
         "Exists(on,Nominal(b))": "not-clear(b)",
         "Exists(on,Nominal(a))": "not-clear(a)",
+
+        "Not(And(Equal(on_g,on),Equal(Star(on_g),Star(on))))": "not-ontarget-or-not-sup-well-placed",
     }
 
     return extend_namer_to_all_features(base).get(s, s)
@@ -139,6 +141,47 @@ def reward_names(feature):
         "reward": "n-rewards",
         "Dist[at, adjacent, reward]": "dist-to-closest-reward",
         "Dist[at, Restrict(adjacent,unblocked), reward]": "unblocked-dist-to-closest-reward",
+    }
+
+    return extend_namer_to_all_features(base).get(s, s)
+
+
+def hanoi_names(feature):
+    s = str(feature)
+    base = {
+        "Equal(on_g,on)": "n-ontarget",
+        "Exists(Star(on),Not(Equal(on_g,on)))": "n-has-misplaced-disc-below",
+        "Forall(on_g,clear)": "n-target-is-clear",
+    }
+
+    return extend_namer_to_all_features(base).get(s, s)
+
+
+def logistics_names(feature):
+    s = str(feature)
+    base = {
+        "Exists(in,<universe>)": "num-loaded-packages",
+        "And(Not(Equal(at_g,at)),obj)": "num-packages-not-in-destiny",
+        "Exists(at_g,Exists(Inverse(at),airplane))": "num-packages-whose-destiny-has-an-airplane",
+        "Exists(at_g,Exists(Inverse(at),<universe>))": "num-packages-with-destiny",
+        "Exists(at_g,airport)": "num-packages-whose-destiny-has-an-airport",
+        "Exists(in,airplane)": "num-packages-in-airplane",
+        # "And(Equal(at_g,Inverse(at)),airport)": "",
+        "And(Exists(at,airport),obj)": "num-packages-at-city-with-airport",
+        # "Exists(at,Forall(Inverse(at),truck))": "",
+    }
+
+    return extend_namer_to_all_features(base).get(s, s)
+
+
+def gridworld_names(feature):
+    s = str(feature)
+    base = {
+        "And(goal_xpos,xpos)": "on-x-target",
+        "And(goal_ypos,ypos)": "on-y-target",
+        "And(xpos,ypos)": "on-diagonal",
+        "Exists(succ,ypos)": "not-on-left-limit",
+        "Exists(Star(succ),xpos)": "xpos",
     }
 
     return extend_namer_to_all_features(base).get(s, s)
