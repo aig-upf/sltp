@@ -212,7 +212,7 @@ of two different equivalence classes such that $(s, s') \not\in \badtx$
  Dist(s, s', t, t'),&\;\; \text{for $s, t$ alive, $(t, t') \in \badtx$.}
 \end{align}
 
-\noindent where $Dist(s, s', t, t')$ is shorthand for $\bigvee_{f \in D2(s, s', t, t')} Select(f)$.
+\noindent where $Dist(s, s', t, t')$ is shorthand for $\bigvee_{f \in D1\&2(s, s', t, t')} Select(f)$.
 
 \smallpar{C10}
 $V(s)$ cannot be much larger than $V^+(s)$:
@@ -220,8 +220,20 @@ $V(s)$ cannot be much larger than $V^+(s)$:
  V(s) \leq \delta \cdot V^*(s),&\;\; \text{for $s$ alive.}
 \end{align}
 
+
+\smallpar{C11}
+Goals can be distinguished from non-goals.
+\begin{align}
+\bigvee_{f \in D1(s, s')} Select(f),&\;\; \text{for $s$ goal, $s$ not a goal}
+\end{align}
+
+
 \subsection{Soft Constraints}
 We simply post a constraint $\neg Select(f)$ for each feature $f$ in the pool, with weight equal to its complexity $\mathcal{K}(f)$.
+
+\section{Empirical Results}
+
+
 
 \bibliographystyle{plain}
 % Cross-referenced entries need to go after the entries that cross-reference them
