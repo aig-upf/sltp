@@ -498,7 +498,8 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
     std::cout << "\tZero clauses: " << n_zero_clauses << std::endl;
     std::cout << "\tGV(s, s', d) auxiliary clauses: " << n_gv_aux_clauses << std::endl;
     assert(wr.nclauses() == n_selected_clauses + n_good_tx_clauses + n_upper_bound_clauses + n_justification_clauses
-                            + n_leq_clauses + n_separation_clauses + n_gv_aux_clauses + n_max_v_s_clauses + n_goal_clauses);
+                            + n_leq_clauses + n_separation_clauses + n_gv_aux_clauses + n_max_v_s_clauses
+                            + n_goal_clauses + n_zero_clauses);
 
 
     return sltp::cnf::CNFGenerationOutput::Success;
