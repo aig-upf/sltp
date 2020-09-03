@@ -69,10 +69,6 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
         ("use-feature-dominance",
          "In the transition-separation encoding, whether we want to exploit the dominance among features to ignore "
          "dominated features and reduce the size of the encoding.")
-
-        ("distinguish-transitions-locally",
-         "In the transition-separation CNF encoding, whether to distinguish good transitions *only from*"
-         " unmarked transitions starting in the same state")
     ;
 
     po::variables_map vm;
@@ -94,7 +90,6 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
     options.workspace = vm["workspace"].as<std::string>();
     options.prune_redundant_states = vm.count("prune-redundant-states") > 0;
     options.verbose = vm.count("verbose") > 0;
-    options.distinguish_transitions_locally = vm.count("distinguish-transitions-locally") > 0;
     options.use_equivalence_classes = vm.count("use-equivalence-classes") > 0;
     options.use_feature_dominance = vm.count("use-feature-dominance") > 0;
     options.use_incremental_refinement = vm.count("use-incremental-refinement") > 0;

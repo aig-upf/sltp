@@ -53,10 +53,6 @@ struct Options {
     //! and transitions coming from different training instances
     bool force_zeros;
 
-    //! In the transition-separation CNF encoding, whether to distinguish good transitions *only from*
-    //! unmarked transitions that start in the same state as the good transition
-    bool distinguish_transitions_locally;
-
     //! A list of user-provided feature IDs for which we want to enforce selection
     std::vector<unsigned> enforced_features;
 

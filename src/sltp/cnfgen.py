@@ -76,7 +76,6 @@ def generate_cnf(config, data):
     args += ["--enforce-features", ",".join(map(str, data.in_goal_features))] if data.in_goal_features else []
     args += ["--prune-redundant-states"] if config.prune_redundant_states else []
     args += ["--encoding", config.maxsat_encoding]
-    args += ["--distinguish-transitions-locally"] if config.distinguish_transitions_locally else []
     args += ["--use-equivalence-classes"] if config.use_equivalence_classes else []
     args += ["--use-feature-dominance"] if config.use_feature_dominance else []
     args += ["--v_slack", str(config.v_slack)]

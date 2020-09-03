@@ -64,19 +64,6 @@ public:
         return tr_set_.transitions().unmarked_transitions();
     }
 
-    const transition_list_t& unmarked_and_alive_transitions() const {
-        return tr_set_.transitions().unmarked_and_alive_transitions();
-    }
-
-    const transition_list_t& get_relevant_unmarked_transitions(unsigned s) const {
-        if (options.distinguish_transitions_locally) {
-            assert(is_alive(s));
-            return tr_set_.transitions().unmarked_transitions_starting_at(s);
-        } else {
-            return tr_set_.transitions().unmarked_transitions();
-        }
-    }
-
     //! Return possibly-cached set of features that d1-distinguish s from t
     const std::vector<feature_t>& d1_distinguishing_features(unsigned s, unsigned t) {
         const auto idx = d1idx(s, t);
