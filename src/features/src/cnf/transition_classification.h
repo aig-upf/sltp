@@ -5,7 +5,6 @@
 #include "generator.h"
 #include "types.h"
 
-//#include <boost/container/flat_set.hpp>
 
 namespace sltp::cnf {
 
@@ -15,8 +14,6 @@ public:
         alive_to_solvable,
         alive_to_dead
     };
-
-    using state_pair = std::pair<uint16_t, uint16_t>;
 
     TransitionClassificationEncoding(const TrainingSet& sample, const Options& options) :
             CNFEncoding(sample, options),
@@ -33,11 +30,11 @@ public:
 
     sltp::cnf::CNFGenerationOutput write(CNFWriter& wr, const std::vector<transition_pair>& transitions_to_distinguish);
 
-    inline unsigned get_transition_id(uint16_t s, uint16_t t) const { return transition_ids_.at(state_pair(s, t)); }
+    inline unsigned get_transition_id(state_id_t s, state_id_t t) const { return transition_ids_.at(state_pair(s, t)); }
 
     inline unsigned get_representative_id(unsigned tx) const { return from_transition_to_eq_class_.at(tx); }
 
-    inline unsigned get_class_representative(uint16_t s, uint16_t t) const {
+    inline unsigned get_class_representative(state_id_t s, state_id_t t) const {
         return get_representative_id(get_transition_id(s, t));
     }
 
@@ -69,7 +66,7 @@ public:
 
     //! Whether the two given transitions are distinguishable through the given features alone
     bool are_transitions_d1d2_distinguishable(
-            uint16_t s, uint16_t sprime, uint16_t t, uint16_t tprime, const std::vector<unsigned>& features) const;
+            state_id_t s, state_id_t sprime, state_id_t t, state_id_t tprime, const std::vector<unsigned>& features) const;
 
     CNFGenerationOutput refine_theory(CNFWriter& wr);
 

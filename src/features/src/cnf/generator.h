@@ -95,10 +95,6 @@ std::vector<feature_t> compute_d1d2_distinguishing_features(const TrainingSet& s
 class CNFEncoding {
 public:
 
-    using transition_t = TransitionSample::transition_t;
-    using transition_set_t = TransitionSample::transition_set_t;
-    using transition_list_t = TransitionSample::transition_list_t;
-
     CNFEncoding(const TrainingSet& sample, const sltp::cnf::Options& options) :
             tr_set_(sample),
             options(options),

@@ -7,10 +7,9 @@
 #include <vector>
 
 #include <boost/functional/hash.hpp>
+#include <common/base.h>
 
 namespace sltp::cnf {
-
-using transition_id_t = uint32_t;
 
 struct transition_pair {
     transition_pair(transition_id_t tx1, transition_id_t tx2) :

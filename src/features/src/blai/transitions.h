@@ -10,17 +10,15 @@
 #include <vector>
 
 #include <boost/functional/hash.hpp>
+#include <common/base.h>
 
 
 namespace sltp {
 
 class TransitionSample {
 public:
-    //! A transition is a pair of state IDs
-    using transition_t = std::pair<unsigned, unsigned>;
-
-    using transition_list_t = std::vector<transition_t>;
-    using transition_set_t = std::unordered_set<transition_t, boost::hash<transition_t>>;
+    using transition_list_t = std::vector<state_pair>;
+    using transition_set_t = std::unordered_set<state_pair, boost::hash<state_pair>>;
 
 protected:
     const std::size_t num_states_;
@@ -51,7 +49,15 @@ public:
               unmarked_transitions_(),
               unmarked_and_alive_transitions_(),
               unmarked_transitions_from_(num_states)
-     {}
+     {
+         if (num_states_ > std::numeric_limits<state_id_t>::max()) {
+             throw std::runtime_error("Number of states too high - revise source code and change state_id_t datatype");
+         }
+
+         if (num_transitions_ > std::numeric_limits<transition_id_t>::max()) {
+             throw std::runtime_error("Number of states too high - revise source code and change transition_id_t datatype");
+         }
+     }
 
     ~TransitionSample() = default;
     TransitionSample(const TransitionSample&) = default;
@@ -83,7 +89,7 @@ public:
         return unmarked_transitions_from_[s];
     }
 
-    bool marked(const transition_t& p) const {
+    bool marked(const state_pair& p) const {
         return marked_transitions_.find(p) != marked_transitions_.end();
     }
     bool marked(unsigned src, unsigned dst) const {

@@ -41,7 +41,7 @@ sltp::cnf::CNFGenerationOutput AAAI19Generator::write(CNFWriter& writer) {
     // D2(s, s', t, t')
     using bridge_clause_t = std::tuple<unsigned, unsigned, unsigned>;
     std::unordered_set<bridge_clause_t, boost::hash<bridge_clause_t>> bridge_clauses;
-    for (const transition_t& tx1:sound_transitions()) {
+    for (const auto& tx1:sound_transitions()) {
         unsigned s = tx1.first, sprime = tx1.second;
 
         for (unsigned t = 0; t < ns_; ++t) {
@@ -144,7 +144,7 @@ sltp::cnf::CNFGenerationOutput AAAI19Generator::write(CNFWriter& writer) {
     }
 
     // Force D1(s1, s2) to be true if exactly one of the two states is a dead-end
-    for (const transition_t& tx1:sound_transitions()) {
+    for (const auto& tx1:sound_transitions()) {
         unsigned s = tx1.first;
         for (unsigned t:tr_set_.matrix().deadends()) {
             const auto& d1feats = d1_distinguishing_features(s, t);

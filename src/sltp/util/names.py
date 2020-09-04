@@ -185,3 +185,44 @@ def gridworld_names(feature):
     }
 
     return extend_namer_to_all_features(base).get(s, s)
+
+
+def miconic_names(feature):
+    s = str(feature)
+    base = {
+        "": "",
+        "": "",
+        "": "",
+        "": "",
+    }
+
+    return extend_namer_to_all_features(base).get(s, s)
+
+
+def satellite_names(feature):
+    s = str(feature)
+    base = {
+        "calibrated": "n-calibrated-instruments",
+        "power_on": "n-on-instruments",
+        "": "",
+        "": "",
+        "": "",
+        "": "",
+    }
+    return extend_namer_to_all_features(base).get(s, s)
+
+
+def taxi_names(feature):
+    s = str(feature)
+    base = {
+        "And(locp,locp_g)": "passenger-delivered",
+        "And(loct,locp)": "at-passenger-location",
+        "And(locp,Nominal(inside_taxi))": "passenger-in-taxi",
+        "Dist[loct;adjacent;locp]": "dist-to-passenger",
+        "Dist[locp, adjacent, loct]": "dist-to-passenger",
+        "Dist[loct;Restrict(adjacent,<universe>);locp]": "dist-to-passenger",
+        "Dist[locp_g, adjacent, loct]": "dist-to-passenger-target",
+        "If{Bool[And(locp,Nominal(inside_taxi))]}{Dist[locp_g;adjacent;loct]}{Infty}": "cond-dist-to-dest",
+    }
+
+    return extend_namer_to_all_features(base).get(s, s)

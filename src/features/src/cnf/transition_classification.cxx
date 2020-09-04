@@ -30,11 +30,12 @@ void TransitionClassificationEncoding::compute_equivalence_relations() {
 
     for (const auto s:all_alive()) {
         for (unsigned sprime:successors(s)) {
-            auto tx = std::make_pair((uint16_t)s, (uint16_t) sprime);
+            auto tx = std::make_pair((state_id_t) s, (state_id_t) sprime);
             auto id = (unsigned) transition_ids_inv_.size(); // Assign a sequential ID to the transition
 
             transition_ids_inv_.push_back(tx);
-            transition_ids_.emplace(tx, id);
+            auto it1 = transition_ids_.emplace(tx, id);
+            assert(it1.second);
 
             // Store the type of the transition
             types_.push_back(is_solvable(sprime) ? transition_type::alive_to_solvable : transition_type::alive_to_dead);
@@ -186,6 +187,7 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
 {
     using Wr = CNFWriter;
     const auto& mat = tr_set_.matrix();
+    const auto num_alive_features = transition_ids_.size();
 
     auto ignore_features = check_feature_dominance();
 
@@ -223,6 +225,8 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
 
 
     /////// CNF variables ///////
+
+    // Create one "Select(f)" variable for each feature f in the pool
     for (unsigned f = 0; f < nf_; ++f) {
         if (!ignore_features[f]) {
             auto v = wr.var("Select(" + tr_set_.matrix().feature_name(f) + ")");
@@ -259,44 +263,52 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
         n_leq_clauses += 1;
     }
 
+    // Create a variable "Good(s, s')" for each transition (s, s') such that s' is solvable and (s, s') is not in BAD
+    for (unsigned tx=0; tx < num_alive_features; ++tx) {
+        if (is_necessarily_bad(tx)) continue; // This includes  alive-to-dead transitions
 
+        const auto& txpair = get_state_pair(tx);
+        const auto s = txpair.first;
+        const auto sprime = txpair.second;
+
+        cnfvar_t good_s_sprime = 0;
+        auto repr = get_representative_id(tx);
+        if (tx == repr) { // tx is an equivalence class representative: create the Good(s, s') variable
+            good_s_sprime = wr.var("Good(" + std::to_string(s) + ", " + std::to_string(sprime) + ")");
+            auto it = good_vars.emplace(tx, good_s_sprime);
+            assert(it.second); // i.e. the SAT variable Good(s, s') is necessarily new
+            //        std::cout << "GOOD(" << tx.first << ", " << tx.second << "): " << vid << std::endl;
+            varmapstream << good_s_sprime << " " << s << " " << sprime << std::endl;
+
+        } else {  // tx is represented by repr, no need to create a redundant variable
+            good_s_sprime = good_vars.at(repr);
+        }
+
+
+        // Create an auxiliary variable "GV(s, s', d)" for each possible d; and enforce its intended semantics
+        if (is_alive(sprime)) {
+            for (unsigned d=0; d < max_d; ++d) {
+                const auto var = wr.var("GV(" + std::to_string(s) + ", " + std::to_string(sprime) + ", " + std::to_string(d) + ")");
+                auto it = good_and_vleq_vars.insert({{s, sprime, d}, var});
+                assert(it.second); // i.e. the SAT variable GV(s, s', d) is necessarily new
+
+                // GV(s, s', d) -> Good(s, s') and Vleq(s', d)
+                wr.cl({Wr::lit(var, false), Wr::lit(good_s_sprime, true)});
+                wr.cl({Wr::lit(var, false), Wr::lit(vleqs[sprime][d], true)});
+                n_gv_aux_clauses += 2;
+            }
+        }
+    }
+
+    // [1] For each alive state s, post a constraint OR_{s' solvable child of s} Good(s, s')
     for (const auto s:all_alive()) {
-        // Good(s, s') for each transition (s, s') such that both s and s' are alive
-        // We will in the same loop create all constraints of the form
-        //     OR Good(s, s'),
-        // where s is alive and s' iterates over all children of s that are solvable
         cnfclause_t clause;
         for (unsigned sprime:successors(s)) {
             auto tx = get_transition_id(s, sprime);
-            auto repr = get_representative_id(tx);
-
             if (is_necessarily_bad(tx)) continue; // This includes  alive-to-dead transitions
 
-            cnfvar_t good_s_sprime = 0;
-            if (tx == repr) {
-                // Create the Good(s, s') variable
-                good_s_sprime = wr.var("Good(" + std::to_string(s) + ", " + std::to_string(sprime) + ")");
-                good_vars.emplace(tx, good_s_sprime);
-                //        std::cout << "GOOD(" << tx.first << ", " << tx.second << "): " << vid << std::endl;
-                varmapstream << good_s_sprime << " " << s << " " << sprime << std::endl;
-            } else {
-                good_s_sprime = good_vars.at(repr);
-            }
-
             // Push it into the clause
-            clause.push_back(Wr::lit(good_s_sprime, true));
-
-            if (is_alive(sprime)) {
-                for (unsigned d=0; d < max_d; ++d) {
-                    const auto var = wr.var("GV(" + std::to_string(s) + ", " + std::to_string(sprime) + ", " + std::to_string(d) + ")");
-                    good_and_vleq_vars.insert({{s, sprime, d}, var});
-
-                    // GV(s, s', d) -> Good(s, s') and Vleq(s', d)
-                    wr.cl({Wr::lit(var, false), Wr::lit(good_s_sprime, true)});
-                    wr.cl({Wr::lit(var, false), Wr::lit(vleqs[sprime][d], true)});
-                    n_gv_aux_clauses += 2;
-                }
-            }
+            clause.push_back(Wr::lit(good_vars.at(get_representative_id(tx)), true));
         }
 
         // Add clauses (1) for this state
@@ -307,7 +319,6 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
         ++n_good_tx_clauses;
     }
 
-
     // From this point on, no more variables will be created. Print total count.
     std::cout << "A total of " << wr.nvars() << " variables were created" << std::endl;
     std::cout << "\tSelect(f): " << n_select_vars << std::endl;
@@ -315,6 +326,7 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
     std::cout << "\tV(s) <= d: " << n_vleq_vars << std::endl;
     std::cout << "\tGV(s, s', d): " << good_and_vleq_vars.size() << std::endl;
 
+    // Check our variable count is correct
     assert(wr.nvars() == n_select_vars + good_vars.size() + n_vleq_vars + good_and_vleq_vars.size());
 
     /////// Rest of CNF constraints ///////
@@ -460,7 +472,7 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
         for (unsigned f = 0; f < nf_; ++f) {
             cnfclause_t clause{Wr::lit(var_selected[f], false)};
 
-            for (unsigned tx=0; tx<transition_ids_.size(); ++tx) {
+            for (unsigned tx=0; tx < num_alive_features; ++tx) {
                 const auto& txpair = get_state_pair(tx);
                 auto s_f = mat.entry(txpair.first, f);
                 auto sprime_f = mat.entry(txpair.second, f);
@@ -657,7 +669,7 @@ bool TransitionClassificationEncoding::check_existing_solution_for_flaws(flaw_in
 }
 
 bool TransitionClassificationEncoding::are_transitions_d1d2_distinguishable(
-        uint16_t s, uint16_t sprime, uint16_t t, uint16_t tprime, const std::vector<unsigned>& features) const {
+        state_id_t s, state_id_t sprime, state_id_t t, state_id_t tprime, const std::vector<unsigned>& features) const {
     const auto& mat = tr_set_.matrix();
     for (unsigned f:features) {
         if (are_transitions_d1d2_distinguished(mat.entry(s, f), mat.entry(sprime, f),

@@ -52,15 +52,15 @@ public:
         return tr_set_.transitions().marked(s, sprime);
     }
 
-    const transition_set_t& sound_transitions() const {
+    const TransitionSample::transition_set_t& sound_transitions() const {
         return marked_transitions();
     }
 
-    const transition_set_t& marked_transitions() const {
+    const TransitionSample::transition_set_t& marked_transitions() const {
         return tr_set_.transitions().marked_transitions();
     }
 
-    const transition_list_t& unmarked_transitions() const {
+    const TransitionSample::transition_list_t& unmarked_transitions() const {
         return tr_set_.transitions().unmarked_transitions();
     }
 
