@@ -97,10 +97,34 @@ void TransitionClassificationEncoding::compute_equivalence_relations() {
               << "/" << class_representatives_.size() << std::endl;
     std::cout << "Number of necessarily bad transitions/classes: " << necessarily_bad_transitions_.size()
               << "/" << necessarily_bad_classes.size() << std::endl;
+
+
+    report_eq_classes();
+
+}
+
+void TransitionClassificationEncoding::report_eq_classes() const {
+    std::unordered_map<unsigned, std::vector<state_pair>> classes;
+    for (unsigned tx=0; tx < transition_ids_.size(); ++tx) {
+        auto repr = get_representative_id(tx);
+        classes[repr].push_back(get_state_pair(tx));
+    }
+
+    unsigned i = 0;
+    for (const auto& elem:classes) {
+        std::cout << "Class " << ++i << ": " << std::endl;
+        const auto& elements = elem.second;
+        for (unsigned j = 0; j < elements.size(); ++j) {
+            const auto& txpair = elements[j];
+            std::cout << "(" << txpair.first << ", " << txpair.second << ")";
+            if (j < elements.size()-1) std::cout << "; ";
+        }
+        std::cout << std::endl << std::endl;
+    }
 }
 
 
-std::vector<bool> TransitionClassificationEncoding::
+    std::vector<bool> TransitionClassificationEncoding::
 check_feature_dominance() {
     const auto& mat = tr_set_.matrix();
 
@@ -187,7 +211,7 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
 {
     using Wr = CNFWriter;
     const auto& mat = tr_set_.matrix();
-    const auto num_alive_features = transition_ids_.size();
+    const auto num_alive_transitions = transition_ids_.size();
 
     auto ignore_features = check_feature_dominance();
 
@@ -264,7 +288,7 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
     }
 
     // Create a variable "Good(s, s')" for each transition (s, s') such that s' is solvable and (s, s') is not in BAD
-    for (unsigned tx=0; tx < num_alive_features; ++tx) {
+    for (unsigned tx=0; tx < num_alive_transitions; ++tx) {
         if (is_necessarily_bad(tx)) continue; // This includes  alive-to-dead transitions
 
         const auto& txpair = get_state_pair(tx);
@@ -472,7 +496,7 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
         for (unsigned f = 0; f < nf_; ++f) {
             cnfclause_t clause{Wr::lit(var_selected[f], false)};
 
-            for (unsigned tx=0; tx < num_alive_features; ++tx) {
+            for (unsigned tx=0; tx < num_alive_transitions; ++tx) {
                 const auto& txpair = get_state_pair(tx);
                 auto s_f = mat.entry(txpair.first, f);
                 auto sprime_f = mat.entry(txpair.second, f);
@@ -569,7 +593,7 @@ TransitionClassificationEncoding::compute_transitions_to_distinguish(
     if (load_transitions_from_previous_iteration) {
         last_transitions = load_transitions_to_distinguish();
     } else {
-        last_transitions = generate_t0_transitions();
+        last_transitions = generate_t0_transitions(5);
     }
 
     std::vector<transition_pair> transitions_to_distinguish;

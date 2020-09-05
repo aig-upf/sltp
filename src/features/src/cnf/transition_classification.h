@@ -107,6 +107,8 @@ protected:
     std::vector<transition_pair> load_transitions_to_distinguish() const;
 
     std::vector<transition_pair> generate_t0_transitions(unsigned m=40) const;
+
+    void report_eq_classes() const;
 };
 
 } // namespaces
