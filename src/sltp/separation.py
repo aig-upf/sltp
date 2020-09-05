@@ -38,19 +38,21 @@ def read_selected_variable_ids(assignment, filename):
 def print_maxsat_solution(assignment, filename):
     """ """
     solution = []
-    vleqs = dict()
+    vs = dict()
     with open(filename, 'r') as f:
         for line in f:
             id_, name = line.rstrip().split("\t")
             if assignment[int(id_)] is True:
-                # e.g. Vleq(4, 1)
-                if name.startswith("Vleq("):
-                    state, value = map(int, name[5:-1].split(", "))
-                    vleqs[state] = min(value, vleqs.get(state, sys.maxsize))
+                # e.g. V(4, 1)
+                if name.startswith("V("):
+                    state, value = map(int, name[2:-1].split(", "))
+                    if state in vs:
+                        raise RuntimeError(f"Maxsat solution has more than one value V(s) for state {state}")
+                    vs[state] = value
                 else:
                     solution.append(name)
     print('\n'.join(natsorted(solution, key=lambda y: y.lower())))
-    print('\n'.join(f"V({s}) = {vleqs[s]}" for s in sorted(vleqs.keys())))
+    print('\n'.join(f"V({s}) = {vs[s]}" for s in sorted(vs.keys())))
 
 
 def compute_transition_classification_policy(config, data, rng):
