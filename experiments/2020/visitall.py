@@ -34,15 +34,14 @@ def experiments():
         test_instances=[],
         test_policy_instances=all_test_instances(),
 
-        max_concept_size=8,
-        distance_feature_max_complexity=8,
-        cond_feature_max_complexity=8,
+        max_concept_size=6,
+        distance_feature_max_complexity=6,
         use_equivalence_classes=True,
         # use_feature_dominance=True,
         # use_incremental_refinement=True,
     )
 
-    exps["test"] = update_dict(
+    exps["debug"] = update_dict(
         base,
         instances=[
             # 'problem02-full.pddl',

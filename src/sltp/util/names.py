@@ -139,8 +139,8 @@ def reward_names(feature):
     s = str(feature)
     base = {
         "reward": "n-rewards",
-        "Dist[at, adjacent, reward]": "dist-to-closest-reward",
-        "Dist[at, Restrict(adjacent,unblocked), reward]": "unblocked-dist-to-closest-reward",
+        "Dist[at;adjacent;reward]": "dist-to-closest-reward",
+        "Dist[at;Restrict(adjacent,unblocked);reward]": "unblocked-dist-to-closest-reward",
     }
 
     return extend_namer_to_all_features(base).get(s, s)

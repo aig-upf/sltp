@@ -186,7 +186,7 @@ def experiments():
         use_equivalence_classes=True,
         use_feature_dominance=False,
 
-        force_zeros=True,
+        # force_zeros=True,
     )
 
     exps["all_at_testing"] = update_dict(

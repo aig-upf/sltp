@@ -32,7 +32,7 @@ def experiments():
         test_policy_instances=["instance_7.pddl", "instance_10.pddl", "instance_20.pddl"],
 
         max_concept_size=8,
-        # distance_feature_max_complexity=8,
+        distance_feature_max_complexity=8,
         parameter_generator=no_parameter,
         # parameter_generator=None
         use_equivalence_classes=True,
@@ -40,6 +40,7 @@ def experiments():
         use_incremental_refinement=False,
     )
 
+    exps["debug"] = update_dict(exps["small"], feature_generator=debug_features)
 
     # One reason for overfitting: in a 3x3 grid, with 2 booleans per dimension you can perfectly represent any position
     # exps['sample_2x2_1reward'] = update_dict(exps['sample_1x3'], instances=["sample_2x2_1reward.pddl"])
@@ -51,5 +52,13 @@ def experiments():
     # Same but using goal-concepts instead of goal parameters:
     # exps["instance_5_gc"] = update_dict(exps["instance_5"], parameter_generator=None)
 
-
     return exps
+
+
+def debug_features(lang):
+    unblocked_dist = "Dist[at;Restrict(adjacent,unblocked);reward]"
+    nrewards = "Num[reward]"
+    return [
+        unblocked_dist,
+        nrewards,
+    ]

@@ -56,7 +56,7 @@ def experiments():
         # comparison_features=True,
         use_equivalence_classes=True,
         # use_feature_dominance=True,
-        use_incremental_refinement=True,
+        use_incremental_refinement=False,
     )
 
     return exps
