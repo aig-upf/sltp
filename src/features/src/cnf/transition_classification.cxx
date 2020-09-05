@@ -98,8 +98,7 @@ void TransitionClassificationEncoding::compute_equivalence_relations() {
     std::cout << "Number of necessarily bad transitions/classes: " << necessarily_bad_transitions_.size()
               << "/" << necessarily_bad_classes.size() << std::endl;
 
-
-    report_eq_classes();
+//    report_eq_classes();
 
 }
 
@@ -222,69 +221,72 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
     std::cout << "Using an upper bound for V_pi(s) values of " << max_d << std::endl;
 
     // Keep a map `good_tx_vars` from transition IDs to SAT variable IDs:
-    std::unordered_map<unsigned, cnfvar_t> good_vars;
+    std::unordered_map<unsigned, cnfvar_t> goods;
 
-    // Keep a map `good_and_vleq_vars` from transitions to SAT variable IDs:
-    using GV_idx = std::tuple<unsigned, unsigned, unsigned>;
-    std::unordered_map<GV_idx, cnfvar_t, boost::hash<GV_idx>> good_and_vleq_vars;
-
-    // Keep a map from pairs (s, d) to SAT variable ID of the variable Vleq(s, d)
-    std::vector<std::vector<cnfvar_t>> vleqs(ns_);
+    // Keep a map from pairs (s, d) to SAT variable ID of the variable V(s, d)
+    std::vector<std::vector<cnfvar_t>> vs(ns_);
 
     // Keep a map from each feature index to the SAT variable ID of Selected(f)
-    std::vector<cnfvar_t> var_selected;
+    std::vector<cnfvar_t> selecteds;
 
     unsigned n_select_vars = 0;
-    unsigned n_vleq_vars = 0;
-    unsigned n_upper_bound_clauses = 0;
-    unsigned n_justification_clauses = 0;
-    unsigned n_gv_aux_clauses = 0;
-    unsigned n_leq_clauses = 0;
+    unsigned n_v_vars = 0;
+    unsigned n_descending_clauses = 0;
+    unsigned n_v_function_clauses = 0;
     unsigned n_good_tx_clauses = 0;
     unsigned n_selected_clauses = 0;
     unsigned n_separation_clauses = 0;
-    unsigned n_max_v_s_clauses = 0;
     unsigned n_goal_clauses = 0;
     unsigned n_zero_clauses = 0;
 
 
     /////// CNF variables ///////
-
     // Create one "Select(f)" variable for each feature f in the pool
     for (unsigned f = 0; f < nf_; ++f) {
         if (!ignore_features[f]) {
             auto v = wr.var("Select(" + tr_set_.matrix().feature_name(f) + ")");
-            var_selected.push_back(v);
+            selecteds.push_back(v);
             selected_map_stream << f << "\t" << v << "\t" << tr_set_.matrix().feature_name(f) << std::endl;
             ++n_select_vars;
 
         } else {
-            var_selected.push_back(std::numeric_limits<uint32_t>::max());
+            selecteds.push_back(std::numeric_limits<uint32_t>::max());
         }
     }
 
-    // Create variables Vleq(s, k) that denote that V(s) <= d, for all d in 0..D and all alive state s
+    // Create variables V(s, d) variables for all all alive state s and d in 1..D
     for (const auto s:all_alive()) {
+        const auto min_vs = get_vstar(s);
+        const auto max_vs = get_max_v(s);
+        assert(max_vs > 0 && max_vs <= max_d && min_vs <= max_vs);
 
-        const auto v_s_0 = wr.var("Vleq(" + std::to_string(s) + ", 0)");
-        cnfclause_t at_least_one_v_clause{Wr::lit(v_s_0, true)};
+        cnfclause_t within_range_clause;
+        vs[s].reserve(max_d + 1);
+        vs[s].push_back(std::numeric_limits<cnfvar_t>::max()); // We'll leave vs[s] 0 unused
 
-        vleqs[s].reserve(max_d + 1);
-        vleqs[s].push_back(v_s_0);
+        // TODO Note that we could be more efficient here and create only variables V(s,d) for those values of d that
+        //  are within the bounds below. I'm leaving that as a future optimization, as it slightly complicates the
+        //  formulation of constraints C2
         for (unsigned d = 1; d <= max_d; ++d) {
-            const auto v_s_d = wr.var("Vleq(" + std::to_string(s) + ", " + std::to_string(d) + ")");
-            vleqs[s].push_back(v_s_d);
-            at_least_one_v_clause.push_back(Wr::lit(v_s_d, true));
+            const auto v_s_d = wr.var("V(" + std::to_string(s) + ", " + std::to_string(d) + ")");
+            vs[s].push_back(v_s_d);
+            n_v_vars += 1;
 
-            // Add clauses (7):  V(s) <= d-1 --> V(s) <= d
-            wr.cl({Wr::lit(vleqs[s][d - 1], false), Wr::lit(v_s_d, true)});
+            if (d >= min_vs && d <= max_vs) {
+                within_range_clause.push_back(Wr::lit(v_s_d, true));
+            }
         }
-        n_leq_clauses += max_d;
-        n_vleq_vars += max_d + 1;
 
-        // Add clauses (6)
-        wr.cl(at_least_one_v_clause);
-        n_leq_clauses += 1;
+        // Add clauses (3), (4)
+        wr.cl(within_range_clause);
+        n_v_function_clauses += 1;
+
+        for (unsigned d = 1; d <= max_d; ++d) {
+            for (unsigned dprime = d+1; dprime <= max_d; ++dprime) {
+                wr.cl({Wr::lit(vs[s][d], false), Wr::lit(vs[s][dprime], false)});
+                n_v_function_clauses += 1;
+            }
+        }
     }
 
     // Create a variable "Good(s, s')" for each transition (s, s') such that s' is solvable and (s, s') is not in BAD
@@ -299,28 +301,12 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
         auto repr = get_representative_id(tx);
         if (tx == repr) { // tx is an equivalence class representative: create the Good(s, s') variable
             good_s_sprime = wr.var("Good(" + std::to_string(s) + ", " + std::to_string(sprime) + ")");
-            auto it = good_vars.emplace(tx, good_s_sprime);
+            auto it = goods.emplace(tx, good_s_sprime);
             assert(it.second); // i.e. the SAT variable Good(s, s') is necessarily new
-            //        std::cout << "GOOD(" << tx.first << ", " << tx.second << "): " << vid << std::endl;
             varmapstream << good_s_sprime << " " << s << " " << sprime << std::endl;
 
         } else {  // tx is represented by repr, no need to create a redundant variable
-            good_s_sprime = good_vars.at(repr);
-        }
-
-
-        // Create an auxiliary variable "GV(s, s', d)" for each possible d; and enforce its intended semantics
-        if (is_alive(sprime)) {
-            for (unsigned d=0; d < max_d; ++d) {
-                const auto var = wr.var("GV(" + std::to_string(s) + ", " + std::to_string(sprime) + ", " + std::to_string(d) + ")");
-                auto it = good_and_vleq_vars.insert({{s, sprime, d}, var});
-                assert(it.second); // i.e. the SAT variable GV(s, s', d) is necessarily new
-
-                // GV(s, s', d) -> Good(s, s') and Vleq(s', d)
-                wr.cl({Wr::lit(var, false), Wr::lit(good_s_sprime, true)});
-                wr.cl({Wr::lit(var, false), Wr::lit(vleqs[sprime][d], true)});
-                n_gv_aux_clauses += 2;
-            }
+            good_s_sprime = goods.at(repr);
         }
     }
 
@@ -329,10 +315,10 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
         cnfclause_t clause;
         for (unsigned sprime:successors(s)) {
             auto tx = get_transition_id(s, sprime);
-            if (is_necessarily_bad(tx)) continue; // This includes  alive-to-dead transitions
+            if (is_necessarily_bad(tx)) continue; // includes alive-to-dead transitions
 
             // Push it into the clause
-            clause.push_back(Wr::lit(good_vars.at(get_representative_id(tx)), true));
+            clause.push_back(Wr::lit(goods.at(get_representative_id(tx)), true));
         }
 
         // Add clauses (1) for this state
@@ -346,12 +332,11 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
     // From this point on, no more variables will be created. Print total count.
     std::cout << "A total of " << wr.nvars() << " variables were created" << std::endl;
     std::cout << "\tSelect(f): " << n_select_vars << std::endl;
-    std::cout << "\tGood(s, s'): " << good_vars.size() << std::endl;
-    std::cout << "\tV(s) <= d: " << n_vleq_vars << std::endl;
-    std::cout << "\tGV(s, s', d): " << good_and_vleq_vars.size() << std::endl;
+    std::cout << "\tGood(s, s'): " << goods.size() << std::endl;
+    std::cout << "\tV(s, d): " << n_v_vars << std::endl;
 
     // Check our variable count is correct
-    assert(wr.nvars() == n_select_vars + good_vars.size() + n_vleq_vars + good_and_vleq_vars.size());
+    assert(wr.nvars() == n_select_vars + goods.size() + n_v_vars);
 
     /////// Rest of CNF constraints ///////
     std::cout << "Generating CNF encoding for " << all_alive().size() << " alive states, "
@@ -359,73 +344,27 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
               << class_representatives_.size() << " transition equivalence classes" << std::endl;
 
     for (const auto s:all_alive()) {
+        for (const auto sprime:successors(s)) {
+            if (!is_alive(sprime)) continue;
+            if (is_necessarily_bad(get_transition_id(s, sprime))) continue; // includes alive-to-dead transitions
 
-        const auto& succs = successors(s);
-        for (unsigned i=0; i < succs.size(); ++i) {
-            unsigned sprime = succs[i];
-            auto tx = get_transition_id(s, sprime);
-            if (is_necessarily_bad(tx)) continue; // This includes  alive-to-dead transitions
+            const auto good_s_prime = goods.at(get_class_representative(s, sprime));
+            for (unsigned d=1; d < max_d; ++d) {
+                // (2) Good(s, s') and V(s',d) -> V(s) > d
+                cnfclause_t clause{Wr::lit(good_s_prime, false),
+                                   Wr::lit(vs[sprime][d], false)};
 
-            auto good_s_sprime = good_vars.at(get_class_representative(s, sprime));
-
-            if (is_goal(sprime)) {
-                for (unsigned d=0; d < max_d; ++d) {
-                    // (3) Good(s, s') -> V(s) <= d+1
-                    wr.cl({
-                                  Wr::lit(good_s_sprime, false),
-                                  Wr::lit(vleqs[s][d+1], true)});
-                    ++n_upper_bound_clauses;
+                for (unsigned k=d+1; k<=max_d; ++k) {
+                    clause.push_back(Wr::lit(vs[s][k], true));
                 }
+                wr.cl(clause);
+                ++n_descending_clauses;
             }
 
-            if (is_alive(sprime)) {
-                for (unsigned d=0; d < max_d; ++d) {
-                    // (2) Good(s, s') and V(s') <= d -> V(s) <= d+1
-                    wr.cl({
-                                  Wr::lit(good_s_sprime, false),
-                                  Wr::lit(vleqs[sprime][d], false),
-                                  Wr::lit(vleqs[s][d+1], true)});
-                    ++n_upper_bound_clauses;
-
-                    // (3') if Vleq(s,d+1) and -Vleq(s',d) then -Good(s,s')
-                    // i.e.: -Good(s, s') OR -Vleq(s, d+1) OR Vleq(s', d)
-                    wr.cl({
-                                  Wr::lit(good_s_sprime, false),
-                                  Wr::lit(vleqs[s][d+1], false),
-                                  Wr::lit(vleqs[sprime][d], true)});
-                    ++n_upper_bound_clauses;
-                }
-            }
-
-            // -Good(s, s') or -Good(s, s'') - deterministic policy
-            // Uncomment to enforce a deterministic policy
-            /*
-            for (unsigned j=i+1; j < succs.size(); ++j) {
-                unsigned sprimeprime = succs[j];
-                wr.cl({Wr::lit(good_s_sprime, false), Wr::lit(good_s_sprime, false)});
-                ++n_good_tx_clauses;
-            }
-            */
+            // (2') Border condition: V(s', D) implies -Good(s, s')
+            wr.cl({Wr::lit(vs[sprime][max_d], false), Wr::lit(good_s_prime, false)});
+            ++n_descending_clauses;
         }
-
-        // Clauses (4), (5):
-        for (unsigned d=0; d < max_d; ++d) {
-            cnfclause_t clause{Wr::lit(vleqs[s][d+1], false)};
-            for (unsigned sprime:successors(s)) {
-                auto tx = get_transition_id(s, sprime);
-                if (is_necessarily_bad(tx)) continue;
-
-                auto good_s_sprime = good_vars.at(get_class_representative(s, sprime));
-
-
-                if (is_goal(sprime)) clause.push_back(Wr::lit(good_s_sprime, true));
-                else if (is_alive(sprime)) clause.push_back(Wr::lit(good_and_vleq_vars.at({s, sprime, d}), true));
-            }
-            wr.cl(clause);
-            ++n_justification_clauses;
-        }
-        wr.cl({Wr::lit(vleqs[s][0], false)});  // (5) if s is not a goal, then -V(s) <= 0
-        ++n_justification_clauses;
     }
 
     // Clauses (8), (9):
@@ -440,33 +379,24 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
         const auto t = tx2pair.first;
         const auto tprime = tx2pair.second;
 
-        cnfclause_t clause{Wr::lit(good_vars.at(tpair.tx1), false)};
+        cnfclause_t clause{Wr::lit(goods.at(tpair.tx1), false)};
 
         // Compute first the Selected(f) terms
         for (feature_t f:compute_d1d2_distinguishing_features(tr_set_, s, sprime, t, tprime)) {
             if (!ignore_features[f]) {
-                clause.push_back(Wr::lit(var_selected.at(f), true));
+                clause.push_back(Wr::lit(selecteds.at(f), true));
             }
         }
 
         if (!is_necessarily_bad(tpair.tx2)) {
-            auto good_t_tprime = good_vars.at(tpair.tx2);
+            auto good_t_tprime = goods.at(tpair.tx2);
             clause.push_back(Wr::lit(good_t_tprime, true));
         }
         wr.cl(clause);
         n_separation_clauses += 1;
     }
 
-    // Clauses (10)
-    for (const auto s:all_alive()) {
-        auto max_v_s = get_max_v(s);
-        assert(max_v_s <= max_d);
-        if (max_v_s < 0) throw std::runtime_error("State #" + std::to_string(s) + " has infinite V^* value");
-        wr.cl({Wr::lit(vleqs[s][max_v_s], true)});
-        n_max_v_s_clauses += 1;
-    }
-
-    // Force D1(s1, s2) to be true if exactly one of the two states is a goal state
+    // (7): Force D1(s1, s2) to be true if exactly one of the two states is a goal state
     if (options.distinguish_goals) {
         for (unsigned s:goals_) {
             for (unsigned t:nongoals_) {
@@ -482,7 +412,7 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
 
                 cnfclause_t clause;
                 for (unsigned f:d1feats) {
-                    clause.push_back(Wr::lit(var_selected.at(f), true));
+                    clause.push_back(Wr::lit(selecteds.at(f), true));
                 }
 
                 wr.cl(clause);
@@ -492,9 +422,9 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
     }
     
 
-    if (options.force_zeros) {
+    if (options.force_zeros) { // Clauses (8)
         for (unsigned f = 0; f < nf_; ++f) {
-            cnfclause_t clause{Wr::lit(var_selected[f], false)};
+            cnfclause_t clause{Wr::lit(selecteds[f], false)};
 
             for (unsigned tx=0; tx < num_alive_transitions; ++tx) {
                 const auto& txpair = get_state_pair(tx);
@@ -502,7 +432,7 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
                 auto sprime_f = mat.entry(txpair.second, f);
                 
                 if (s_f > 0 && sprime_f == 0) {
-                    clause.push_back(Wr::lit(good_vars.at(get_representative_id(tx)), true));
+                    clause.push_back(Wr::lit(goods.at(get_representative_id(tx)), true));
                 }
             }
 
@@ -512,10 +442,10 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
     }
 
 
-    std::cout << "Posting (weighted) soft constraints for " << var_selected.size() << " features" << std::endl;
+    std::cout << "Posting (weighted) soft constraints for " << selecteds.size() << " features" << std::endl;
     for (unsigned f = 0; f < nf_; ++f) {
         if (!ignore_features[f]) {
-            wr.cl({Wr::lit(var_selected[f], false)}, feature_weight(f));
+            wr.cl({Wr::lit(selecteds[f], false)}, feature_weight(f));
             n_selected_clauses += 1;
         }
     }
@@ -525,16 +455,13 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
     std::cout << "A total of " << wr.nclauses() << " clauses were created" << std::endl;
     std::cout << "\t(Weighted) Select(f): " << n_selected_clauses << std::endl;
     std::cout << "\tPolicy completeness [1]: " << n_good_tx_clauses << std::endl;
-    std::cout << "\tUpper-bounding V(s) clauses [2,3,3']: " << n_upper_bound_clauses << std::endl;
-    std::cout << "\tClauses justifying V(s) bounds [4,5]: " << n_justification_clauses << std::endl;
-    std::cout << "\tV(s)<=d consistency [6,7]: " << n_leq_clauses << std::endl;
-    std::cout << "\tTransition-separation clauses [8,9]: " << n_separation_clauses << std::endl;
-    std::cout << "\tMax V(s) clauses [10]: " << n_max_v_s_clauses << std::endl;
-    std::cout << "\tGoal clauses [11]: " << n_goal_clauses << std::endl;
-    std::cout << "\tZero clauses: " << n_zero_clauses << std::endl;
-    std::cout << "\tGV(s, s', d) auxiliary clauses: " << n_gv_aux_clauses << std::endl;
-    assert(wr.nclauses() == n_selected_clauses + n_good_tx_clauses + n_upper_bound_clauses + n_justification_clauses
-                            + n_leq_clauses + n_separation_clauses + n_gv_aux_clauses + n_max_v_s_clauses
+    std::cout << "\tV descending along good transitions [2]: " << n_descending_clauses << std::endl;
+    std::cout << "\tV is total function within bounds [3,4]: " << n_v_function_clauses << std::endl;
+    std::cout << "\tTransition-separation clauses [5,6]: " << n_separation_clauses << std::endl;
+    std::cout << "\tGoal clauses [7]: " << n_goal_clauses << std::endl;
+    std::cout << "\tZero clauses [8]: " << n_zero_clauses << std::endl;
+    assert(wr.nclauses() == n_selected_clauses + n_good_tx_clauses + n_descending_clauses
+                            + n_v_function_clauses + n_separation_clauses
                             + n_goal_clauses + n_zero_clauses);
 
 
@@ -593,7 +520,7 @@ TransitionClassificationEncoding::compute_transitions_to_distinguish(
     if (load_transitions_from_previous_iteration) {
         last_transitions = load_transitions_to_distinguish();
     } else {
-        last_transitions = generate_t0_transitions(5);
+        last_transitions = generate_t0_transitions();
     }
 
     std::vector<transition_pair> transitions_to_distinguish;

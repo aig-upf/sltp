@@ -44,10 +44,14 @@ public:
         return necessarily_bad_transitions_.find(tx) != necessarily_bad_transitions_.end();
     }
 
+    inline int get_vstar(unsigned s) const {
+        int vstar = tr_set_.transitions().vstar(s);
+        return vstar < 0 ? -1 : vstar;
+    }
+
     inline int get_max_v(unsigned s) const {
         int vstar = tr_set_.transitions().vstar(s);
-        if (vstar < 0) return -1;
-        return std::ceil(options.v_slack * vstar);
+        return vstar < 0 ? -1 : std::ceil(options.v_slack * vstar);
     }
 
     inline unsigned compute_D() const {
