@@ -1,4 +1,5 @@
 from sltp.util.misc import update_dict
+from sltp.util.names import visitall_names
 
 
 def experiments():
@@ -6,7 +7,7 @@ def experiments():
         domain_dir="visitall-opt11-strips",
         domain="domain.pddl",
         test_domain="domain.pddl",
-        # feature_namer=gripper_names,
+        feature_namer=visitall_names,
         pipeline="transition_classifier",
         maxsat_encoding="separation",
         complete_only_wrt_optimal=True,
@@ -39,8 +40,30 @@ def experiments():
         use_equivalence_classes=True,
         # use_feature_dominance=True,
         # use_incremental_refinement=True,
+    )
 
-        # feature_generator=debug_features,
+    exps["test"] = update_dict(
+        base,
+        instances=[
+            # 'problem02-full.pddl',
+            # 'problem03-full.pddl',
+            "tests.pddl",
+        ],
+        test_instances=[
+            # 'problem03-full.pddl',
+            # 'problem04-full.pddl',
+        ],
+        # test_policy_instances=all_test_instances(),
+
+        # max_concept_size=8,
+        # distance_feature_max_complexity=8,
+        # cond_feature_max_complexity=8,
+        use_equivalence_classes=True,
+        # use_feature_dominance=True,
+        # use_incremental_refinement=True,
+        print_denotations=True,
+
+        feature_generator=debug_features,
     )
 
     return exps
@@ -51,7 +74,11 @@ def all_test_instances():
 
 
 def debug_features(lang):
-    nallbelow_wellplaced = "Num[Forall(Star(on),Equal(on_g,on))]"
-    ontarget = "Num[Equal(on_g,on)]"
-    nclear = f"Num[clear]"
-    return [nallbelow_wellplaced, nclear, ontarget]
+    dist_to_unvisited = "Dist[at-robot;connected;Not(visited)]"
+    num_visited = "Num[visited]"
+    # num_unvisited = "Num[Not(visited)]"
+    return [
+        dist_to_unvisited,
+        num_visited,
+        # num_unvisited,
+    ]

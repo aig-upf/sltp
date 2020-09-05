@@ -226,3 +226,13 @@ def taxi_names(feature):
     }
 
     return extend_namer_to_all_features(base).get(s, s)
+
+
+def visitall_names(feature):
+    s = str(feature)
+    base = {
+        "Dist[at-robot;connected;Not(visited)]": "dist-to-closest-unvisited",
+        "visited": "n-visited",
+        "Not(visited)": "n-unvisited",
+    }
+    return extend_namer_to_all_features(base).get(s, s)
