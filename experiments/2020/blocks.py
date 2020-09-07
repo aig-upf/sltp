@@ -95,6 +95,7 @@ def experiments():
         # use_incremental_refinement=True,
     )
 
+
     exps["on_fn"] = update_dict(
         fn_base,
         instances=["training_on_5_fs.pddl"],
@@ -108,7 +109,7 @@ def experiments():
         # use_incremental_refinement=True,
     )
 
-    exps["all_5"] = update_dict(
+    exps["4op_5"] = update_dict(
         strips_base,
 
         instances=[
@@ -117,18 +118,24 @@ def experiments():
         test_instances=[
 
         ],
-        test_policy_instances=[
-            "probBLOCKS-6-0.pddl",
-            "probBLOCKS-6-1.pddl",
-            "probBLOCKS-6-2.pddl",
-            "probBLOCKS-7-0.pddl",
-            "probBLOCKS-7-1.pddl",
-            "probBLOCKS-7-2.pddl",
+        test_policy_instances=all_4op_test_instances(),
 
+        max_concept_size=12,
+        use_incremental_refinement=True,
+        use_equivalence_classes=True,
+        use_feature_dominance=False,
+    )
+
+    exps["4op_debug"] = update_dict(
+        exps["4op_5"],
+
+        instances=[
+            "probBLOCKS-4-0.pddl"
         ],
 
-        max_concept_size=10,
-        use_incremental_refinement=True,
+        # transition_classification_policy=debug_policy_4op,
+        feature_generator=debug_features_4op,
+        use_incremental_refinement=False,
         use_equivalence_classes=True,
         use_feature_dominance=False,
     )
@@ -256,3 +263,48 @@ def debug_features_at2(lang):
     ontarget = "Num[Equal(on_g,on)]"
     nclear = f"Num[clear]"
     return [nallbelow_wellplaced, nclear, ontarget]
+
+
+def debug_policy_4op():
+
+    # NOTE the -holding below is important because in the standard BW instances the goal is underspecified:
+    # the goal is always a tower, but the block that must go on the table left implicitly. Let's say that block is D
+    # in some instance, and we don't have that -holding in the definition of well-placed.
+    # Then, if D is being held, it'd be considered well-placed, when it should not.
+    wp = "And(And(Equal(on_g,on),Forall(Star(on),Equal(on_g,on))),Not(holding))"
+    # wp = "And(Equal(on_g,on),Forall(Star(on),Equal(on_g,on)))"
+    ready_to_rock = f"Bool[And(Exists(on_g,And(clear,{wp})),holding)]"
+    nwp = f"Num[{wp}]"
+    holding = f"Bool[holding]"
+    nontable = f"Num[ontable]"
+
+    return [
+        # Pick up some block that has blocks below misplaced when possible
+        # [(some_below_misplaced, 'DEC'), (holding, 'ADD')],
+        # [(holding, 'ADD'), (nallbelow_wellplaced, 'NIL')],
+        [(holding, 'ADD'), (ready_to_rock, 'ADD'), (nontable, 'DEC')],  # pick one from the table if can be placed correctly next
+        [(holding, 'ADD'), (nwp, 'NIL'), (nontable, 'NIL')],  # pick
+        # [(holding, 'ADD'), (some_below_misplaced, 'DEC')],  # pick
+
+        # Put down the held block on its target if possible
+        [(holding, 'DEL'), (ready_to_rock, "DEL"), (nwp, 'INC')],
+
+        # Put down the held block on table if cannot put it well placed
+        [(holding, 'DEL'), (ready_to_rock, "=0"), (nontable, "INC")],
+    ]
+
+
+def debug_features_4op(lang):
+    wp = "And(And(Equal(on_g,on),Forall(Star(on),Equal(on_g,on))),Not(holding))"
+    ready_to_rock = f"Bool[And(Exists(on_g,And(clear,{wp})),holding)]"
+    nwp = f"Num[{wp}]"
+    holding = f"Bool[holding]"
+    nontable = f"Num[ontable]"
+    return [nwp, ready_to_rock, holding, nontable]
+
+
+def all_4op_test_instances():
+    res = []
+    for nblocks in [6, 7, 8, 9, 10, 11]:
+        res += [f"probBLOCKS-{nblocks}-{i}.pddl" for i in [0, 1, 2]]
+    return res

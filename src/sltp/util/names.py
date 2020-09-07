@@ -121,6 +121,9 @@ def blocksworld_names(feature):
         "Exists(on,Nominal(a))": "not-clear(a)",
 
         "Not(And(Equal(on_g,on),Equal(Star(on_g),Star(on))))": "not-ontarget-or-not-sup-well-placed",
+
+        "Exists(Star(on),Not(Equal(on_g,on)))": "some_below_misplaced",
+        "And(And(Exists(on_g,clear),Forall(Star(on),Equal(on_g,on))),holding)": "ready_to_rock",
     }
 
     return extend_namer_to_all_features(base).get(s, s)
@@ -267,4 +270,14 @@ def childsnack_names(feature):
         "Exists(ontray,Exists(at,Nominal(kitchen)))": "num-sandwiches-on-some-tray-in-kitchen",
     }
 
+    return extend_namer_to_all_features(base).get(s, s)
+
+
+def floortile_names(feature):
+    s = str(feature)
+    base = {
+        "Exists(at,Not(Nominal(roomb)))": "nballs-A",
+        "Exists(at,Nominal(roomb))": "nballs-B",
+        "Exists(carry,<universe>)": "ncarried",
+    }
     return extend_namer_to_all_features(base).get(s, s)
