@@ -240,6 +240,9 @@ def compute_static_atoms(problem):
     static_predicates = set()
     for atom in init_atoms:
         predicate_name = atom[0]
+        if predicate_name == 'total-cost':
+            continue
+
         if predicate_name not in fluent_symbols:
             static_atoms.add(atom)
             static_predicates.add(predicate_name)

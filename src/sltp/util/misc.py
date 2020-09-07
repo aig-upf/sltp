@@ -75,7 +75,7 @@ def types_as_atoms(lang):
     atoms = set()
     for s in lang.sorts:
         # This takes into account type inheritance, as s.domain() contains constants of type s and of derived types.
-        if s != lang.Object and not s.builtin:
+        if s != lang.Object and s.name != 'number' and not s.builtin:
             atoms.update((s.name, c.symbol) for c in s.domain())
     return atoms
 
