@@ -53,6 +53,9 @@ struct Options {
     //! decrease to zero in some transition
     bool force_zeros;
 
+    //! In the transition-separation encoding, whether to force any V-descending transition to be labeled as Good
+    bool decreasing_transitions_must_be_good;
+
     //! A list of user-provided feature IDs for which we want to enforce selection
     std::vector<unsigned> enforced_features;
 

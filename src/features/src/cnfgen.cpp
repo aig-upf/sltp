@@ -66,6 +66,9 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
          "In the transition-separation encoding, whether to post constraints to ensure that all selected features "
          "decrease to zero in some transition")
 
+        ("decreasing_transitions_must_be_good",
+         "In the transition-separation encoding, whether to force any V-descending transition to be labeled as Good")
+
         ("use-feature-dominance",
          "In the transition-separation encoding, whether we want to exploit the dominance among features to ignore "
          "dominated features and reduce the size of the encoding.")
@@ -94,6 +97,7 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
     options.use_feature_dominance = vm.count("use-feature-dominance") > 0;
     options.use_incremental_refinement = vm.count("use-incremental-refinement") > 0;
     options.distinguish_goals = vm.count("distinguish-goals") > 0;
+    options.decreasing_transitions_must_be_good = vm.count("decreasing_transitions_must_be_good") > 0;
     options.force_zeros = vm.count("force_zeros") > 0;
     options.cross_instance_constraints = vm.count("cross_instance_constraints") > 0;
     options.v_slack = vm["v_slack"].as<double>();

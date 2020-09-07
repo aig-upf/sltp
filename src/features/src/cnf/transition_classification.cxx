@@ -277,7 +277,7 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
             }
         }
 
-        // Add clauses (3), (4)
+        // Add clauses (4), (5)
         wr.cl(within_range_clause);
         n_v_function_clauses += 1;
 
@@ -345,17 +345,34 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
 
     for (const auto s:all_alive()) {
         for (const auto sprime:successors(s)) {
-            if (!is_alive(sprime)) continue;
             if (is_necessarily_bad(get_transition_id(s, sprime))) continue; // includes alive-to-dead transitions
-
             const auto good_s_prime = goods.at(get_class_representative(s, sprime));
-            for (unsigned d=1; d < max_d; ++d) {
-                // (2) Good(s, s') and V(s',d) -> V(s) > d
-                cnfclause_t clause{Wr::lit(good_s_prime, false),
-                                   Wr::lit(vs[sprime][d], false)};
 
-                for (unsigned k=d+1; k<=max_d; ++k) {
-                    clause.push_back(Wr::lit(vs[s][k], true));
+            if (options.decreasing_transitions_must_be_good) {
+                // (3') Border condition: if s' is a goal, then (s, s') must be good
+                if (is_goal(sprime)) {
+                    wr.cl({Wr::lit(good_s_prime, true)});
+                    ++n_descending_clauses;
+                }
+            }
+
+            if (!is_alive(sprime)) continue;
+
+            for (unsigned dprime=1; dprime < max_d; ++dprime) {
+                // (2) Good(s, s') and V(s',dprime) -> V(s) > dprime
+                cnfclause_t clause{Wr::lit(good_s_prime, false),
+                                   Wr::lit(vs[sprime][dprime], false)};
+
+                for (unsigned d = dprime + 1; d <= max_d; ++d) {
+                    clause.push_back(Wr::lit(vs[s][d], true));
+
+                    // (3) V(s') < V(s) -> Good(s, s')
+                    if (options.decreasing_transitions_must_be_good) {
+                        wr.cl({Wr::lit(vs[s][d], false),
+                                      Wr::lit(vs[sprime][dprime], false),
+                                      Wr::lit(good_s_prime, true)});
+                        ++n_descending_clauses;
+                    }
                 }
                 wr.cl(clause);
                 ++n_descending_clauses;
@@ -367,7 +384,7 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
         }
     }
 
-    // Clauses (8), (9):
+    // Clauses (6), (7):
     std::cout << "Posting distinguishability constraints for " << transitions_to_distinguish.size()
               << " pairs of transitions" << std::endl;
     for (const auto& tpair:transitions_to_distinguish) {
@@ -396,7 +413,7 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
         n_separation_clauses += 1;
     }
 
-    // (7): Force D1(s1, s2) to be true if exactly one of the two states is a goal state
+    // (8): Force D1(s1, s2) to be true if exactly one of the two states is a goal state
     if (options.distinguish_goals) {
         for (unsigned s:goals_) {
             for (unsigned t:nongoals_) {
@@ -422,7 +439,7 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
     }
     
 
-    if (options.force_zeros) { // Clauses (8)
+    if (options.force_zeros) { // Clauses (9)
         for (unsigned f = 0; f < nf_; ++f) {
             cnfclause_t clause{Wr::lit(selecteds[f], false)};
 

@@ -41,7 +41,7 @@ def run(config, data, rng):
         solution = solve(config.experiment_dir, config.cnf_filename, config.maxsat_solver, config.maxsat_timeout)
 
         if solution.result == "UNSATISFIABLE":
-            return ExitCode.MaxsatModelUnsat, dict()
+            return ExitCode.MaxsatModelUnsat, dict(transition_classification_policy=None)
         elif solution.result == "SATISFIABLE":
             logging.info(f"Possibly suboptimal MAXSAT solution with cost {solution.cost} found")
         else:
@@ -83,6 +83,7 @@ def generate_cnf(config, data):
     args += ["--distinguish-goals"] if config.distinguish_goals else []
     args += ["--cross_instance_constraints"] if config.cross_instance_constraints else []
     args += ["--force_zeros"] if config.force_zeros else []
+    args += ["--decreasing_transitions_must_be_good"] if config.decreasing_transitions_must_be_good else []
     retcode = execute([cmd] + args)
 
     if retcode == 0:

@@ -175,6 +175,12 @@ The policy has to be complete with respect to all alive states:
 \end{align}
 
 
+\smallpar{C3 (Optional)} All descending transitions must be considered Good:
+\begin{align}
+ V(s, d) \land V(s', d') \rightarrow Good(s, s'),&\;\; \text{for $s, s'$ alive, $(s, s') \not\in \badtx$, $1 \leq d' < d \leq D$,} \\
+ Good(s, s'),&\;\; \text{for $s$ alive, $s'$ goal.} \tag{\theequation${}^\prime$}
+\end{align}
+
 %\smallpar{C4-5} Any upper bound on $V(s)$ (for $s$ not a goal) needs to be justified:
 %\begin{align}
 % V(s) \leq d+1 \rightarrow \bigvee_{\substack{
