@@ -211,6 +211,9 @@ def generate_experiment(expid, domain_dir, domain, **kwargs):
         # In the transition-separation encoding, whether to post constraints to ensure that all selected features
         # decrease to zero in some transition
         force_zeros=False,
+
+        # In the transition-separation encoding, whether to force any V-descending transition to be labeled as Good
+        decreasing_transitions_must_be_good=False,
     )
 
     parameters = {**defaults, **kwargs}  # Copy defaults, overwrite with user-specified parameters
