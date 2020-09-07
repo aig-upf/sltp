@@ -157,11 +157,12 @@ def create_pyperplan_abstract_policy_based_search(pyperplan, search_policy):
             if expanded % 1000 == 0:
                 logging.debug(f"Number of expanded states so far in policy-based search: {expanded}")
 
-            successor_generator = ((op, op.apply(node.state)) for op in task.operators if op.applicable(node.state))
-            op, succ = search_policy(node.state, successor_generator)
+            successors = [(op, op.apply(node.state)) for op in task.operators if op.applicable(node.state)]
+            op, succ = search_policy(node.state, successors)
 
             if succ in closed:  # loop detection
                 logging.error(f"Policy incurred in a loop after {expanded} expansions. Repeated node: {succ}")
+                logging.error(f"Trajectory from initial state: {node.extract_solution()}")
                 raise PolicySearchException(ExitCode.AbstractPolicyNonTerminatingOnTestInstances)
 
             node = searchspace.make_child_node(node, op, succ)
@@ -181,16 +182,23 @@ class PolicySearchException(Exception):
 def create_action_selection_function_from_transition_policy(model_factory, static_atoms, policy):
     assert isinstance(policy, TransitionClassificationPolicy)
 
-    def _policy(state, successor_generator):
+    def _policy(state, successors):
         m0 = generate_model_from_state(model_factory, state, static_atoms)
 
-        for op, succ in successor_generator:
+        for op, succ in successors:
             m1 = generate_model_from_state(model_factory, succ, static_atoms)
             if policy.transition_is_good(m0, m1):
                 return op, succ
 
         # No transition labeled as good by the policy
         logging.warning(f"Policy is incomplete on state:\n{state}")
+
+        # Report the reason why no transition is labeled as good
+        for op, succ in successors:
+            m1 = generate_model_from_state(model_factory, succ, static_atoms)
+            print(f"\nTransition to state {succ} is bad because:")
+            policy.explain_why_transition_is_bad(m0, m1)
+
         raise PolicySearchException(ExitCode.AbstractPolicyNotCompleteOnTestInstances)
 
     return _policy

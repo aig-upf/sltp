@@ -202,18 +202,27 @@ class TransitionClassificationPolicy:
         # If the given transition satisfies any of the clauses in the DNF, we consider it "good"
         return any(self.does_transition_satisfy_clause(clause, m0, m1) for clause in self.dnf)
 
+    def explain_why_transition_is_bad(self, m0, m1):
+        for clause in self.dnf:
+            print(f'\tClause: {self.print_clause(clause)}')
+            self.does_transition_satisfy_clause(clause, m0, m1, explain=True)
+
     @staticmethod
-    def does_transition_satisfy_clause(clause, m0, m1):
+    def does_transition_satisfy_clause(clause, m0, m1, explain=False):
         for atom in clause:
             feat = atom.feature
 
             if atom.is_state_feature():
                 state_val = feat.denotation(m0) != 0
                 if state_val != atom.value:
+                    if explain:
+                        print(f'\t\t{atom} not satisfied by transition values ({feat.denotation(m0)}, {feat.denotation(m1)})')
                     return False
             else:
                 tx_val = feat.feature.diff(feat.denotation(m0), feat.denotation(m1))
                 if not changes_are_analogous(tx_val, atom.value):
+                    if explain:
+                        print(f'\t\t{atom} not satisfied by transition values ({feat.denotation(m0)}, {feat.denotation(m1)})')
                     return False
         return True
 
