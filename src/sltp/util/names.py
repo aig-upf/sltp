@@ -190,10 +190,18 @@ def gridworld_names(feature):
 def miconic_names(feature):
     s = str(feature)
     base = {
-        "": "",
-        "": "",
-        "": "",
-        "": "",
+        "And(lift-at,Exists(Inverse(destin),boarded))": "lift_at_dest_some_boarded_pass",
+        "served": "n-served",
+        "boarded": "n-boarded",
+
+        # num passengers unboarded s.t. lift is on their origin floor
+        "And(And(Not(boarded),Not(served)),Exists(origin,lift-at))": "n_pass_ready_to_board",
+        "And(lift-at,Exists(Inverse(origin),And(Not(boarded),Not(served))))": "lift_at_origin_some_awaiting_pass",
+
+        "Exists(origin,lift-at)": "n-pass-waiting-on-lifts-floor",
+        "And(Exists(destin,lift-at),boarded)": "n-boarded-and-at-destiny",
+        "Forall(origin,lift-at)": "n-ready-to-board",
+
     }
 
     return extend_namer_to_all_features(base).get(s, s)
@@ -204,8 +212,6 @@ def satellite_names(feature):
     base = {
         "calibrated": "n-calibrated-instruments",
         "power_on": "n-on-instruments",
-        "": "",
-        "": "",
         "": "",
         "": "",
     }
@@ -235,4 +241,30 @@ def visitall_names(feature):
         "visited": "n-visited",
         "Not(visited)": "n-unvisited",
     }
+    return extend_namer_to_all_features(base).get(s, s)
+
+
+def childsnack_names(feature):
+    s = str(feature)
+    base = {
+        # "": "",
+        "served": "num-served-children",
+        "And(Not(served),child)": "num-unserved-children",
+        "notexist": "num-unprepared-sandwiches",
+        "no_gluten_sandwich": "num-sandwiches-wo-gluten",
+        "at_kitchen_bread": "num-breads-at-kitchen",
+        "at_kitchen_content": "num-fillings-at-kitchen",
+        "at_kitchen_sandwich": "num-sandwiches-at-kitchen",
+        "Exists(ontray,<universe>)": "num-sandwiches-on-some-tray",
+        "And(allergic_gluten,served)": "num-allergic-served",
+        "Exists(at,Nominal(kitchen))": "num-trays-on-kitchen",
+        "And(Not(served),not_allergic_gluten)": "num-unallergic-unserved",
+        "And(Not(served),allergic_gluten)": "num-allergic-unserved",
+        "And(Not(no_gluten_content),content-portion)": "num-gluten-free-fillings",
+        "And(Not(no_gluten_bread),bread-portion)": "num-gluten-free-breads",
+        "And(Not(no_gluten_sandwich),sandwich)": "num-sandwiches-with-gluten",
+        "Exists(at,Exists(Inverse(waiting),<universe>))": "num-trays-on-place-with-some-child",
+        "Exists(ontray,Exists(at,Nominal(kitchen)))": "num-sandwiches-on-some-tray-in-kitchen",
+    }
+
     return extend_namer_to_all_features(base).get(s, s)

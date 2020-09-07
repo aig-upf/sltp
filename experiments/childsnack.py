@@ -1,4 +1,5 @@
 from sltp.util.misc import update_dict, extend_namer_to_all_features
+from sltp.util.names import childsnack_names
 
 
 def experiments():
@@ -8,7 +9,7 @@ def experiments():
         domain="domain.pddl",
         test_domain="domain.pddl",
         complete_only_wrt_optimal=True,
-        feature_namer=feature_namer,
+        feature_namer=childsnack_names,
     )
 
     exps = dict()
@@ -60,32 +61,6 @@ def experiments():
     )
 
     return exps
-
-
-def feature_namer(feature):
-    s = str(feature)
-    base = {
-        # "": "",
-        "served": "num-served-children",
-        "And(Not(served),child)": "num-unserved-children",
-        "notexist": "num-unprepared-sandwiches",
-        "no_gluten_sandwich": "num-sandwiches-wo-gluten",
-        "at_kitchen_bread": "num-breads-at-kitchen",
-        "at_kitchen_content": "num-fillings-at-kitchen",
-        "at_kitchen_sandwich": "num-sandwiches-at-kitchen",
-        "Exists(ontray,<universe>)": "num-sandwiches-on-some-tray",
-        "And(allergic_gluten,served)": "num-allergic-served",
-        "Exists(at,Nominal(kitchen))": "num-trays-on-kitchen",
-        "And(Not(served),not_allergic_gluten)": "num-unallergic-unserved",
-        "And(Not(served),allergic_gluten)": "num-allergic-unserved",
-        "And(Not(no_gluten_content),content-portion)": "num-gluten-free-fillings",
-        "And(Not(no_gluten_bread),bread-portion)": "num-gluten-free-breads",
-        "And(Not(no_gluten_sandwich),sandwich)": "num-sandwiches-with-gluten",
-        "Exists(at,Exists(Inverse(waiting),<universe>))": "num-trays-on-place-with-some-child",
-        "Exists(ontray,Exists(at,Nominal(kitchen)))": "num-sandwiches-on-some-tray-in-kitchen",
-    }
-
-    return extend_namer_to_all_features(base).get(s, s)
 
 
 def all_test_instances():
