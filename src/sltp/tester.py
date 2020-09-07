@@ -2,7 +2,7 @@ import logging
 import sys
 
 from .models import FeatureModel
-from .separation import TransitionClassificationPolicy
+from .separation import TransitionClassificationPolicy, generate_user_provided_policy
 from .util.tools import Abstraction, AbstractAction, generate_qualitative_effects_from_transition
 from .features import generate_model_cache, create_model_factory, compute_static_atoms
 from .returncodes import ExitCode
@@ -202,8 +202,12 @@ def test_transition_classification_policy(config, data, rng):
         return ExitCode.Success, dict()
 
     def create_policy(model_factory, static_atoms):
-        return create_action_selection_function_from_transition_policy(model_factory, static_atoms,
-                                                                       data.transition_classification_policy)
+        if config.transition_classification_policy is not None:
+            policy = generate_user_provided_policy(config)
+        else:
+            policy = data.transition_classification_policy
+
+        return create_action_selection_function_from_transition_policy(model_factory, static_atoms, policy)
 
     # Test that the policy reaches a goal when applied on all test instances
     res = apply_policy_on_test_instances(config, create_policy)

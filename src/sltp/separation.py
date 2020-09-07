@@ -1,6 +1,5 @@
 import itertools
 import os
-import sys
 
 from natsort import natsorted
 
@@ -180,6 +179,14 @@ class DNFAtom:
         return self.feature == other.feature and self.value == other.value
 
 
+def changes_are_analogous(change1, change2):
+    normalization = {
+        FeatureValueChange.ADD: FeatureValueChange.INC,
+        FeatureValueChange.DEL: FeatureValueChange.DEC,
+    }
+    return normalization.get(change1, change1) == normalization.get(change2, change2)
+
+
 class TransitionClassificationPolicy:
     def __init__(self, features):
         self.features = features
@@ -206,7 +213,7 @@ class TransitionClassificationPolicy:
                     return False
             else:
                 tx_val = feat.feature.diff(feat.denotation(m0), feat.denotation(m1))
-                if tx_val != atom.value:
+                if not changes_are_analogous(tx_val, atom.value):
                     return False
         return True
 
