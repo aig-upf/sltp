@@ -163,8 +163,8 @@ def hanoi_names(feature):
 def logistics_names(feature):
     s = str(feature)
     base = {
-        "Exists(in,<universe>)": "num-loaded-packages",
-        "And(Not(Equal(at_g,at)),obj)": "num-packages-not-in-destiny",
+        "Exists(in,<universe>)": "n_loaded_packages",  # both in plane or truck
+        "And(Not(Equal(at_g,at)),obj)": "n_undelivered_packages",
         "Exists(at_g,Exists(Inverse(at),airplane))": "num-packages-whose-destiny-has-an-airplane",
         "Exists(at_g,Exists(Inverse(at),<universe>))": "num-packages-with-destiny",
         "Exists(at_g,airport)": "num-packages-whose-destiny-has-an-airport",
@@ -228,9 +228,9 @@ def taxi_names(feature):
         "And(loct,locp)": "at-passenger-location",
         "And(locp,Nominal(inside_taxi))": "passenger-in-taxi",
         "Dist[loct;adjacent;locp]": "dist-to-passenger",
-        "Dist[locp, adjacent, loct]": "dist-to-passenger",
+        "Dist[locp;adjacent;loct]": "dist-to-passenger",
         "Dist[loct;Restrict(adjacent,<universe>);locp]": "dist-to-passenger",
-        "Dist[locp_g, adjacent, loct]": "dist-to-passenger-target",
+        "Dist[locp_g;adjacent;loct]": "dist-to-passenger-target",
         "If{Bool[And(locp,Nominal(inside_taxi))]}{Dist[locp_g;adjacent;loct]}{Infty}": "cond-dist-to-dest",
     }
 

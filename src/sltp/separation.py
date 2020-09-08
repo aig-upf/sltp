@@ -227,7 +227,11 @@ class TransitionClassificationPolicy:
         return True
 
     def print(self):
-        print("Transition-classification policy with the following transitions labeled as good:")
+        max_k = max(f.feature.complexity() for f in self.features)
+        print(f"Features (total: {len(self.features)}; max k = {max_k}):")
+        for f in self.features:
+            print(f"  {f} [k={f.feature.complexity()}]")
+        print("Policy:")
         for i, clause in enumerate(self.dnf, start=1):
             print(f"  {i}. " + self.print_clause(clause))
 

@@ -298,6 +298,11 @@ class MaxsatProblemSolutionStep(Step):
     def get_required_attributes(self):
         return ['maxsat_solver', 'maxsat_timeout']
 
+    def process_config(self, config):
+        config["cnf_filename"] = compute_maxsat_filename(config)
+        config["maxsat_variables_file"] = compute_maxsat_variables_filename(config)
+        return config
+
     def get_required_data(self):
         return []
 
@@ -400,6 +405,8 @@ class TransitionClassificationPolicyStep(Step):
         return ['serialized_feature_filename', 'domain']
 
     def process_config(self, config):
+        config["wsat_varmap_filename"] = compute_info_filename(config, "varmap.wsat")
+        config["wsat_allvars_filename"] = compute_info_filename(config, "allvars.wsat")
         return config
 
     def get_required_data(self):
