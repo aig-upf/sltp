@@ -239,20 +239,6 @@ We simply post a constraint $\neg Select(f)$ for each feature $f$ in the pool, w
 
 \section{Empirical Results}
 
-\subsection{Blocks:clear}
-\begin{itemize}
- \item Two instances of 5 blocks.
- \item 1 iteration, 19759 vars + 69255 clauses
- \item Number of transitions/equivalence classes: 1161/55
- \item Optimal MAXSAT solution with cost 5 found
-\end{itemize}
-
-
-
-\begin{Verbatim}[fontsize=\footnotesize]
-0. n(a) DECs AND n-ontable NILs AND n-ontable>0
-1. n(a) NILs AND n-ontable INCs AND n-ontable>0
-\end{Verbatim}
 
 
 \subsection{Blocks:on}
@@ -296,22 +282,6 @@ We simply post a constraint $\neg Select(f)$ for each feature $f$ in the pool, w
 \end{Verbatim}
 
 
-\subsection{Gripper}
-One simple (smallest) standard instance, 4 blocks, two rooms.
-1 iteration
-CNF Theory: 34418 vars + 124935 clauses
-835 features
-Number of transitions/equivalence classes: 1140/65
-concept size bound=10,
-Optimal MAXSAT solution with cost 5 found
-
-\begin{Verbatim}[fontsize=\footnotesize]
-0. ncarried NILs AND ncarried=0 AND robby-at-B DECs
-1. ncarried DECs AND robby-at-B NILs AND robby-at-B>0
-2. ncarried INCs AND ncarried=0 AND robby-at-B NILs AND robby-at-B=0
-3. ncarried NILs AND ncarried>0 AND robby-at-B INCs AND robby-at-B=0
-\end{Verbatim}
-
 
 \subsection{Spanner}
 
@@ -325,7 +295,6 @@ Optimal MAXSAT solution with cost 5 found
  \item Optimal MAXSAT solution with cost 9 found
 \end{itemize}
 
-
 NOTE: Features of the form $f1>f2$ are not necessary for this solution.
 
 \begin{Verbatim}[fontsize=\footnotesize]
@@ -334,20 +303,6 @@ NOTE: Features of the form $f1>f2$ are not necessary for this solution.
 2. bobs-loc-empty DELs AND n-items-somewhere NILs AND n-items-somewhere>0 AND n-tightened NILs AND n-tightened=0
 3. bobs-loc-empty NILs AND bobs-loc-empty=0 AND n-items-somewhere NILs AND n-items-somewhere>0 AND n-tightened INCs
 4. bobs-loc-empty ADDs AND n-items-somewhere DECs AND n-tightened NILs AND n-tightened=0
-\end{Verbatim}
-
-\subsection{Pick Reward}
-1 5x5 training instance
-3 iteration
-CNF Theory: 18519 vars + 76267 clauses
-514 features
-Number of transitions/equivalence classes: 432/361
-concept size bound=8,
-Optimal MAXSAT solution with cost 7 found
-
-\begin{Verbatim}[fontsize=\footnotesize]
- 1. n-rewards NILs AND n-rewards>0 AND unblocked-dist-to-closest-reward DECs AND unblocked-dist-to-closest-reward>0
- 2. n-rewards DECs AND unblocked-dist-to-closest-reward INCs AND unblocked-dist-to-closest-reward=0
 \end{Verbatim}
 
 
