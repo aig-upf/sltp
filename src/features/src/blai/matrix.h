@@ -74,6 +74,8 @@ class FeatureMatrix {
             return deadends_.find(s) != deadends_.end();
         }
 
+        inline bool feature_is_boolean(unsigned f) const { return binary_features_.at(f); }
+
         feature_value_t entry(unsigned s, unsigned f) const {
             return rowdata_[s][f];
         }
@@ -86,7 +88,7 @@ class FeatureMatrix {
             os << "FeatureMatrix stats: #states=" << num_states_
                << ", #features=" << num_features_
                << ", #binary-features=" << std::count(binary_features_.begin(), binary_features_.end(), true)
-               << ", #numeric-features=" << std::count(numeric_features_.begin(), binary_features_.end(), true)
+               << ", #numeric-features=" << std::count(numeric_features_.begin(), numeric_features_.end(), true)
                << std::endl;
             for (unsigned s = 0; s < num_states_; ++s) {
                 os << "state " << s << ":";

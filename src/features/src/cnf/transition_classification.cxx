@@ -441,6 +441,8 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
 
     if (options.force_zeros) { // Clauses (9)
         for (unsigned f = 0; f < nf_; ++f) {
+            if (tr_set_.matrix().feature_is_boolean(f)) continue;
+
             cnfclause_t clause{Wr::lit(selecteds[f], false)};
 
             for (unsigned tx=0; tx < num_alive_transitions; ++tx) {
