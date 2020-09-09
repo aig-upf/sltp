@@ -21,7 +21,6 @@ def experiments():
         # concept_generation_timeout=120,  # in seconds
         maxsat_timeout=None,
 
-        force_zeros=True,
         distinguish_goals=True,
     )
 
