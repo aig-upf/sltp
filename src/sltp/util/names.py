@@ -29,9 +29,9 @@ def gripper_names(feature):
         # "Not(And(Not(And(at-robby,Nominal(roomb))),Forall(at,And(at-robby,Nominal(roomb)))))": "",
         # "Not(And(Not(And(Forall(at,at-robby),ball)),Not(And(at-robby,Nominal(roomb)))))": "",
         # "Not(And(Forall(at-robby,And(Not(Nominal(roomb)),Exists(Inverse(at),<universe>))),Forall(carry,<empty>)))":
-        #     ""
         "And(Exists(carry,<universe>),Exists(at_g,at-robby))": "if-robot-at-B-then-num-carried-balls-else-emptyset",
         "Exists(at_g,at-robby)": "robby-at-B",  # This one only works for a single target room
+        "Not(Equal(at_g,at))": "n-balls-not-at-B",
     }
     return extend_namer_to_all_features(base).get(s, s)
 
@@ -110,6 +110,7 @@ def blocksworld_names(feature):
         "And(Forall(Star(on),Equal(on_g,on)),Equal(on_g,on))": "n-well-placed",
         "Equal(Star(loc_g),Star(loc))": "n-superficially-well-placed",  # FSTRIPS
         "Equal(Star(on_g),Star(on))": "n-superficially-well-placed",
+        "Not(Equal(Star(on_g),Star(on)))": "n-superficially-misplaced",
         "Equal(loc_g,loc)": "n-ontarget",  # FSTRIPS
         "Not(Equal(loc_g,loc))": "n-not-ontarget",  # FSTRIPS
         "Equal(on_g,on)": "n-ontarget",
@@ -119,6 +120,7 @@ def blocksworld_names(feature):
         "Forall(Star(on),Equal(on_g,on))": "n-all-below-well-placed",
         "Exists(on,Nominal(b))": "not-clear(b)",
         "Exists(on,Nominal(a))": "not-clear(a)",
+
 
         "Not(And(Equal(on_g,on),Equal(Star(on_g),Star(on))))": "not-ontarget-or-not-sup-well-placed",
 
@@ -241,6 +243,7 @@ def visitall_names(feature):
     s = str(feature)
     base = {
         "Dist[at-robot;connected;Not(visited)]": "dist-to-closest-unvisited",
+        "Dist[at-robot;connected;Exists(connected,Not(visited))]": "dist-to-closest-adj-to-unvisited",
         "visited": "n-visited",
         "Not(visited)": "n-unvisited",
     }

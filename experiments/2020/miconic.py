@@ -25,6 +25,9 @@ def experiments():
 
         # concept_generation_timeout=120,  # in seconds
         maxsat_timeout=None,
+
+        force_zeros=True,
+        distinguish_goals=True,
     )
 
     exps = dict()
@@ -44,11 +47,14 @@ def experiments():
         ],
         test_policy_instances=all_test_instances(),
 
-        max_concept_size=10,
+        max_concept_size=8,
+        distance_feature_max_complexity=8,
+
         parameter_generator=None,
         use_equivalence_classes=True,
         # use_feature_dominance=True,
         use_incremental_refinement=True,
+
         decreasing_transitions_must_be_good=True,
     )
 

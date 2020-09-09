@@ -21,25 +21,27 @@ def experiments():
 
         # concept_generation_timeout=120,  # in seconds
         maxsat_timeout=None,
+
+        force_zeros=True,
+        distinguish_goals=True,
     )
 
     exps = dict()
 
     exps["small"] = update_dict(
         base,
-        instances=['instance_5.pddl', 'instance_3_2.pddl'],
+        instances=['instance_5.pddl'],
         test_instances=[],
 
         # Cannot verify, not in STRIPS
         # test_policy_instances=[f"instance_7_{i}.pddl" for i in range(0, 3)],
 
-        max_concept_size=6,
-        distance_feature_max_complexity=6,
-        # cond_feature_max_complexity=6+2,
+        max_concept_size=8,
+        distance_feature_max_complexity=8,
         # feature_generator=expected_features,
         use_equivalence_classes=True,
         # use_feature_dominance=True,
-        # use_incremental_refinement=True,
+        use_incremental_refinement=True,
     )
 
     return exps

@@ -18,6 +18,9 @@ def experiments():
 
         # concept_generation_timeout=120,  # in seconds
         maxsat_timeout=None,
+
+        force_zeros=True,
+        distinguish_goals=True,
     )
 
     exps = dict()
@@ -57,6 +60,8 @@ def experiments():
         use_equivalence_classes=True,
         # use_feature_dominance=True,
         use_incremental_refinement=True,
+
+        # feature_generator=debug_features_clear,
     )
 
     exps["clear_fn"] = update_dict(
@@ -74,8 +79,6 @@ def experiments():
     exps["on"] = update_dict(
         strips_base,
         instances=[
-            "training_on_2.pddl",
-            "training_on_3.pddl",
             "training_on_5.pddl",
         ],
         test_instances=["inst_on_x_y_7.pddl"],
@@ -88,13 +91,14 @@ def experiments():
         ],
 
         max_concept_size=8,
+        distance_feature_max_complexity=8,
+
         # enforce_features=get_on_x_y_feature,
         parameter_generator=blocksworld_parameters_for_on,
         use_equivalence_classes=True,
         # use_feature_dominance=True,
-        # use_incremental_refinement=True,
+        use_incremental_refinement=True,
     )
-
 
     exps["on_fn"] = update_dict(
         fn_base,
@@ -106,7 +110,7 @@ def experiments():
         parameter_generator=blocksworld_parameters_for_on,
         use_equivalence_classes=True,
         # use_feature_dominance=True,
-        # use_incremental_refinement=True,
+        use_incremental_refinement=True,
     )
 
     exps["4op_5"] = update_dict(
@@ -140,37 +144,22 @@ def experiments():
         use_feature_dominance=False,
     )
 
-    exps["all_fn"] = update_dict(
-        fn_base,
-        instances=[
-            # "training_singletower_5_fs.pddl",
-            # "training_singletower_6_fs.pddl",
-            # "training_arbitrary_5_fs.pddl",
-            "training_arbitrary_6_fs.pddl",
-            # "training_singletower_8_fs.pddl",
-            # "training_singletower_10_fs.pddl",
-        ],
-        test_instances=[],
-        test_policy_instances=[],
-
-        # feature_generator=fs_debug_features,
-        # transition_classification_policy=fs_debug_policy
-        max_concept_size=8,
-        use_equivalence_classes=True,
-        use_incremental_refinement=True,
-    )
-
     exps["all_fn_5"] = update_dict(
-        exps["all_fn"],
+        fn_base,
         instances=[
             "training_arbitrary_5_fs.pddl",
             # "training_singletower_5_fs.pddl",
         ],
+        test_instances=[],
+        test_policy_instances=[],
+
         max_concept_size=10,
-        # feature_generator=fs_debug_features,
         use_incremental_refinement=False,
         use_equivalence_classes=True,
         use_feature_dominance=False,
+
+        # feature_generator=fs_debug_features,
+        # transition_classification_policy=fs_debug_policy
     )
 
     exps["all_at_5"] = update_dict(
@@ -187,13 +176,14 @@ def experiments():
             "testing_arbitrary_17-1_atomic.pddl",
         ],
 
-        max_concept_size=10,
+        max_concept_size=8,
+        distance_feature_max_complexity=8,
+
         # feature_generator=debug_features_at,
         use_incremental_refinement=True,
         use_equivalence_classes=True,
         use_feature_dominance=False,
 
-        # force_zeros=True,
     )
 
     exps["all_at_testing"] = update_dict(
@@ -296,6 +286,7 @@ def debug_policy_4op():
 
 def debug_features_4op(lang):
     wp = "And(And(Equal(on_g,on),Forall(Star(on),Equal(on_g,on))),Not(holding))"
+    # wp = "Forall(Star(on),Equal(on_g,on))"
     ready_to_rock = f"Bool[And(Exists(on_g,And(clear,{wp})),holding)]"
     nwp = f"Num[{wp}]"
     holding = f"Bool[holding]"
@@ -308,3 +299,14 @@ def all_4op_test_instances():
     for nblocks in [6, 7, 8, 9, 10, 11]:
         res += [f"probBLOCKS-{nblocks}-{i}.pddl" for i in [0, 1, 2]]
     return res
+
+
+def debug_features_clear(lang):
+    nx = "Num[Exists(Star(on),Nominal(a))]"
+    nontable = f"Num[ontable]"
+    nclear = f"Num[clear]"
+    holding = f"Bool[holding]"
+    cleara = "Bool[And(clear,Nominal(a))]"
+    handempty = "Atom[handempty]"
+    return [cleara, handempty, nx]
+    # return [nx, nontable, holding, cleara]

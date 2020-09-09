@@ -21,6 +21,9 @@ def experiments():
 
         # concept_generation_timeout=120,  # in seconds
         maxsat_timeout=None,
+
+        force_zeros=True,
+        distinguish_goals=True,
     )
 
     exps = dict()
@@ -28,24 +31,29 @@ def experiments():
     # Goal: arbitrary logistics goal
     exps["small"] = update_dict(
         base,
-        instances=['sample{}.pddl'.format(i) for i in [2]],
+        instances=[f'sample{i}.pddl' for i in [2]],
         # test_instances=["prob{:02d}.pddl".format(i) for i in range(2, 5)],
         test_instances=[],
         test_policy_instances=all_instances(),
 
-        # num_states="until_first_goal",
         distance_feature_max_complexity=8,
         max_concept_size=8,
+
         use_equivalence_classes=True,
         # use_feature_dominance=True,
         use_incremental_refinement=True,
     )
 
-    exps["p2_max"] = update_dict(
+    exps["debug"] = update_dict(
         exps["small"],
 
-        goal_selector=goal_selector,
-        create_goal_features_automatically=True,
+        instances=[f'sample{i}.pddl' for i in [2]],
+
+        transition_classification_policy=debug_policy,
+        # feature_generator=debug_features,
+        use_incremental_refinement=False,
+        use_equivalence_classes=True,
+        use_feature_dominance=False,
     )
 
     return exps
@@ -57,3 +65,24 @@ def all_instances():
 
 def goal_selector(lang):
     return "And(Equal(at_g,at),obj)"
+
+
+def debug_features(lang):
+    # undelivered packages:
+    # And(Not(Equal(at_g,at)),obj)
+
+
+    return [nwp, ready_to_rock, holding, nontable]
+
+
+def debug_policy():
+    wp = "And(And(Equal(on_g,on),Forall(Star(on),Equal(on_g,on))),Not(holding))"
+    # wp = "And(Equal(on_g,on),Forall(Star(on),Equal(on_g,on)))"
+
+    return [
+        # Put down the held block on its target if possible
+        [(holding, 'DEL'), (ready_to_rock, "DEL"), (nwp, 'INC')],
+
+        # Put down the held block on table if cannot put it well placed
+        [(holding, 'DEL'), (ready_to_rock, "=0"), (nontable, "INC")],
+    ]

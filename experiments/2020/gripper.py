@@ -20,6 +20,9 @@ def experiments():
 
         # concept_generation_timeout=120,  # in seconds
         maxsat_timeout=None,
+
+        force_zeros=True,
+        distinguish_goals=True,
     )
 
     exps = dict()
@@ -32,7 +35,9 @@ def experiments():
         test_instances=[],
         test_policy_instances=[f"prob{i:02d}.pddl" for i in range(3, 21)],
 
-        max_concept_size=10,
+        max_concept_size=8,
+        distance_feature_max_complexity=8,
+
         # parameter_generator=gripper_parameters,  # Works also, but no real advantage
         parameter_generator=None,
         use_equivalence_classes=True,

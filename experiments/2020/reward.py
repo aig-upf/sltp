@@ -20,6 +20,9 @@ def experiments():
 
         # concept_generation_timeout=120,  # in seconds
         maxsat_timeout=None,
+
+        force_zeros=True,
+        distinguish_goals=True,
     )
 
     exps = dict()
@@ -37,7 +40,7 @@ def experiments():
         # parameter_generator=None
         use_equivalence_classes=True,
         # use_feature_dominance=True,
-        use_incremental_refinement=False,
+        use_incremental_refinement=True,
     )
 
     exps["debug"] = update_dict(exps["small"], feature_generator=debug_features)
