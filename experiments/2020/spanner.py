@@ -4,8 +4,7 @@ from sltp.util.names import spanner_names
 
 def experiments():
     base = dict(
-        # domain_dir="gripper-m",
-        domain_dir="spanner-small",
+        domain_dir="spanner-ipc11-learning",
         domain="domain.pddl",
         test_domain="domain.pddl",
         feature_namer=spanner_names,
@@ -31,27 +30,17 @@ def experiments():
         base,
         pipeline="transition_classifier",
         instances=[
-            "prob-3-2-2.pddl",
-            "prob-3-2-2_b.pddl",
-            "prob-3-2-2_c.pddl",
-            "prob-3-2-2_d.pddl",
+            "prob-2-2-10.pddl",
             "prob-4-2-5.pddl",
             "prob-6_4_10.pddl",
-            "prob-2-2-10.pddl",
-            "prob-2-2-10_b.pddl"
 
         ],
         test_instances=[
-            "prob-4-3-3-1540907466.pddl",
-            "prob-4-4-3-1540907456.pddl",
-            "prob-4-2-6.pddl",
-            "prob-4-2-7.pddl",
-            # "prob-6-6-10.pddl"
         ],
         test_policy_instances=[
             "prob-10-10-10-1540903568.pddl",
             "prob-15-10-8-1540913795.pddl"
-        ],
+        ] + all_test_instances(),
 
         max_concept_size=8,
         distance_feature_max_complexity=8,
@@ -86,3 +75,8 @@ def debug_policy():
         # Moving to the right when there's no more spanners in same location as bob is good:
         [(n_spanners_same_loc_as_bob, "=0"), (n_unreachable_locs, 'INC')],
     ]
+
+
+def all_test_instances():
+    import math
+    return [f"pfile0{math.ceil(i/5)}-0{i:02d}.pddl" for i in range(1, 31)]

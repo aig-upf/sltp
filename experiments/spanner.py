@@ -5,7 +5,7 @@ from sltp.util.names import spanner_names
 def experiments():
 
     base = dict(
-        domain_dir="spanner-small",
+        domain_dir="spanner-ipc11-learning",
         domain="domain.pddl",
         test_domain="domain.pddl",
         complete_only_wrt_optimal=True,

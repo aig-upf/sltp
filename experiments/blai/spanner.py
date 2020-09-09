@@ -23,7 +23,7 @@ from sltp.util.misc import update_dict
 #
 
 def experiment(experiment_name=None):
-    domain_dir = "spanner-small"
+    domain_dir = "spanner-ipc11-learning"
     domain = "domain.pddl"
 
     exps = dict()
