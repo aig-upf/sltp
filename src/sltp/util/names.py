@@ -118,8 +118,8 @@ def blocksworld_names(feature):
         "Equal(Inverse(loc_g),Inverse(loc))": "n-right-under-target",  # FSTRIPS
         "Forall(Star(loc),Equal(loc_g,loc))": "n-all-below-well-placed",  # FSTRIPS
         "Forall(Star(on),Equal(on_g,on))": "n-all-below-well-placed",
-        "Exists(on,Nominal(b))": "not-clear(b)",
-        "Exists(on,Nominal(a))": "not-clear(a)",
+        "Exists(on,Nominal(b))": "something-on(b)",
+        "Exists(on,Nominal(a))": "something-on(a)",
 
 
         "Not(And(Equal(on_g,on),Equal(Star(on_g),Star(on))))": "not-ontarget-or-not-sup-well-placed",
