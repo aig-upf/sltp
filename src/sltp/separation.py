@@ -1,5 +1,6 @@
 import itertools
 import os
+from collections import defaultdict
 
 from natsort import natsorted
 
@@ -80,11 +81,11 @@ def generate_policy_from_sat_solution(config, solution, model_cache, minimize_po
 
         policy.add_clause(frozenset(clause))
 
-    if minimize_policy:
-        policy.minimize()
+    # if minimize_policy:
+    #     policy.minimize()
 
     if print_policy:
-        policy.print()
+        policy.print_aaai20()
     return features, good_transitions, policy
 
 
@@ -106,15 +107,15 @@ def generate_user_provided_policy(config):
 def compute_policy_clauses(f, den_s, den_t):
     diff = f.feature.diff(den_s, den_t)
 
-    if isinstance(f.feature, NullaryAtomFeature) or isinstance(f.feature, EmpiricalBinaryConcept):
-        if diff in (FeatureValueChange.DEL, FeatureValueChange.ADD):
-            # For binary features that change their value across a transition, the origin value is implicit
-            return [DNFAtom(f, diff)]
-
-    if isinstance(f.feature, ConceptCardinalityFeature):
-        if diff in (FeatureValueChange.DEC, ):
-            # Same for numeric features that decrease their value: they necessarily need to start at >0
-            return [DNFAtom(f, diff)]
+    # if isinstance(f.feature, NullaryAtomFeature) or isinstance(f.feature, EmpiricalBinaryConcept):
+    #     if diff in (FeatureValueChange.DEL, FeatureValueChange.ADD):
+    #         # For binary features that change their value across a transition, the origin value is implicit
+    #         return [DNFAtom(f, diff)]
+    #
+    # if isinstance(f.feature, ConceptCardinalityFeature):
+    #     if diff in (FeatureValueChange.DEC, ):
+    #         # Same for numeric features that decrease their value: they necessarily need to start at >0
+    #         return [DNFAtom(f, diff)]
 
     # Else, the start value is non-redundant info that we want to use
     return [DNFAtom(f, den_s != 0), DNFAtom(f, diff)]
@@ -227,13 +228,43 @@ class TransitionClassificationPolicy:
         return True
 
     def print(self):
-        max_k = max(f.feature.complexity() for f in self.features)
-        print(f"Features (total: {len(self.features)}; max k = {max_k}):")
-        for f in self.features:
-            print(f"  {f} [k={f.feature.complexity()}]")
+        self.print_header()
         print("Policy:")
         for i, clause in enumerate(self.dnf, start=1):
             print(f"  {i}. " + self.print_clause(clause))
+
+    def print_aaai20(self):
+        self.print_header()
+        # Group by state features
+        grouped = defaultdict(list)
+        for clause in self.dnf:
+            key = frozenset(atom for atom in clause if atom.value in {True, False})
+            value = frozenset(atom for atom in clause if atom.value not in {True, False})
+            grouped[key].append(value)
+
+        distinct_values = defaultdict(set)
+        for key in grouped.keys():
+            for atom in key:
+                distinct_values[atom.feature].add(atom.value)
+
+        invariant_value_features = {f: next(iter(vals)) for f, vals in distinct_values.items() if len(vals) == 1}
+        print("Invariants: " + ','.join(f"{f}{'>0' if v is True else '=0'}" for f, v in invariant_value_features.items()))
+        print("Policy:")
+        for i, (statef, transitionf) in enumerate(grouped.items(), start=1):
+            state_conds = ' AND '.join(sorted(map(str, statef)))
+            feature_conds = ', '.join(self.print_effect_list(e) for e in transitionf)
+            print(f"  {i}. {state_conds} -> {feature_conds}")
+
+    @staticmethod
+    def print_effect_list(effect):
+        return '{' + ', '.join(sorted(map(str, effect))) + '}'
+
+    def print_header(self):
+        max_k = max(f.feature.complexity() for f in self.features)
+        total_k = sum(f.feature.complexity() for f in self.features)
+        print(f"Features (#: {len(self.features)}; total k: {total_k}; max k = {max_k}):")
+        for f in self.features:
+            print(f"  {f} [k={f.feature.complexity()}]")
 
     @staticmethod
     def print_clause(clause):
