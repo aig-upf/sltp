@@ -1,7 +1,4 @@
-# coding=utf-8
-
 import os
-import pathlib
 
 from setuptools import setup, find_packages, Extension
 from setuptools.command.build_ext import build_ext as build_ext_orig
@@ -31,6 +28,7 @@ def get_version():
 def main():
     setup(
         name='sltp',
+        python_requires='>=3.6.9',
         version=get_version(),
         description='The SLTP Generalized Planning Framework: Sample, Learn, Transform & Plan',
         long_description=get_description(),
@@ -48,7 +46,6 @@ def main():
             'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
 
             'Programming Language :: Python :: 3',
-            'Programming Language :: Python :: 3.6',
             'Programming Language :: Python :: 3.7',
             'Programming Language :: Python :: 3.8',
         ],
@@ -60,7 +57,7 @@ def main():
             'setuptools',
             'psutil',
             'bitarray',
-            'natsorted',
+            'natsort>=7.0.1',
             'numpy',
             "tarski @ git+ssh://git@github.com/aig-upf/tarski.git@2d57d46#egg=tarski-devel"
         ],
@@ -85,6 +82,7 @@ class BuildExt(build_ext_orig):
         super().run()
 
     def build_cmake(self, ext):
+        import pathlib
         cwd = pathlib.Path().absolute()
 
         # these dirs will be created in build_py, so if you don't have
