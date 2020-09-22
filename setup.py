@@ -62,7 +62,7 @@ def main():
             'bitarray',
             'natsorted',
             'numpy',
-            "tarski @ git+ssh://git@github.com/aig-upf/tarski.git@1c107d5#egg=tarski-devel"
+            "tarski @ git+ssh://git@github.com/aig-upf/tarski.git@2d57d46#egg=tarski-devel"
         ],
 
 #        ext_modules=[CMakeExtension('featuregen', os.path.join(here, "src", "features"))],
