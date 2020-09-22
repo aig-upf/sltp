@@ -281,8 +281,8 @@ def extract_features(config, sample):
 
     # Invoke C++ feature generation module
     logging.info('Invoking C++ feature generation module'.format())
-    featuregen_location = os.path.join(SLTP_SRC_DIR, "..", "features")
-    cmd = os.path.realpath(os.path.join(featuregen_location, "featuregen"))
+    generators_dir = os.path.join(SLTP_SRC_DIR, "..", "features")
+    cmd = os.path.realpath(os.path.join(generators_dir, "featuregen"))
     args = f" --complexity-bound {config.max_concept_size}" \
            + f" --timeout {config.concept_generation_timeout}" \
            + f" --dist-complexity-bound {config.distance_feature_max_complexity}" \

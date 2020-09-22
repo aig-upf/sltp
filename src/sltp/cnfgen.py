@@ -70,8 +70,8 @@ def print_good_features_list(good_features, filename):
 def generate_cnf(config, data):
     # Invoke C++ feature generation module
     logging.info('Invoking C++ CNF generation module'.format())
-    featuregen_location = os.path.join(SLTP_SRC_DIR, "..", "features")
-    cmd = os.path.realpath(os.path.join(featuregen_location, "cnfgen"))
+    generators_dir = os.path.join(SLTP_SRC_DIR, "..", "features")
+    cmd = os.path.realpath(os.path.join(generators_dir, "cnfgen"))
     args = ["--workspace", config.experiment_dir]
     args += ["--enforce-features", ",".join(map(str, data.in_goal_features))] if data.in_goal_features else []
     args += ["--prune-redundant-states"] if config.prune_redundant_states else []
