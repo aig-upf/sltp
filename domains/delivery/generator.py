@@ -6,83 +6,79 @@ import random
 
 from tarski.fstrips import create_fstrips_problem, language
 from tarski.io import FstripsWriter
+from tarski.syntax import land
 from tarski.theories import Theory
+from tarski import fstrips as fs
 
 _CURRENT_DIR_ = os.path.dirname(os.path.realpath(__file__))
 
 
-def create_noop(problem):
-    # A hackish no-op, to prevent the planner from detecting that the action is useless and pruning it
-    lang = problem.language
-    cell_t, loct = lang.get("cell", "loct")
-    x = lang.variable("x", cell_t)
-    problem.action(name='noop', parameters=[x], precondition=(loct() == x), effects=[loct() << x])
-
-
 def create_actions(problem, add_fuel):
     lang = problem.language
-    cell_t = lang.get("cell")
-    loc_taxi, loc_passenger, inside, adjacent = lang.get("loct", "locp", "inside_taxi", "adjacent")
+    at, cell_t, empty, carrying, adjacent = lang.get("at", "cell", "empty", "carrying", "adjacent")
 
-    problem.action(name='pick-passenger', parameters=[],
-                   precondition=loc_passenger() == loc_taxi(),
-                   effects=[loc_passenger() << inside])
-
-    problem.action(name='drop-passenger', parameters=[],
-                   precondition=loc_passenger() == inside,
-                   effects=[loc_passenger() << loc_taxi()])
-
+    t = lang.variable("t", 'truck')
+    p = lang.variable("p", 'package')
+    x = lang.variable("x", cell_t)
+    f = lang.variable("from", cell_t)
     to = lang.variable("to", cell_t)
+    
+    problem.action(name='pick-package', parameters=[t, p, x],
+                   precondition=land(at(p, x), at(t, x), empty(t), flat=True),
+                   effects=[
+                       fs.DelEffect(at(p, x)),
+                       fs.DelEffect(empty(t)),
+                       fs.AddEffect(carrying(t, p)),
+                   ])
 
-    if add_fuel:  # Add the refill action plus a fuel-aware move action
+    problem.action(name='drop-package', parameters=[t, p, x],
+                   precondition=land(at(t, x), carrying(t, p), flat=True),
+                   effects=[
+                       fs.AddEffect(empty(t)),
+                       fs.DelEffect(carrying(t, p)),
+                       fs.AddEffect(at(p, x)),
+                   ])
 
-        fuel_level_t, loc_fuel, current_fuel, max_fuel_level, succ = \
-            lang.get("fuel_level", "loc_fuel", "current_fuel", "max_fuel_level", "succ")
-
-        problem.action(name='refill', parameters=[],
-                       precondition=loc_taxi() == loc_fuel(),
-                       effects=[current_fuel() << max_fuel_level()])
-
-        x0 = lang.variable("x0", fuel_level_t)
-        x1 = lang.variable("x1", fuel_level_t)
-        problem.action(name='move', parameters=[to, x0, x1],
-                       precondition=(adjacent(loc_taxi(), to)) & (succ(x0, x1)) & (current_fuel() == x1),
-                       effects=[loc_taxi() << to,
-                                current_fuel() << x0])
-
-    else:  # Add a fuel-independent move action
-        problem.action(name='move', parameters=[to],
-                       precondition=(adjacent(loc_taxi(), to)),
-                       effects=[loc_taxi() << to])
+    problem.action(name='move', parameters=[t, f, to],
+                   precondition=land(adjacent(f, to), at(t, f), flat=True),
+                   effects=[
+                       fs.DelEffect(at(t, f)),
+                       fs.AddEffect(at(t, to)),
+                   ])
 
 
-def generate_domain(gridsize, add_noop=False, add_fuel=True):
+def generate_domain(gridsize, npackages, add_fuel=True):
     lang = language(theories=[Theory.EQUALITY, Theory.ARITHMETIC])
-    problem = create_fstrips_problem(domain_name='taxi-fs',
-                                     problem_name="taxi-fs-{}x{}".format(gridsize, gridsize),
+    problem = create_fstrips_problem(domain_name='delivery',
+                                     problem_name=f"delivery-{gridsize}x{gridsize}-{npackages}",
                                      language=lang)
 
     cell_t = lang.sort('cell')
+    lang.sort('locatable')
+    lang.sort('package', 'locatable')
+    lang.sort('truck', 'locatable')
 
-    loc_taxi = lang.function('loct', cell_t)
-    loc_passenger = lang.function('locp', cell_t)
+    at = lang.predicate('at', 'locatable', 'cell')
+    lang.predicate('carrying', 'truck', 'package')
+    empty = lang.predicate('empty', 'truck')
 
     adjacent = lang.predicate('adjacent', cell_t, cell_t)
 
     # Create the actions
-    it = lang.constant("inside_taxi", cell_t)
     create_actions(problem, add_fuel)
-    if add_noop:
-        create_noop(problem)
 
     rng = range(0, gridsize)
     coordinates = list(itertools.product(rng, rng))
 
     def cell_name(x, y):
-        return "c_{}_{}".format(x, y)
+        return f"c_{x}_{y}"
+
+    truck = lang.constant('t1', 'truck')
 
     # Declare the constants:
     coord_objects = [lang.constant(cell_name(x, y), cell_t) for x, y in coordinates]
+
+    package_objects = [lang.constant(f"p{i}", "package") for i in range(1, npackages+1)]
 
     # Declare the adjacencies:
     adjacent_coords = [(a, b, c, d) for (a, b), (c, d) in itertools.combinations(coordinates, 2)
@@ -96,11 +92,16 @@ def generate_domain(gridsize, add_noop=False, add_fuel=True):
     random.shuffle(cd)
 
     # Initial positions
-    problem.init.set(loc_taxi, cd.pop())
-    problem.init.set(loc_passenger, cd.pop())
+    problem.init.add(at, truck, cd.pop())
+    for p in package_objects:
+        problem.init.add(at, p, cd.pop())
+
+    problem.init.add(empty, truck)
 
     # Set the problem goal
-    problem.goal = loc_passenger() == cd.pop()
+    target = cd.pop()
+    goal = [at(p, target) for p in package_objects]
+    problem.goal = land(*goal, flat=True)
 
     if add_fuel:
         # Our approach is not yet too int-friendly :-(
@@ -123,18 +124,18 @@ def generate_domain(gridsize, add_noop=False, add_fuel=True):
         problem.init.set(max_fuel_level, levels[-1])
         problem.init.set(loc_fuel, cd.pop())
 
-    return problem, [it]
+    return problem
 
 
 def main():
 
-    for gridsize in [3, 5, 7]:
+    for gridsize in [3, 4, 5, 7]:
         for run in range(0, 3):
-            problem, constants = generate_domain(gridsize, add_noop=False, add_fuel=False)
+            problem = generate_domain(gridsize, npackages=2, add_fuel=False)
             writer = FstripsWriter(problem)
             writer.write(domain_filename=os.path.join(_CURRENT_DIR_, "domain.pddl"),  # We can overwrite the domain
                          instance_filename=os.path.join(_CURRENT_DIR_, "instance_{}_{}.pddl".format(gridsize, run)),
-                         domain_constants=constants)
+                         domain_constants=[])
 
 
 if __name__ == "__main__":

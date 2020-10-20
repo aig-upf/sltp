@@ -5,7 +5,7 @@ from sltp.util.names import taxi_names
 
 def experiments():
     base = dict(
-        domain_dir="taxi",
+        domain_dir="delivery",
         domain="domain.pddl",
         test_domain="domain.pddl",
         feature_namer=taxi_names,
@@ -29,7 +29,7 @@ def experiments():
 
     exps["small"] = update_dict(
         base,
-        instances=['instance_5.pddl'],
+        instances=['instance_4_0.pddl'],
         test_instances=[],
 
         # Cannot verify, not in STRIPS
@@ -41,6 +41,8 @@ def experiments():
         use_equivalence_classes=True,
         # use_feature_dominance=True,
         use_incremental_refinement=True,
+
+        print_denotations=True,
     )
 
     return exps
