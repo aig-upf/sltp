@@ -1827,18 +1827,22 @@ public:
     void generate_distance_features(const std::vector<const Concept*>& concepts, Cache &cache, const Sample &sample, feature_cache_t& seen_denotations) {
         if (options.dist_complexity_bound<=0) return;
 
-        auto m = sample.num_states();
+        const auto m = sample.num_states();
 
-        // identify concepts with singleton denotation across all states
-        // as these are the candidates for start concepts
+        // Identify concepts with singleton denotation across all states: these are the candidates for start concepts
         std::vector<const Concept*> start_concepts;
         for (const Concept* c:concepts) {
             const sample_denotation_t *d = cache.find_sample_denotation(c->as_str());
             assert((d != nullptr) && (d->size() == m));
             bool singleton_denotations = true;
-            for( int j = 0; singleton_denotations && (j < m); ++j )
-                singleton_denotations = (*d)[j]->cardinality() == 1;
-            if( singleton_denotations ) {
+            for (int j = 0; singleton_denotations && (j < m); ++j) {
+                if ((*d)[j]->cardinality() != 1) {
+                    singleton_denotations = false;
+                    break;
+                }
+            }
+
+            if (singleton_denotations) {
                 start_concepts.push_back(c);
             }
         }
