@@ -474,11 +474,11 @@ public:
             const auto& r_den = sd_sub2.get(i, n*n);
 
             state_denotation_t nsd(n, false);
-            for (int x = 0; x < n; ++x) {
+            for (unsigned x = 0; x < n; ++x) {
                 // x makes it into the denotation if there is an y such that y in c_den and (x,y) in r_den
                 for (unsigned y = 0; y < n; ++y) {
                     if(c_den[y]) {
-                        auto x_y = x * m + y;
+                        auto x_y = x * n + y;
                         if (r_den[x_y]) {
                             nsd[x] = true;
                             break;
@@ -525,12 +525,12 @@ public:
             const auto& r_den = sd_sub2.get(i, n*n);
 
             state_denotation_t nsd(n, true);
-            for (int x = 0; x < n; ++x) {
+            for (unsigned x = 0; x < n; ++x) {
                 // x does *not* make it into the denotation if there is an y
                 // such that y not in c_den and (x,y) in r_den
                 for (unsigned y = 0; y < n; ++y) {
-                    if(!c_den[y]) {
-                        auto x_y = x * m + y;
+                    if (!c_den[y]) {
+                        auto x_y = x * n + y;
                         if (r_den[x_y]) {
                             nsd[x] = false;
                             break;
@@ -627,14 +627,14 @@ public:
     }
 
     const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
-        const unsigned m = sample.num_objects(state.id());
-        state_denotation_t sr(m*m, false);
+        const auto n = sample.num_objects(state.id());
+        state_denotation_t sr(n * n, false);
         for (const auto atom_id : state.atoms()) {
             const Atom &atom = sample.atom(state.id(), atom_id);
             if( atom.is_instance(*predicate_) ) {
                 assert(atom.objects().size() == 2);
-                unsigned index = atom.object(0) * m + atom.object(1);
-                assert(index < m * m);
+                unsigned index = atom.object(0) * n + atom.object(1);
+                assert(index < n * n);
                 sr[index] = true;
             }
         }
@@ -1039,20 +1039,20 @@ public:
     }
     int value(const Cache &cache, const Sample &sample, const State &state) const override {
         assert(sample.state(state.id()).id() == state.id());
-        const auto k = sample.num_states();
+        const auto m = sample.num_states();
         if( !valid_cache_ ) {
-            const sample_denotation_t& start_d = cache.find_sample_denotation(*start_, k);
-            const sample_denotation_t& end_d = cache.find_sample_denotation(*end_, k);
-            const sample_denotation_t& role_d = cache.find_sample_denotation(*role_, k);
+            const sample_denotation_t& start_d = cache.find_sample_denotation(*start_, m);
+            const sample_denotation_t& end_d = cache.find_sample_denotation(*end_, m);
+            const sample_denotation_t& role_d = cache.find_sample_denotation(*role_, m);
 
-            cached_distances_ = std::vector<int>(k, std::numeric_limits<int>::max());
-            for(int i = 0; i < k; ++i ) {
-                const auto m = sample.num_objects(i);
+            cached_distances_ = std::vector<int>(m, std::numeric_limits<int>::max());
+            for(int i = 0; i < m; ++i ) {
+                const auto n = sample.num_objects(i);
 
-                const state_denotation_t& start_sd = start_d.get(i, m);
-                const state_denotation_t& end_sd = end_d.get(i, m);
-                const state_denotation_t& role_sd = role_d.get(i, m*m);
-                int distance = compute_distance(m, start_sd, end_sd, role_sd);
+                const state_denotation_t& start_sd = start_d.get(i, n);
+                const state_denotation_t& end_sd = end_d.get(i, n);
+                const state_denotation_t& role_sd = role_d.get(i, n * n);
+                int distance = compute_distance(n, start_sd, end_sd, role_sd);
                 cached_distances_[i] = distance;
             }
             valid_cache_ = true;
