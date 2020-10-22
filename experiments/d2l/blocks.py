@@ -182,7 +182,14 @@ def experiments():
         use_incremental_refinement=True,
         use_equivalence_classes=True,
         use_feature_dominance=False,
+    )
 
+    # Using incompletely-specified goals
+    exps["all_at_5_inc"] = update_dict(
+        exps["all_at_5"],
+        instances=[
+            "training_arbitrary_5_atomic_incomplete.pddl",
+        ],
     )
 
     exps["all_at_testing"] = update_dict(
