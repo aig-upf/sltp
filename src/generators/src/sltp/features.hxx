@@ -1153,11 +1153,11 @@ protected:
     
     Options options;
 
-    mutable std::vector<const Role*> roles_;
+    std::vector<const Role*> roles_;
 
     // A layered set of concepts, concepts_[k] contains all concepts generated in the k-th application of
     // the concept grammar
-    mutable std::vector<std::vector<const Concept*> > concepts_;
+    std::vector<std::vector<const Concept*> > concepts_;
     std::vector<const Feature*> features_;
 
     //! Indices of features generated from goal concepts
@@ -1224,7 +1224,7 @@ public:
     // apply one iteration of the concept generation grammar
     // new concepts are left on a new last layer in concepts_
     // new concepts are non-redundant if sample != nullptr
-    int advance_step(Cache &cache, const Sample &sample, const std::clock_t& start_time) const {
+    int advance_step(Cache &cache, const Sample &sample, const std::clock_t& start_time) {
         int num_pruned_concepts = 0;
         if( concepts_.empty() ) { // On the first iteration, we simply process the basis concepts and return
             concepts_.emplace_back();
@@ -1456,7 +1456,7 @@ public:
         return goal_concepts;
     }
 
-    int generate_roles(Cache &cache, const Sample &sample) const {
+    int generate_roles(Cache &cache, const Sample &sample) {
         assert(roles_.empty());
 
         std::vector<const Role*> non_redundant_base_roles;
@@ -1487,7 +1487,7 @@ public:
         return roles_.size();
     }
 
-    std::vector<const Concept*> generate_concepts(Cache &cache, const Sample &sample, const std::clock_t& start_time) const {
+    std::vector<const Concept*> generate_concepts(Cache &cache, const Sample &sample, const std::clock_t& start_time) {
         std::size_t num_concepts = 0;
         bool some_new_concepts = true;
         bool timeout_reached = false;
