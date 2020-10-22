@@ -1,5 +1,7 @@
 
-#include <sltp/features.hxx>
+#include <common/helpers.h>
+#include <sltp/dl/cache.hxx>
+#include <sltp/dl/factory.hxx>
 
 #include <iostream>
 #include <string>
@@ -7,7 +9,7 @@
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
-#include <common/helpers.h>
+
 
 using namespace std;
 namespace po = boost::program_options;

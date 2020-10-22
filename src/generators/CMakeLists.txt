@@ -14,13 +14,16 @@ set(CMAKE_CXX_FLAGS "-O3 -DNDEBUG")  # -Wall -Wextra
 
 set(SOURCE_FILES
         src/featuregen.cpp
-        src/sltp/features
+        src/sltp/dl/cache
+        src/sltp/dl/elements
+        src/sltp/dl/factory
+        src/sltp/dl/types.hxx
         src/sltp/utils.hxx
         src/sltp/algorithms
-        src/sltp/base
         src/common/utils
         src/common/helpers
         src/common/base
+        src/common/types
 )
 
 

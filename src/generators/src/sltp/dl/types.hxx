@@ -1,6 +1,10 @@
 
 #pragma once
 
+#include <cassert>
+#include <vector>
+
+
 namespace sltp {
 
 

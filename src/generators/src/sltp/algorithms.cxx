@@ -4,7 +4,7 @@
 #include <vector>
 #include <cassert>
 
-#include <sltp/base.hxx>
+#include <sltp/dl/types.hxx>
 #include <sltp/algorithms.hxx>
 
 namespace sltp {
