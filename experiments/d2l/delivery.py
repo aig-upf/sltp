@@ -41,8 +41,7 @@ def experiments():
         use_equivalence_classes=True,
         # use_feature_dominance=True,
         use_incremental_refinement=True,
-
-        print_denotations=True,
+        # print_denotations=True,
     )
 
     return exps
