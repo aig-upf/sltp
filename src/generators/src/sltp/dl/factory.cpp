@@ -63,7 +63,7 @@ void Factory::log_all_concepts_and_features(
 
             for (const Concept *c:concepts) {
                 const state_denotation_t &denotation = cache.retrieveDLDenotation(*c, state, m);
-                of << "s_" << i << "[" << c->as_str() << "] = {";
+                of << "s_" << i << "[" << c->str() << "] = {";
                 bool need_comma = false;
                 for (unsigned atom = 0; atom < denotation.size(); ++atom) {
                     if (denotation[atom]) {
@@ -91,7 +91,7 @@ void Factory::log_all_concepts_and_features(
 
             for (const Role *r:roles_) {
                 const state_denotation_t &denotation = cache.retrieveDLDenotation(*r, state, m);
-                of << "s_" << i << "[" << r->as_str() << "] = {";
+                of << "s_" << i << "[" << r->str() << "] = {";
                 bool need_comma = false;
 
                 for (unsigned idx = 0; idx < denotation.size(); ++idx) {
@@ -134,7 +134,7 @@ void Factory::log_all_concepts_and_features(
 
     std::cout << "Serializing all concepts and features to:\n\t" << fname1 << "\n\t" << fname2 << std::endl;
     for (const Concept* c:concepts) {
-        of1 << c->as_str() << "\t" << c->complexity() << std::endl;
+        of1 << c->str() << "\t" << c->complexity() << std::endl;
     }
     of1.close();
 
@@ -299,7 +299,7 @@ bool Factory::prune_feature_denotation(
     bool is_new = (it == seen_denotations.end());
 
     if (!is_new) {
-//         std::cout << "REJECT (Redundant): " << f.as_str_with_complexity() << std::endl;
+//         std::cout << "REJECT (Redundant): " << f.fullstr() << std::endl;
         // Make sure that we don't prune a feature of lower complexity in favor of a feature of higher complexity
         // This should come for free, since features are ordered in increasing complexity
         if (it->second->complexity() > f.complexity()) {
@@ -312,11 +312,11 @@ bool Factory::prune_feature_denotation(
     }
 
     if (!check_some_transition_pair_distinguished(fd, sample, transitions)) {
-//         std::cout << "REJECT (NO DISTINCTION): " << f.as_str_with_complexity() << std::endl;
+//         std::cout << "REJECT (NO DISTINCTION): " << f.fullstr() << std::endl;
         return true;
     }
 
-//    std::cout << "ACCEPT: " << f.as_str_with_complexity() << std::endl;
+//    std::cout << "ACCEPT: " << f.fullstr() << std::endl;
     return false;
 }
 
@@ -419,9 +419,9 @@ void Factory::generate_distance_features(
                 role_restrictions.push_back(role_restriction.clone());
                 cache.find_or_insert_sample_denotation(*d, role_restriction.id());
                 //std::cout << "ACCEPT RR(sz=" << cache_for_role_restrictions.cache1().size() << "): "
-                // + role_restriction.as_str_with_complexity() << std::endl;
+                // + role_restriction.fullstr() << std::endl;
             } else {
-                //std::cout << "PRUNE RR: " + role_restriction.as_str() << std::endl;
+                //std::cout << "PRUNE RR: " + role_restriction.str() << std::endl;
             }
             delete d;
         }
@@ -495,21 +495,21 @@ std::ostream& Factory::report_dl_data(std::ostream &os) const {
 
     os << "Base concepts (sz=" << basis_concepts_.size() << "): ";
     for( int i = 0; i < int(basis_concepts_.size()); ++i ) {
-        os << basis_concepts_[i]->as_str();
+        os << basis_concepts_[i]->str();
         if( 1 + i < int(basis_concepts_.size()) ) os << ", ";
     }
     os << std::endl;
 
     os << "Base roles (sz=" << basis_roles_.size() << "): ";
     for( int i = 0; i < int(basis_roles_.size()); ++i ) {
-        os << basis_roles_[i]->as_str();
+        os << basis_roles_[i]->str();
         if( 1 + i < int(basis_roles_.size()) ) os << ", ";
     }
     os << std::endl;
 
     os << "All Roles under complexity " << options.complexity_bound << " (sz=" << roles_.size() << "): ";
     for( int i = 0; i < int(roles_.size()); ++i ) {
-        os << roles_[i]->as_str_with_complexity();
+        os << roles_[i]->fullstr();
         if( 1 + i < int(roles_.size()) ) os << ", ";
     }
     os << std::endl;
@@ -518,7 +518,7 @@ std::ostream& Factory::report_dl_data(std::ostream &os) const {
     for( int layer = 0; layer < concepts_.size(); ++layer ) {
         os << "    Layer " << layer << " (sz=" << concepts_[layer].size() << "): ";
         for( int i = 0; i < int(concepts_[layer].size()); ++i ) {
-            os << concepts_[layer][i]->as_str_with_complexity();
+            os << concepts_[layer][i]->fullstr();
             if( 1 + i < int(concepts_[layer].size()) ) os << ", ";
         }
         os << std::endl;
@@ -891,7 +891,7 @@ std::vector<const Concept*> Factory::generate_goal_concepts_and_roles(Cache &cac
                 cache.find_or_insert_sample_denotation(*d, elem->id());
             }
 //                for (const auto elem:std::vector<const Concept*>({c, not_c, c_g})) {
-//                    cache.remove_sample_denotation(elem->as_str());
+//                    cache.remove_sample_denotation(elem->str());
 //                }
 
 
@@ -913,10 +913,10 @@ std::vector<const Concept*> Factory::generate_goal_concepts_and_roles(Cache &cac
 //                for (const auto elem:std::vector<const Role*>({r_diff})) {
 //                for (const auto elem:std::vector<const Role*>({r, r_g, r_diff})) {
 //                    const sample_denotation_t *d = elem->denotation(cache, sample, false);
-//                    cache.find_or_insert_sample_denotation(*d, elem->as_str());
+//                    cache.find_or_insert_sample_denotation(*d, elem->str());
 //                }
 //                for (const auto elem:std::vector<const Role*>({r, r_g})) {
-//                    cache.remove_sample_denotation(elem->as_str());
+//                    cache.remove_sample_denotation(elem->str());
 //                }
 
             r_diff->force_complexity(1);
@@ -951,7 +951,7 @@ void Factory::output_feature_matrix(std::ostream &os, const Cache &cache, const 
 template <typename T1, typename T2>
 bool Factory::attempt_insertion(const T1& elem, Cache &cache, const Sample &sample, std::vector<const T2*>& container) const {
     if (elem.complexity() > options.complexity_bound) {
-//            std::cout << elem.as_str() << " superfluous because complexity " << base.complexity() << ">" << options.complexity_bound << std::endl;
+//            std::cout << elem.str() << " superfluous because complexity " << base.complexity() << ">" << options.complexity_bound << std::endl;
         return false;
     }
 
@@ -962,7 +962,7 @@ bool Factory::attempt_insertion(const T1& elem, Cache &cache, const Sample &samp
     if (it != index.end()) {
         // There is in the index some other concept/role with same sample denotation,
         // hence we consider this one redundant
-//              std::cout << elem.as_str() << " superfluous because complexity "
+//              std::cout << elem.str() << " superfluous because complexity "
 //                        << elem.complexity() << ">" << options.complexity_bound << std::endl;
         delete d;
         return false;

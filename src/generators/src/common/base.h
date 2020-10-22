@@ -68,7 +68,7 @@ struct Predicate {
         } else {
             assert(objects->size() == arity_);
             for( int i = 0; i < arity_; ++i ) {
-                //str += (*objects)[i]->as_str();
+                //str += (*objects)[i]->str();
                 str += std::to_string((*objects)[i]);
                 if( 1 + i < arity_ ) str += ",";
             }

@@ -40,11 +40,11 @@ public:
     virtual const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const = 0;
 
     //! Return a string representation of the concept or role
-    [[nodiscard]] virtual std::string as_str() const = 0;
+    [[nodiscard]] virtual std::string str() const = 0;
 
     //! Return a string representation of the concept or role that includes its complexity.
-    [[nodiscard]] std::string as_str_with_complexity() const {
-        return std::to_string(complexity_) + "." + as_str();
+    [[nodiscard]] std::string fullstr() const {
+        return str() + "[id=" + std::to_string(id()) + ",k=" + std::to_string(complexity_) + "]";
     }
 
     void force_complexity(int c) {
@@ -54,7 +54,7 @@ public:
     [[nodiscard]] virtual const DLBaseElement* clone() const = 0;
 
     friend std::ostream& operator<<(std::ostream &os, const DLBaseElement &base) {
-        return os << base.as_str_with_complexity() << std::flush;
+        return os << base.fullstr() << std::flush;
     }
 };
 
@@ -108,7 +108,7 @@ public:
         }
         return cache.find_or_insert_state_denotation(sd);
     }
-    [[nodiscard]] std::string as_str() const override {
+    [[nodiscard]] std::string str() const override {
         return predicate_->name_;
     }
 };
@@ -149,7 +149,7 @@ public:
         return cache.find_or_insert_state_denotation(sd);
     }
 
-    [[nodiscard]] std::string as_str() const override {
+    [[nodiscard]] std::string str() const override {
         return std::string("Nominal(") + name_ + ")";
     }
 };
@@ -177,7 +177,7 @@ public:
         return res;
     }
 
-    [[nodiscard]] std::string as_str() const override {
+    [[nodiscard]] std::string str() const override {
         return "<universe>";
     }
 };
@@ -203,7 +203,7 @@ public:
         return res;
     }
 
-    [[nodiscard]] std::string as_str() const override {
+    [[nodiscard]] std::string str() const override {
         return "<empty>";
     }
 };
@@ -244,8 +244,8 @@ public:
         return res;
     }
 
-    [[nodiscard]] std::string as_str() const override {
-        return std::string("And(") +  concept1_->as_str() + "," + concept2_->as_str() + ")";
+    [[nodiscard]] std::string str() const override {
+        return std::string("And(") + concept1_->str() + "," + concept2_->str() + ")";
     }
 };
 
@@ -280,8 +280,8 @@ public:
         return res;
     }
 
-    [[nodiscard]] std::string as_str() const override {
-        return std::string("Not(") + concept_->as_str() + ")";
+    [[nodiscard]] std::string str() const override {
+        return std::string("Not(") + concept_->str() + ")";
     }
 };
 
@@ -331,8 +331,8 @@ public:
         return res;
     }
 
-    [[nodiscard]] std::string as_str() const override {
-        return std::string("Exists(") + role_->as_str() + "," + concept_->as_str() + ")";
+    [[nodiscard]] std::string str() const override {
+        return std::string("Exists(") + role_->str() + "," + concept_->str() + ")";
     }
 };
 
@@ -383,8 +383,8 @@ public:
         return res;
     }
 
-    [[nodiscard]] std::string as_str() const override {
-        return std::string("Forall(") + role_->as_str() + "," + concept_->as_str() + ")";
+    [[nodiscard]] std::string str() const override {
+        return std::string("Forall(") + role_->str() + "," + concept_->str() + ")";
     }
 };
 
@@ -438,8 +438,8 @@ public:
         return res;
     }
 
-    [[nodiscard]] std::string as_str() const override {
-        return std::string("Equal(") + r1_->as_str() + "," + r2_->as_str() + ")";
+    [[nodiscard]] std::string str() const override {
+        return std::string("Equal(") + r1_->str() + "," + r2_->str() + ")";
     }
 };
 
@@ -483,7 +483,7 @@ public:
 
     [[nodiscard]] const Predicate* predicate() const { return predicate_; }
 
-    [[nodiscard]] std::string as_str() const override {
+    [[nodiscard]] std::string str() const override {
         return predicate_->name_;
     }
 };
@@ -545,9 +545,9 @@ public:
 
     [[nodiscard]] const Role* role() const { return role_; }
 
-    [[nodiscard]] std::string as_str() const override {
+    [[nodiscard]] std::string str() const override {
         // ATM let us call these Star(X) to get the same output than the Python module
-        return std::string("Star(") + role_->as_str() + ")";
+        return std::string("Star(") + role_->str() + ")";
     }
 };
 
@@ -576,8 +576,8 @@ public:
 
     [[nodiscard]] const Role* role() const { return role_; }
 
-    [[nodiscard]] std::string as_str() const override {
-        return std::string("Star(") + role_->as_str() + ")";
+    [[nodiscard]] std::string str() const override {
+        return std::string("Star(") + role_->str() + ")";
     }
 };
 
@@ -622,8 +622,8 @@ public:
 
     [[nodiscard]] const Role* role() const { return role_; }
 
-    [[nodiscard]] std::string as_str() const override {
-        return std::string("Inverse(") + role_->as_str() + ")";
+    [[nodiscard]] std::string str() const override {
+        return std::string("Inverse(") + role_->str() + ")";
     }
 };
 
@@ -674,8 +674,8 @@ public:
 
     [[nodiscard]] const Role* role() const { return role_; }
 
-    [[nodiscard]] std::string as_str() const override {
-        return std::string("Restrict(") + role_->as_str() + "," + restriction_->as_str() + ")";
+    [[nodiscard]] std::string str() const override {
+        return std::string("Restrict(") + role_->str() + "," + restriction_->str() + ")";
     }
 };
 
@@ -720,8 +720,8 @@ public:
         return res;
     }
 
-    [[nodiscard]] std::string as_str() const override {
-        return std::string("RoleDifference(") + r1_->as_str() + "," + r2_->as_str() + ")";
+    [[nodiscard]] std::string str() const override {
+        return std::string("RoleDifference(") + r1_->str() + "," + r2_->str() + ")";
     }
 };
 
@@ -729,7 +729,7 @@ class Feature {
 public:
     Feature() = default;
     virtual ~Feature() = default;
-    virtual const Feature* clone() const = 0;
+    [[nodiscard]] virtual const Feature* clone() const = 0;
 
     [[nodiscard]] virtual int complexity() const = 0;
     [[nodiscard]] virtual int value(const Cache &cache, const Sample &sample, const State &state) const = 0;
@@ -810,7 +810,7 @@ public:
     }
 
     [[nodiscard]] std::string as_str() const override {
-        return std::string("Bool[") + concept_->as_str() + "]";
+        return std::string("Bool[") + concept_->str() + "]";
     }
 
     [[nodiscard]] bool is_boolean() const override { return true; }
@@ -843,7 +843,7 @@ public:
     }
 
     [[nodiscard]] std::string as_str() const override {
-        return std::string("Num[") + concept_->as_str() + "]";
+        return std::string("Num[") + concept_->str() + "]";
     }
 
     [[nodiscard]] bool is_boolean() const override { return false; }
@@ -880,7 +880,7 @@ public:
     int value(const Cache &cache, const Sample &sample, const State &state) const override;
 
     [[nodiscard]] std::string as_str() const override {
-        return std::string("Dist[") + start_->as_str() + ";" + role_->as_str() + ";" + end_->as_str() + "]";
+        return std::string("Dist[") + start_->str() + ";" + role_->str() + ";" + end_->str() + "]";
     }
 
     bool is_boolean() const override { return false; }
