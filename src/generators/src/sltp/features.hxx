@@ -35,11 +35,14 @@ namespace sltp::dl {
 
 const unsigned PRIMITIVE_COMPLEXITY = 1;
 
+class DLBaseElement;
 class Concept;
 class Role;
 class Feature;
 
-using feature_cache_t = std::unordered_map<feature_sample_denotation_t, const Feature*, utils::container_hash<feature_sample_denotation_t> >;
+//! A cache from features to their sample denotations
+using feature_cache_t = std::unordered_map<
+        feature_sample_denotation_t, const Feature*, utils::container_hash<feature_sample_denotation_t> >;
 
 
 //! Command-line option processing
@@ -95,8 +98,14 @@ public:
         }
     };
 
-    using cache1_t = std::unordered_map<const sample_denotation_t*, std::string, cache_support_t, cache_support_t>;
-    using cache2_t = std::unordered_map<std::string, const sample_denotation_t*>;
+    //! A map from sample denotations to the concept/role ID with that denotation
+    using cache1_t = std::unordered_map<const sample_denotation_t*, unsigned long, cache_support_t, cache_support_t>;
+
+    //! A map from concept/role IDs to their denotation
+    using cache2_t = std::unordered_map<unsigned long, const sample_denotation_t*>;
+
+    //! A set of state denotations that we'll keep as a register, to avoid having duplicate state_denotation_t
+    //! objects around.
     using cache3_t = std::unordered_set<const state_denotation_t*, cache_support_t, cache_support_t>;
 
 protected:
@@ -120,41 +129,25 @@ public:
         return cache1_;
     }
 
-    const sample_denotation_t* find_sample_denotation(const sample_denotation_t &d) const {
-        auto it = cache1_.find(&d);
-        return it == cache1_.end() ? nullptr : it->first;
+    bool contains(const sample_denotation_t* d) const {
+        return cache1_.find(d) != cache1_.end();
     }
 
-    const sample_denotation_t* find_or_insert_sample_denotation(const sample_denotation_t &d, const std::string &name) {
+    const sample_denotation_t* find_or_insert_sample_denotation(const sample_denotation_t &d, unsigned long id) {
         auto it = cache1_.find(&d);
         if( it == cache1_.end() ) {
-            assert(cache2_.find(name) == cache2_.end());
+            assert(cache2_.find(id) == cache2_.end());
             const sample_denotation_t *nd = new sample_denotation_t(d);
-            cache1_.emplace(nd, name);
-            cache2_.emplace(name, nd);
+            cache1_.emplace(nd, id);
+            cache2_.emplace(id, nd);
             return nd;
         } else {
             return it->first;
         }
     }
-    const sample_denotation_t* find_or_insert_sample_denotation_by_name(const std::string &name, const sample_denotation_t &d) {
-        auto it = cache2_.find(name);
-        if( it == cache2_.end() ) {
-            const sample_denotation_t *nd = new sample_denotation_t(d);
-            cache2_.emplace(name, nd);
-            return nd;
-        } else {
-            return it->second;
-        }
-    }
 
-    // cache2: (full) sample denotations for concepts
-    //
-    // concept name -> sample denotation
-    const sample_denotation_t* find_sample_denotation(const std::string &name) const {
-        auto it = cache2_.find(name);
-        return it == cache2_.end() ? nullptr : it->second;
-    }
+    // Return the sample denotation corresponding to the DL element with given ID
+    const sample_denotation_t& find_sample_denotation(const DLBaseElement& element, std::size_t expected_size) const;
 
     // cache3: state denotations (bit vectors)
     //
@@ -176,23 +169,40 @@ public:
         }
     }
 
-    const state_denotation_t& retrieve_concept_denotation(const Concept &element, const State &state) const;
-    const state_denotation_t& retrieve_role_denotation(const Role &element, const State &state) const;
+    const state_denotation_t& retrieveDLDenotation(
+            const DLBaseElement& element, const State &state, std::size_t expected_size) const;
 };
 
-class Base {
+//! A common base class for concepts and roles
+class DLBaseElement {
+private:
+    static unsigned long global_id;
+
 protected:
+    const unsigned long id_;
     int complexity_;
 
 public:
-    explicit Base(int complexity) : complexity_(complexity) { }
+    explicit DLBaseElement(int complexity) : id_(global_id++), complexity_(complexity) { }
+
     [[nodiscard]] int complexity() const { return complexity_; }
 
-    //virtual void denotation(Denotation &d) const = 0;
-    virtual const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const = 0;
-    virtual const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const = 0;
+    [[nodiscard]] unsigned long id() const { return id_; }
+
+    //! By default we raise an exception here, as we want users to use the method that returns the denotation
+    //! over the whole sample, which will be more efficient. Some subclasses though will override this, mostly
+    //! Primitive concepts and roles.
+    virtual const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const {
+        throw std::runtime_error("Unexpected call to DLBaseElement::denotation(Cache&, const Sample&, const State&)");
+    }
+
+    //! Compute the full sample denotation for the current DL element
+    virtual const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const = 0;
+
+    //! Return a string representation of the concept or role
     [[nodiscard]] virtual std::string as_str() const = 0;
 
+    //! Return a string representation of the concept or role that includes its complexity.
     [[nodiscard]] std::string as_str_with_complexity() const {
         return std::to_string(complexity_) + "." + as_str();
     }
@@ -201,23 +211,25 @@ public:
         complexity_ = c;
     }
 
-    friend std::ostream& operator<<(std::ostream &os, const Base &base) {
+    [[nodiscard]] virtual const DLBaseElement* clone() const = 0;
+
+    friend std::ostream& operator<<(std::ostream &os, const DLBaseElement &base) {
         return os << base.as_str_with_complexity() << std::flush;
     }
 };
 
-class Concept : public Base {
+class Concept : public DLBaseElement {
 public:
-    explicit Concept(int complexity) : Base(complexity) { }
+    explicit Concept(int complexity) : DLBaseElement(complexity) { }
     virtual ~Concept() = default;
-    [[nodiscard]] virtual const Concept* clone() const = 0;
+    [[nodiscard]] const Concept* clone() const override = 0;
 };
 
-class Role : public Base {
+class Role : public DLBaseElement {
 public:
-    explicit Role(int complexity) : Base(complexity) { }
+    explicit Role(int complexity) : DLBaseElement(complexity) { }
     virtual ~Role() = default;
-    [[nodiscard]] virtual const Role* clone() const = 0;
+    [[nodiscard]] virtual const Role* clone() const override = 0;
 };
 
 class PrimitiveConcept : public Concept {
@@ -231,19 +243,17 @@ public:
         return new PrimitiveConcept(*this);
     }
 
-    const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
-        const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
-        if( cached == nullptr ) {
-            sample_denotation_t d;
-            for( int i = 0; i < sample.num_states(); ++i ) {
-                const State &s = sample.state(i);
-                d.emplace_back(denotation(cache, sample, s));
-            }
-            return use_cache ? cache.find_or_insert_sample_denotation(d, as_str()) : new sample_denotation_t(d);
-        } else {
-            return cached;
+    const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const override {
+        const auto m = sample.num_states();
+
+        auto res = new sample_denotation_t();
+        res->reserve(m);
+        for (int i = 0; i < m; ++i) {
+            res->emplace_back(denotation(cache, sample, sample.state(i)));
         }
+        return res;
     }
+
     const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
         state_denotation_t sd(sample.num_objects(state.id()), false);
         for( int i = 0; i < int(state.atoms().size()); ++i ) {
@@ -276,19 +286,18 @@ public:
         return new NominalConcept(*this);
     }
 
-    const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
-        const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
-        if( cached == nullptr ) {
-            sample_denotation_t d;
-            for( int i = 0; i < sample.num_states(); ++i ) {
-                const State &s = sample.state(i);
-                d.emplace_back(denotation(cache, sample, s));
-            }
-            return use_cache ? cache.find_or_insert_sample_denotation(d, as_str()) : new sample_denotation_t(d);
-        } else {
-            return cached;
+    const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const override {
+        const auto m = sample.num_states();
+
+        auto res = new sample_denotation_t();
+        res->reserve(m);
+        for (int i = 0; i < m; ++i) {
+            res->emplace_back(denotation(cache, sample, sample.state(i)));
         }
+        return res;
     }
+
+
     const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
         const auto& oidx = sample.instance(state.id()).object_index();
         object_id_t id = oidx.left.at(name_);
@@ -299,6 +308,7 @@ public:
 
         return cache.find_or_insert_state_denotation(sd);
     }
+
     [[nodiscard]] std::string as_str() const override {
         return std::string("Nominal(") + name_ + ")";
     }
@@ -306,31 +316,27 @@ public:
 
 class UniversalConcept : public Concept {
 public:
-    UniversalConcept() : Concept(0) { }
+    UniversalConcept() : Concept(0) {}
+
     ~UniversalConcept() override = default;
+
     [[nodiscard]] const Concept* clone() const override {
-        return new UniversalConcept;
+        return new UniversalConcept(*this);
     }
 
-    const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
-        const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
-        if( cached == nullptr ) {
-            sample_denotation_t nd;
-            nd.reserve(sample.num_states());
-            for( int i = 0; i < sample.num_states(); ++i ) {
-                state_denotation_t sd(sample.num_objects(i), true);
-                const state_denotation_t *cached_sd = cache.find_or_insert_state_denotation(sd);
-                nd.emplace_back(cached_sd);
-            }
-            return use_cache ? cache.find_or_insert_sample_denotation(nd, as_str()) : new sample_denotation_t(nd);
-        } else {
-            return cached;
+    const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const override {
+        const auto m = sample.num_states();
+        auto res = new sample_denotation_t();
+        res->reserve(m);
+        for (int i = 0; i < m; ++i) {
+            const auto n = sample.num_objects(i);
+
+            state_denotation_t sd(n, true);
+            res->emplace_back(cache.find_or_insert_state_denotation(sd));
         }
+        return res;
     }
-    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
-        throw std::runtime_error("Unexpected call: UniversalConcept::denotation(Cache&, const Sample&, const State&)");
-        return nullptr;
-    }
+
     [[nodiscard]] std::string as_str() const override {
         return "<universe>";
     }
@@ -342,28 +348,21 @@ public:
     EmptyConcept() : Concept(0) { }
     ~EmptyConcept() override = default;
     [[nodiscard]] const Concept* clone() const override {
-        return new EmptyConcept;
+        return new EmptyConcept(*this);
     }
 
-    const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
-        const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
-        if( cached == nullptr ) {
-            sample_denotation_t nd;
-            nd.reserve(sample.num_states());
-            for( int i = 0; i < sample.num_states(); ++i ) {
-                state_denotation_t sd(sample.num_objects(i), false);
-                const state_denotation_t *cached_sd = cache.find_or_insert_state_denotation(sd);
-                nd.emplace_back(cached_sd);
-            }
-            return use_cache ? cache.find_or_insert_sample_denotation(nd, as_str()) : new sample_denotation_t(nd);
-        } else {
-            return cached;
+    const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const override {
+        const auto m = sample.num_states();
+
+        auto res = new sample_denotation_t();
+        res->reserve(m);
+        for (int i = 0; i < m; ++i) {
+            state_denotation_t std(sample.num_objects(i), false);
+            res->emplace_back(cache.find_or_insert_state_denotation(std));
         }
+        return res;
     }
-    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
-        throw std::runtime_error("Unexpected call: EmptyConcept::denotation(Cache&, const Sample&, const State&)");
-        return nullptr;
-    }
+
     [[nodiscard]] std::string as_str() const override {
         return "<empty>";
     }
@@ -386,34 +385,23 @@ public:
         return new AndConcept(*this);
     }
 
-    const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
-        const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
-        if( cached == nullptr ) {
-            const sample_denotation_t *d1 = cache.find_sample_denotation(concept1_->as_str());
-            assert((d1 != nullptr) && (d1->size() == sample.num_states()));
-            const sample_denotation_t *d2 = cache.find_sample_denotation(concept2_->as_str());
-            assert((d2 != nullptr) && (d2->size() == sample.num_states()));
+    const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const override {
+        const auto m = sample.num_states();
+        const sample_denotation_t& sd_sub1 = cache.find_sample_denotation(*concept1_, m);
+        const sample_denotation_t& sd_sub2 = cache.find_sample_denotation(*concept2_, m);
 
-            sample_denotation_t nd;
-            for( int i = 0; i < sample.num_states(); ++i ) {
-                const state_denotation_t *sd1 = (*d1)[i];
-                assert((sd1 != nullptr) && (sd1->size() == sample.num_objects(i)));
-                const state_denotation_t *sd2 = (*d2)[i];
-                assert((sd2 != nullptr) && (sd2->size() == sample.num_objects(i)));
+        auto res = new sample_denotation_t();
+        res->reserve(m);
+        for( int i = 0; i < m; ++i ) {
+            const auto n = sample.num_objects(i);
+            const auto& sd1 = sd_sub1.get(i, n);
+            const auto& sd2 = sd_sub2.get(i, n);
 
-                state_denotation_t nsd(sample.num_objects(i), false);
-                for( int j = 0; j < sample.num_objects(i); ++j )
-                    nsd[j] = (*sd1)[j] && (*sd2)[j];
-                nd.emplace_back(cache.find_or_insert_state_denotation(nsd));
-            }
-            return use_cache ? cache.find_or_insert_sample_denotation(nd, as_str()) : new sample_denotation_t(nd);
-        } else {
-            return cached;
+            state_denotation_t nsd(n, false);
+            for (int j = 0; j < n; ++j) nsd[j] = sd1[j] && sd2[j];
+            res->emplace_back(cache.find_or_insert_state_denotation(nsd));
         }
-    }
-    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
-        throw std::runtime_error("Unexpected call: AndConcept::denotation(Cache&, const Sample&, const State&)");
-        return nullptr;
+        return res;
     }
 
     [[nodiscard]] std::string as_str() const override {
@@ -435,30 +423,21 @@ public:
         return new NotConcept(*this);
     }
 
-    const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
-        const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
-        if( cached == nullptr ) {
-            const sample_denotation_t *d = cache.find_sample_denotation(concept_->as_str());
-            assert((d != nullptr) && (d->size() == sample.num_states()));
+    const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const override {
+        const auto m = sample.num_states();
+        const sample_denotation_t& sd_sub1 = cache.find_sample_denotation(*concept_, m);
 
-            sample_denotation_t nd;
-            for( int i = 0; i < sample.num_states(); ++i ) {
-                const state_denotation_t *sd = (*d)[i];
-                assert((sd != nullptr) && (sd->size() == sample.num_objects(i)));
+        auto res = new sample_denotation_t();
+        res->reserve(m);
+        for (int i = 0; i < m; ++i) {
+            const auto n = sample.num_objects(i);
+            const auto& std_sub1 = sd_sub1.get(i, n);
 
-                state_denotation_t nsd(sample.num_objects(i), false);
-                for( int j = 0; j < sample.num_objects(i); ++j )
-                    nsd[j] = !(*sd)[j];
-                nd.emplace_back(cache.find_or_insert_state_denotation(nsd));
-            }
-            return use_cache ? cache.find_or_insert_sample_denotation(nd, as_str()) : new sample_denotation_t(nd);
-        } else {
-            return cached;
+            state_denotation_t nsd(n, false);
+            for (int j = 0; j < n; ++j) nsd[j] = !std_sub1[j];
+            res->emplace_back(cache.find_or_insert_state_denotation(nsd));
         }
-    }
-    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
-        throw std::runtime_error("Unexpected call: NotConcept::denotation(Cache&, const Sample&, const State&)");
-        return nullptr;
+        return res;
     }
 
     [[nodiscard]] std::string as_str() const override {
@@ -482,47 +461,34 @@ public:
         return new ExistsConcept(*this);
     }
 
-    const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
-        const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
-        if( cached == nullptr ) {
-            const sample_denotation_t *d = cache.find_sample_denotation(concept_->as_str());
-            assert((d != nullptr) && (d->size() == sample.num_states()));
-            const sample_denotation_t *r = cache.find_sample_denotation(role_->as_str());
-            assert((r != nullptr) && (r->size() == sample.num_states()));
+    const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const override {
+        const auto m = sample.num_states();
+        const sample_denotation_t& sd_sub1 = cache.find_sample_denotation(*concept_, m);
+        const sample_denotation_t& sd_sub2 = cache.find_sample_denotation(*role_, m);
 
-            sample_denotation_t nd;
-            for( int i = 0; i < sample.num_states(); ++i ) {
-                unsigned m = sample.num_objects(i);
-                const state_denotation_t *c_den = (*d)[i];
-                assert((c_den != nullptr) && (c_den->size() == m));
-                const state_denotation_t *r_den = (*r)[i];
-                assert((r_den != nullptr) && (r_den->size() == m*m));
+        auto res = new sample_denotation_t();
+        res->reserve(m);
+        for( int i = 0; i < m; ++i ) {
+            const auto n = sample.num_objects(i);
+            const auto& c_den = sd_sub1.get(i, n);
+            const auto& r_den = sd_sub2.get(i, n*n);
 
-                state_denotation_t nsd(m, false);
-                for(unsigned x = 0; x < m; ++x) {
-
-                    // x makes it into the denotation if there is an y such that y in c_den and (x,y) in r_den
-                    for(unsigned y = 0; y < m; ++y) {
-                        if((*c_den)[y]) {
-                            auto x_y = x * m + y;
-                            if ((*r_den)[x_y]) {
-                                nsd[x] = true;
-                                break;
-                            }
+            state_denotation_t nsd(n, false);
+            for (int x = 0; x < n; ++x) {
+                // x makes it into the denotation if there is an y such that y in c_den and (x,y) in r_den
+                for (unsigned y = 0; y < n; ++y) {
+                    if(c_den[y]) {
+                        auto x_y = x * m + y;
+                        if (r_den[x_y]) {
+                            nsd[x] = true;
+                            break;
                         }
                     }
                 }
-
-                nd.emplace_back(cache.find_or_insert_state_denotation(nsd));
             }
-            return use_cache ? cache.find_or_insert_sample_denotation(nd, as_str()) : new sample_denotation_t(nd);
-        } else {
-            return cached;
+            res->emplace_back(cache.find_or_insert_state_denotation(nsd));
         }
-    }
-    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
-        throw std::runtime_error("Unexpected call: ExistsConcept::denotation(Cache&, const Sample&, const State&)");
-        return nullptr;
+        return res;
     }
 
     [[nodiscard]] std::string as_str() const override {
@@ -546,48 +512,35 @@ public:
         return new ForallConcept(*this);
     }
 
-    const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
-        const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
-        if( cached == nullptr ) {
-            const sample_denotation_t *d = cache.find_sample_denotation(concept_->as_str());
-            assert((d != nullptr) && (d->size() == sample.num_states()));
-            const sample_denotation_t *r = cache.find_sample_denotation(role_->as_str());
-            assert((r != nullptr) && (r->size() == sample.num_states()));
+    const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const override {
+        const auto m = sample.num_states();
+        const sample_denotation_t& sd_sub1 = cache.find_sample_denotation(*concept_, m);
+        const sample_denotation_t& sd_sub2 = cache.find_sample_denotation(*role_, m);
 
-            sample_denotation_t nd;
-            for( int i = 0; i < sample.num_states(); ++i ) {
-                const auto m = sample.num_objects(i);
-                const state_denotation_t *c_den = (*d)[i];
-                assert((c_den != nullptr) && (c_den->size() == m));
-                const state_denotation_t *r_den = (*r)[i];
-                assert((r_den != nullptr) && (r_den->size() == m*m));
+        auto res = new sample_denotation_t();
+        res->reserve(m);
+        for( int i = 0; i < m; ++i ) {
+            const auto n = sample.num_objects(i);
+            const auto& c_den = sd_sub1.get(i, n);
+            const auto& r_den = sd_sub2.get(i, n*n);
 
-                state_denotation_t nsd(m, true);
-                for(unsigned x = 0; x < m; ++x) {
-
-                    // x does *not* make it into the denotation if there is an y
-                    // such that y not in c_den and (x,y) in r_den
-                    for(unsigned y = 0; y < m; ++y) {
-                        if(!(*c_den)[y]) {
-                            auto x_y = x * m + y;
-                            if ((*r_den)[x_y]) {
-                                nsd[x] = false;
-                                break;
-                            }
+            state_denotation_t nsd(n, true);
+            for (int x = 0; x < n; ++x) {
+                // x does *not* make it into the denotation if there is an y
+                // such that y not in c_den and (x,y) in r_den
+                for (unsigned y = 0; y < n; ++y) {
+                    if(!c_den[y]) {
+                        auto x_y = x * m + y;
+                        if (r_den[x_y]) {
+                            nsd[x] = false;
+                            break;
                         }
                     }
                 }
-
-                nd.emplace_back(cache.find_or_insert_state_denotation(nsd));
             }
-            return use_cache ? cache.find_or_insert_sample_denotation(nd, as_str()) : new sample_denotation_t(nd);
-        } else {
-            return cached;
+            res->emplace_back(cache.find_or_insert_state_denotation(nsd));
         }
-    }
-    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
-        throw std::runtime_error("Unexpected call: ForallConcept::denotation(Cache&, const Sample&, const State&)");
-        return nullptr;
+        return res;
     }
 
     [[nodiscard]] std::string as_str() const override {
@@ -610,53 +563,41 @@ public:
     ~EqualConcept() override = default;
     [[nodiscard]] const Concept* clone() const override { return new EqualConcept(*this); }
 
-    const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
-        const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
-        if( cached == nullptr ) {
-            const sample_denotation_t *r1_den = cache.find_sample_denotation(r1_->as_str());
-            assert(r1_den && (r1_den->size() == sample.num_states()));
-            const sample_denotation_t *r2_den = cache.find_sample_denotation(r2_->as_str());
-            assert(r2_den && (r2_den->size() == sample.num_states()));
 
-            sample_denotation_t nd;
-            for( int i = 0; i < sample.num_states(); ++i ) {
-                unsigned m = sample.num_objects(i);
-                const state_denotation_t *sd1 = (*r1_den)[i];
-                assert((sd1 != nullptr) && (sd1->size() == m*m));
-                const state_denotation_t *sd2 = (*r2_den)[i];
-                assert((sd2 != nullptr) && (sd2->size() == m*m));
+    const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const override {
+        const auto m = sample.num_states();
+        const sample_denotation_t& sd_sub1 = cache.find_sample_denotation(*r1_, m);
+        const sample_denotation_t& sd_sub2 = cache.find_sample_denotation(*r2_, m);
 
-                state_denotation_t nsd(m, false);
+        auto res = new sample_denotation_t();
+        res->reserve(m);
+        for( int i = 0; i < m; ++i ) {
+            const auto n = sample.num_objects(i);
+            const auto& sd1 = sd_sub1.get(i, n*n);
+            const auto& sd2 = sd_sub2.get(i, n*n);
 
-                for(int x = 0; x < sample.num_objects(i); ++x) {
-                    // If the set of y such that (x, y) in sd1 is equal to the set of z such that (x, z) in sd2,
-                    // then x makes it into the denotation of this concept
-                    bool in_denotation = true;
-                    for (int z = 0; z < m; ++z) {
-                        auto idx = x*m + z;
-                        if ((*sd1)[idx] != (*sd2)[idx]) {
-                            in_denotation = false;
-                            break;
-                        }
-                    }
-
-                    if (in_denotation) {
-                        nsd[x] = true;
+            state_denotation_t nsd(n, false);
+            for (int x = 0; x < n; ++x) {
+                // If the set of y such that (x, y) in sd1 is equal to the set of z such that (x, z) in sd2,
+                // then x makes it into the denotation of this concept
+                bool in_denotation = true;
+                for (int z = 0; z < n; ++z) {
+                    auto idx = x * n + z;
+                    if (sd1[idx] != sd2[idx]) {
+                        in_denotation = false;
+                        break;
                     }
                 }
 
-                nd.emplace_back(cache.find_or_insert_state_denotation(nsd));
+                if (in_denotation) {
+                    nsd[x] = true;
+                }
             }
-            return use_cache ? cache.find_or_insert_sample_denotation(nd, as_str()) : new sample_denotation_t(nd);
-        } else {
-            return cached;
+            res->emplace_back(cache.find_or_insert_state_denotation(nsd));
         }
+        return res;
     }
 
-    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
-        throw std::runtime_error("Unexpected call: EqualConcept::denotation(Cache&, const Sample&, const State&)");
-        return nullptr;
-    }
     [[nodiscard]] std::string as_str() const override {
         return std::string("Equal(") + r1_->as_str() + "," + r2_->as_str() + ")";
     }
@@ -674,19 +615,17 @@ public:
         return new PrimitiveRole(*this);
     }
 
-    const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
-        const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
-        if( cached == nullptr ) {
-            sample_denotation_t nr;
-            for( int i = 0; i < sample.num_states(); ++i ) {
-                const State &s = sample.state(i);
-                nr.emplace_back(denotation(cache, sample, s));
-            }
-            return use_cache ? cache.find_or_insert_sample_denotation(nr, as_str()) : new sample_denotation_t(nr);
-        } else {
-            return cached;
+    const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const override {
+        const auto m = sample.num_states();
+
+        auto res = new sample_denotation_t();
+        res->reserve(m);
+        for( int i = 0; i < m; ++i ) {
+            res->emplace_back(denotation(cache, sample, sample.state(i)));
         }
+        return res;
     }
+
     const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
         const unsigned m = sample.num_objects(state.id());
         state_denotation_t sr(m*m, false);
@@ -747,30 +686,21 @@ public:
         }
     }
 
-    const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
-        const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
-        if( cached == nullptr ) {
-            const sample_denotation_t *r = cache.find_sample_denotation(role_->as_str());
-            if( r == nullptr ) return nullptr; // CHECK: BLAI HACK
-            assert((r != nullptr) && (r->size() == sample.num_states()));
+    const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const override {
+        const auto m = sample.num_states();
+        const sample_denotation_t& sd_sub1 = cache.find_sample_denotation(*role_, m);
 
-            sample_denotation_t nr;
-            for( int i = 0; i < sample.num_states(); ++i ) {
-                const state_denotation_t *sr = (*r)[i];
-                assert((sr != nullptr) && (sr->size() == sample.num_objects(i) * sample.num_objects(i)));
+        auto res = new sample_denotation_t();
+        res->reserve(m);
+        for (int i = 0; i < m; ++i) {
+            const auto n = sample.num_objects(i);
+            const auto& sd1 = sd_sub1.get(i, n*n);
 
-                state_denotation_t nsr(*sr);
-                transitive_closure(sample.num_objects(i), nsr);
-                nr.emplace_back(cache.find_or_insert_state_denotation(nsr));
-            }
-            return use_cache ? cache.find_or_insert_sample_denotation(nr, as_str()) : new sample_denotation_t(nr);
-        } else {
-            return cached;
+            state_denotation_t nsd(sd1);
+            transitive_closure(n, nsd);
+            res->emplace_back(cache.find_or_insert_state_denotation(nsd));
         }
-    }
-    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
-        throw std::runtime_error("Unexpected call: PlusRole::denotation(Cache&, const Sample&, const State&)");
-        return nullptr;
+        return res;
     }
 
     [[nodiscard]] const Role* role() const { return role_; }
@@ -795,41 +725,16 @@ public:
     ~StarRole() override {
         delete plus_role_;
     }
+
     [[nodiscard]] const Role* clone() const override {
         return new StarRole(*this);
     }
 
-    const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
-        const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
-        if( cached == nullptr ) {
-            const sample_denotation_t *pr = cache.find_sample_denotation(plus_role_->as_str());
-            if( pr == nullptr ) return nullptr; // CHECK: BLAI HACK
-            assert((pr != nullptr) && (pr->size() == sample.num_states()));
-
-            sample_denotation_t nr;
-            for( int i = 0; i < sample.num_states(); ++i ) {
-                const state_denotation_t *sr = (*pr)[i];
-                assert((sr != nullptr) && (sr->size() == sample.num_objects(i) * sample.num_objects(i)));
-
-                state_denotation_t nsr(*sr);
-                for( int j = 0; j < sample.num_objects(i); ++j ) {
-                    int index = j * sample.num_objects(i) + j;
-                    nsr[index] = true;
-                }
-                nr.emplace_back(cache.find_or_insert_state_denotation(nsr));
-            }
-            return use_cache ? cache.find_or_insert_sample_denotation(nr, as_str()) : new sample_denotation_t(nr);
-        } else {
-            return cached;
-        }
-    }
-    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
-        throw std::runtime_error("Unexpected call: StarRole::denotation(Cache&, const Sample&, const State&)");
-        return nullptr;
+    const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const override {
+        throw std::runtime_error("UNIMPLEMENTED");
     }
 
     [[nodiscard]] const Role* role() const { return role_; }
-
 
     [[nodiscard]] std::string as_str() const override {
         return std::string("Star(") + role_->as_str() + ")";
@@ -842,46 +747,38 @@ protected:
 
 public:
     explicit InverseRole(const Role *role) : Role(1 + role->complexity()), role_(role) { }
+
     ~InverseRole() override = default;
+
     [[nodiscard]] const Role* clone() const override {
         return new InverseRole(*this);
     }
 
-    const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
-        const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
-        if( cached == nullptr ) {
-            const sample_denotation_t *r = cache.find_sample_denotation(role_->as_str());
-            assert((r != nullptr) && (r->size() == sample.num_states()));
+    const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const override {
+        const auto m = sample.num_states();
+        const sample_denotation_t& sd_sub1 = cache.find_sample_denotation(*role_, m);
 
-            sample_denotation_t nr;
-            for( int i = 0; i < sample.num_states(); ++i ) {
-                const auto m = sample.num_objects(i);
-                const State &state = sample.state(i);
-                assert(state.id() == i);
-                const state_denotation_t *sr = (*r)[i];
-                assert((sr != nullptr) && (sr->size() == m*m));
+        auto res = new sample_denotation_t();
+        res->reserve(m);
+        for (int i = 0; i < m; ++i) {
+            const auto n = sample.num_objects(i);
+            const auto& sr = sd_sub1.get(i, n*n);
 
-                state_denotation_t nsr(m*m, false);
-                for( int j = 0; j < m; ++j ) {
-                    for( int k = 0; k < m; ++k ) {
-                        int index = j * m + k;
-                        if( (*sr)[index] ) {
-                            int inv_index = k * m + j;
-                            nsr[inv_index] = true;
-                        }
+            state_denotation_t nsd(n*n, false);
+            for (int j = 0; j < n; ++j) {
+                for(int k = 0; k < n; ++k ) {
+                    int index = j * n + k;
+                    if (sr[index]) {
+                        int inv_index = k * n + j;
+                        nsd[inv_index] = true;
                     }
                 }
-                nr.emplace_back(cache.find_or_insert_state_denotation(nsr));
             }
-            return use_cache ? cache.find_or_insert_sample_denotation(nr, as_str()) : new sample_denotation_t(nr);
-        } else {
-            return cached;
+            res->emplace_back(cache.find_or_insert_state_denotation(nsd));
         }
+        return res;
     }
-    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
-        throw std::runtime_error("Unexpected call: InverseRole::denotation(Cache&, const Sample&, const State&)");
-        return nullptr;
-    }
+
 
     [[nodiscard]] const Role* role() const { return role_; }
 
@@ -903,45 +800,36 @@ public:
               role_(role),
               restriction_(restriction) {
     }
+
     ~RoleRestriction() override = default;
+
     [[nodiscard]] const Role* clone() const override {
         return new RoleRestriction(*this);
     }
 
-    const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
-        const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
-        if( cached == nullptr ) {
-            const sample_denotation_t *r = cache.find_sample_denotation(role_->as_str());
-            assert((r != nullptr) && (r->size() == sample.num_states()));
-            const sample_denotation_t *d = cache.find_sample_denotation(restriction_->as_str());
-            assert((d != nullptr) && (d->size() == sample.num_states()));
+    const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const override {
+        const auto m = sample.num_states();
+        const sample_denotation_t& sd_sub1 = cache.find_sample_denotation(*role_, m);
+        const sample_denotation_t& sd_sub2 = cache.find_sample_denotation(*restriction_, m);
 
-            sample_denotation_t nr;
-            for( int i = 0; i < sample.num_states(); ++i ) {
-                const auto m = sample.num_objects(i);
-                const state_denotation_t *sr = (*r)[i];
-                assert((sr != nullptr) && (sr->size() == m*m));
-                const state_denotation_t *sd = (*d)[i];
-                assert((sd != nullptr) && (sd->size() == m));
+        auto res = new sample_denotation_t();
+        res->reserve(m);
+        for (int i = 0; i < m; ++i) {
+            const auto n = sample.num_objects(i);
+            const auto& sr = sd_sub1.get(i, n*n);
+            const auto& sd = sd_sub2.get(i, n);
 
-                state_denotation_t nsr(*sr);
-                for( int j = 0; j < m * m; ++j ) {
-                    if( nsr[j] ) {
-                        //int src = j / m;
-                        int dst = j % m;
-                        nsr[j] = (*sd)[dst];
-                    }
+            state_denotation_t nsd(sr);
+            for (int j = 0; j < n*n; ++j) {
+                if( nsd[j] ) {
+                    //int src = j / n;
+                    int dst = j % n;
+                    nsd[j] = sd[dst];
                 }
-                nr.emplace_back(cache.find_or_insert_state_denotation(nsr));
             }
-            return use_cache ? cache.find_or_insert_sample_denotation(nr, as_str()) : new sample_denotation_t(nr);
-        } else {
-            return cached;
+            res->emplace_back(cache.find_or_insert_state_denotation(nsd));
         }
-    }
-    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
-        throw std::runtime_error("Unexpected call: RoleRestriction::denotation(Cache&, const Sample&, const State&)");
-        return nullptr;
+        return res;
     }
 
     [[nodiscard]] const Role* role() const { return role_; }
@@ -969,42 +857,27 @@ public:
         return new RoleDifference(*this);
     }
 
-    const sample_denotation_t* denotation(Cache &cache, const Sample &sample, bool use_cache) const override {
-        const sample_denotation_t *cached = use_cache ? cache.find_sample_denotation(as_str()) : nullptr;
-        if( cached == nullptr ) {
-            const sample_denotation_t *r1_den = cache.find_sample_denotation(r1_->as_str());
-            assert(r1_den && (r1_den->size() == sample.num_states()));
-            const sample_denotation_t *r2_den = cache.find_sample_denotation(r2_->as_str());
-            assert(r2_den && (r2_den->size() == sample.num_states()));
+    const sample_denotation_t* denotation(Cache &cache, const Sample &sample) const override {
+        const auto m = sample.num_states();
+        const sample_denotation_t& sd_sub1 = cache.find_sample_denotation(*r1_, m);
+        const sample_denotation_t& sd_sub2 = cache.find_sample_denotation(*r2_, m);
 
-            sample_denotation_t nd;
-            for( int i = 0; i < sample.num_states(); ++i ) {
-                const auto m = sample.num_objects(i);
+        auto res = new sample_denotation_t();
+        res->reserve(m);
+        for (int i = 0; i < m; ++i) {
+            const auto n = sample.num_objects(i);
+            const auto& sd1 = sd_sub1.get(i, n*n);
+            const auto& sd2 = sd_sub2.get(i, n*n);
 
-                const State &state = sample.state(i);
-                const state_denotation_t *sd1 = (*r1_den)[i];
-                assert((sd1 != nullptr) && (sd1->size() == m*m));
-                const state_denotation_t *sd2 = (*r2_den)[i];
-                assert((sd2 != nullptr) && (sd2->size() == m*m));
-
-                state_denotation_t nsd(m*m, false);
-
-                for(int x = 0; x < m*m; ++x) {
-                    if ((*sd1)[x] && !(*sd2)[x]) {
-                        nsd[x] = true;
-                    }
+            state_denotation_t nsd(n*n, false);
+            for (int x = 0; x < n*n; ++x) {
+                if (sd1[x] && !sd2[x]) {
+                    nsd[x] = true;
                 }
-
-                nd.emplace_back(cache.find_or_insert_state_denotation(nsd));
             }
-            return use_cache ? cache.find_or_insert_sample_denotation(nd, as_str()) : new sample_denotation_t(nd);
-        } else {
-            return cached;
+            res->emplace_back(cache.find_or_insert_state_denotation(nsd));
         }
-    }
-    const state_denotation_t* denotation(Cache &cache, const Sample &sample, const State &state) const override {
-        throw std::runtime_error("Unexpected call: RoleDifference::denotation(Cache&, const Sample&, const State&)");
-        return nullptr;
+        return res;
     }
 
     [[nodiscard]] std::string as_str() const override {
@@ -1061,6 +934,7 @@ public:
         }
         return 0;
     }
+
     [[nodiscard]] std::string as_str() const override {
         return std::string("Atom[") + predicate_->name_ + "]";
     }
@@ -1074,7 +948,9 @@ protected:
 
 public:
     explicit BooleanFeature(const Concept *concept) : Feature(), concept_(concept) { }
+
     ~BooleanFeature() override = default;
+
     [[nodiscard]] const Feature* clone() const override {
         return new BooleanFeature(concept_);
     }
@@ -1082,18 +958,17 @@ public:
     [[nodiscard]] int complexity() const override {
         return concept_->complexity();
     }
+
     [[nodiscard]] int value(const Cache &cache, const Sample &sample, const State &state) const override {
-        // we look into cache for sample denotation using the concept name,
-        // then index sample denotation with state id to find state denotation,
-        // for finally computing cardinality (this assumes that state id is
-        // index of state into sample.states())
-        const sample_denotation_t *d = cache.find_sample_denotation(concept_->as_str());
-        assert((d != nullptr) && (d->size() == sample.num_states()));
-        const state_denotation_t *sd = (*d)[state.id()];
-        assert((sd != nullptr) && (sd->size() == sample.num_objects(state.id())));
-        assert(sd->cardinality() < 2);
-        return sd->cardinality();
+        // we retrieve the sample denotation from the cache, then the state denotation from the sample denotation,
+        // and compute the cardinality (this assumes that state id is index of state into sample.states())
+        const auto m = sample.num_states();
+        const sample_denotation_t& d = cache.find_sample_denotation(*concept_, m);
+        const state_denotation_t& std = d.get(state.id(), sample.num_objects(state.id()));
+        assert(std.cardinality() < 2);
+        return std.cardinality();
     }
+
     [[nodiscard]] std::string as_str() const override {
         return std::string("Bool[") + concept_->as_str() + "]";
     }
@@ -1107,7 +982,9 @@ protected:
 
 public:
     explicit NumericalFeature(const Concept *concept) : Feature(), concept_(concept) { }
+
     ~NumericalFeature() override = default;
+
     [[nodiscard]] const Feature* clone() const override {
         return new NumericalFeature(concept_);
     }
@@ -1117,16 +994,14 @@ public:
     }
 
     [[nodiscard]] int value(const Cache &cache, const Sample &sample, const State &state) const override {
-        // we look into cache for sample denotation using the concept name,
-        // then index sample denotation with state id to find state denotation,
-        // for finally computing cardinality (this assumes that state id is
-        // index of state into sample.states())
-        const sample_denotation_t *d = cache.find_sample_denotation(concept_->as_str());
-        assert((d != nullptr) && (d->size() == sample.num_states()));
-        const state_denotation_t *sd = (*d)[state.id()];
-        assert((sd != nullptr) && (sd->size() == sample.num_objects(state.id())));
-        return sd->cardinality();
+        // we retrieve the sample denotation from the cache, then the state denotation from the sample denotation,
+        // and compute the cardinality (this assumes that state id is index of state into sample.states())
+        const auto m = sample.num_states();
+        const sample_denotation_t& d = cache.find_sample_denotation(*concept_, m);
+        const state_denotation_t& std = d.get(state.id(), sample.num_objects(state.id()));
+        return std.cardinality();
     }
+
     [[nodiscard]] std::string as_str() const override {
         return std::string("Num[") + concept_->as_str() + "]";
     }
@@ -1166,24 +1041,18 @@ public:
         assert(sample.state(state.id()).id() == state.id());
         const auto k = sample.num_states();
         if( !valid_cache_ ) {
-            const sample_denotation_t *start_d = cache.find_sample_denotation(start_->as_str());
-            assert((start_d != nullptr) && (start_d->size() == k));
-            const sample_denotation_t *end_d = cache.find_sample_denotation(end_->as_str());
-            assert((end_d != nullptr) && (end_d->size() == k));
-            const sample_denotation_t *role_d = cache.find_sample_denotation(role_->as_str());
-            assert((role_d != nullptr) && (role_d->size() == k));
+            const sample_denotation_t& start_d = cache.find_sample_denotation(*start_, k);
+            const sample_denotation_t& end_d = cache.find_sample_denotation(*end_, k);
+            const sample_denotation_t& role_d = cache.find_sample_denotation(*role_, k);
 
             cached_distances_ = std::vector<int>(k, std::numeric_limits<int>::max());
             for(int i = 0; i < k; ++i ) {
                 const auto m = sample.num_objects(i);
 
-                const state_denotation_t *start_sd = (*start_d)[i];
-                assert((start_sd != nullptr) && (start_sd->size() == m));
-                const state_denotation_t *end_sd = (*end_d)[i];
-                assert((end_sd != nullptr) && (end_sd->size() == m));
-                const state_denotation_t *role_sd = (*role_d)[i];
-                assert((role_sd != nullptr) && (role_sd->size() == m * m));
-                int distance = compute_distance(m, *start_sd, *end_sd, *role_sd);
+                const state_denotation_t& start_sd = start_d.get(i, m);
+                const state_denotation_t& end_sd = end_d.get(i, m);
+                const state_denotation_t& role_sd = role_d.get(i, m*m);
+                int distance = compute_distance(m, start_sd, end_sd, role_sd);
                 cached_distances_[i] = distance;
             }
             valid_cache_ = true;
@@ -1267,6 +1136,15 @@ public:
     [[nodiscard]] bool is_boolean() const override { return true; }
 };
 
+//! We use this to store a number of properties of the denotations of concepts
+//! and features over entire samples; properties which we might be interested in analyzing
+//! for diverse ends such as pruning redundant features, etc.
+struct SampleDenotationProperties {
+    bool denotation_is_bool = false;
+    bool denotation_is_constant = false;
+};
+
+
 class Factory {
 protected:
     const std::vector<std::string> nominals_;
@@ -1295,111 +1173,42 @@ public:
     void insert_basis(const Role *role) {
         basis_roles_.push_back(role);
     }
+
     void insert_basis(const Concept *concept) {
 //        std::cout << "insert_basis: " << *concept << std::endl;
         basis_concepts_.push_back(concept);
     }
 
-    void reset(bool remove) {
-        // roles can be safely deleted since the
-        // ones coming from the basis are clones
-        while( !roles_.empty() ) {
-            if( remove ) delete roles_.back();
-            roles_.pop_back();
+
+    //! Insert the given concept/role as long as it is not redundant with some previous role and it is
+    //! below the complexity bound. Return whether the role was effectively inserted.
+    template <typename T1, typename T2>
+    bool attempt_insertion(const T1& elem, Cache &cache, const Sample &sample, std::vector<const T2*>& container) const {
+        if (elem.complexity() > options.complexity_bound) {
+//            std::cout << elem.as_str() << " superfluous because complexity " << base.complexity() << ">" << options.complexity_bound << std::endl;
+            return false;
         }
 
-        // concepts in all layers can be safely deleted since
-        // the ones coming from the basis are clones
-        while( !concepts_.empty() ) {
-            if( remove ) {
-                while( !concepts_.back().empty() ) {
-                    delete concepts_.back().back();
-                    concepts_.back().pop_back();
-                }
-            }
-            concepts_.pop_back();
-        }
-        concepts_.pop_back();
-    }
+        const sample_denotation_t *d = elem.denotation(cache, sample);
 
-    static void insert_new_denotation_by_name(Cache &cache, const std::string &name, const sample_denotation_t *d) {
-        cache.find_or_insert_sample_denotation_by_name(name, *d);
-    }
-
-    int insert_new_role(Cache &cache, const Role *role, const sample_denotation_t *d) const {
-        roles_.push_back(role);
-        cache.find_or_insert_sample_denotation(*d, role->as_str());
-        return roles_.size();
-    }
-
-    //! Insert the given role as long as it is not redundant with some previous role and it is below the complexity
-    //! bound. Return whether the role was effectively inserted.
-    bool insert_role_if_possible(const Role &role, Cache &cache, const Sample &sample) const {
-        auto sup = is_superfluous_or_exceeds_complexity_bound(role, cache, sample);
-        if(!sup.first) {
-//            std::cout << "INSERT: " + role.as_str() << std::endl;
-            insert_new_role(cache, role.clone(), sup.second);
-        } else {
-            // We cannot just obviate this role, since some other role denotation may depend on this one's
-//            std::cout << "PRUNE: " + role.as_str() << std::endl;
-            insert_new_denotation_by_name(cache, role.as_str(), sup.second);
-        }
-        delete sup.second;
-        return !sup.first;
-    }
-
-    static bool is_superfluous(Cache &cache, const sample_denotation_t *d) {
-        return cache.find_sample_denotation(*d) != nullptr;
-    }
-
-    std::pair<bool, const sample_denotation_t*>
-    is_superfluous_or_exceeds_complexity_bound(const Base &base, Cache &cache, const Sample &sample) const {
-        if(base.complexity() > options.complexity_bound) {
-//            std::cout << base.as_str() << " superfluous because complexity " << base.complexity() << ">" << options.complexity_bound << std::endl;
-            return {true, nullptr};
-        }
-
-        const sample_denotation_t *d = base.denotation(cache, sample, false);
-        const auto& denotation_idx = cache.cache1();
-        auto it = denotation_idx.find(d);
-
-        if (it != denotation_idx.end()) {
-//            std::cout << base.as_str() << " (k=" << base.complexity() << ") superfluous because equivalent to " << it->second << std::endl;
-            return {true, d};
-        }
-        return {false, d};
-    }
-
-    //!
-    void attempt_concept_insertion(const Concept& concept, Cache& cache, const Sample& sample, int& pruning_count) const {
-        if (concept.complexity() > options.complexity_bound) {
-//            std::cout << concept.as_str() << " superfluous because complexity " << concept.complexity() << ">" << options.complexity_bound << std::endl;
-            pruning_count++;
-            return;
-        }
-
-        const sample_denotation_t *d = concept.denotation(cache, sample, false);
         const auto& index = cache.cache1();
-
         auto it = index.find(d);
         if (it != index.end()) {
-            // Some other concept has the exact same denotation over the whole sample.
-//            std::cout << concept.as_str() << " (k=" << concept.complexity() << ") superfluous because equivalent to " << it->second << std::endl;
-            pruning_count++;
-
-            // TODO Here we should be making sure that we're not pruning one simpler concept in favor of a
-            //      more complex one. This is not trivial to do now due to the current architecture, because
-            //      if we want to replace an already-existing concept with a new one, we should guarantee that there
-            //      are no third concepts that have been generated in the meantime and make use of the one we want
-            //      to eliminate
+            // There is in the index some other concept/role with same sample denotation,
+            // hence we consider this one redundant
+//              std::cout << elem.as_str() << " superfluous because complexity "
+//                        << elem.complexity() << ">" << options.complexity_bound << std::endl;
+            delete d;
+            return false;
 
         } else {
-            assert(!concepts_.empty());
-            concepts_.back().push_back(concept.clone());
-            cache.find_or_insert_sample_denotation(*d, concept.as_str());
-        }
 
-        delete d;
+            container.push_back(elem.clone());
+            assert (container.back()->id() == elem.id());
+            cache.find_or_insert_sample_denotation(*d, elem.id());
+            delete d;
+            return true;
+        }
     }
 
     bool check_timeout(const std::clock_t& start_time) const {
@@ -1420,7 +1229,7 @@ public:
         if( concepts_.empty() ) { // On the first iteration, we simply process the basis concepts and return
             concepts_.emplace_back();
             for (const auto* concept : basis_concepts_) {
-                attempt_concept_insertion(*concept, cache, sample, num_pruned_concepts);
+                num_pruned_concepts += !attempt_insertion(*concept, cache, sample, concepts_.back());
             }
             return num_pruned_concepts;
         }
@@ -1469,7 +1278,7 @@ public:
                     // with higher complexity
                     // if (typeid(*r1) == typeid(*r2)) eq_concept.force_complexity(1);
 
-                    attempt_concept_insertion(eq_concept, cache, sample, num_pruned_concepts);
+                    num_pruned_concepts += !attempt_insertion(eq_concept, cache, sample, concepts_.back());
 
                     if (check_timeout(start_time)) return -1;
                 }
@@ -1481,15 +1290,15 @@ public:
 
                 // Negate concepts in the last layer, only if they are not already negations
                 if (!dynamic_cast<const NotConcept*>(concept)) {
-                    attempt_concept_insertion(NotConcept(concept), cache, sample, num_pruned_concepts);
+                    num_pruned_concepts += !attempt_insertion(NotConcept(concept), cache, sample, concepts_.back());
                 }
 
 
                 // generate exist and forall combining a role with a concept in the last layer
                 for (int k2 = 0; k2 <= (options.complexity_bound-k-1); ++k2) {
                     for (const auto *role:roles_by_complexity[k2]) {
-                        attempt_concept_insertion(ExistsConcept(concept, role), cache, sample, num_pruned_concepts);
-                        attempt_concept_insertion(ForallConcept(concept, role), cache, sample, num_pruned_concepts);
+                        num_pruned_concepts += !attempt_insertion(ExistsConcept(concept, role), cache, sample, concepts_.back());
+                        num_pruned_concepts += !attempt_insertion(ForallConcept(concept, role), cache, sample, concepts_.back());
 
                         if (check_timeout(start_time)) return -1;
                     }
@@ -1508,7 +1317,7 @@ public:
                 // (a) a concept of the last layer with a concept in some previous layer
                 for (int k2 = 0; k2 <= (options.complexity_bound-k); ++k2) {
                     for (const auto *concept2:concepts_in_previous_layers_by_complexity[k2]) {
-                        attempt_concept_insertion(AndConcept(concept1, concept2), cache, sample, num_pruned_concepts);
+                        num_pruned_concepts += !attempt_insertion(AndConcept(concept1, concept2), cache, sample, concepts_.back());
 
                         if (check_timeout(start_time)) return -1;
                     }
@@ -1520,7 +1329,7 @@ public:
                     unsigned start_at = (k == k2) ? i_k+1: 0; // Break symmetries within same complexity bucket
                     for (unsigned i_k2 = start_at; i_k2 < concepts_in_last_layer_by_complexity[k2].size(); ++i_k2) {
                         const auto& concept2 = concepts_in_last_layer_by_complexity[k2][i_k2];
-                        attempt_concept_insertion(AndConcept(concept1, concept2), cache, sample, num_pruned_concepts);
+                        num_pruned_concepts += !attempt_insertion(AndConcept(concept1, concept2), cache, sample, concepts_.back());
 
                         if (check_timeout(start_time)) return -1;
                     }
@@ -1602,8 +1411,8 @@ public:
                 // Insert the denotations into the cache
 //                for (const auto elem:std::vector<const Concept*>({and_c})) {
                 for (const auto* elem:std::vector<const Concept*>({c, not_c, c_g, and_c})) {
-                    const sample_denotation_t *d = elem->denotation(cache, sample, false);
-                    cache.find_or_insert_sample_denotation(*d, elem->as_str());
+                    const sample_denotation_t *d = elem->denotation(cache, sample);
+                    cache.find_or_insert_sample_denotation(*d, elem->id());
                 }
 //                for (const auto elem:std::vector<const Concept*>({c, not_c, c_g})) {
 //                    cache.remove_sample_denotation(elem->as_str());
@@ -1650,35 +1459,29 @@ public:
     int generate_roles(Cache &cache, const Sample &sample) const {
         assert(roles_.empty());
 
+        std::vector<const Role*> non_redundant_base_roles;
+
         // Insert the basis (i.e. primitive) roles as long as they are not redundant
         for (const auto *role : basis_roles_) {
-            auto p = is_superfluous_or_exceeds_complexity_bound(*role, cache, sample);
-            if( !p.first ) {
-                insert_new_role(cache, role->clone(), p.second);
-            } else {
-                // we cannot just obviate this role since another
-                // role denotation may depend on this denotation
-                //std::cout << "PRUNE: " + role.as_str() << std::endl;
-                insert_new_denotation_by_name(cache, role->as_str(), p.second);
+            if (attempt_insertion(*role, cache, sample, roles_)) {
+                non_redundant_base_roles.push_back(role);
             }
-            delete p.second;
         }
 
-        for (const auto *role : basis_roles_) {
-            // Create Plus(R) roles from the primitive roles
+        // Now insert a few compounds based on those base roles that are not redundant
+        for (const auto *role:non_redundant_base_roles) {
+
+            // Create Inverse(R) role from the primitive role
+            attempt_insertion(InverseRole(role), cache, sample, roles_);
+
+            // Create Plus(R) role from the primitive role
             PlusRole p_role(role);
-            insert_role_if_possible(p_role, cache, sample);
-
+            if (attempt_insertion(p_role, cache, sample, roles_)) {
+                // Create Inverse(Plus(R)) only if Plus(R) is NOT redundant
+                attempt_insertion(InverseRole(p_role.clone()), cache, sample, roles_);
+            }
             // Create Star(R) roles from the primitive roles !!! NOTE ATM we deactivate Star roles
-            // insert_role_if_possible(StarRole(role), cache, sample);
-
-            // Create Inverse(R) roles from the primitive roles
-            InverseRole inv_r(role);
-            insert_role_if_possible(InverseRole(role), cache, sample);
-
-            // Create Inverse(Plus(R)) and Plus(Inverse(R)) roles from the primitive roles
-            insert_role_if_possible(InverseRole(p_role.clone()), cache, sample);
-            insert_role_if_possible(PlusRole(inv_r.clone()), cache, sample);
+            // attempt_role_insertion(StarRole(role), cache, sample);
         }
         std::cout << "ROLES: #roles=" << roles_.size() << std::endl;
         return roles_.size();
@@ -1726,6 +1529,7 @@ public:
             const std::vector<const Feature*>& base_features,
             Cache& cache,
             const Sample& sample,
+            const TransitionSample& transitions,
             feature_cache_t& seen_denotations)
     {
         if (!options.comparison_features) return;
@@ -1743,8 +1547,8 @@ public:
                     continue;
 
                 const auto *feature = new DifferenceFeature(f_i, f_j);
-                if (!insert_feature_if_necessary(
-                        feature, options.complexity_bound, cache, sample, seen_denotations)) {
+                if (!attempt_feature_insertion(
+                        feature, options.complexity_bound, cache, sample, transitions, seen_denotations, true)) {
                     delete feature;
                 }
             }
@@ -1755,6 +1559,7 @@ public:
             const std::vector<const Feature*>& base_features,
             Cache& cache,
             const Sample& sample,
+            const TransitionSample& transitions,
             feature_cache_t& seen_denotations)
     {
         if (options.cond_complexity_bound <= 0) return;
@@ -1770,8 +1575,8 @@ public:
                     continue;
 
                 const auto *feature = new ConditionalFeature(cond, body);
-                if (!insert_feature_if_necessary(
-                        feature, options.cond_complexity_bound, cache, sample, seen_denotations)) {
+                if (!attempt_feature_insertion(
+                        feature, options.cond_complexity_bound, cache, sample, transitions, seen_denotations, true)) {
                     delete feature;
                 }
             }
@@ -1810,21 +1615,37 @@ public:
                   << std::endl;
     }
 
-    bool generate_cardinality_feature_if_not_redundant(
+    inline static feature_sample_denotation_t compute_feature_sample_denotation(
+            const Feature& feature, const Sample &sample, const Cache &cache) {
+        SampleDenotationProperties _;
+        return compute_feature_sample_denotation(feature, sample, cache, _);
+    }
+
+    static feature_sample_denotation_t compute_feature_sample_denotation(
+            const Feature& feature, const Sample &sample, const Cache &cache, SampleDenotationProperties& properties);
+
+    bool attempt_cardinality_feature_insertion(
             const Concept* c,
             Cache &cache,
             const Sample &sample,
             const TransitionSample& transitions,
             feature_cache_t& seen_denotations,
-            bool can_be_pruned);
+            bool check_redundancy);
 
     //! Insert the given feature if its complexity is below the given bound, its denotation is not constant,
     //! and its denotation trail is not redundant with that of some previously-generated feature
-    bool insert_feature_if_necessary(
+    //! Return whether the feature was indeed inserted or not
+    bool attempt_feature_insertion(
             const Feature* feature, unsigned bound,
-            Cache &cache, const Sample &sample, feature_cache_t& seen_denotations);
+            Cache &cache, const Sample &sample,
+            const TransitionSample& transitions, feature_cache_t& seen_denotations,
+            bool check_redundancy);
 
-    void generate_distance_features(const std::vector<const Concept*>& concepts, Cache &cache, const Sample &sample, feature_cache_t& seen_denotations) {
+    void generate_distance_features(
+            const std::vector<const Concept*>& concepts, Cache &cache,
+            const Sample &sample,
+            const TransitionSample& transitions,
+            feature_cache_t& seen_denotations) {
         if (options.dist_complexity_bound<=0) return;
 
         const auto m = sample.num_states();
@@ -1832,11 +1653,10 @@ public:
         // Identify concepts with singleton denotation across all states: these are the candidates for start concepts
         std::vector<const Concept*> start_concepts;
         for (const Concept* c:concepts) {
-            const sample_denotation_t *d = cache.find_sample_denotation(c->as_str());
-            assert((d != nullptr) && (d->size() == m));
+            const sample_denotation_t& d = cache.find_sample_denotation(*c, m);
             bool singleton_denotations = true;
             for (int j = 0; singleton_denotations && (j < m); ++j) {
-                if ((*d)[j]->cardinality() != 1) {
+                if (d[j]->cardinality() != 1) {
                     singleton_denotations = false;
                     break;
                 }
@@ -1848,18 +1668,18 @@ public:
         }
 
         // create role restrictions to be used in distance features
-        std::vector<const Role*> dist_roles(roles_);  // Start with all base roles
+        std::vector<const Role*> role_restrictions(roles_);  // Start with all base roles
         for (const Role* r:roles_) {
             for (const Concept* c:concepts) {
                 RoleRestriction role_restriction(r, c);
                 if( role_restriction.complexity()+3 > options.dist_complexity_bound ) continue;
-                const sample_denotation_t *d = role_restriction.denotation(cache, sample, false);
-                if( !is_superfluous(cache, d) ) {
-                    assert(cache.cache1().find(d) == cache.cache1().end());
-                    dist_roles.push_back(role_restriction.clone());
-                    cache.find_or_insert_sample_denotation(*d, role_restriction.as_str());
-                    assert(cache.cache1().find(d) != cache.cache1().end());
-                    //std::cout << "ACCEPT RR(sz=" << cache_for_role_restrictions.cache1().size() << "): " + role_restriction.as_str_with_complexity() << std::endl;
+                const sample_denotation_t *d = role_restriction.denotation(cache, sample);
+
+                if (!cache.contains(d)) {  // The role is not redundant
+                    role_restrictions.push_back(role_restriction.clone());
+                    cache.find_or_insert_sample_denotation(*d, role_restriction.id());
+                    //std::cout << "ACCEPT RR(sz=" << cache_for_role_restrictions.cache1().size() << "): "
+                    // + role_restriction.as_str_with_complexity() << std::endl;
                 } else {
                     //std::cout << "PRUNE RR: " + role_restriction.as_str() << std::endl;
                 }
@@ -1869,45 +1689,59 @@ public:
 
         // create distance features
         int num_distance_features = 0;
-        for(const Concept* start:start_concepts) {
+        std::vector<const DistanceFeature*> candidates;
+
+        for (const Concept* start:start_concepts) {
             for (const Concept* end:concepts) {
                 if (start == end) continue;
-                for (const Role* role:dist_roles) {
-                    DistanceFeature df(start, end, role);
-                    if( df.complexity() > options.dist_complexity_bound ) continue;
-                    //std::cout << "TESTING: " << df.as_str_with_complexity() << std::endl;
+
+                for (const Role* role:role_restrictions) {
+                    const auto* df = new DistanceFeature(start, end, role);
+                    if (df->complexity() > options.dist_complexity_bound) {
+                        delete df;
+                        continue;
+                    }
+
+                    candidates.push_back(df);
 
                     // fill cache with denotations for start and end concepts
-                    const sample_denotation_t *ds = cache.find_sample_denotation(start->as_str());
-                    assert((ds != nullptr) && (ds->size() == m));
-                    cache.find_or_insert_sample_denotation(*ds, start->as_str());
-                    const sample_denotation_t *de = cache.find_sample_denotation(end->as_str());
-                    assert((de != nullptr) && (de->size() == m));
-                    cache.find_or_insert_sample_denotation(*de, end->as_str());
-
-                    // check whether df is novel
-                    feature_sample_denotation_t fd(m);
-                    for( int index = 0; index < m; ++index ) {
-                        assert(sample.state(index).id() == index);
-                        const State &state = sample.state(index);
-                        int value = df.value(cache, sample, state);
-                        fd[index] = value;
-                    }
-
-                    auto it = seen_denotations.find(fd);
-                    if( it == seen_denotations.end() ) {
-                        ++num_distance_features;
-                        features_.emplace_back(df.clone());
-                        seen_denotations.emplace(fd, features_.back());
-                        //std::cout << "ACCEPT: " + df.as_str_with_complexity() << std::endl;
-                    } else {
-                        //std::cout << "REJECT: " + df.as_str() << std::endl;
-                        //std::cout << "PRUNED-BY: " << it->second->as_str() << std::endl;
-                    }
+//            const sample_denotation_t& ds = cache.find_sample_denotation(*start, m);
+//            cache.find_or_insert_sample_denotation(ds, start->id());
+//            const sample_denotation_t& de = cache.find_sample_denotation(*end, m);
+//            cache.find_or_insert_sample_denotation(de, end->id());
                 }
             }
         }
+
+        // Sort the candidate distance features along increasing complexity
+        std::sort(std::begin(candidates), std::end(candidates),
+                  [](const DistanceFeature* f1, const DistanceFeature* f2) {
+            return f1->complexity() < f2->complexity();
+        });
+
+        for (const auto* df:candidates) {
+            SampleDenotationProperties properties;
+            const auto denotation = compute_feature_sample_denotation(*df, sample, cache, properties);
+
+            if (!prune_feature_denotation(
+                    *df, denotation, properties, sample, transitions, seen_denotations, true)) {
+                ++num_distance_features;
+                features_.emplace_back(df);
+                seen_denotations.emplace(denotation, features_.back());
+            } else {
+                delete df;
+            }
+        }
     }
+
+    static bool prune_feature_denotation(
+            const Feature& f,
+            const feature_sample_denotation_t& fd,
+            const SampleDenotationProperties& properties,
+            const Sample &sample,
+            const TransitionSample& transitions,
+            feature_cache_t& seen_denotations,
+            bool check_redundancy);
 
     std::ostream& report_dl_data(std::ostream &os) const {
 
@@ -2060,6 +1894,9 @@ public:
 
         return all;
     }
+
+    static bool check_some_transition_pair_distinguished(
+            const feature_sample_denotation_t &fsd, const Sample &sample, const TransitionSample &transitions) ;
 };
 
 } // namespaces
