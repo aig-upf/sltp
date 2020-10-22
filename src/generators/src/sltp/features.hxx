@@ -1492,8 +1492,8 @@ public:
         bool some_new_concepts = true;
         bool timeout_reached = false;
         for( int iteration = 0; some_new_concepts && !timeout_reached; ++iteration ) {
-            std::cout << "dl::concept-generation: iteration=" << iteration
-                      << ", #concepts=" << num_concepts
+            std::cout << "Start of iteration " << iteration
+                      << ": #total-concepts=" << num_concepts
                       << ", #concepts-in-last-layer=" << (concepts_.empty() ? 0 : concepts_.back().size())
                       << std::endl;
 
@@ -1506,8 +1506,8 @@ public:
             num_concepts += concepts_.empty() ? 0 : concepts_.back().size();
             some_new_concepts = num_concepts > num_concepts_before_step;
 
-            std::cout << "\tResult of iteration:"
-                      << " #concepts-in-layer=" << concepts_.back().size()
+            std::cout << "Result of iteration " << iteration
+                      << ": #concepts-in-layer=" << concepts_.back().size()
                       << ", #pruned-concepts=" << num_pruned_concepts
                       << std::endl;
 //            report_dl_data(std::cout);
