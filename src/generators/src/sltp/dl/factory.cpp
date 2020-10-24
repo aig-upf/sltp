@@ -163,6 +163,8 @@ void Factory::generate_features(
     }
     std::cout << "A total of " << goal_features_.size() << " features were marked as goal-identifying" << std::endl;
 
+    std::cout << "Generating cardinality features..." << std::endl;
+
     // create features that derive from nullary predicates
     // TODO Keep track of the denotation of nullary-atom features and prune them if necessary
     for (const auto& predicate:sample.predicates()) {
@@ -388,6 +390,8 @@ void Factory::generate_distance_features(
         feature_cache_t& seen_denotations) {
     if (options.dist_complexity_bound<=0) return;
 
+    std::cout << "Generating distance features..." << std::endl;
+
     const auto m = sample.num_states();
 
     // Identify concepts with singleton denotation across all states: these are the candidates for start concepts
@@ -395,7 +399,7 @@ void Factory::generate_distance_features(
     for (const Concept* c:concepts) {
         const sample_denotation_t& d = cache.find_sample_denotation(*c, m);
         bool singleton_denotations = true;
-        for (int j = 0; singleton_denotations && (j < m); ++j) {
+        for (unsigned j = 0; j < m; ++j) {
             if (d[j]->cardinality() != 1) {
                 singleton_denotations = false;
                 break;
@@ -443,12 +447,6 @@ void Factory::generate_distance_features(
                 }
 
                 candidates.push_back(df);
-
-                // fill cache with denotations for start and end concepts
-//            const sample_denotation_t& ds = cache.find_sample_denotation(*start, m);
-//            cache.find_or_insert_sample_denotation(ds, start->id());
-//            const sample_denotation_t& de = cache.find_sample_denotation(*end, m);
-//            cache.find_or_insert_sample_denotation(de, end->id());
             }
         }
     }
@@ -606,6 +604,8 @@ void Factory::generate_conditional_features(
 {
     if (options.cond_complexity_bound <= 0) return;
 
+    std::cout << "Generating conditional features..." << std::endl;
+
     for (std::size_t i = 0, n = features_.size(); i < n; ++i) {
         const auto* cond = features_[i];
         if (!cond->is_boolean() || cond->complexity() + 1 + 1 > options.cond_complexity_bound) continue;
@@ -633,6 +633,8 @@ void Factory::generate_comparison_features(
         feature_cache_t& seen_denotations)
 {
     if (!options.comparison_features) return;
+
+    std::cout << "Generating comparison features..." << std::endl;
 
     // get the max index here, as we'll keep adding elements to the same `features_` vector:
     auto n = features_.size();
