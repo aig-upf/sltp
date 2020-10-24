@@ -223,7 +223,7 @@ def satellite_names(feature):
     return extend_namer_to_all_features(base).get(s, s)
 
 
-def taxi_names(feature):
+def delivery_names(feature):
     s = str(feature)
     base = {
         "And(locp,locp_g)": "passenger-delivered",
@@ -234,6 +234,18 @@ def taxi_names(feature):
         "Dist[loct;Restrict(adjacent,<universe>);locp]": "dist-to-passenger",
         "Dist[locp_g;adjacent;loct]": "dist-to-passenger-target",
         "If{Bool[And(locp,Nominal(inside_taxi))]}{Dist[locp_g;adjacent;loct]}{Infty}": "cond-dist-to-dest",
+
+        "Dist[Exists(Inverse(at),empty);adjacent;Exists(Inverse(at),And(Not(Equal(at_g,at)),package))]": "dist-to-undelivered",
+
+        "empty": "empty",
+        "And(Not(Equal(at_g,at)),package)": "n-undelivered",
+
+        # This one encodes the distance between a truck and any cell with a package that is not the target cell
+        "Dist[Exists(Inverse(at),truck);adjacent;And(Forall(Inverse(at_g),<empty>),Exists(Inverse(at),package))]": "dist-to-cell-with-undelivered-p",
+
+
+        "Dist[Exists(Inverse(at_g),<universe>);adjacent;Exists(Inverse(at),truck)]": "dist-to-target",
+        "Dist[Exists(Inverse(at),truck);adjacent;Exists(Inverse(at_g),<universe>)]": "dist-to-target",
     }
 
     return extend_namer_to_all_features(base).get(s, s)

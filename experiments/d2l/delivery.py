@@ -1,6 +1,6 @@
 
 from sltp.util.misc import update_dict
-from sltp.util.names import taxi_names
+from sltp.util.names import delivery_names
 
 
 def experiments():
@@ -8,7 +8,7 @@ def experiments():
         domain_dir="delivery",
         domain="domain.pddl",
         test_domain="domain.pddl",
-        feature_namer=taxi_names,
+        feature_namer=delivery_names,
         pipeline="transition_classifier",
         maxsat_encoding="separation",
         complete_only_wrt_optimal=True,
@@ -29,15 +29,26 @@ def experiments():
 
     exps["small"] = update_dict(
         base,
-        instances=['instance_4_0.pddl'],
-        test_instances=[],
-
-        # Cannot verify, not in STRIPS
-        # test_policy_instances=[f"instance_7_{i}.pddl" for i in range(0, 3)],
+        instances=[
+            'instance_3_3_0.pddl',  # Use one small instance with three packages
+            'instance_4_2_0.pddl',  # And a slightly larger one with two packages
+            # 'instance_5_0.pddl',
+        ],
+        test_policy_instances=[
+            'instance_4_2_0.pddl',
+            'instance_4_3_0.pddl',
+            'instance_5_2_0.pddl',
+            'instance_5_3_0.pddl',
+            'instance_7_2_0.pddl',
+            'instance_7_3_0.pddl',
+        ],
 
         max_concept_size=8,
-        distance_feature_max_complexity=8,
-        # feature_generator=expected_features,
+        distance_feature_max_complexity=14,
+
+        # feature_generator=debug_features,
+        # transition_classification_policy=debug_policy,
+
         use_equivalence_classes=True,
         # use_feature_dominance=True,
         use_incremental_refinement=True,
@@ -65,3 +76,36 @@ def expected_features(lang):
         "Bool[And(locp,Nominal(inside_taxi))]",
         "If{Bool[And(locp,Nominal(inside_taxi))]}{Dist[locp_g;adjacent;loct]}{Infty}",
     ]
+
+
+def debug_features(lang):
+    return [
+        "Dist[Exists(Inverse(at),empty);adjacent;Exists(Inverse(at),And(Not(Equal(at_g,at)),package))]",
+        "Dist[Exists(Inverse(at),truck);adjacent;Exists(Inverse(at_g),<universe>)]",
+
+        "Bool[empty]",
+
+        "Num[And(Not(Equal(at_g,at)),package)]",
+    ]
+
+
+def debug_policy():
+    truck_empty = "Bool[empty]"
+    dist_to_unpicked_package = "Dist[Exists(Inverse(at),empty);adjacent;Exists(Inverse(at),And(Not(Equal(at_g,at)),package))]"
+    dist_to_target = "Dist[Exists(Inverse(at),truck);adjacent;Exists(Inverse(at_g),<universe>)]"
+    undelivered = "Num[And(Not(Equal(at_g,at)),package)]"
+
+    return [
+        # If empty, move towards unpicked package if possible
+        [(truck_empty, ">0"), (truck_empty, "NIL"), (dist_to_unpicked_package, 'DEC')],
+
+        # If carrying something, move closer to target
+        [(truck_empty, "=0"), (truck_empty, "NIL"), (dist_to_target, 'DEC')],
+
+        # Picking up something is good as long as it's not a delivered package
+        [(truck_empty, "DEL"), (undelivered, 'NIL')],
+
+        # Leaving a package is good as long as it's on the target location
+        [(truck_empty, "ADD"), (undelivered, 'DEC')],
+    ]
+

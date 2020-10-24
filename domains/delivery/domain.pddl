@@ -13,7 +13,7 @@
         truck - locatable
     )
 
-    (:constants c_3_0 - cell
+    (:constants
         
     )
 
