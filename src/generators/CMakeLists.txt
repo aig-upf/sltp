@@ -38,6 +38,7 @@ set(CNFGEN_SOURCE_FILES
         src/common/utils
         src/common/helpers
         src/common/base
+        src/common/types
         src/blai/sample.h
         src/blai/matrix.h
         src/blai/transitions.h
