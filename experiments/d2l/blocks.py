@@ -169,10 +169,8 @@ def experiments():
         test_instances=[],
         test_policy_instances=[
             "training_arbitrary_5_atomic.pddl",
-            "testing_arbitrary_10_atomic.pddl",
-            "testing_arbitrary_10_1_atomic.pddl",
-            "testing_arbitrary_17-0_atomic.pddl",
-            "testing_arbitrary_17-1_atomic.pddl",
+        ] + [
+            f"test_atomic_{n}_{i}.pddl" for n in range(10, 31) for i in range(0, 5)
         ],
 
         max_concept_size=8,

@@ -1,5 +1,5 @@
 (define (problem BLOCKS-5-0)
-(:domain strips-blocksworld)
+(:domain blocksworld-atomic)
 (:objects a b c d e)
 
 (:init

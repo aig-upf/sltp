@@ -73,8 +73,8 @@ def generate_atomic_bw_language(nblocks):
 
 
 def main():
-    for nblocks in range(5, 6):
-        for run in range(0, 1):
+    for nblocks in range(10, 31):
+        for run in range(0, 5):
             problem, domain_constants = generate_problem(nblocks=nblocks, run=run)
             writer = FstripsWriter(problem)
             writer.write(domain_filename=os.path.join(_CURRENT_DIR_, "domain_atomic.pddl"),

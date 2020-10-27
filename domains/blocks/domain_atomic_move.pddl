@@ -1,7 +1,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Atomic-move blocksworld
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define (domain strips-blocksworld)
+(define (domain blocksworld-atomic)
   (:requirements :strips)
 
   (:constants table)
