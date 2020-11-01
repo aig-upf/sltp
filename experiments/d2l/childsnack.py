@@ -1,4 +1,4 @@
-from sltp.util.misc import update_dict, extend_namer_to_all_features
+from sltp.util.misc import update_dict
 from sltp.util.names import childsnack_names
 
 

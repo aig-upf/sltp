@@ -34,14 +34,7 @@ def experiments():
             'instance_4_2_0.pddl',  # And a slightly larger one with two packages
             # 'instance_5_0.pddl',
         ],
-        test_policy_instances=[
-            'instance_4_2_0.pddl',
-            'instance_4_3_0.pddl',
-            'instance_5_2_0.pddl',
-            'instance_5_3_0.pddl',
-            'instance_7_2_0.pddl',
-            'instance_7_3_0.pddl',
-        ],
+        test_policy_instances=all_test_instances(),
 
         max_concept_size=8,
         distance_feature_max_complexity=14,
@@ -109,3 +102,11 @@ def debug_policy():
         [(truck_empty, "ADD"), (undelivered, 'DEC')],
     ]
 
+
+def all_test_instances():
+    instances = []
+    for gridsize in [3, 4, 5, 7, 9]:
+        for npacks in [2, 3]:
+            for run in range(0, 3):
+                instances.append(f"instance_{gridsize}_{npacks}_{run}.pddl")
+    return instances

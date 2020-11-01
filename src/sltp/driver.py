@@ -398,31 +398,6 @@ class CPPActionModelStep(Step):
         return actionmodel.compute_abstract_action_model
 
 
-class TransitionClassificationPolicyStep(Step):
-    """  """
-
-    def get_required_attributes(self):
-        return ['serialized_feature_filename', 'domain']
-
-    def process_config(self, config):
-        config["wsat_varmap_filename"] = compute_info_filename(config, "varmap.wsat")
-        config["wsat_allvars_filename"] = compute_info_filename(config, "allvars.wsat")
-        return config
-
-    def get_required_data(self):
-        res = ["num_features", "model_cache"]
-        if self.config["transition_classification_policy"] is None:
-            res.append("cnf_solution")
-        return res
-
-    def description(self):
-        return "Computation of the transition-classification policy"
-
-    def get_step_runner(self):
-        from . import separation
-        return separation.compute_transition_classification_policy
-
-
 class TransitionClassificationPolicyTestingStep(Step):
     """  """
     def get_required_attributes(self):
@@ -776,8 +751,6 @@ PIPELINES = dict(
         TransitionSamplingStep,
         CPPFeatureGenerationStep,
         CPPMaxsatProblemGenerationStep,
-        # MaxsatProblemSolutionStep,
-        # TransitionClassificationPolicyStep,
         TransitionClassificationPolicyTestingStep,
     ],
 )

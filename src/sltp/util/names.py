@@ -296,3 +296,12 @@ def floortile_names(feature):
         "Exists(carry,<universe>)": "ncarried",
     }
     return extend_namer_to_all_features(base).get(s, s)
+
+
+def barman_names(feature):
+    s = str(feature)
+    base = {
+        # "": "",
+    }
+
+    return extend_namer_to_all_features(base).get(s, s)

@@ -162,7 +162,8 @@ def create_pyperplan_abstract_policy_based_search(pyperplan, search_policy):
 
             if succ in closed:  # loop detection
                 logging.error(f"Policy incurred in a loop after {expanded} expansions. Repeated node: {succ}")
-                logging.error(f"Trajectory from initial state: {node.extract_solution()}")
+                logging.error(f"Trajectory from initial state: "
+                              f"{searchspace.make_child_node(node, op, succ).extract_solution()}")
                 raise PolicySearchException(ExitCode.AbstractPolicyNonTerminatingOnTestInstances)
 
             node = searchspace.make_child_node(node, op, succ)
