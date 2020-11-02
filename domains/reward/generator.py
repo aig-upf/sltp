@@ -128,13 +128,13 @@ def generate_propositional_domain(gridsize, num_rewards, num_blocked_cells, add_
 
 def main():
 
-    add_noop = False
-    for gridsize in [3, 5, 7, 10, 20]:
-        num_blocks_and_rewards = gridsize
-        problem = generate_propositional_domain(gridsize, num_blocks_and_rewards-2, num_blocks_and_rewards-2, add_noop)
-        writer = FstripsWriter(problem)
-        writer.write(domain_filename=os.path.join(_CURRENT_DIR_, "domain.pddl"),  # We can overwrite the domain
-                     instance_filename=os.path.join(_CURRENT_DIR_, "instance_{}.pddl".format(gridsize)))
+    for gridsize in [3, 5, 7, 10, 15, 20, 25]:
+        for run in range(0, 5):
+            num_blocks_and_rewards = gridsize
+            problem = generate_propositional_domain(gridsize, num_blocks_and_rewards-2, num_blocks_and_rewards-2, False)
+            writer = FstripsWriter(problem)
+            writer.write(domain_filename=os.path.join(_CURRENT_DIR_, "domain.pddl"),  # We can overwrite the domain
+                         instance_filename=os.path.join(_CURRENT_DIR_, f"instance_{gridsize}x{gridsize}_{run}.pddl"))
 
 
 if __name__ == "__main__":

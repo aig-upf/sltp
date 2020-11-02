@@ -4,7 +4,7 @@ from sltp.util.names import reward_names, no_parameter
 
 def experiments():
     base = dict(
-        domain_dir="pick-reward",
+        domain_dir="reward",
         domain="domain.pddl",
         test_domain="domain.pddl",
         feature_namer=reward_names,
@@ -31,7 +31,7 @@ def experiments():
         instances=["training_5x5.pddl"],
         # instances=["instance_5.pddl", "instance_4_blocked.pddl"],
         test_instances=[],
-        test_policy_instances=["instance_7.pddl", "instance_10.pddl", "instance_20.pddl"],
+        test_policy_instances=all_test_instances(),
 
         max_concept_size=8,
         distance_feature_max_complexity=8,
@@ -64,3 +64,9 @@ def debug_features(lang):
         unblocked_dist,
         nrewards,
     ]
+
+
+def all_test_instances():
+    for gridsize in [5, 7, 10, 15, 20, 25]:
+        for run in range(0, 5):
+            yield f"instance_{gridsize}x{gridsize}_{run}.pddl"
