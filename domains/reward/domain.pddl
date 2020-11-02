@@ -4,7 +4,7 @@
 ;;; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (domain pick-reward-strips)
+(define (domain reward-strips)
     (:requirements :equality :typing)
     (:types
         cell - object

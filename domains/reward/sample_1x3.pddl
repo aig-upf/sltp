@@ -4,8 +4,8 @@
 ;;; 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (problem pick-reward-4x4)
-    (:domain pick-reward-strips)
+(define (problem reward-4x4)
+    (:domain reward-strips)
 
     (:objects
         c_0_0 c_0_1 c_0_2 - cell

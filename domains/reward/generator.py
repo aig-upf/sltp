@@ -54,8 +54,8 @@ def create_two_action_version(problem):
 
 def generate_propositional_domain(gridsize, num_rewards, num_blocked_cells, add_noop=False):
     lang = language(theories=[Theory.EQUALITY])
-    problem = create_fstrips_problem(domain_name='pick-reward-strips',
-                                     problem_name=f"pick-reward-{gridsize}x{gridsize}",
+    problem = create_fstrips_problem(domain_name='reward-strips',
+                                     problem_name=f"reward-{gridsize}x{gridsize}",
                                      language=lang)
 
     cell_t = lang.sort('cell')
