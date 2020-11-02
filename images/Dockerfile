@@ -1,7 +1,7 @@
 # BUILD:
 # git clone --depth 1 -b sltp-lite --single-branch git@github.com:aig-upf/fs-private.git fs
-# git clone --depth 1 -b integrating-with-tarski --single-branch git@github.com:aig-upf/sltp.git sltp
-# git clone --depth 1 -b dev-0.2.0-symbols --single-branch git@github.com:aig-upf/tarski.git tarski
+# git clone --depth 1 -b d2l --single-branch git@github.com:aig-upf/sltp.git sltp
+# git clone --depth 1 -b devel --single-branch git@github.com:aig-upf/tarski.git tarski
 # cd fs && git submodule update --init && cd..
 # docker build -t sltp .
 #
@@ -9,13 +9,13 @@
 #
 # RUN:
 #    docker run -it sltp  # Run interactive shell
-#    docker run -it sltp /root/projects/sltp/experiments/run.py blocks:aaai_clear_x_simple_hybrid
+#    docker run -it sltp /root/projects/sltp/experiments/d2l/run.py blocks:clear
+
+FROM ubuntu:focal
+MAINTAINER Guillem Francès guillem.frances@upf.edu
 
 
-FROM ubuntu:bionic
-MAINTAINER Guillem Francès guillem.frances@unibas.edu
-
-
+ENV DEBIAN_FRONTEND="noninteractive" TZ="Europe/London"
 RUN apt-get update && apt-get install --no-install-recommends -y \
 	build-essential \
 	cmake \
@@ -58,7 +58,7 @@ RUN cd $BASE_DIR && curl -SL $OPENWBO_GITHUB_URL | tar -xz \
 #################################
 ENV FS_PATH "${BASE_DIR}/fs"
 ADD fs $FS_PATH
-RUN cd $FS_PATH && git submodule update --init && python ./build.py -p
+RUN cd $FS_PATH && git submodule update --init && python3 ./build.py -p
 
 
 #################################
@@ -75,7 +75,7 @@ RUN cd $TARSKI_PATH && pip3 install -e .
 ENV SLTP_PATH "${BASE_DIR}/sltp"
 ADD sltp $SLTP_PATH
 RUN cd $SLTP_PATH && pip3 install -e .
-RUN cd $SLTP_PATH/src/features && cmake . && make -j4 && rm -rf CMakeFiles
+RUN cd $SLTP_PATH/src/generators && cmake . && make -j4 && rm -rf CMakeFiles
 
 
 WORKDIR $SLTP_PATH

@@ -25,10 +25,10 @@ trap cleanup EXIT
 pushd $WORK_DIR
 
 # Get Tarski
-git clone --depth 1 -b dev-0.2.0-symbols --single-branch git@github.com:aig-upf/tarski.git tarski
+git clone --depth 1 -b devel --single-branch git@github.com:aig-upf/tarski.git tarski
 
 # Get the FS planner
-git clone --depth 1 -b sltp-lite --single-branch git@github.com:aig-upf/fs-private.git fs
+git clone --depth 1 -b sltp-lite --single-branch git@gitlab.com:rleap-project/guillem/fs-private.git fs
 cd fs && git submodule update --init && cd ..
 
 # Get current version of SLTP (from local directory)
@@ -44,8 +44,8 @@ docker build -t sltp .
 # docker save sltp | bzip2 | pv | ssh awscluster 'bunzip2 | docker load'
 
 # Upload image to Docker Hub
-docker tag sltp:latest gfrancesm/sltp:latest
-docker push gfrancesm/sltp:latest
+#docker tag sltp:latest gfrancesm/sltp:latest
+#docker push gfrancesm/sltp:latest
 
 
 # Cleanup tmp directory and go back to original directory
