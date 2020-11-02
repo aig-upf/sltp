@@ -59,6 +59,10 @@ struct transition_trace {
     //! A list of denotations, one denotation for every transition
     std::vector<transition_denotation> denotations;
 
+    transition_trace()
+        : denotations()
+    {}
+
     explicit transition_trace(unsigned nfeatures)
         : denotations(nfeatures)
     {}

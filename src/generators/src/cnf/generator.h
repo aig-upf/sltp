@@ -13,7 +13,7 @@ struct Options {
     enum class Encoding {
         Basic,
         D2Tree,
-        TransitionSeparation
+        TransitionClassification
     };
 
     //! The path of the workspace where output files will be left
@@ -59,9 +59,15 @@ struct Options {
     //! A list of user-provided feature IDs for which we want to enforce selection
     std::vector<unsigned> enforced_features;
 
+    //! An optional list with the a subset of features (feature IDs) that will be, if present, enforced as Selected;
+    //! excluding the rest of features from the pool
+    std::vector<unsigned> validate_features;
+
 
     [[nodiscard]] bool use_d2tree() const { return encoding == Encoding::D2Tree; }
-    [[nodiscard]] bool use_separation_encoding() const { return encoding == Encoding::TransitionSeparation; }
+    [[nodiscard]] bool use_transition_classification_encoding() const {
+        return encoding == Encoding::TransitionClassification;
+    }
 };
 
 
@@ -92,8 +98,10 @@ std::vector<feature_t> compute_d2_distinguishing_features(const TrainingSet& sam
         unsigned s, unsigned sprime, unsigned t, unsigned tprime);
 
 //! Return a sorted vector with those features that d2-distinguish transition (s, s') from (t, t')
-std::vector<feature_t> compute_d1d2_distinguishing_features(const TrainingSet& sample,
-                                                          unsigned s, unsigned sprime, unsigned t, unsigned tprime);
+std::vector<feature_t> compute_d1d2_distinguishing_features(
+        const std::vector<unsigned>& feature_ids,
+        const TrainingSet& sample,
+        unsigned s, unsigned sprime, unsigned t, unsigned tprime);
 
 class CNFEncoding {
 public:

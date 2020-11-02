@@ -53,9 +53,9 @@ void TransitionClassificationEncoding::compute_equivalence_relations() {
             }
 
             // Compute the trace of the transition for all features
-            transition_trace trace(nf_);
-            for (unsigned f = 0; f < nf_; ++f) {
-                trace.denotations[f] = compute_transition_denotation(mat.entry(s, f), mat.entry(sprime, f));
+            transition_trace trace;
+            for (auto f:feature_ids) {
+                trace.denotations.emplace_back(compute_transition_denotation(mat.entry(s, f), mat.entry(sprime, f)));
             }
 
             // Check whether some previous transition has the same transition trace
@@ -123,12 +123,15 @@ void TransitionClassificationEncoding::report_eq_classes() const {
 }
 
 
-    std::vector<bool> TransitionClassificationEncoding::
-check_feature_dominance() {
+std::vector<unsigned> TransitionClassificationEncoding::
+prune_dominated_features() {
     const auto& mat = tr_set_.matrix();
 
     std::vector<bool> dominated(nf_, false);
-    if (!options.use_feature_dominance) return dominated;  // No feature will be considered as dominated
+
+    if (!options.use_feature_dominance || !options.validate_features.empty())
+        // No feature will be considered as dominated
+        return feature_ids;
 
     std::cout << "Computing sets DT(f)... " << std::endl;
     std::vector<std::vector<transition_pair>> dt(nf_);
@@ -171,7 +174,14 @@ check_feature_dominance() {
     }
 
     std::cout << "A total of " << ndominated << " features are dominated by some less complex feature and can be ignored" << std::endl;
-    return dominated;
+
+    std::vector<unsigned> nondominated;
+
+    for (unsigned f=0; f < nf_; f) {
+        if (!dominated[f]) nondominated.push_back(f);
+    }
+
+    return nondominated;
 }
 
 std::vector<transition_pair> TransitionClassificationEncoding::
@@ -212,7 +222,7 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
     const auto& mat = tr_set_.matrix();
     const auto num_alive_transitions = transition_ids_.size();
 
-    auto ignore_features = check_feature_dominance();
+    feature_ids = prune_dominated_features();
 
     auto varmapstream = get_ofstream(options.workspace + "/varmap.wsat");
     auto selected_map_stream = get_ofstream(options.workspace + "/selecteds.wsat");
@@ -227,7 +237,7 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
     std::vector<std::vector<cnfvar_t>> vs(ns_);
 
     // Keep a map from each feature index to the SAT variable ID of Selected(f)
-    std::vector<cnfvar_t> selecteds;
+    std::vector<cnfvar_t> selecteds(nf_, std::numeric_limits<uint32_t>::max());
 
     unsigned n_select_vars = 0;
     unsigned n_v_vars = 0;
@@ -242,16 +252,11 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
 
     /////// CNF variables ///////
     // Create one "Select(f)" variable for each feature f in the pool
-    for (unsigned f = 0; f < nf_; ++f) {
-        if (!ignore_features[f]) {
-            auto v = wr.var("Select(" + tr_set_.matrix().feature_name(f) + ")");
-            selecteds.push_back(v);
-            selected_map_stream << f << "\t" << v << "\t" << tr_set_.matrix().feature_name(f) << std::endl;
-            ++n_select_vars;
-
-        } else {
-            selecteds.push_back(std::numeric_limits<uint32_t>::max());
-        }
+    for (unsigned f:feature_ids) {
+        auto v = wr.var("Select(" + tr_set_.matrix().feature_name(f) + ")");
+        selecteds[f] = v;
+        selected_map_stream << f << "\t" << v << "\t" << tr_set_.matrix().feature_name(f) << std::endl;
+        ++n_select_vars;
     }
 
     // Create variables V(s, d) variables for all all alive state s and d in 1..D
@@ -399,10 +404,8 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
         cnfclause_t clause{Wr::lit(goods.at(tpair.tx1), false)};
 
         // Compute first the Selected(f) terms
-        for (feature_t f:compute_d1d2_distinguishing_features(tr_set_, s, sprime, t, tprime)) {
-            if (!ignore_features[f]) {
-                clause.push_back(Wr::lit(selecteds.at(f), true));
-            }
+        for (feature_t f:compute_d1d2_distinguishing_features(feature_ids, tr_set_, s, sprime, t, tprime)) {
+            clause.push_back(Wr::lit(selecteds.at(f), true));
         }
 
         if (!is_necessarily_bad(tpair.tx2)) {
@@ -438,7 +441,8 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
         }
     }
     
-
+/*
+ * Not using this ATM
     if (options.force_zeros) { // Clauses (9)
         for (unsigned f = 0; f < nf_; ++f) {
             if (tr_set_.matrix().feature_is_boolean(f)) continue;
@@ -459,16 +463,23 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
             n_zero_clauses += 1;
         }
     }
+*/
 
-
-    std::cout << "Posting (weighted) soft constraints for " << selecteds.size() << " features" << std::endl;
-    for (unsigned f = 0; f < nf_; ++f) {
-        if (!ignore_features[f]) {
+    if (!options.validate_features.empty()) {
+        // If we only want to validate a set of features, we just force the Selected(f) to be true for them,
+        // plus we don't really need any soft constraints.
+        std::cout << "Enforcing " << feature_ids.size() << " feature selections and ignoring soft constraints" << std::endl;
+        for (unsigned f:feature_ids) {
+            wr.cl({Wr::lit(selecteds[f], true)});
+        }
+    } else {
+        std::cout << "Posting (weighted) soft constraints for " << selecteds.size() << " features" << std::endl;
+        for (unsigned f:feature_ids) {
             wr.cl({Wr::lit(selecteds[f], false)}, feature_weight(f));
-            n_selected_clauses += 1;
         }
     }
 
+    n_selected_clauses += feature_ids.size();
 
     // Print a breakdown of the clauses
     std::cout << "A total of " << wr.nclauses() << " clauses were created" << std::endl;
@@ -478,7 +489,7 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
     std::cout << "\tV is total function within bounds [3,4]: " << n_v_function_clauses << std::endl;
     std::cout << "\tTransition-separation clauses [5,6]: " << n_separation_clauses << std::endl;
     std::cout << "\tGoal clauses [7]: " << n_goal_clauses << std::endl;
-    std::cout << "\tZero clauses [8]: " << n_zero_clauses << std::endl;
+//    std::cout << "\tZero clauses [8]: " << n_zero_clauses << std::endl;
     assert(wr.nclauses() == n_selected_clauses + n_good_tx_clauses + n_descending_clauses
                             + n_v_function_clauses + n_separation_clauses
                             + n_goal_clauses + n_zero_clauses);
@@ -488,6 +499,13 @@ sltp::cnf::CNFGenerationOutput TransitionClassificationEncoding::write(
 }
 
 CNFGenerationOutput TransitionClassificationEncoding::refine_theory(CNFWriter& wr) {
+    if (!options.validate_features.empty()) {
+        // If validate_features not empty, we will want to generate a validation CNF T(F', S) with all transitions
+        // but with the given subset of features F' only.
+        return write(wr, distinguish_all_transitions());
+    }
+
+
     flaw_index_t flaws;
     bool previous_solution = check_existing_solution_for_flaws(flaws);
     if (previous_solution && flaws.empty()) {

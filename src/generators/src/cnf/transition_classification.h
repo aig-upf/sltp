@@ -5,6 +5,8 @@
 #include "generator.h"
 #include "types.h"
 
+#include <numeric>
+
 
 namespace sltp::cnf {
 
@@ -22,8 +24,17 @@ public:
             class_representatives_(),
             from_transition_to_eq_class_(),
             types_(),
-            necessarily_bad_transitions_()
+            necessarily_bad_transitions_(),
+            feature_ids()
     {
+        if (!options.validate_features.empty()) {
+            // Consider only the features we want to validate
+            feature_ids = options.validate_features;
+        } else { // Else, we will simply consider all feature IDs
+            feature_ids.resize(nf_);
+            std::iota(feature_ids.begin(), feature_ids.end(), 0);
+        }
+
         compute_equivalence_relations();
     }
 
@@ -91,11 +102,14 @@ protected:
 
     std::unordered_set<unsigned> necessarily_bad_transitions_;
 
+    //! The only feature IDs that we will consider for the encoding
+    std::vector<unsigned> feature_ids;
+
     //!
     void compute_equivalence_relations();
 
-    //!
-    std::vector<bool> check_feature_dominance();
+    //! Return a list with the IDs of those features that are not dominated by other features
+    std::vector<unsigned> prune_dominated_features();
 
 
     //! Return DT(f), the set of pairs of transitions that are distinguished by the given feature f

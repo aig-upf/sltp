@@ -55,17 +55,10 @@ def print_maxsat_solution(assignment, filename):
     print('\n'.join(f"V({s}) = {vs[s]}" for s in sorted(vs.keys())))
 
 
-def compute_transition_classification_policy(config, data, rng):
-    if config.transition_classification_policy is not None:
-        return ExitCode.Success, dict(transition_classification_policy=generate_user_provided_policy(config))
-
-    features, good_transitions, policy = generate_policy_from_sat_solution(config, data.cnf_solution, data.model_cache)
-    return ExitCode.Success, dict(transition_classification_policy=policy)
-
-
-def generate_policy_from_sat_solution(config, solution, model_cache, minimize_policy=True, print_policy=True):
+def generate_policy_from_sat_solution(config, solution, model_cache, print_policy=True):
     assert solution.solved
     features = extract_features_from_sat_solution(config, solution)
+    assert features
     # print_maxsat_solution(solution.assignment, config.wsat_allvars_filename)
     good_transitions = compute_good_transitions(solution.assignment, config.wsat_varmap_filename)
     policy = TransitionClassificationPolicy(features)
@@ -80,9 +73,6 @@ def generate_policy_from_sat_solution(config, solution, model_cache, minimize_po
             clause += compute_policy_clauses(f, den_s, den_t)
 
         policy.add_clause(frozenset(clause))
-
-    # if minimize_policy:
-    #     policy.minimize()
 
     if print_policy:
         policy.print_aaai20()

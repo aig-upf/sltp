@@ -20,6 +20,21 @@
 using namespace std;
 namespace po = boost::program_options;
 
+std::vector<unsigned> parse_id_list(const std::string& list) {
+    std::vector<unsigned> ids;
+    if (!list.empty()) {
+        std::stringstream ss(list);
+        while (ss.good()) {
+            std::string substr;
+            getline(ss, substr, ',');
+            if (!substr.empty()) {
+                ids.push_back((unsigned) atoi(substr.c_str()));
+            }
+        }
+    }
+    return ids;
+}
+
 //! Command-line option processing
 sltp::cnf::Options parse_options(int argc, const char **argv) {
     sltp::cnf::Options options;
@@ -41,6 +56,8 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
         ("enforce-features,e", po::value<std::string>()->default_value(""),
          "Comma-separated (no spaces!) list of IDs of feature we want to enforce in the abstraction.")
 
+        ("validate-features", po::value<std::string>()->default_value(""),
+         "Comma-separated (no spaces!) list of IDs of a subset of features we want to validate.")
 
         ("v_slack", po::value<double>()->default_value(2),
          "The slack value for the maximum allowed value for V_pi(s) = slack * V^*(s)")
@@ -105,44 +122,35 @@ sltp::cnf::Options parse_options(int argc, const char **argv) {
     auto enc = vm["encoding"].as<std::string>();
     if (enc == "basic") options.encoding = sltp::cnf::Options::Encoding::Basic;
     else if (enc == "d2tree") options.encoding = sltp::cnf::Options::Encoding::D2Tree;
-    else if  (enc == "separation") options.encoding = sltp::cnf::Options::Encoding::TransitionSeparation;
+    else if  (enc == "separation") options.encoding = sltp::cnf::Options::Encoding::TransitionClassification;
     else throw po::validation_error(po::validation_error::invalid_option_value, "encoding");
 
 
     // Split the comma-separated list of enforced feature IDS
-    auto enforced_str = vm["enforce-features"].as<std::string>();
-//        std::cout << "\nenforced_str: " << enforced_str << std::endl;
-    if (!enforced_str.empty()) {
-        std::stringstream ss(enforced_str);
-        while (ss.good()) {
-            std::string substr;
-            getline(ss, substr, ',');
-            if (!substr.empty()) {
-                options.enforced_features.push_back((unsigned) atoi(substr.c_str()));
-            }
-        }
-    }
+    options.enforced_features = parse_id_list(vm["enforce-features"].as<std::string>());
 //        for (auto x:enforced_features) std::cout << "\n" << x << std::endl;
+
+    options.validate_features = parse_id_list(vm["validate-features"].as<std::string>());
 
     return options;
 }
 
 sltp::cnf::CNFGenerationOutput
 write_encoding(CNFWriter& wr, const sltp::TrainingSet& sample, const sltp::cnf::Options& options) {
-    if (options.use_separation_encoding()) {
+    if (options.use_transition_classification_encoding()) {
         sltp::cnf::TransitionClassificationEncoding generator(sample, options);
         return generator.refine_theory(wr);
+    }
 
+    // Else we assume we want to use the AAAI19 Encoding
+    if (options.prune_redundant_states) {
+        // If indicated by the user, prune those states that appear redundant for the given feature pool
+        auto resample = sltp::cnf::AAAI19Generator::preprocess_sample(sample, options);
+        sltp::cnf::AAAI19Generator gen(resample, options);
+        return gen.write(wr);
     } else {
-        if (options.prune_redundant_states) {
-            // If indicated by the user, prune those states that appear redundant for the given feature pool
-            auto resample = sltp::cnf::AAAI19Generator::preprocess_sample(sample, options);
-            sltp::cnf::AAAI19Generator gen(resample, options);
-            return gen.write(wr);
-        } else {
-            sltp::cnf::AAAI19Generator gen(sample, options);
-            return gen.write(wr);
-        }
+        sltp::cnf::AAAI19Generator gen(sample, options);
+        return gen.write(wr);
     }
 }
 

@@ -15,26 +15,44 @@ def run(config, data, rng):
         return generate_cnf(config, data)
 
     good_transitions, features = [], []
+    policy = None
 
-    maxiterations = 9999 if config.use_incremental_refinement else 1
-    approach_name = "incremental refinement" if config.use_incremental_refinement else "standard"
+    maxiterations = 99999 if config.use_incremental_refinement else 1
 
     solution = None
     for it in range(1, maxiterations+1):
-        logging.info(f"Starting iteration {it} of the {approach_name} approach")
-
+        # Note that on the first iteration these will just print empty files, which will signal the
+        # C++ module (when using incremental approach) that it needs to do a random sample of transition pairs.
         print_good_transition_list(good_transitions, config.good_transitions_filename)
         print_good_features_list(features, config.good_features_filename)
 
+        if it > 1:
+            # Try a CNF theory to validate the found solution first
+            logging.info(f"Generating validation CNF for solution found on iteration #{it-1}")
+            exitcode, _ = generate_cnf(config, data, validate_features=[f.id for f in features])
+            assert exitcode == ExitCode.Success
+
+            validation_sol = solve(config.experiment_dir, config.cnf_filename, config.maxsat_solver, config.maxsat_timeout)
+            if not validation_sol.solved:
+                logging.info(f"Solution found on iteration #{it-1} is not valid, keep iterating")
+
+            else:
+                logging.info(f"Last solution (iteration #{it-1}) correctly validated!")
+                # Recover the policy from the validation run, which may be more complete than the incremental one
+                _, _, policy = generate_policy_from_sat_solution(config, validation_sol, data.model_cache)
+                break
+
+        logging.info(f"Starting iteration {it} of the incremental refinement approach"
+                     if config.use_incremental_refinement else "Running standard non-incremental approach")
         exitcode, results = generate_cnf(config, data)
-        if exitcode == ExitCode.IterativeMaxsatApproachSuccessful:
-            # Here we subtract 1 because last iteration was only the check
-            print(f"Iterative approach finished successfully after {it-1} iterations")
-
-            # Recover the policy one more time, but doing policy minimization
-            _, _, policy = generate_policy_from_sat_solution(config, solution, data.model_cache, minimize_policy=True)
-
-            return ExitCode.Success, dict(transition_classification_policy=policy)
+        assert exitcode != ExitCode.IterativeMaxsatApproachSuccessful  # We know it's not valid
+        # if exitcode == ExitCode.IterativeMaxsatApproachSuccessful:
+        #     # Here we subtract 1 because last iteration was only the check
+        #     print(f"Iterative approach finished successfully after {it-1} iterations")
+        #
+        #     # Recover the policy one more time
+        #     _, _, policy = generate_policy_from_sat_solution(config, solution, data.model_cache)
+        #     return ExitCode.Success, dict(transition_classification_policy=policy)
 
         solution = solve(config.experiment_dir, config.cnf_filename, config.maxsat_solver, config.maxsat_timeout)
 
@@ -46,11 +64,11 @@ def run(config, data, rng):
             logging.info(f"Optimal MAXSAT solution with cost {solution.cost} found")
 
         # print_maxsat_solution(solution.assignment, config.wsat_allvars_filename)
-        features, good_transitions, policy = generate_policy_from_sat_solution(
-            config, solution, data.model_cache, minimize_policy=False)
+        features, good_transitions, policy = generate_policy_from_sat_solution(config, solution, data.model_cache)
 
     # Recover the policy one more time, but doing policy minimization
-    _, _, policy = generate_policy_from_sat_solution(config, solution, data.model_cache, minimize_policy=True)
+    # _, _, policy = generate_policy_from_sat_solution(config, solution, data.model_cache)
+    # policy.minimize()  # ATM we no longer minimize
     return ExitCode.Success, dict(transition_classification_policy=policy)
 
 
@@ -65,12 +83,13 @@ def print_good_features_list(good_features, filename):
         print(' '.join(str(f.id) for f in good_features), file=f)
 
 
-def generate_cnf(config, data):
+def generate_cnf(config, data, validate_features=None):
     # Invoke C++ feature generation module
     logging.info('Invoking C++ CNF generation module'.format())
     cmd = os.path.realpath(os.path.join(SLTP_GEN_DIR, "cnfgen"))
     args = ["--workspace", config.experiment_dir]
     args += ["--enforce-features", ",".join(map(str, data.in_goal_features))] if data.in_goal_features else []
+    args += ["--validate-features", ",".join(map(str, validate_features))] if validate_features is not None else []
     args += ["--prune-redundant-states"] if config.prune_redundant_states else []
     args += ["--encoding", config.maxsat_encoding]
     args += ["--use-equivalence-classes"] if config.use_equivalence_classes else []
