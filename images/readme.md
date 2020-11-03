@@ -5,7 +5,7 @@
 
 
 ```lang-bash
-(sudo) docker build -t sltp .
+(sudo) docker build -t d2l .
 ```
 
 
